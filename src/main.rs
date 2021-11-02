@@ -1,13 +1,16 @@
 pub mod assets;
+pub mod vga_render;
 pub mod vl;
 
 use std::sync::Arc;
+use std::io::prelude::*;
+use std::fs::File;
+use std::{thread, time};
 
 use vgaemu::screen;
 use vgaemu::{SCReg, set_vertical_display_end};
 
-use std::io::prelude::*;
-use std::fs::File;
+use vga_render::Renderer;
 
 fn main() {
     let vga = vgaemu::new(0x13);
@@ -19,12 +22,22 @@ fn main() {
 
     init_game(&vga);
 
-    let vga_m = Arc::new(vga);
+    let vga_screen = Arc::new(vga);
+    let render = vga_render::init(vga_screen.clone());
+
+	thread::spawn(move || { 
+        // TODO Wait for key press instead
+        thread::sleep(time::Duration::from_secs(3));
+        pg_13(&render);
+    });
+
+    // TODO game loop
+
 	let options: screen::Options = vgaemu::screen::Options {
 		show_frame_rate: true,
 		..Default::default()
 	};
-	screen::start(vga_m, options).unwrap();
+	screen::start(vga_screen, options).unwrap();
 }
 
 fn init_game(vga: &vgaemu::VGA) {
@@ -57,4 +70,9 @@ fn signon_screen(vga: &vgaemu::VGA) {
         vga_offset += 1;
         buf_offset += 4;
     }
+}
+
+fn pg_13(rdr: &dyn Renderer) {
+    rdr.bar(0, 0, 320, 200, 0x82);
+    //TODO draw pg13 pic from assets
 }
