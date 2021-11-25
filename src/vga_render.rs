@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use vgaemu::{set_vertical_display_end, SCReg};
+use vgaemu::{SCReg};
+
+use super::assets::{Graphic, GraphicNum};
 
 const MAXSCANLINES: usize = 200;
 const PAGE_0_START: usize = 0;
@@ -8,24 +10,54 @@ const PAGE_1_START: usize = MAXSCANLINES;
 
 pub trait Renderer {
 	fn bar(&self, x: usize, y: usize, width: usize, height: usize, color: u8);
+	fn pic(&self, x: usize, y: usize, picnum: GraphicNum);
 }
 
 pub struct VGARenderer {
 	vga: Arc<vgaemu::VGA>,
 	linewidth: usize,
 	bufferofs: usize,
+	graphics: Vec<Graphic>,
 }
 
-pub fn init(vga: Arc<vgaemu::VGA>) -> VGARenderer {
+pub fn init(vga: Arc<vgaemu::VGA>, graphics: Vec<Graphic>) -> VGARenderer {
 	VGARenderer {
 		vga,
 		linewidth: 80,
 		bufferofs: PAGE_0_START,
+		graphics,
 	}
 }
 
 static LEFTMASKS: [u8; 4] = [15, 14, 12, 8];
 static RIGHTMASKS: [u8; 4] = [1, 3, 7, 15];
+
+impl VGARenderer {
+	fn mem_to_screen(&self, data: &Vec<u8>, width: usize, height: usize, x: usize, y: usize) {
+		let width_bytes = width >> 2;
+		let mut mask = 1 << (x & 3);
+		let mut src_ix = 0;
+		let dst_offset = self.bufferofs + self.ylookup(y)+(x >> 2); 
+		let mut dst_ix;
+		for _ in 0..4 {
+			self.vga.set_sc_data(SCReg::MapMask, mask);
+			mask <<= 1;
+			if mask == 16 {
+				mask = 1;
+			}
+			dst_ix = dst_offset;
+			for _ in 0..height {
+				self.vga.write_mem_chunk(dst_ix, &data[src_ix..(src_ix+width_bytes)]);
+				dst_ix += self.linewidth;
+				src_ix += width_bytes;
+			}
+		}
+	}
+
+	fn ylookup(&self, y: usize) -> usize {
+		y * self.linewidth
+	}
+}
 
 impl Renderer for VGARenderer {
 	fn bar(&self, x: usize, y: usize, width: usize, height: usize, color: u8) {
@@ -62,4 +94,11 @@ impl Renderer for VGARenderer {
 
 		self.vga.set_sc_data(SCReg::MapMask, 0xFF);
 	}
+
+	fn pic(&self, x: usize, y: usize, picnum: GraphicNum) {
+		let graphic = &self.graphics[picnum as usize];
+		self.mem_to_screen(&graphic.data, graphic.width, graphic.height, x & !7, y);
+	}
 }
+
+
