@@ -50,7 +50,6 @@ fn main() -> Result<(), String> {
 }
 
 fn init_game(vga: &vgaemu::VGA) {
-
     vl::set_palette(vga, assets::GAMEPAL);
     signon_screen(vga);
 }
@@ -82,10 +81,12 @@ fn signon_screen(vga: &vgaemu::VGA) {
 }
 
 fn pg_13(rdr: &dyn Renderer) {
+    rdr.fade_out(); 
     rdr.bar(0, 0, 320, 200, 0x82);
     rdr.pic(216, 110, GraphicNum::PG13PIC);
+    rdr.fade_in();
 
-    //TODO Fade In & Fade Out
+    //TODO wait for user input and fade_out
 }
 
 fn load_config() -> Config {
