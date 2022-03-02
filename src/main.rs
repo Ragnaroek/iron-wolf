@@ -2,6 +2,8 @@ pub mod assets;
 pub mod vga_render;
 pub mod vl;
 pub mod config;
+pub mod input;
+pub mod time;
 
 use std::sync::Arc;
 use std::io::prelude::*;
@@ -32,11 +34,13 @@ fn main() -> Result<(), String> {
 
     let vga_screen = Arc::new(vga);
     let render = vga_render::init(vga_screen.clone(), graphics);
+    let time = time::init();
+    let input = input::init(Arc::new(time));
 
 	thread::spawn(move || { 
         // TODO Wait for key press instead
         //thread::sleep(time::Duration::from_secs(3));
-        pg_13(&render);
+        pg_13(&render, &input);
     });
 
     // TODO game loop
@@ -80,13 +84,18 @@ fn signon_screen(vga: &vgaemu::VGA) {
     }
 }
 
-fn pg_13(rdr: &dyn Renderer) {
+fn pg_13(rdr: &dyn Renderer, input: &input::Input) {
     rdr.fade_out(); 
     rdr.bar(0, 0, 320, 200, 0x82);
     rdr.pic(216, 110, GraphicNum::PG13PIC);
     rdr.fade_in();
 
+    input.user_input(time::TICK_BASE*7);
+    
+    rdr.bar(0, 0, 320, 200, 0x10); //TODO just a demo
     //TODO wait for user input and fade_out
+
+    input.user_input(time::TICK_BASE*9000);
 }
 
 fn load_config() -> Config {
