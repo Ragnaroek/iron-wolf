@@ -32,10 +32,12 @@ fn main() -> Result<(), String> {
 
     init_game(&vga);
 
+    let input_monitoring = screen::new_input_monitoring();
+
     let vga_screen = Arc::new(vga);
     let render = vga_render::init(vga_screen.clone(), graphics);
     let time = time::init();
-    let input = input::init(Arc::new(time));
+    let input = input::init(Arc::new(time), input_monitoring.clone());
 
 	thread::spawn(move || { 
         // TODO Wait for key press instead
@@ -47,6 +49,7 @@ fn main() -> Result<(), String> {
 
 	let options: screen::Options = vgaemu::screen::Options {
 		show_frame_rate: true,
+        input_monitoring: Some(input_monitoring),
 		..Default::default()
 	};
 	screen::start(vga_screen, options).unwrap();
