@@ -1,13 +1,13 @@
 use super::time::{TimeCount};
 use std::sync::Arc;
-use vgaemu::screen;
+use vgaemu::input;
 
 pub struct Input {
 	time: Arc<TimeCount>,
-	input_monitoring: screen::InputMonitoring
+	input_monitoring: input::InputMonitoring
 }
 
-pub fn init(time: Arc<TimeCount>, input_monitoring: screen::InputMonitoring ) -> Input {
+pub fn init(time: Arc<TimeCount>, input_monitoring: input::InputMonitoring ) -> Input {
 	Input{time, input_monitoring}
 } 
 
