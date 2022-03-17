@@ -19,6 +19,7 @@ fn load_file(path: &Path) -> Vec<u8> {
 }
 
 pub enum GraphicNum {
+	TITLEPIC = 87,
 	PG13PIC = 88,
 }
 
@@ -46,31 +47,23 @@ pub fn load_all_graphics(config: &Config) -> Result<Vec<Graphic>, String> {
 	let grstarts = load_file(&config.wolf3d_data.join(GRAPHIC_HEAD));
 	let grdata = load_file(&config.wolf3d_data.join(GRAPHIC_DATA));
 
-	// TODO extract pic sizes from grdata
 	let picsizes = extract_picsizes(&grdata, &grstarts, &grhuffman);
 
 	let mut graphics = Vec::with_capacity(NUM_PICS);
-	for i in 0..NUM_PICS {
-		if i == GraphicNum::PG13PIC as usize {
-			let g = load_graphic(
-				GraphicNum::PG13PIC as usize,
-				&grstarts,
-				&grdata,
-				&grhuffman,
-				&picsizes
-			)?;
-			/*
-			let mut file = OpenOptions::new().write(true)
-                             .create_new(true)
-                             .open("pc2.data").unwrap();
-			file.write_all(&g.data).unwrap();
-			file.flush().unwrap(); */	
-			graphics.push(g);
-		} else {
-			// TODO Load all data here, replace dummy graphics
-			graphics.push(Graphic{data: Vec::with_capacity(0), width: 0, height: 0});
-		}
+	for _ in 0..10 {
+		graphics.push(Graphic{data: Vec::with_capacity(0), width: 0, height: 0});
 	}
+	for i in 10..NUM_PICS {
+		let g = load_graphic(
+			i,
+			&grstarts,
+			&grdata,
+			&grhuffman,
+			&picsizes
+		)?;
+		graphics.push(g);
+	}
+
 	Ok(graphics)
 }
 

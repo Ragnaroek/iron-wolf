@@ -100,6 +100,7 @@ impl Renderer for VGARenderer {
 
 	fn pic(&self, x: usize, y: usize, picnum: GraphicNum) {
 		let graphic = &self.graphics[picnum as usize];
+		println!("sizes = {}, {}", graphic.width, graphic.height);
 		self.mem_to_screen(&graphic.data, graphic.width, graphic.height, x & !7, y);
 	}
 
