@@ -63,6 +63,7 @@ fn demo_loop(rdr: &dyn Renderer, input: &input::Input) {
     loop {
         loop { // title screen & demo loop
             rdr.pic(0, 0, GraphicNum::TITLEPIC);
+            rdr.fade_in();
             input.user_input(time::TICK_BASE*15);
             // TODO exit game loop if input
         }

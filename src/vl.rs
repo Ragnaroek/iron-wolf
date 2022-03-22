@@ -49,19 +49,19 @@ pub fn fade_out(vga: &vgaemu::VGA, start: usize, end: usize, red: u8, green: u8,
     for i in 0..steps {
         let mut ix = 0;
         for _ in start..end {
-            let orig = palette_orig[ix];
-            let (delta, _) = red.overflowing_sub(orig);
-            palette_new[ix] = orig + (delta as usize * i / steps) as u8;
+            let orig = palette_orig[ix] as i32;
+            let delta = red as i32 - orig;
+            palette_new[ix] = (orig + (delta * i as i32 / steps as i32)) as u8;
             ix += 1;
 
-            let orig = palette_orig[ix];
-            let (delta, _) = green.overflowing_sub(orig);
-            palette_new[ix] = orig + (delta as usize * i / steps) as u8;
+            let orig = palette_orig[ix] as i32;
+            let delta = green as i32 - orig;
+            palette_new[ix] = (orig + (delta * i as i32 / steps as i32)) as u8;
             ix += 1;
 
-            let orig = palette_orig[ix];
-            let (delta, _) = blue.overflowing_sub(orig);
-            palette_new[ix] = orig + (delta as usize * i / steps) as u8;
+            let orig = palette_orig[ix] as i32;
+            let delta = blue as i32 - orig;
+            palette_new[ix] = (orig + (delta * i as i32 / steps as i32)) as u8;
             ix += 1;
         }
 
