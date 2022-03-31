@@ -1,8 +1,6 @@
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
+use super::util;
 
-use super::config::Config;
+use super::config::IWConfig;
 
 pub static GAMEPAL: &'static [u8] = include_bytes!("../assets/gamepal.bin");
 
@@ -10,17 +8,11 @@ pub static GRAPHIC_DICT: &'static str = "VGADICT.WL6";
 pub static GRAPHIC_HEAD: &'static str = "VGAHEAD.WL6";
 pub static GRAPHIC_DATA: &'static str = "VGAGRAPH.WL6";
 
-// loads a file completly, panics if it cannot be found or read
-fn load_file(path: &Path) -> Vec<u8> {
-	let mut file = File::open(path).unwrap();
-	let mut data = Vec::new();
-	file.read_to_end(&mut data).unwrap();
-	data
-}
-
 pub enum GraphicNum {
+	STATUSBARPIC = 86,
 	TITLEPIC = 87,
 	PG13PIC = 88,
+	CREDITSPIC = 89,
 }
 
 const STRUCTPIC: usize = 0;
@@ -40,12 +32,12 @@ pub struct Huffnode {
 	bit1: u16,
 }
 
-pub fn load_all_graphics(config: &Config) -> Result<Vec<Graphic>, String> {
-	let grhuffman_bytes = load_file(&config.wolf3d_data.join(GRAPHIC_DICT));
+pub fn load_all_graphics(config: &IWConfig) -> Result<Vec<Graphic>, String> {
+	let grhuffman_bytes = util::load_file(&config.wolf3d_data.join(GRAPHIC_DICT));
 	let grhuffman = to_huffnodes(grhuffman_bytes);
 
-	let grstarts = load_file(&config.wolf3d_data.join(GRAPHIC_HEAD));
-	let grdata = load_file(&config.wolf3d_data.join(GRAPHIC_DATA));
+	let grstarts = util::load_file(&config.wolf3d_data.join(GRAPHIC_HEAD));
+	let grdata = util::load_file(&config.wolf3d_data.join(GRAPHIC_DATA));
 
 	let picsizes = extract_picsizes(&grdata, &grstarts, &grhuffman);
 

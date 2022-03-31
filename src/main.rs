@@ -4,23 +4,24 @@ pub mod vl;
 pub mod config;
 pub mod input;
 pub mod time;
+pub mod game;
+pub mod user;
+pub mod util;
 
 use std::sync::Arc;
 use std::io::prelude::*;
 use std::fs::File;
 use std::thread;
-use std::path::Path;
 
 use vgaemu::screen;
 use vgaemu::{SCReg, set_vertical_display_end};
 
 use assets::{GraphicNum};
 use vga_render::Renderer;
-use config::Config;
 
 fn main() -> Result<(), String> {
 
-    let config = load_config();
+    let iw_config = config::load_iw_config();
 
     let vga = vgaemu::new(0x13);
 	//enable Mode X
@@ -28,9 +29,11 @@ fn main() -> Result<(), String> {
 	vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 	set_vertical_display_end(&vga, 480);
 
-    let graphics = assets::load_all_graphics(&config)?;
+    let graphics = assets::load_all_graphics(&iw_config)?;
 
     init_game(&vga);
+
+    let config = config::load_wolf_config(&iw_config);
 
     let input_monitoring = vgaemu::input::new_input_monitoring();
 
@@ -64,9 +67,24 @@ fn demo_loop(rdr: &dyn Renderer, input: &input::Input) {
         loop { // title screen & demo loop
             rdr.pic(0, 0, GraphicNum::TITLEPIC);
             rdr.fade_in();
-            input.user_input(time::TICK_BASE*15);
-            // TODO exit game loop if input
+            if input.user_input(time::TICK_BASE*15) {
+                break;
+            }
+            rdr.fade_out();
+
+            rdr.pic(0,0, GraphicNum::CREDITSPIC);
+            rdr.fade_in();
+            if input.user_input(time::TICK_BASE*10) {
+                break;
+            }
+            rdr.fade_out();
+         
+            //TODO DrawHighScore() here
+            //TODO PlayDemo() here
         }
+
+        game::game_loop(rdr, input);
+        rdr.fade_out();
     }
 }
 
@@ -104,11 +122,4 @@ fn pg_13(rdr: &dyn Renderer, input: &input::Input) {
     rdr.fade_in();
     input.user_input(time::TICK_BASE*7);
     rdr.fade_out();
-}
-
-fn load_config() -> Config {
-    //TODO load from file
-    Config {
-        wolf3d_data: Path::new("/Users/mb/_w3d/w3d_data")
-    }
 }
