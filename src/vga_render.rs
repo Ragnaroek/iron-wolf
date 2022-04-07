@@ -9,9 +9,16 @@ const MAXSCANLINES: usize = 200;
 const PAGE_0_START: usize = 0;
 const PAGE_1_START: usize = MAXSCANLINES;
 
+static PIXMASKS: [u8; 4] = [1, 2, 4, 8];
+static LEFTMASKS: [u8; 4]	= [15, 14, 12, 8];
+static RIGHTMASKS: [u8; 4] = [1, 3, 7, 15];
+
 pub trait Renderer {
 	fn bar(&self, x: usize, y: usize, width: usize, height: usize, color: u8);
 	fn pic(&self, x: usize, y: usize, picnum: GraphicNum);
+	fn hlin(&self, x: usize, y: usize, width: usize, color: u8);
+	fn vlin(&self, x: usize, y: usize, height: usize, color: u8);
+	fn plot(&self, x: usize, y: usize, color: u8);
 	fn fade_out(&self);
 	fn fade_in(&self);
 }
@@ -31,9 +38,6 @@ pub fn init(vga: Arc<vgaemu::VGA>, graphics: Vec<Graphic>) -> VGARenderer {
 		graphics,
 	}
 }
-
-static LEFTMASKS: [u8; 4] = [15, 14, 12, 8];
-static RIGHTMASKS: [u8; 4] = [1, 3, 7, 15];
 
 impl VGARenderer {
 	fn mem_to_screen(&self, data: &Vec<u8>, width: usize, height: usize, x: usize, y: usize) {
@@ -68,7 +72,7 @@ impl Renderer for VGARenderer {
 		let rightmask = RIGHTMASKS[(x + width - 1) & 3];
 		let midbytes = ((x as i32 + (width as i32) + 3) >> 2) - (x as i32 >> 2) - 2;
 
-		let mut dest = self.bufferofs + y * self.linewidth;
+		let mut dest = self.bufferofs + y * self.linewidth + (x >> 2);
 
 		if midbytes < 0 {
 			self.vga.set_sc_data(SCReg::MapMask, leftmask & rightmask);
@@ -88,7 +92,7 @@ impl Renderer for VGARenderer {
 					self.vga.write_mem(dest, color);
 					dest += 1;
 				}
-				self.vga.set_sc_data(SCReg::MapMask, leftmask);
+				self.vga.set_sc_data(SCReg::MapMask, rightmask);
 				self.vga.write_mem(dest, color);
 
 				dest += linedelta;
@@ -96,6 +100,56 @@ impl Renderer for VGARenderer {
 		}
 
 		self.vga.set_sc_data(SCReg::MapMask, 0xFF);
+	}
+
+	fn hlin(&self, x: usize, y: usize, width: usize, color: u8) {
+		let xbyte = x >> 2;
+		let leftmask = LEFTMASKS[x&3];
+		let rightmask = RIGHTMASKS[(x+width-1)&3];
+		let midbytes : i32 = ((x+width+3)>>2) as i32 - xbyte as i32 - 2;
+
+		let mut dest = self.bufferofs + y * self.linewidth + xbyte;
+		if midbytes < 0 {
+			self.vga.set_sc_data(SCReg::MapMask, leftmask & rightmask);
+			self.vga.write_mem(dest, color);	
+		} else {
+			self.vga.set_sc_data(SCReg::MapMask, leftmask);
+			self.vga.write_mem(dest, color);
+			dest += 1;
+
+			self.vga.set_sc_data(SCReg::MapMask, 0xFF);
+			for _ in 0..midbytes {
+				self.vga.write_mem(dest, color);
+				dest += 1;
+			}
+
+			self.vga.set_sc_data(SCReg::MapMask, rightmask);
+			self.vga.write_mem(dest, color);
+		}
+
+		self.vga.set_sc_data(SCReg::MapMask, 0xFF);
+	}
+
+	fn vlin(&self, x: usize, y: usize, height: usize, color: u8) {
+		let mask = PIXMASKS[x&3];
+		self.vga.set_sc_data(SCReg::MapMask, mask);
+
+		let mut dest = self.bufferofs + y * self.linewidth + (x >> 2);
+		let mut h = height;
+		while h > 0 {
+			self.vga.write_mem(dest, color);
+			dest += self.linewidth;
+			h -= 1;
+		}
+
+		self.vga.set_sc_data(SCReg::MapMask, 0xFF);
+	}
+
+	fn plot(&self, x: usize, y: usize, color: u8) {
+		let mask = PIXMASKS[x&3];
+		self.vga.set_sc_data(SCReg::MapMask, mask);
+		let dest = self.bufferofs + y * self.linewidth + (x >> 2);
+		self.vga.write_mem(dest, color);	
 	}
 
 	fn pic(&self, x: usize, y: usize, picnum: GraphicNum) {
