@@ -4,9 +4,12 @@ use super::assets::{GraphicNum};
 use super::input;
 use super::time;
 use super::config;
+use super::vga_render;
 
 const STATUS_LINES : usize = 40;
 const HEIGHT_RATIO : f32 = 0.5;
+
+static SCREENLOC : [usize; 3] = [vga_render::PAGE_1_START, vga_render::PAGE_2_START, vga_render::PAGE_3_START];
 
 pub struct ProjectionConfig {
 	view_size: usize,
@@ -35,11 +38,13 @@ pub fn game_loop(rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfi
 fn draw_play_screen(rdr: &dyn Renderer, prj: &ProjectionConfig) {
 	rdr.fade_out();
 
-	for i in 0..3 { 
+	let offset_prev = rdr.buffer_offset();
+	for i in 0..3 {
+		rdr.set_buffer_offset(SCREENLOC[i]); 
 		draw_play_border(rdr, prj);
-		//TODO draw border to all three buffers
 		rdr.pic(0, 200-STATUS_LINES, GraphicNum::STATUSBARPIC);
 	}
+	rdr.set_buffer_offset(offset_prev);
 
 	//TODO draw face, health, lives,...
 }
