@@ -27,7 +27,6 @@ fn main() -> Result<(), String> {
 	//enable Mode X
 	let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
 	vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
-	set_vertical_display_end(&vga, 480);
 
     let graphics = assets::load_all_graphics(&iw_config)?;
 
