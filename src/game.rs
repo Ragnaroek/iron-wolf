@@ -46,6 +46,8 @@ fn draw_play_screen(rdr: &dyn Renderer, prj: &ProjectionConfig) {
 	}
 	rdr.set_buffer_offset(offset_prev);
 
+	draw_face(rdr);
+
 	//TODO draw face, health, lives,...
 }
 
@@ -74,4 +76,15 @@ fn hlin(rdr: &dyn Renderer, x: usize, z: usize, y: usize, c: u8) {
 
 fn vlin(rdr: &dyn Renderer, y: usize, z: usize, x: usize, c: u8) {
 	rdr.vlin(x, y, (z-y)+1, c)
+}
+
+fn draw_face(rdr: &dyn Renderer) {
+	// TODO testpic, draw appropriate pic depending on gamestate!
+	status_draw_pic(rdr, 17, 4, GraphicNum::FACE8APIC)
+}
+
+// x in bytes
+fn status_draw_pic(rdr: &dyn Renderer, x: usize, y: usize, pic: GraphicNum) {
+	let y_status = (200-STATUS_LINES) + y;
+	rdr.pic(x*8, y_status, pic);
 }
