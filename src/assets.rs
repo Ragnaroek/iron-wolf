@@ -43,6 +43,36 @@ pub enum GraphicNum {
 	GETPSYCHEDPIC = 134,     
 }
 
+pub fn face_pic(n: usize) -> GraphicNum {
+	let offset = GraphicNum::FACE1APIC as usize + n;
+
+	match offset {
+		109 => return GraphicNum::FACE1APIC,
+		110 => return GraphicNum::FACE1BPIC,
+		111 => return GraphicNum::FACE1CPIC,
+		112 => return GraphicNum::FACE2APIC,
+		113 => return GraphicNum::FACE2BPIC,
+		114 => return GraphicNum::FACE2CPIC,
+		115 => return GraphicNum::FACE3APIC,
+		116 => return GraphicNum::FACE3BPIC,
+		117 => return GraphicNum::FACE3CPIC,
+		118 => return GraphicNum::FACE4APIC,
+		119 => return GraphicNum::FACE4BPIC,
+		120 => return GraphicNum::FACE4CPIC,
+		121 => return GraphicNum::FACE5APIC,
+		122 => return GraphicNum::FACE5BPIC,
+		123 => return GraphicNum::FACE5CPIC,
+		124 => return GraphicNum::FACE6APIC,
+		125 => return GraphicNum::FACE6BPIC,
+		126 => return GraphicNum::FACE6CPIC,
+		127 => return GraphicNum::FACE7APIC,
+		128 => return GraphicNum::FACE7BPIC,
+		129 => return GraphicNum::FACE7CPIC,
+		130 => return GraphicNum::FACE8APIC,
+		_ => return GraphicNum::FACE1APIC,
+	}
+}
+
 const STRUCTPIC: usize = 0;
 const STARTPICS: usize = 3;
 const STARTTILE8: usize = 150;
