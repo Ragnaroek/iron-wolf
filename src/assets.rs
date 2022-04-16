@@ -15,6 +15,17 @@ pub enum GraphicNum {
 	CREDITSPIC = 89,
 	// TODO add missing pics
 	// Lump Start
+	NBLANKPIC = 98,
+	N0PIC = 99,
+	N1PIC = 100,
+	N2PIC = 101,
+	N3PIC = 102,
+	N4PIC = 103,
+	N5PIC = 104,
+	N6PIC = 105,
+	N7PIC = 106,
+	N8PIC = 107,
+	N9PIC = 108,
 	FACE1APIC = 109,
 	FACE1BPIC = 110,
 	FACE1CPIC = 111,
@@ -45,7 +56,6 @@ pub enum GraphicNum {
 
 pub fn face_pic(n: usize) -> GraphicNum {
 	let offset = GraphicNum::FACE1APIC as usize + n;
-
 	match offset {
 		109 => return GraphicNum::FACE1APIC,
 		110 => return GraphicNum::FACE1BPIC,
@@ -70,6 +80,22 @@ pub fn face_pic(n: usize) -> GraphicNum {
 		129 => return GraphicNum::FACE7CPIC,
 		130 => return GraphicNum::FACE8APIC,
 		_ => return GraphicNum::FACE1APIC,
+	}
+}
+
+pub fn num_pic(n: usize) -> GraphicNum {
+	match n {
+		0 => GraphicNum::N0PIC,
+		1 => GraphicNum::N1PIC,
+		2 => GraphicNum::N2PIC,
+		3 => GraphicNum::N3PIC,
+		4 => GraphicNum::N4PIC,
+		5 => GraphicNum::N5PIC,
+		6 => GraphicNum::N6PIC,
+		7 => GraphicNum::N7PIC,
+		8 => GraphicNum::N8PIC,
+		9 => GraphicNum::N9PIC,
+		_ => GraphicNum::NBLANKPIC,
 	}
 }
 
