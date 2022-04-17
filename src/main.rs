@@ -1,3 +1,4 @@
+pub mod def;
 pub mod assets;
 pub mod vga_render;
 pub mod vl;
@@ -14,7 +15,7 @@ use std::fs::File;
 use std::thread;
 
 use vgaemu::screen;
-use vgaemu::{SCReg, set_vertical_display_end};
+use vgaemu::{SCReg};
 
 use assets::{GraphicNum};
 use game::{new_game_state};

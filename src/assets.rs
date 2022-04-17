@@ -1,5 +1,5 @@
+use super::def::{WeaponType};
 use super::util;
-
 use super::config::IWConfig;
 
 pub static GAMEPAL: &'static [u8] = include_bytes!("../assets/gamepal.bin");
@@ -15,6 +15,13 @@ pub enum GraphicNum {
 	CREDITSPIC = 89,
 	// TODO add missing pics
 	// Lump Start
+	KNIFEPIC = 91,
+	GUNPIC = 92,
+	MACHINEGUNPIC = 93,
+	GATLINGGUNPIC = 94,
+	NOKEYPIC = 95,
+	GOLDKEYPIC = 96,
+	SILVERKEYPIC = 97,
 	NBLANKPIC = 98,
 	N0PIC = 99,
 	N1PIC = 100,
@@ -96,6 +103,15 @@ pub fn num_pic(n: usize) -> GraphicNum {
 		8 => GraphicNum::N8PIC,
 		9 => GraphicNum::N9PIC,
 		_ => GraphicNum::NBLANKPIC,
+	}
+}
+
+pub fn weapon_pic(w: WeaponType) -> GraphicNum {
+	match w {
+		WeaponType::Knife => GraphicNum::KNIFEPIC,
+		WeaponType::Pistol => GraphicNum::GUNPIC,
+		WeaponType::MachineGun => GraphicNum::MACHINEGUNPIC,
+		WeaponType::ChainGun => GraphicNum::GATLINGGUNPIC,
 	}
 }
 

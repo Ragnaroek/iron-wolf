@@ -1,6 +1,7 @@
 
 use super::vga_render::Renderer;
-use super::assets::{GraphicNum, face_pic, num_pic};
+use super::def::{GameState, WeaponType};
+use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
 use super::input;
 use super::time;
 use super::config;
@@ -17,14 +18,15 @@ pub struct ProjectionConfig {
 	view_height: usize,
 }
 
-pub struct GameState {
-	health: usize,
-	face_frame: usize,
-}
-
 pub fn new_game_state() -> GameState {
 	GameState {
+		mapon: 0,
+		score: 0,
+		lives: 3,
 		health: 100,
+		ammo: 8,
+		keys: 0,
+		weapon: WeaponType::Pistol,
 		face_frame: 0,
 	}
 }
@@ -60,8 +62,12 @@ fn draw_play_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfi
 
 	draw_face(state, rdr);
 	draw_health(state, rdr);
-
-	//TODO draw face, health, lives,...
+	draw_lives(state, rdr);
+	draw_level(state, rdr);
+	draw_ammo(state, rdr);
+	draw_keys(state, rdr);
+	draw_weapon(state, rdr);
+	draw_score(state, rdr);
 }
 
 fn draw_play_border(rdr: &dyn Renderer, prj: &ProjectionConfig) {
@@ -102,6 +108,40 @@ fn draw_face(state: &GameState, rdr: &dyn Renderer) {
 
 fn draw_health(state: &GameState, rdr: &dyn Renderer) {
 	latch_number(rdr, 21, 16, 3, state.health);
+}
+
+fn draw_lives(state: &GameState, rdr: &dyn Renderer) {
+	latch_number(rdr, 14, 16, 1, state.lives);
+}
+
+fn draw_level(state: &GameState, rdr: &dyn Renderer) {
+	latch_number(rdr, 2, 16, 2, state.mapon+1);
+}
+
+fn draw_ammo(state: &GameState, rdr: &dyn Renderer) {
+	latch_number(rdr, 27, 16, 2, state.ammo);
+}
+
+fn draw_keys(state: &GameState, rdr: &dyn Renderer) {
+	if state.keys & 1 != 0 {
+		status_draw_pic(rdr, 30, 4, GraphicNum::GOLDKEYPIC);
+	} else {
+		status_draw_pic(rdr, 30, 4, GraphicNum::NOKEYPIC)
+	}
+
+	if state.keys & 2 != 0 {
+		status_draw_pic(rdr, 30, 20, GraphicNum::SILVERKEYPIC);
+	} else {
+		status_draw_pic(rdr, 30, 20, GraphicNum::NOKEYPIC);
+	}
+}
+
+fn draw_weapon(state: &GameState, rdr: &dyn Renderer) {
+	status_draw_pic(rdr, 32, 8, weapon_pic(state.weapon))
+}
+
+fn draw_score(state: &GameState, rdr: &dyn Renderer) {
+	latch_number(rdr, 6, 16, 6, state.score);
 }
 
 // x in bytes
