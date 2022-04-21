@@ -45,6 +45,12 @@ pub fn new_projection_config(config: &config::WolfConfig) -> ProjectionConfig {
 pub fn game_loop(state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig) {
 	draw_play_screen(state, rdr, prj);
 
+	//TODO SetupGameLevel
+	//TODO StartMusic
+	//TODO PreloadGraphics
+	//TODO DrawLevel
+	//TODO PlayLoop
+
 	rdr.fade_in();
 	input.user_input(time::TICK_BASE*1000);
 }

@@ -10,19 +10,23 @@ pub fn load_file(path: &Path) -> Vec<u8> {
 	data
 }
 
-pub struct DataReader {
-	data: Vec<u8>,
+pub struct DataReader<'a> {
+	data: &'a Vec<u8>,
 	offset: usize,
 }
 
-pub fn new_data_reader(data: Vec<u8>) -> DataReader {
+pub fn new_data_reader(data: &Vec<u8>) -> DataReader {
+	new_data_reader_with_offset(data, 0)
+}
+
+pub fn new_data_reader_with_offset(data: &Vec<u8>, offset: usize) -> DataReader {
 	DataReader {
 		data,
-		offset: 0
+		offset
 	}
 }
 
-impl DataReader {
+impl DataReader<'_> {
 	pub fn read_utf8_string(&mut self, size: usize) -> String {
 		let str = String::from_utf8_lossy(&self.data[self.offset..(self.offset+size)]).to_string();
 		self.offset += size;
@@ -33,6 +37,12 @@ impl DataReader {
 		let u = u32::from_le_bytes(self.data[self.offset..(self.offset+4)].try_into().unwrap());
 		self.offset += 4;
 		u
+	}
+	
+	pub fn read_i32(&mut self) -> i32 {
+		let i = i32::from_le_bytes(self.data[self.offset..(self.offset + 4)].try_into().unwrap());
+		self.offset += 4;
+		i
 	}
 
 	pub fn read_u16(&mut self) -> u16 {
