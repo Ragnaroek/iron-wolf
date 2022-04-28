@@ -9,6 +9,9 @@ pub mod game;
 pub mod user;
 pub mod util;
 
+#[cfg(test)]
+mod assets_test;
+
 use std::sync::Arc;
 use std::io::prelude::*;
 use std::fs::File;
@@ -25,6 +28,7 @@ use vga_render::Renderer;
 fn main() -> Result<(), String> {
 
     let iw_config = config::load_iw_config();
+    let config = config::load_wolf_config(&iw_config);
 
     let vga = vgaemu::new(0x13);
 	//enable Mode X
@@ -36,11 +40,10 @@ fn main() -> Result<(), String> {
 
     let assets = Assets {
         map_headers: map_headers,
+        iw_config: iw_config,
     };
 
     init_game(&vga);
-
-    let config = config::load_wolf_config(&iw_config);
 
     let prj = game::new_projection_config(&config);
 
@@ -52,7 +55,7 @@ fn main() -> Result<(), String> {
     let input = input::init(Arc::new(time), input_monitoring.clone());
 
 	thread::spawn(move || { 
-        demo_loop(&render, &input, &prj, &assets, &iw_config);
+        demo_loop(&render, &input, &prj, &assets);
     });
 
 	let options: screen::Options = vgaemu::screen::Options {
@@ -69,15 +72,15 @@ fn init_game(vga: &vgaemu::VGA) {
     signon_screen(vga);
 }
 
-fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionConfig, assets: &Assets, iw_config: &config::IWConfig) {
-    if !iw_config.no_wait {
+fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionConfig, assets: &Assets) {
+    if !assets.iw_config.no_wait {
         pg_13(rdr, input);
     }
 
     let game_state = new_game_state();
 
     loop {
-        while !iw_config.no_wait { // title screen & demo loop
+        while !assets.iw_config.no_wait { // title screen & demo loop
             rdr.pic(0, 0, GraphicNum::TITLEPIC);
             rdr.fade_in();
             if input.user_input(time::TICK_BASE*15) {

@@ -1,7 +1,7 @@
 
 use super::vga_render::Renderer;
 use super::def::{GameState, WeaponType, Assets};
-use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
+use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic, load_map};
 use super::input;
 use super::time;
 use super::config;
@@ -75,6 +75,16 @@ fn setup_game_level(state: &GameState, assets: &Assets) -> Level {
 	let map = &assets.map_headers[state.map_on];
 	if map.width != 64 || map.height != 64 {
 		panic!("Map not 64*64!");
+	}
+
+	let map_data = load_map(assets, state.map_on);
+
+	//TODO uncompress map
+
+	for y in 0..map.height {
+		for x in 0..map.width {
+
+		}
 	}
 
 	let tile_map = [[0;MAP_SIZE];MAP_SIZE];

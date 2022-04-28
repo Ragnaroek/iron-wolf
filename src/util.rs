@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-// loads a file completly, panics if it cannot be found or read
+// loads a file completely, panics if it cannot be found or read
 pub fn load_file(path: &Path) -> Vec<u8> {
 	let mut file = File::open(path).unwrap();
 	let mut data = Vec::new();
@@ -54,5 +54,10 @@ impl DataReader<'_> {
 	pub fn read_bool(&mut self) -> bool {
 		let u = self.read_u16();
 		u != 0
+	}
+
+	// returns a slice over the bytes there were not read so far
+	pub fn unread_bytes(&self) -> &[u8] {
+		&self.data[self.offset..]
 	}
 }

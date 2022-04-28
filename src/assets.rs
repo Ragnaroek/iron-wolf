@@ -1,6 +1,7 @@
-use super::def::{WeaponType, MapType};
+use std::fs::{File};
+use std::io::{Seek, SeekFrom, Read};
+use super::def::{WeaponType, MapType, Assets, IWConfig};
 use super::util;
-use super::config::IWConfig;
 
 pub static GAMEPAL: &'static [u8] = include_bytes!("../assets/gamepal.bin");
 
@@ -11,6 +12,7 @@ pub static MAP_HEAD: &'static str = "MAPHEAD.WL6";
 pub static GAME_MAPS: &'static str = "GAMEMAPS.WL6";
 
 pub const NUM_MAPS: usize = 60;
+pub const MAP_PLANES: usize = 2;
 
 pub enum GraphicNum {
 	STATUSBARPIC = 86,
@@ -299,10 +301,87 @@ fn huff_expand(data: &[u8], len: usize, grhuffman: &Vec<Huffnode>) -> Vec<u8> {
 	expanded
 }
 
+// map stuff
+
 struct MapFileType {
 	pub rlew_tag: u16,
 	pub header_offsets: Vec<i32>,
 }
+
+pub struct MapData {
+
+}
+
+// load map and uncompress it
+pub fn load_map(assets: &Assets, mapnum: usize) -> Result<MapData, String> {
+
+	let mut file = File::open(&assets.iw_config.wolf3d_data.join(GAME_MAPS)).unwrap();
+
+	for plane in 0..MAP_PLANES {
+		let pos = assets.map_headers[mapnum].plane_start[plane];
+		let compressed = assets.map_headers[mapnum].plane_length[plane];
+		
+		let mut buf = vec![0; compressed as usize];
+		file.seek(SeekFrom::Start(pos as u64)).expect("map seek failed");
+		file.read_exact(&mut buf).expect("map read failed");
+
+		let mut reader = util::new_data_reader(&buf);
+		let expanded_len = reader.read_u16();		
+
+		let expanded = carmack_expand(reader.unread_bytes(), expanded_len as usize);
+
+		//TODO carmackexpand
+		//TODO RLEWexpand
+
+		println!("pos = {}, compressed = {}, expanded = {}", pos, compressed, expanded_len);
+	}
+
+
+	Ok(MapData{})
+	//Return value??
+}
+
+const NEARTAG : u8 = 0xa7;
+const FARTAG : u8 = 0xa8;
+
+pub fn carmack_expand(data: &[u8], len: usize) -> Vec<u8> {
+	let mut expanded = Vec::with_capacity(len);
+
+	let mut length = len / 2;
+	let mut in_ptr = 0;
+
+	while length != 0 {
+
+		let count = data[in_ptr];
+		let ch_high = data[in_ptr+1];
+		in_ptr += 2;
+
+		if ch_high == NEARTAG {
+			let offset = data[in_ptr+1];
+			in_ptr += 1;
+
+			if count == 0 {
+				expanded.push(offset);
+				length -= 1;
+			} else {
+				let mut copy_ptr = expanded.len() - offset as usize;
+				length -= count as usize;
+				for _ in 0..count {
+					expanded.push(expanded[copy_ptr]);
+					copy_ptr += 1;
+				}
+			}
+		} else {
+			//add word as is (destructured here as count and ch_high)
+			expanded.push(count);
+			expanded.push(ch_high);
+			length -= 1;
+		}
+	}
+
+	expanded
+}
+
 
 pub fn load_map_headers(config: &IWConfig) -> Result<Vec<MapType>, String> {
 	let offsets = load_map_offsets(config)?;

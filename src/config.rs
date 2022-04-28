@@ -1,17 +1,12 @@
 use std::path::Path;
 use super::util;
 use super::user;
+use super::def::{IWConfig};
 
 use vgaemu::input::{NumCode, to_numcode};
 
 pub static CONFIG_DATA: &'static str = "CONFIG.WL6";
 pub const MAX_SCORES : usize = 7;
-
-// iron-wolf specific configuration
-pub struct IWConfig {
-	pub wolf3d_data: &'static Path,
-    pub no_wait: bool,
-}
 
 pub fn load_iw_config() -> IWConfig {
     //TODO load from toml file
