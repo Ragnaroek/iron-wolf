@@ -79,8 +79,6 @@ fn setup_game_level(state: &GameState, assets: &Assets) -> Level {
 
 	let map_data = load_map(assets, state.map_on);
 
-	//TODO uncompress map
-
 	for y in 0..map.height {
 		for x in 0..map.width {
 
