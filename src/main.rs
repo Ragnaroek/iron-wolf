@@ -36,11 +36,12 @@ fn main() -> Result<(), String> {
 	vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
     let graphics = assets::load_all_graphics(&iw_config)?;
-    let map_headers = assets::load_map_headers(&iw_config)?;
+    let (map_offsets, map_headers) = assets::load_map_headers(&iw_config)?;
 
     let assets = Assets {
-        map_headers: map_headers,
-        iw_config: iw_config,
+        map_headers,
+        map_offsets,
+        iw_config,
     };
 
     init_game(&vga);
