@@ -18,6 +18,8 @@ pub struct GameState {
 	pub weapon: WeaponType,
 
 	pub face_frame: usize,
+
+	pub episode : usize,
 }
 
 pub struct MapType {

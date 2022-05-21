@@ -304,13 +304,15 @@ fn huff_expand(data: &[u8], len: usize, grhuffman: &Vec<Huffnode>) -> Vec<u8> {
 // map stuff
 
 pub struct MapData {
-
+	pub segs: [Vec<u8>; MAP_PLANES]
 }
 
 // load map and uncompress it
 pub fn load_map(assets: &Assets, mapnum: usize) -> Result<MapData, String> {
 
 	let mut file = File::open(&assets.iw_config.wolf3d_data.join(GAME_MAPS)).unwrap();
+
+	let mut segs = [Vec::with_capacity(0), Vec::with_capacity(0)];
 
 	for plane in 0..MAP_PLANES {
 		let pos = assets.map_headers[mapnum].plane_start[plane];
@@ -325,10 +327,10 @@ pub fn load_map(assets: &Assets, mapnum: usize) -> Result<MapData, String> {
 
 		let carmack_expanded = carmack_expand(reader.unread_bytes(), expanded_len as usize);
 		let expanded = rlew_expand(&carmack_expanded, 64*64*2, assets.map_offsets.rlew_tag);
-		println!("expanded len = {}", expanded.len());
+		segs[plane] = expanded;
 	}
 
-	Ok(MapData{}) // TODO return uncompressed map value
+	Ok(MapData{segs}) 
 }
 
 pub fn rlew_expand(source: &Vec<u8>, len: usize, rlew_tag: u16) -> Vec<u8> {
