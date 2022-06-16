@@ -1,9 +1,10 @@
 use std::path::Path;
-use super::util;
 use super::user;
 use super::def::{IWConfig};
+use super::util;
 
 use vgaemu::input::{NumCode, to_numcode};
+use libiw::util as iwutil;
 
 pub static CONFIG_DATA: &'static str = "CONFIG.WL6";
 pub const MAX_SCORES : usize = 7;
@@ -61,7 +62,7 @@ pub struct WolfConfig {
 
 pub fn load_wolf_config(config: &IWConfig) -> WolfConfig {
     let data = util::load_file(&config.wolf3d_data.join(CONFIG_DATA));
-    let mut reader = util::new_data_reader(&data);
+    let mut reader = iwutil::new_data_reader(&data);
 
     let mut high_scores = Vec::with_capacity(MAX_SCORES);
     

@@ -1,7 +1,6 @@
-
 use super::vga_render::Renderer;
-use super::def::{GameState, WeaponType, Assets};
-use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic, load_map};
+use super::def::{GameState, WeaponType, Assets, ObjStruct};
+use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic, load_map_from_assets};
 use super::input;
 use super::time;
 use super::config;
@@ -10,10 +9,21 @@ use super::vga_render;
 const STATUS_LINES : usize = 40;
 const HEIGHT_RATIO : f32 = 0.5;
 const SCREEN_WIDTH : usize = 80;
+const MAX_VIEW_WIDTH : usize = 320;
 
 const MAP_SIZE : usize = 64;
 
-const AREATILE : u8 = 107;	
+const AREATILE : u16 = 107;
+const NUMAREAS : u16 = 37;
+
+const FINE_ANGLES : i32 = 3600;
+const ANGLES : i32 = 360;
+
+const VIEW_GLOBAL : usize = 0x10000;
+const FOCAL_LENGTH : usize = 0x5700;
+const MIN_DIST : usize = 0x5800;
+
+const RAD_TO_INT : f32 = FINE_ANGLES as f32 / 2.0 / std::f32::consts::PI;
 
 static SCREENLOC : [usize; 3] = [vga_render::PAGE_1_START, vga_render::PAGE_2_START, vga_render::PAGE_3_START];
 
@@ -33,6 +43,7 @@ pub struct ProjectionConfig {
 	view_width: usize,
 	view_height: usize,
 	screenofs: usize,
+	pixelangle: [i32; MAX_VIEW_WIDTH],
 }
 
 pub fn new_game_state() -> GameState {
@@ -46,6 +57,9 @@ pub fn new_game_state() -> GameState {
 		weapon: WeaponType::Pistol,
 		face_frame: 0,
 		episode: 0,
+		player: ObjStruct{
+			angle: 0,
+		}
 	}
 }
 
@@ -54,12 +68,31 @@ pub fn new_projection_config(config: &config::WolfConfig) -> ProjectionConfig {
 	let view_height = ((((config.viewsize * 16) as f32 * HEIGHT_RATIO) as u16) & !1) as usize;
 	let screenofs = (200-STATUS_LINES-view_height)/2*SCREEN_WIDTH+(320-view_width)/8;
 	
+	let pixelangle = calc_pixelangle(FOCAL_LENGTH, view_width);
+
 	ProjectionConfig {
 		view_width,
 		view_height,
 		view_size: config.viewsize as usize,
 		screenofs,
+		pixelangle,
 	}
+}
+
+fn calc_pixelangle(focal: usize, view_width: usize) -> [i32; MAX_VIEW_WIDTH] {
+	let half_view = view_width/2;
+	let face_dist = (focal + MIN_DIST) as f32;
+
+	let mut pixelangles = [0; MAX_VIEW_WIDTH];
+
+	for i in 0..half_view {
+		let tang = (i * VIEW_GLOBAL / view_width) as f32 / face_dist;
+		let angle = (tang.atan() * RAD_TO_INT) as i32;
+		pixelangles[half_view-1-i] = angle;
+		pixelangles[half_view+i] = -angle;
+	}
+
+	pixelangles
 }
 
 #[derive(Copy, Clone)] // Keep this just for init of array with default??
@@ -75,7 +108,8 @@ struct Level {
 pub fn game_loop(state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
 	draw_play_screen(state, rdr, prj);
 	
-	let level = setup_game_level(state, assets);
+	let level = setup_game_level(state, assets).unwrap();
+	
 	//TODO StartMusic
 	//TODO PreloadGraphics
 
@@ -97,17 +131,34 @@ fn play_loop(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
 }
 
 fn three_d_refresh(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
+	rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
+
 	clear_screen(state, rdr, prj);
+
+	wall_refresh(state, prj);
 
 	rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
 
 	// TODO: increment buffer offset to next page
 }
 
+fn wall_refresh(state: &GameState, prj: &ProjectionConfig) {
+	
+	let midangle = state.player.angle * (FINE_ANGLES/ANGLES);
+	
+	for pixx in 0..prj.view_width {
+		let angle = midangle + prj.pixelangle[pixx];
+		
+		// compute xstep and ystep from angle!
+		// depending on case 0-90, 90-180, 180-270, ... one of xstep or ystep is always 1!!
+
+		// cast ray and see if it intersects with vertical or horizontal wall
+	}
+}
+
 // Clears the screen and already draws the bottom and ceiling
 fn clear_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
 	let ceil_color = VGA_CEILING[state.episode*10+state.map_on];
-	rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
 
 	let half = prj.view_height/2;
 	rdr.bar(0, 0, prj.view_width, half, ceil_color); 
@@ -121,7 +172,23 @@ fn setup_game_level(state: &GameState, assets: &Assets) -> Result<Level, String>
 		panic!("Map not 64*64!");
 	}
 
-	let map_data = load_map(assets, state.map_on)?;
+	let map_data = load_map_from_assets(assets, state.map_on)?;
+
+	for y in 0..64 {
+		print!("{:02} ", y);
+		for x in 0..64 {
+			let tile = map_data.segs[0][y*64+x];
+			if tile < AREATILE {
+				print!("{:02x}", tile);
+			} else if tile < (AREATILE+NUMAREAS) {
+				print!("  ");
+			} else {
+				print!("??");
+			}
+		}
+		println!();
+	}
+
 
 	let mut tile_map = [[0;MAP_SIZE];MAP_SIZE];
 	let actor_at = [[Objstruct{};MAP_SIZE];MAP_SIZE];
@@ -133,7 +200,7 @@ fn setup_game_level(state: &GameState, assets: &Assets) -> Result<Level, String>
 			map_ptr += 1;
 			//TODO assign actorat, but something strange is going on there in orginal code
 			if tile < AREATILE {
-				tile_map[x][y] = tile;
+				tile_map[x][y] = tile as u8;
 			} else {
 				tile_map[x][y] = 0;
 			}
