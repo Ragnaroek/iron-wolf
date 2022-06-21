@@ -1,5 +1,5 @@
 use super::vga_render::Renderer;
-use super::def::{GameState, WeaponType, Assets, ObjStruct};
+use super::def::{GameState, WeaponType, Assets, ObjType};
 use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic, load_map_from_assets};
 use super::input;
 use super::time;
@@ -15,6 +15,14 @@ const MAP_SIZE : usize = 64;
 
 const AREATILE : u16 = 107;
 const NUMAREAS : u16 = 37;
+
+const NORTH : i32 = 0;
+const EAST : i32 = 0;
+const SOUTH : i32 = 0;
+const WEST : i32 = 0;
+
+const TILESHIFT : u32 = 16;
+const TILEGLOBAL : u32 = 1<<16;
 
 const FINE_ANGLES : i32 = 3600;
 const ANGLES : i32 = 360;
@@ -56,10 +64,7 @@ pub fn new_game_state() -> GameState {
 		keys: 0,
 		weapon: WeaponType::Pistol,
 		face_frame: 0,
-		episode: 0,
-		player: ObjStruct{
-			angle: 0,
-		}
+		episode: 0
 	}
 }
 
@@ -95,14 +100,10 @@ fn calc_pixelangle(focal: usize, view_width: usize) -> [i32; MAX_VIEW_WIDTH] {
 	pixelangles
 }
 
-#[derive(Copy, Clone)] // Keep this just for init of array with default??
-struct Objstruct {
-
-}
-
 struct Level {
 	tile_map: [[u8;MAP_SIZE]; MAP_SIZE],
-	actor_at: [[Objstruct;MAP_SIZE]; MAP_SIZE],
+	actor_at: [[Option<ObjType>;MAP_SIZE]; MAP_SIZE],
+	player: ObjType,
 }
 
 pub fn game_loop(state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
@@ -144,8 +145,10 @@ fn three_d_refresh(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig
 
 fn wall_refresh(state: &GameState, prj: &ProjectionConfig) {
 	
-	let midangle = state.player.angle * (FINE_ANGLES/ANGLES);
+	//TODO take player angle from Level: level.player
+	//let midangle = state.player.angle * (FINE_ANGLES/ANGLES);
 	
+	let midangle = 0;
 	for pixx in 0..prj.view_width {
 		let angle = midangle + prj.pixelangle[pixx];
 		
@@ -168,37 +171,20 @@ fn clear_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
 fn setup_game_level(state: &GameState, assets: &Assets) -> Result<Level, String> {
 
 	let map = &assets.map_headers[state.map_on];
-	if map.width != 64 || map.height != 64 {
+	if map.width != MAP_SIZE as u16 || map.height != MAP_SIZE as u16 {
 		panic!("Map not 64*64!");
 	}
 
 	let map_data = load_map_from_assets(assets, state.map_on)?;
 
-	for y in 0..64 {
-		print!("{:02} ", y);
-		for x in 0..64 {
-			let tile = map_data.segs[0][y*64+x];
-			if tile < AREATILE {
-				print!("{:02x}", tile);
-			} else if tile < (AREATILE+NUMAREAS) {
-				print!("  ");
-			} else {
-				print!("??");
-			}
-		}
-		println!();
-	}
-
-
 	let mut tile_map = [[0;MAP_SIZE];MAP_SIZE];
-	let actor_at = [[Objstruct{};MAP_SIZE];MAP_SIZE];
+	let actor_at = [[None;MAP_SIZE];MAP_SIZE];
 
 	let mut map_ptr = 0;
-	for y in 0..(map.height as usize) {
-		for x in 0..(map.width as usize) {
+	for y in 0..MAP_SIZE {
+		for x in 0..MAP_SIZE {
 			let tile = map_data.segs[0][map_ptr];
 			map_ptr += 1;
-			//TODO assign actorat, but something strange is going on there in orginal code
 			if tile < AREATILE {
 				tile_map[x][y] = tile as u8;
 			} else {
@@ -207,10 +193,55 @@ fn setup_game_level(state: &GameState, assets: &Assets) -> Result<Level, String>
 		}
 	}
 
+	//TODO init_actor_list?
+	//TODO init_door_list?
+	//TODO init_static_list?
+
+	//TODO something with doors 90 to 101
+
+	let player = scan_info_plane(&map_data);
+
+	//TODO ambush markers
+
 	Ok(Level {
 		tile_map,
 		actor_at,
+		player,
 	})
+}
+
+//Returns the player object
+fn scan_info_plane(map_data: &libiw::map::MapData) -> ObjType {
+
+	let mut player = None;
+
+	let mut map_ptr = 0;
+	for y in 0..MAP_SIZE {
+		for x in 0..MAP_SIZE {
+			let tile = map_data.segs[1][map_ptr];
+			map_ptr += 1;
+			match tile {
+				19..=22 => player = Some(spawn_player(x, y, NORTH+(tile-19)as i32)),
+				_ => {},
+			}
+		}
+	}
+
+	if player.is_none() {
+		panic!("No player start position in map");
+	}
+
+	player.unwrap()
+}
+
+fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
+	ObjType{
+		angle: (1-dir)*90,
+		tilex,
+		tiley,
+		x: ((tilex as u32) << TILESHIFT) + TILEGLOBAL / 2,
+		y: ((tiley as u32) << TILESHIFT) + TILEGLOBAL / 2,
+	}
 }
 
 fn draw_play_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {

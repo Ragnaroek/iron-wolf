@@ -22,12 +22,15 @@ pub struct GameState {
 	pub face_frame: usize,
 
 	pub episode : usize,
-
-	pub player: ObjStruct,
 }
 
-pub struct ObjStruct {
+#[derive(Clone, Copy)]
+pub struct ObjType {
 	pub angle: i32,
+	pub tilex: usize,
+	pub tiley: usize,
+	pub x: u32,
+	pub y: u32,
 }
 
 // iron-wolf specific configuration
