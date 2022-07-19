@@ -26,7 +26,7 @@ pub struct GameState {
 
 #[derive(Clone, Copy)]
 pub struct ObjType {
-	pub angle: i32,
+	pub angle: f64, //in radian
 	pub tilex: usize,
 	pub tiley: usize,
 	pub x: u32,
