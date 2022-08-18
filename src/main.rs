@@ -16,6 +16,7 @@ use std::thread;
 
 use vgaemu::screen;
 use vgaemu::{SCReg};
+use libiw::assets::{GAMEPAL};
 
 use def::{Assets};
 use assets::{GraphicNum};
@@ -35,10 +36,14 @@ fn main() -> Result<(), String> {
     let graphics = assets::load_all_graphics(&iw_config)?;
     let (map_offsets, map_headers) = assets::load_map_headers_from_config(&iw_config)?;
 
+    let (gamedata, headers) = assets::load_gamedata(&iw_config)?;
+    let textures = assets::load_all_textures(&iw_config, &headers)?;
+
     let assets = Assets {
         map_headers,
         map_offsets,
         iw_config,
+        textures,
     };
 
     init_game(&vga);
@@ -66,7 +71,7 @@ fn main() -> Result<(), String> {
 }
 
 fn init_game(vga: &vgaemu::VGA) {
-    vl::set_palette(vga, assets::GAMEPAL);
+    vl::set_palette(vga, GAMEPAL);
     signon_screen(vga);
 }
 

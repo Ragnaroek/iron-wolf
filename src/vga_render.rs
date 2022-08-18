@@ -4,8 +4,9 @@ use std::thread;
 use std::time::Duration;
 
 use vgaemu::{CRTReg, SCReg, GeneralReg};
+use libiw::assets::{GAMEPAL};
 
-use super::assets::{Graphic, GraphicNum, GAMEPAL};
+use super::assets::{Graphic, GraphicNum};
 use super::vl;
 
 const MAXSCANLINES: usize = 200;
@@ -38,6 +39,9 @@ pub trait Renderer {
 	fn plot(&self, x: usize, y: usize, color: u8);
 	fn fade_out(&self);
 	fn fade_in(&self);
+
+
+    fn debug_pic(&self, data: &Vec<u8>);
 }
 
 pub struct VGARenderer {
@@ -192,6 +196,14 @@ impl Renderer for VGARenderer {
 		let graphic = &self.graphics[picnum as usize];
 		self.mem_to_screen(&graphic.data, graphic.width, graphic.height, x & !7, y);
 	}
+
+    fn debug_pic(&self, data: &Vec<u8>) {
+        for tex_y in 0..64 {
+            for tex_x in 0..64 {
+                self.plot(tex_x, tex_y, data[tex_x * 64+tex_y]);
+            }
+        }
+    }
 
 	fn fade_out(&self) {
 		vl::fade_out(&self.vga, 0, 255, 0, 0, 0, 30)

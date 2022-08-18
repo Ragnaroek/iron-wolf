@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use libiw::map::{MapType, MapFileType};
+use libiw::gamedata::{Texture};
 
 #[derive(Copy, Clone)]
 pub enum WeaponType {
@@ -44,4 +45,5 @@ pub struct Assets {
 	pub iw_config: IWConfig, // put here for convenience (mabye only put assets path here?)
 	pub map_headers: Vec<MapType>,
 	pub map_offsets: MapFileType,
+    pub textures: Vec<Texture>,
 }

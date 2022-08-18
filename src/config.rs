@@ -108,7 +108,8 @@ pub fn load_wolf_config(config: &IWConfig) -> WolfConfig {
     for i in 0..4 {
         buttonjoy[i] = to_numcode(reader.read_u16() as u8);
     }
-    let viewsize = reader.read_u16();
+    let mut viewsize = reader.read_u16();
+    viewsize = 19; //TODO this should be configurable in the menu
     let mouse_adjustment = reader.read_u16();
 
     WolfConfig {

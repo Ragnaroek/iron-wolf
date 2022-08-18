@@ -1,6 +1,7 @@
 use super::vga_render::Renderer;
 use super::def::{GameState, WeaponType, Assets, ObjType};
 use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic, load_map_from_assets};
+use libiw::gamedata::{Texture};
 use super::input;
 use super::time;
 use super::config;
@@ -29,6 +30,9 @@ const FINE_ANGLES : i32 = 3600;
 const VIEW_GLOBAL : usize = 0x10000;
 const FOCAL_LENGTH : usize = 0x5700;
 const MIN_DIST : usize = 0x5800;
+
+const TEXTURE_WIDTH : usize = 64;
+const TEXTURE_HEIGHT : usize = 64;
 
 const RAD_TO_INT : f32 = FINE_ANGLES as f32 / 2.0 / std::f32::consts::PI;
 
@@ -118,29 +122,36 @@ pub fn game_loop(state: &GameState, rdr: &dyn Renderer, input: &input::Input, pr
     
     rdr.fade_in();
 
-	play_loop(state, &mut level, rdr, prj);
+	play_loop(state, &mut level, rdr, prj, assets);
 
 	//TODO Go to next level (gamestate.map_on+=1)
 
 	input.user_input(time::TICK_BASE*1000);
 }
 
-fn play_loop(state: &GameState, level: &mut Level, rdr: &dyn Renderer, prj: &ProjectionConfig) {
+fn play_loop(state: &GameState, level: &mut Level, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
 	//TODO A lot to do here (clear palette, poll controls, prepare world)
     loop {
-        level.player.angle += 0.05;
+        level.player.angle += 0.025;
         if level.player.angle > 2.0 * std::f64::consts::PI {
             level.player.angle = 0.0;
         }
-	    three_d_refresh(state, level, rdr, prj);
+	    three_d_refresh(state, level, rdr, prj, assets);
+
+        let offset_prev = rdr.buffer_offset();
+        for i in 0..3 {
+            rdr.set_buffer_offset(SCREENLOC[i]);
+        } 
+        rdr.set_buffer_offset(offset_prev);
     }
 }
 
-fn three_d_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig) {
+fn three_d_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+
     rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
 
 	clear_screen(state, rdr, prj);
-    wall_refresh(state, level, rdr, prj);
+    wall_refresh(state, level, rdr, prj, assets);
 
 	rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
     rdr.activate_buffer(rdr.buffer_offset());
@@ -153,7 +164,7 @@ fn three_d_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &P
     rdr.set_buffer_offset(next_offset);
 }
 
-fn wall_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig) {
+fn wall_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
 
     let angle = level.player.angle;
     let dir_x = angle.cos() - angle.sin();
@@ -203,6 +214,7 @@ fn wall_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &Proj
 
         let mut hit = false;
         let mut side = 0;
+        let mut tile = 0;
 
         while !hit {
             if side_dist_x < side_dist_y {
@@ -214,7 +226,8 @@ fn wall_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &Proj
                 map_y += step_y;
                 side = 1;
             }
-            if level.tile_map[map_x as usize][map_y as usize] > 0 {
+            tile = level.tile_map[map_x as usize][map_y as usize];
+            if tile > 0 {
                 hit = true
             }
         }
@@ -224,7 +237,41 @@ fn wall_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &Proj
 
         let line_height = ((prj.view_height as f64 / perp_wall_dist) as usize).min(prj.view_height);
         let y = prj.view_height/2 - line_height/2;
-        rdr.vlin(x, y, line_height, 0x50);
+        
+        //texturing
+        let mut wall_x = if side == 0 { pos_y + perp_wall_dist * raydir_y } else { pos_x + perp_wall_dist + raydir_x};
+        wall_x -= f64::floor(wall_x);
+        let mut tex_x = (wall_x * TEXTURE_WIDTH as f64) as usize;
+        /* TODO not sure what this is for
+        if side == 0 && raydir_x > 0.0 || side == 1 && raydir_y < 0.0 {
+            tex_x = TEXTURE_WIDTH - tex_x - 1;
+        }*/
+
+        let step = TEXTURE_HEIGHT as f64 / line_height as f64;
+
+        let texture = if tile < 50 {
+            Some(&assets.textures[((tile - 1) * 2 + side) as usize])
+        } else {
+            //TODO totally only for test
+            None
+        };
+
+        let mut tex_y = 0.0;
+        for y_draw in y..(y+line_height) {
+            let pixel = if tile < 50 {
+                texture.unwrap().bytes[(tex_y as usize + tex_x * TEXTURE_WIDTH).min(4095)]
+            } else {
+                0x50
+            };
+            // TODO replace this with a faster? buffered draw
+            rdr.plot(x, y_draw, pixel);
+            tex_y += step;
+        }
+
+        /*
+        if x == prj.view_width-1 {
+            panic!("debug");
+        }*/
 	}
 }
 
