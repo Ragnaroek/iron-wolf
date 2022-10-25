@@ -27,11 +27,12 @@ pub struct GameState {
 
 #[derive(Clone, Copy)]
 pub struct ObjType {
-	pub angle: f64, //in radian
+	pub angle: u32,
+    pub pitch: u32,
 	pub tilex: usize,
 	pub tiley: usize,
-	pub x: u32,
-	pub y: u32,
+	pub x: i32,
+	pub y: i32,
 }
 
 // iron-wolf specific configuration

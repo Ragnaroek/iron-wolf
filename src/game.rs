@@ -1,40 +1,60 @@
 use super::vga_render::Renderer;
 use super::def::{GameState, WeaponType, Assets, ObjType};
 use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic, load_map_from_assets};
-use libiw::gamedata::{Texture};
+use libiw::gamedata::Texture;
 use super::input;
 use super::time;
 use super::config;
 use super::vga_render;
 
+const MIN_DIST : i32 = 0x4000;
+
 const STATUS_LINES : usize = 40;
 const HEIGHT_RATIO : f32 = 0.5;
 const SCREEN_WIDTH : usize = 80;
-const MAX_VIEW_WIDTH : usize = 320;
+
+const SCREEN_WIDTH_PIXEL : usize = 640;
+const SCREEN_HEIGHT_PIXEL : usize = 480;
 
 const MAP_SIZE : usize = 64;
 
 const AREATILE : u16 = 107;
-const NUMAREAS : u16 = 37;
 
 const NORTH : i32 = 0;
 const EAST : i32 = 0;
 const SOUTH : i32 = 0;
 const WEST : i32 = 0;
 
-const TILESHIFT : u32 = 16;
-const TILEGLOBAL : u32 = 1<<16;
+const TILESHIFT : i32 = 16;
+const TILEGLOBAL : i32 = 1<<16;
 
-const FINE_ANGLES : i32 = 3600;
+const FRAC_BITS : usize = 16;
+const FRAC_UNIT : usize = 1<<FRAC_BITS;
+
+const PI : f32 = 3.141592657;
+const ANGLES : i32 = 360;
+const ANGLE_TO_FINE_SHIFT : u32 = 19;
+const FINE_ANGLES : usize = 8192;
+const ANG90 : usize = FINE_ANGLES/4;
+const ANG180 : usize = ANG90*2;
+const ANG270 : usize = ANG90*3;
+const ANG360 : usize = ANG90*4;
+
+const ANGLE_45 : u32 = 0x20000000;
+const ANGLE_90 : u32 = ANGLE_45*2;
+const ANGLE_180 : u32 = ANGLE_45*4;
+const ANGLE_1 : u32 = ANGLE_45/45;
+
+const NUM_FINE_TANGENTS : usize = FINE_ANGLES/2 + ANG180;
+const NUM_FINE_SINES : usize = FINE_ANGLES+ANG90;
 
 const VIEW_GLOBAL : usize = 0x10000;
-const FOCAL_LENGTH : usize = 0x5700;
-const MIN_DIST : usize = 0x5800;
+const FOCAL_LENGTH : i32 = 0x5700;
 
 const TEXTURE_WIDTH : usize = 64;
 const TEXTURE_HEIGHT : usize = 64;
 
-const RAD_TO_INT : f32 = FINE_ANGLES as f32 / 2.0 / std::f32::consts::PI;
+const RAD_TO_INT : f64 = FINE_ANGLES as f64 / 2.0 / std::f64::consts::PI;
 
 static SCREENLOC : [usize; 3] = [vga_render::PAGE_1_START, vga_render::PAGE_2_START, vga_render::PAGE_3_START];
 
@@ -54,7 +74,11 @@ pub struct ProjectionConfig {
 	view_width: usize,
 	view_height: usize,
 	screenofs: usize,
-	pixelangle: [i32; MAX_VIEW_WIDTH],
+    height_numerator: i32,
+	pixelangle: Vec<i32>,
+    fine_sines: Vec<i32>,
+    fine_tangents: [i32; NUM_FINE_TANGENTS],
+    focal_length_y: i32,
 }
 
 pub fn new_game_state() -> GameState {
@@ -75,32 +99,85 @@ pub fn new_projection_config(config: &config::WolfConfig) -> ProjectionConfig {
 	let view_width = ((config.viewsize * 16) & !15) as usize;
 	let view_height = ((((config.viewsize * 16) as f32 * HEIGHT_RATIO) as u16) & !1) as usize;
 	let screenofs = (200-STATUS_LINES-view_height)/2*SCREEN_WIDTH+(320-view_width)/8;
-	
-	let pixelangle = calc_pixelangle(FOCAL_LENGTH, view_width);
+
+    let projection_fov = VIEW_GLOBAL as f64;
+    let face_dist = 2.0 * FOCAL_LENGTH as f64 + 0x100 as f64;
+
+	let pixelangle = calc_pixelangle(view_width, projection_fov, face_dist);
+    let fine_sines = calc_fine_sines();
+    let fine_tangents = calc_fine_tangents();
+
+    let center_x = view_width/2-1;
+    let y_aspect = fixed_mul((320<<FRAC_BITS)/200, ((SCREEN_HEIGHT_PIXEL<<FRAC_BITS)/SCREEN_WIDTH_PIXEL) as i32);
+    let focal_length_y = center_x as i32 * y_aspect/fine_tangents[FINE_ANGLES/2+(ANGLE_45 >> ANGLE_TO_FINE_SHIFT) as usize];
+
+    let scale = (view_width as f64 *face_dist/projection_fov) as i32;
+    let height_numerator = fixed_mul((TILEGLOBAL*scale)>>6, y_aspect);
 
 	ProjectionConfig {
 		view_width,
 		view_height,
 		view_size: config.viewsize as usize,
 		screenofs,
+        height_numerator,
 		pixelangle,
+        fine_sines,
+        fine_tangents,
+        focal_length_y,
 	}
 }
 
-fn calc_pixelangle(focal: usize, view_width: usize) -> [i32; MAX_VIEW_WIDTH] {
+fn calc_fine_tangents() -> [i32; NUM_FINE_TANGENTS] {
+    let mut tangents = [0; NUM_FINE_TANGENTS];
+
+    for i in 0..FINE_ANGLES/8 {
+        let tang = ((i as f64 +0.5)/RAD_TO_INT).tan();
+        let t = (tang * FRAC_UNIT as f64) as i32;
+        tangents[i] = t;
+        tangents[i+FINE_ANGLES/2] = t;
+        tangents[FINE_ANGLES/4-1-i] = ((1.0/tang)*FRAC_UNIT as f64) as i32;
+        tangents[FINE_ANGLES/4+i]=-tangents[FINE_ANGLES/4-1-i];
+        tangents[FINE_ANGLES/2-1-i]=-tangents[i];
+    }
+    let mut src = 0;
+    for i in FINE_ANGLES/2..FINE_ANGLES {
+        tangents[i] = tangents[src];
+        src += 1;
+    }
+
+    tangents
+}
+
+fn calc_pixelangle(view_width: usize, projection_fov: f64, face_dist: f64) -> Vec<i32> {
 	let half_view = view_width/2;
-	let face_dist = (focal + MIN_DIST) as f32;
 
-	let mut pixelangles = [0; MAX_VIEW_WIDTH];
+	let mut pixelangles = vec![0; view_width as usize]; 
 
-	for i in 0..half_view {
-		let tang = (i * VIEW_GLOBAL / view_width) as f32 / face_dist;
+	for i in 0..(half_view+1) {
+		let tang = (((i as f64 + 0.5) * projection_fov) / view_width as f64) / face_dist;
 		let angle = (tang.atan() * RAD_TO_INT) as i32;
-		pixelangles[half_view-1-i] = angle;
-		pixelangles[half_view+i] = -angle;
+        pixelangles[half_view-i] = angle;
+		pixelangles[half_view-1+i] = -angle;
 	}
 
 	pixelangles
+}
+
+fn calc_fine_sines() -> Vec<i32> {
+	let mut angle : f32 = 0.0;
+	let angle_step = PI/2.0/ANG90 as f32;
+
+    let mut fine_sines = vec![0; FINE_ANGLES+FINE_ANGLES/4];
+
+    for i in 0..FINE_ANGLES {
+        fine_sines[i]= (FRAC_UNIT as f32 * angle.sin()) as i32;
+        angle += angle_step;
+    }
+    //copy cosine value into the Vec (cosines are represented as a shift in the sine table)
+    for i in 0..(FINE_ANGLES/4) {
+        fine_sines[i+FINE_ANGLES] = fine_sines[i];
+    }
+    fine_sines
 }
 
 struct Level {
@@ -114,7 +191,7 @@ pub fn game_loop(state: &GameState, rdr: &dyn Renderer, input: &input::Input, pr
 	
     // TODO do player 
 	let mut level = setup_game_level(state, assets).unwrap();
-	
+
 	//TODO StartMusic
 	//TODO PreloadGraphics
 
@@ -132,10 +209,10 @@ pub fn game_loop(state: &GameState, rdr: &dyn Renderer, input: &input::Input, pr
 fn play_loop(state: &GameState, level: &mut Level, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
 	//TODO A lot to do here (clear palette, poll controls, prepare world)
     loop {
-        level.player.angle += 0.025;
-        if level.player.angle > 2.0 * std::f64::consts::PI {
-            level.player.angle = 0.0;
-        }
+        //level.player.angle += 0.025;
+        //if level.player.angle > 2.0 * std::f64::consts::PI {
+        //    level.player.angle = 0.0;
+        //}
 	    three_d_refresh(state, level, rdr, prj, assets);
 
         let offset_prev = rdr.buffer_offset();
@@ -151,7 +228,7 @@ fn three_d_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &P
     rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
 
 	clear_screen(state, rdr, prj);
-    wall_refresh(state, level, rdr, prj, assets);
+    wall_refresh(level, rdr, prj, assets);
 
 	rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
     rdr.activate_buffer(rdr.buffer_offset());
@@ -164,115 +241,283 @@ fn three_d_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &P
     rdr.set_buffer_offset(next_offset);
 }
 
-fn wall_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+#[derive(Debug)]
+enum Hit {
+    VerticalBorder,
+    HorizontalBorder,
+    VerticalWall,
+    HorizontalWall,
+}
 
-    let angle = level.player.angle;
-    let dir_x = angle.cos() - angle.sin();
-    let dir_y = angle.sin() + angle.cos();
-    
-    let plane_x_start = 0.0;
-    let plane_y_start = 0.66;
-    let plane_x = plane_x_start * angle.cos() - plane_y_start * angle.sin();
-    let plane_y = plane_x_start * angle.sin() + plane_y_start * angle.cos(); 
+struct RayCast {
+    tile_hit: u8,
+    hit: Hit, 
+    y_tile: i32,
+    x_tile: i32,
+    y_intercept: i32,
+    x_intercept: i32,
+    x_spot: [i32; 2],
+    y_spot: [i32; 2],
+    x_tilestep: i32,
+    y_tilestep: i32,
+    x_step: i32,
+    y_step: i32,
+}
 
-    //TODO player.x, player.y contains very high numbers (wolf internal float format?) 
-    let pos_x = level.player.tilex as f64; //TODO use real player position here
-    let pos_y = level.player.tiley as f64;
+enum Dir {
+    Vertical,
+    Horizontal,
+}
 
-	for x in 0..prj.view_width {
-        //TODO remove pixelangle??? since the project is simpler in iron-wolf
+impl RayCast {
+    fn cast(&mut self, level: &Level) {
+        let mut dir = Dir::Vertical;
+        loop {
+            match dir {
+                Dir::Vertical => {
+                    if self.y_tilestep == -1 && (self.y_intercept>>16)<=self.y_tile || self.y_tilestep == 1 && (self.y_intercept>>16)>=self.y_tile {
+                        dir = Dir::Horizontal
+                    }
+                }
+                Dir::Horizontal => {
+                    if self.x_tilestep == -1 && (self.x_intercept>>16)<=self.x_tile || self.x_tilestep == 1 && (self.x_intercept>>16)>=self.x_tile {
+                        dir = Dir::Vertical
+                    }
+                } 
+            }
 
-        let camera_x = 2.0 * x as f64 / prj.view_width as f64 - 1.0;        
-        let raydir_x = dir_x + plane_x * camera_x;
-        let raydir_y = dir_y + plane_y * camera_x;
-
-        let delta_dist_x = if raydir_x == 0.0 { f64::MAX } else {(1.0 / raydir_x).abs()};
-        let delta_dist_y = if raydir_y == 0.0 { f64::MAX } else {(1.0 / raydir_y).abs()};
-
-        let mut side_dist_x : f64;
-        let mut side_dist_y : f64;
-
-        let mut map_x = level.player.tilex as i64;
-        let mut map_y = level.player.tiley as i64;
-
-        let step_x : i64;
-        let step_y : i64;
-        if raydir_x < 0.0 {
-            step_x = -1;
-            side_dist_x = (pos_x - map_x as f64) + delta_dist_x;
-        } else {
-            step_x = 1;
-            side_dist_x = (map_x as f64 + 1.0 - pos_x) * delta_dist_x;
+            if match dir {
+                Dir::Vertical => self.vert_entry(level),
+                Dir::Horizontal => self.horiz_entry(level),
+            } {
+                break;
+            }
         }
-        if raydir_y < 0.0 {
-            step_y = -1;
-            side_dist_y = (pos_y - map_y as f64) * delta_dist_y;
-        } else {
-            step_y = 1;
-            side_dist_y = (map_y as f64 + 1.0 - pos_y) + delta_dist_y;
-        }
+    }
 
-        let mut hit = false;
-        let mut side = 0;
-        let mut tile = 0;
-
-        while !hit {
-            if side_dist_x < side_dist_y {
-                side_dist_x += delta_dist_x;
-                map_x += step_x;
-                side = 0;
+    fn vert_entry(&mut self, level: &Level) -> bool {
+        if self.y_intercept > (MAP_SIZE*65536-1) as i32 || self.x_tile >= MAP_SIZE as i32 {
+            if self.x_tile < 0 {
+                self.x_intercept = 0;
+                self.x_tile = 0;
+            } else if self.x_tile >= MAP_SIZE as i32 {
+                self.x_intercept = (MAP_SIZE as i32) << TILESHIFT;
+                self.x_tile = MAP_SIZE as i32 - 1;
             } else {
-                side_dist_y += delta_dist_y;
-                map_y += step_y;
-                side = 1;
+                self.x_tile = self.x_intercept >> TILESHIFT;
             }
-            tile = level.tile_map[map_x as usize][map_y as usize];
-            if tile > 0 {
-                hit = true
+
+            if self.y_intercept < 0 {
+                self.y_intercept = 0;
+                self.y_tile = 0;
+            } else if self.y_intercept >= (MAP_SIZE as i32) << TILESHIFT {
+                self.y_intercept = (MAP_SIZE as i32) << TILESHIFT;
+                self.y_tile = MAP_SIZE as i32 - 1;
             }
+            self.y_spot[0] = 0xffff;
+            self.tile_hit = 0;
+            self.hit = Hit::HorizontalBorder;
+            return true;
         }
+        if self.x_spot[0] >= MAP_SIZE as i32 || self.x_spot[1] >= MAP_SIZE as i32 {
+            return true;
+        }
+        self.tile_hit = level.tile_map[self.x_spot[0] as usize][self.x_spot[1] as usize];
+        if self.tile_hit != 0 {
+            //TODO Ignored tile.offsetVertical and pushWall handling here!
+            self.x_intercept = self.x_tile << TILESHIFT;
+            self.y_tile = self.y_intercept >> TILESHIFT;
+            self.hit = Hit::VerticalWall;
+            return true;
+        }
+        self.x_tile += self.x_tilestep;
+        self.y_intercept += self.y_step;
+        self.x_spot[0] = self.x_tile;
+        self.x_spot[1] = self.y_intercept >> 16;
+        false
+    }
 
-        let perp_wall_dist = 
-        if side == 0 {side_dist_x - delta_dist_x} else {side_dist_y - delta_dist_y};
+    fn horiz_entry(&mut self, level: &Level) -> bool {
+        if self.x_intercept > (MAP_SIZE*65536-1) as i32 || self.y_tile >= MAP_SIZE as i32  {
+            if self.y_tile < 0 {
+                self.y_intercept=0;
+                self.y_tile=0;
+            } else if self.y_tile >= MAP_SIZE as i32 {
+                self.y_intercept = (MAP_SIZE as i32) << TILESHIFT;
+                self.y_tile=MAP_SIZE as i32 - 1;
+            } else {
+                self.y_tile = self.y_intercept >> TILESHIFT;
+            }
 
-        let line_height = ((prj.view_height as f64 / perp_wall_dist) as usize).min(prj.view_height);
-        let y = prj.view_height/2 - line_height/2;
+            if self.x_intercept < 0 {
+                self.x_intercept = 0;
+                self.x_tile = 0;
+            } else if self.x_intercept >= (MAP_SIZE as i32) << TILESHIFT {
+                self.x_intercept = (MAP_SIZE as i32) << TILESHIFT;
+                self.x_tile = MAP_SIZE as i32 - 1;
+            }
+
+            self.x_spot[0] = 0xffff;
+            self.tile_hit = 0;
+            self.hit = Hit::VerticalBorder;
+            return true;
+        }
+        if self.y_spot[0]>=MAP_SIZE as i32 || self.y_spot[1]>=MAP_SIZE as i32 {
+            return true;
+        }
+        self.tile_hit = level.tile_map[self.y_spot[0] as usize][self.y_spot[1] as usize];
+        if self.tile_hit != 0 {
+            //TODO Ignored tile.offsetHorizontal and pushWall handling here!
+            self.y_intercept = self.y_tile<<TILESHIFT;
+            self.x_tile = self.x_intercept >> TILESHIFT;
+            self.hit = Hit::HorizontalWall;
+            return true;
+        }
+        //passhoriz
+        self.y_tile += self.y_tilestep;
+        self.x_intercept += self.x_step;
+        self.y_spot[0] = self.x_intercept >> 16;
+        self.y_spot[1] = self.y_tile;
+        false
+    }
+}
+
+fn wall_refresh(level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+    let view_angle = level.player.angle;
+    let mid_angle = view_angle >> ANGLE_TO_FINE_SHIFT;
+    let view_sin = prj.fine_sines[(view_angle >> ANGLE_TO_FINE_SHIFT) as usize];
+    let view_cos = prj.fine_sines[((view_angle >> ANGLE_TO_FINE_SHIFT) + ANG90 as u32) as usize ];
+    let view_x = level.player.x - fixed_mul(FOCAL_LENGTH as i32, view_cos);
+    let view_y = level.player.y + fixed_mul(FOCAL_LENGTH as i32, view_sin);
+
+    let focal_tx = view_x >> TILESHIFT;
+    let focal_ty = view_y >> TILESHIFT;
+
+    let view_tx = level.player.x >> TILESHIFT;
+    let view_ty = level.player.y >> TILESHIFT;
+
+    let x_partialdown = view_x&(TILEGLOBAL-1);
+    let x_partialup = TILEGLOBAL-x_partialdown;
+    let y_partialdown = view_y&(TILEGLOBAL-1);
+    let y_partialup = TILEGLOBAL-y_partialdown;
+
+    let mid_wallheight = prj.view_height;
+    let lastside = -1;
+    let view_shift = fixed_mul(prj.focal_length_y, prj.fine_tangents[(ANGLE_180 + level.player.pitch >> ANGLE_TO_FINE_SHIFT) as usize]);
+
+    let mut x_partial = 0;
+    let mut y_partial = 0;
+
+    //asm_refresh / ray casting core loop
+    let mut rc = RayCast{tile_hit: 0, hit: Hit::VerticalBorder, 
+        x_intercept:0, y_intercept:0, 
+        x_tile: 0, y_tile:0,
+        x_tilestep: 0, y_tilestep: 0,
+        x_step: 0, y_step: 0, 
+        x_spot: [0, 0], y_spot: [0, 0]};
+
+    for pixx in 0..prj.view_width {
+        let mut angl=mid_angle as i32 + prj.pixelangle[pixx];
+        if angl<0 {
+            angl+=FINE_ANGLES as i32;
+        }
+        if angl>=ANG360 as i32 {
+            angl-=FINE_ANGLES as i32;
+        }
+        if angl<ANG90 as i32 {
+            rc.x_tilestep = 1;
+            rc.y_tilestep = -1;
+            rc.x_step = prj.fine_tangents[ANG90-1-angl as usize];
+            rc.y_step = -prj.fine_tangents[angl as usize];
+            x_partial = x_partialup;
+            y_partial = y_partialdown;
+        } else if angl<ANG180 as i32 {
+            rc.x_tilestep = -1;
+            rc.y_tilestep = -1;
+            rc.x_step = -prj.fine_tangents[angl as usize -ANG90];
+            rc.y_step = -prj.fine_tangents[ANG180-1-angl as usize];
+            x_partial=x_partialdown;
+            y_partial=y_partialdown;
+        } else if angl<ANG270 as i32 {
+            rc.x_tilestep = -1;
+            rc.y_tilestep = 1;
+            rc.x_step = -prj.fine_tangents[ANG270-1-angl as usize];
+            rc.y_step = prj.fine_tangents[angl as usize - ANG180 as usize];
+            x_partial=x_partialup;
+            y_partial=y_partialup; 
+        } else if angl<ANG360 as i32 {
+            rc.x_tilestep = 1;
+            rc.y_tilestep = 1;
+            rc.x_step = prj.fine_tangents[angl as usize - ANG270];
+            rc.y_step = prj.fine_tangents[ANG360-1-angl as usize];
+            x_partial=x_partialup;
+            y_partial=y_partialup;
+        }
+        rc.y_intercept = fixed_mul(rc.y_step,x_partial)+view_y;
+        rc.x_tile = focal_tx+rc.x_tilestep;
+        rc.x_spot[0] = rc.x_tile;
+        rc.x_spot[1] = rc.y_intercept >> 16;
+        rc.x_intercept = fixed_mul(rc.x_step, y_partial) + view_x;
+        rc.y_tile = focal_ty + rc.y_tilestep;
+        rc.y_spot[0] = rc.x_intercept>>16;
+        rc.y_spot[1] = rc.y_tile;
+        let tex_delta = 0;
+
+        rc.cast(level);
         
-        //texturing
-        let mut wall_x = if side == 0 { pos_y + perp_wall_dist * raydir_y } else { pos_x + perp_wall_dist + raydir_x};
-        wall_x -= f64::floor(wall_x);
-        let mut tex_x = (wall_x * TEXTURE_WIDTH as f64) as usize;
-        /* TODO not sure what this is for
-        if side == 0 && raydir_x > 0.0 || side == 1 && raydir_y < 0.0 {
-            tex_x = TEXTURE_WIDTH - tex_x - 1;
-        }*/
+        let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, view_x, view_y, view_cos, view_sin);
+       
+        let side = match rc.hit {
+            Hit::HorizontalBorder|Hit::HorizontalWall => 0,
+            Hit::VerticalBorder|Hit::VerticalWall => 1,
+        };
+       
+        let post_src = match rc.hit {
+            Hit::HorizontalBorder|Hit::HorizontalWall => (rc.x_intercept>>4)&0xFC0,
+            Hit::VerticalBorder|Hit::VerticalWall => (rc.y_intercept>>4)&0xFC0,
+        };
 
-        let step = TEXTURE_HEIGHT as f64 / line_height as f64;
-
-        let texture = if tile < 50 {
-            Some(&assets.textures[((tile - 1) * 2 + side) as usize])
+        let texture = if rc.tile_hit < 50 {
+            Some(&assets.textures[((rc.tile_hit - 1) * 2 + side) as usize])
         } else {
             //TODO totally only for test
             None
         };
 
-        let mut tex_y = 0.0;
-        for y_draw in y..(y+line_height) {
-            let pixel = if tile < 50 {
-                texture.unwrap().bytes[(tex_y as usize + tex_x * TEXTURE_WIDTH).min(4095)]
-            } else {
-                0x50
-            };
-            // TODO replace this with a faster? buffered draw
-            rdr.plot(x, y_draw, pixel);
-            tex_y += step;
-        }
+        draw_scaled(pixx, post_src, height, prj.view_height as i32, texture, rdr);
+    }
+}
 
-        /*
-        if x == prj.view_width-1 {
-            panic!("debug");
-        }*/
-	}
+fn draw_scaled(x: usize, post_src: i32, height: i32, view_height: i32, texture: Option<&Texture>, rdr: &dyn Renderer) {
+    //TODO use the exact copy statements as the compiled scalers do!
+    let line_height = (height as f64 / 512.0 * view_height as f64) as i32;
+    let step = TEXTURE_HEIGHT as f64 / line_height as f64;
+   
+    let y = view_height/2 - line_height/2;
+
+    let mut src = post_src as f64;
+    for y_draw in y..(y+line_height) {
+        let pixel = if let Some(tex) = texture {
+            tex.bytes[src as usize]
+        } else {
+            0x50
+        };
+        // TODO replace this with a faster? buffered draw
+        rdr.plot(x, y_draw as usize, pixel);
+        src += step;
+    }
+}
+
+fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, view_x: i32, view_y: i32, view_cos: i32, view_sin: i32) -> i32 {
+    let mut z = fixed_mul(x_intercept-view_x, view_cos) - fixed_mul(y_intercept - view_y, view_sin);
+    if z < MIN_DIST {
+         z = MIN_DIST;
+    }
+    (height_numerator << 8) / z
+}
+
+fn fixed_mul(a: i32, b: i32) -> i32 {
+    ((a as i64 * b as i64) + 0x8000 >> 16) as i32
 }
 
 // Clears the screen and already draws the bottom and ceiling
@@ -285,7 +530,6 @@ fn clear_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
 }
 
 fn setup_game_level(state: &GameState, assets: &Assets) -> Result<Level, String> {
-
 	let map = &assets.map_headers[state.map_on];
 	if map.width != MAP_SIZE as u16 || map.height != MAP_SIZE as u16 {
 		panic!("Map not 64*64!");
@@ -293,6 +537,7 @@ fn setup_game_level(state: &GameState, assets: &Assets) -> Result<Level, String>
 
 	let map_data = load_map_from_assets(assets, state.map_on)?;
 
+    //TODO Do not allocate this on the stack
 	let mut tile_map = [[0;MAP_SIZE];MAP_SIZE];
 	let actor_at = [[None;MAP_SIZE];MAP_SIZE];
 
@@ -351,13 +596,23 @@ fn scan_info_plane(map_data: &libiw::map::MapData) -> ObjType {
 }
 
 fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
-	ObjType{
-		angle: 0.0,
+    let mut angle = (1-dir)*90;
+    if angle == 0 {
+        angle = 360
+    }
+    if angle < 0 {
+        angle += ANGLES;
+    }
+
+	let r = ObjType{
+		angle: angle as u32 * ANGLE_1, 
+        pitch: 0,
 		tilex,
 		tiley,
-		x: ((tilex as u32) << TILESHIFT) + TILEGLOBAL / 2,
-		y: ((tiley as u32) << TILESHIFT) + TILEGLOBAL / 2,
-	}
+		x: ((tilex as i32) << TILESHIFT) + TILEGLOBAL / 2,
+		y: ((tiley as i32) << TILESHIFT) + TILEGLOBAL / 2,
+	};
+    r
 }
 
 fn draw_play_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
