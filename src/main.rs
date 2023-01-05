@@ -86,14 +86,14 @@ fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionCon
         while !assets.iw_config.no_wait { // title screen & demo loop
             rdr.pic(0, 0, GraphicNum::TITLEPIC);
             rdr.fade_in();
-            if input.user_input(time::TICK_BASE*15) {
+            if input.wait_user_input(time::TICK_BASE*15) {
                 break;
             }
             rdr.fade_out();
 
             rdr.pic(0,0, GraphicNum::CREDITSPIC);
             rdr.fade_in();
-            if input.user_input(time::TICK_BASE*10) {
+            if input.wait_user_input(time::TICK_BASE*10) {
                 break;
             }
             rdr.fade_out();
@@ -139,6 +139,6 @@ fn pg_13(rdr: &dyn Renderer, input: &input::Input) {
     rdr.pic(216, 110, GraphicNum::PG13PIC);
     
     rdr.fade_in();
-    input.user_input(time::TICK_BASE*7);
+    input.wait_user_input(time::TICK_BASE*7);
     rdr.fade_out();
 }
