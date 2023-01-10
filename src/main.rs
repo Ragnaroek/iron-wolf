@@ -54,11 +54,12 @@ fn main() -> Result<(), String> {
 
     let vga_screen = Arc::new(vga);
     let render = vga_render::init(vga_screen.clone(), graphics);
-    let time = time::new();
+    let time = time::new_time_count();
+    let ticker = time::new_ticker(time.clone());
     let input = input::init(time.clone(), input_monitoring.clone());
 
 	thread::spawn(move || { 
-        demo_loop(&render, &input, &prj, &assets);
+        demo_loop(ticker, &render, &input, &prj, &assets);
     });
 
 	let options: screen::Options = vgaemu::screen::Options {
@@ -76,12 +77,10 @@ fn init_game(vga: &vgaemu::VGA) {
     signon_screen(vga);
 }
 
-fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets) {
+fn demo_loop(ticker: time::Ticker, rdr: &dyn Renderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets) {
     if !assets.iw_config.no_wait {
         pg_13(rdr, input);
     }
-
-    let game_state = new_game_state();
 
     loop {
         while !assets.iw_config.no_wait { // title screen & demo loop
@@ -103,7 +102,8 @@ fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &play::ProjectionCon
             //TODO PlayDemo() here
         }
 
-        play::game_loop(&game_state, rdr, input, prj, assets);
+        let game_state = new_game_state();
+        play::game_loop(&ticker, &game_state, rdr, input, prj, assets);
         rdr.fade_out();
     }
 }

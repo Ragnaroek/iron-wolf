@@ -1,4 +1,4 @@
-use super::time::{TimeCount, count};
+use super::time::{TimeCount, get_count};
 use vgaemu::input;
 
 pub struct Input {
@@ -12,14 +12,14 @@ pub fn init(time: TimeCount, input_monitoring: input::InputMonitoring ) -> Input
 
 impl Input {
 	pub fn wait_user_input(&self, delay: u64) -> bool {
-		let last_count = count(&self.time);
+		let last_count = get_count(&self.time);
 		self.input_monitoring.clear_keyboard();
 		loop {
 			if self.input_monitoring.any_key_pressed() {
 				return true;
 			}
 
-			if count(&self.time) - last_count > delay {
+			if get_count(&self.time) - last_count > delay {
 				break;
 			}
 		}
