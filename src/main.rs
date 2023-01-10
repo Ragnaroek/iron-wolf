@@ -5,7 +5,7 @@ pub mod vl;
 pub mod config;
 pub mod input;
 pub mod time;
-pub mod game;
+pub mod play;
 pub mod user;
 pub mod util;
 
@@ -20,7 +20,7 @@ use libiw::assets::{GAMEPAL};
 
 use def::{Assets};
 use assets::{GraphicNum};
-use game::{new_game_state};
+use play::{new_game_state};
 use vga_render::Renderer;
 
 fn main() -> Result<(), String> {
@@ -48,14 +48,14 @@ fn main() -> Result<(), String> {
 
     init_game(&vga);
 
-    let prj = game::new_projection_config(&config);
+    let prj = play::new_projection_config(&config);
 
     let input_monitoring = vgaemu::input::new_input_monitoring();
 
     let vga_screen = Arc::new(vga);
     let render = vga_render::init(vga_screen.clone(), graphics);
-    let time = time::init();
-    let input = input::init(Arc::new(time), input_monitoring.clone());
+    let time = time::new();
+    let input = input::init(time.clone(), input_monitoring.clone());
 
 	thread::spawn(move || { 
         demo_loop(&render, &input, &prj, &assets);
@@ -64,6 +64,7 @@ fn main() -> Result<(), String> {
 	let options: screen::Options = vgaemu::screen::Options {
 		show_frame_rate: true,
         input_monitoring: Some(input_monitoring),
+        frame_count: time.clone(),
 		..Default::default()
 	};
 	screen::start(vga_screen, options).unwrap();
@@ -75,7 +76,7 @@ fn init_game(vga: &vgaemu::VGA) {
     signon_screen(vga);
 }
 
-fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionConfig, assets: &Assets) {
+fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets) {
     if !assets.iw_config.no_wait {
         pg_13(rdr, input);
     }
@@ -102,7 +103,7 @@ fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionCon
             //TODO PlayDemo() here
         }
 
-        game::game_loop(&game_state, rdr, input, prj, assets);
+        play::game_loop(&game_state, rdr, input, prj, assets);
         rdr.fade_out();
     }
 }
