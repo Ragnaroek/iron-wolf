@@ -1,12 +1,13 @@
 use super::vga_render::Renderer;
-use super::def::{GameState, WeaponType, Assets, ObjType};
-use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic, load_map_from_assets};
+use super::def::{GameState, WeaponType, Assets, Level, LevelState, MAP_SIZE};
+use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
 use libiw::gamedata::Texture;
 use vgaemu::input::NumCode;
 use super::input;
 use super::time;
 use super::config;
 use super::vga_render;
+use super::game::{setup_game_level, TILESHIFT, TILEGLOBAL, ANGLE_45, ANGLE_180, ANGLES};
 
 //TODO separate draw.c stuff from play.c stuff in here
 
@@ -19,34 +20,17 @@ const SCREEN_WIDTH : usize = 80;
 const SCREEN_WIDTH_PIXEL : usize = 640;
 const SCREEN_HEIGHT_PIXEL : usize = 480;
 
-const MAP_SIZE : usize = 64;
-
-const AREATILE : u16 = 107;
-
-const NORTH : i32 = 0;
-const EAST : i32 = 0;
-const SOUTH : i32 = 0;
-const WEST : i32 = 0;
-
-const TILESHIFT : i32 = 16;
-const TILEGLOBAL : i32 = 1<<16;
-
 const FRAC_BITS : usize = 16;
 const FRAC_UNIT : usize = 1<<FRAC_BITS;
 
 const PI : f32 = 3.141592657;
-const ANGLES : i32 = 360;
+
 const ANGLE_TO_FINE_SHIFT : u32 = 19;
 const FINE_ANGLES : usize = 8192;
 const ANG90 : usize = FINE_ANGLES/4;
 const ANG180 : usize = ANG90*2;
 const ANG270 : usize = ANG90*3;
 const ANG360 : usize = ANG90*4;
-
-const ANGLE_45 : u32 = 0x20000000;
-const ANGLE_90 : u32 = ANGLE_45*2;
-const ANGLE_180 : u32 = ANGLE_45*4;
-const ANGLE_1 : u32 = ANGLE_45/45;
 
 const NUM_FINE_TANGENTS : usize = FINE_ANGLES/2 + ANG180;
 const NUM_FINE_SINES : usize = FINE_ANGLES+ANG90;
@@ -191,43 +175,42 @@ fn calc_fine_sines() -> Vec<i32> {
     fine_sines
 }
 
-struct Level {
-	tile_map: [[u8;MAP_SIZE]; MAP_SIZE],
-	actor_at: [[Option<ObjType>;MAP_SIZE]; MAP_SIZE],
-	player: ObjType,
-}
-
-pub fn game_loop(ticker: &time::Ticker, state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
-	draw_play_screen(state, rdr, prj);
+pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
 	
-	let mut level = setup_game_level(state, assets).unwrap();
+    let mut game_state = new_game_state();
+    
+    draw_play_screen(&game_state, rdr, prj);
+	
+	let mut level = setup_game_level(game_state.map_on, assets).unwrap();
 
 	//TODO StartMusic
 	//TODO PreloadGraphics
 
-	draw_level(state, rdr);
+	draw_level(&game_state, rdr);
     
     rdr.fade_in();
 
-	play_loop(ticker, &mut level, state, rdr, input, prj, assets);
+	play_loop(ticker, &mut level, &game_state, rdr, input, prj, assets);
 
 	//TODO Go to next level (gamestate.map_on+=1)
 
 	input.wait_user_input(time::TICK_BASE*1000);
 }
 
-fn play_loop(ticker: &time::Ticker, level: &mut Level, state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
 	//TODO A lot to do here (clear palette, poll controls, prepare world)
     loop {
-        level.player.angle = 0;
-        let control = poll_controls(ticker, input);
-        level.player.x += control.x; //TODO movement still in map space
-        level.player.y += control.y;
+        {
+            let mut player = level_state.mut_player();
+            player.angle = 0;
+            let control = poll_controls(ticker, input);
+            player.x += control.x; //TODO movement still in map space
+            player.y += control.y;
+        }
 
         // TODO DoActor loop
         
-
-	    three_d_refresh(state, level, rdr, prj, assets);
+	    three_d_refresh(game_state, level_state, rdr, prj, assets);
 
         let offset_prev = rdr.buffer_offset();
         for i in 0..3 {
@@ -237,12 +220,12 @@ fn play_loop(ticker: &time::Ticker, level: &mut Level, state: &GameState, rdr: &
     }
 }
 
-fn three_d_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+fn three_d_refresh(game_state: &GameState, level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
 
     rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
 
-	clear_screen(state, rdr, prj);
-    wall_refresh(level, rdr, prj, assets);
+	clear_screen(game_state, rdr, prj);
+    wall_refresh(level_state, rdr, prj, assets);
 
 	rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
     rdr.activate_buffer(rdr.buffer_offset());
@@ -277,7 +260,6 @@ struct RayCast {
     x_step: i32,
     y_step: i32,
 }
-
 enum Dir {
     Vertical,
     Horizontal,
@@ -396,21 +378,20 @@ impl RayCast {
     }
 }
 
-fn wall_refresh(level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
-    let view_angle = level.player.angle;
+fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+    let player = level_state.player();
+    let view_angle = player.angle;
     let mid_angle = view_angle * (FINE_ANGLES as u32/ANGLES as u32);
     let view_sin = prj.fine_sines[(view_angle >> ANGLE_TO_FINE_SHIFT) as usize];
     let view_cos = prj.fine_sines[((view_angle >> ANGLE_TO_FINE_SHIFT) + ANG90 as u32) as usize ];
-    let view_x = level.player.x - fixed_mul(FOCAL_LENGTH as i32, view_cos);
-    let view_y = level.player.y + fixed_mul(FOCAL_LENGTH as i32, view_sin);
-    
-    println!("mid_angle={}, angle={}", mid_angle, view_angle);
+    let view_x = player.x - fixed_mul(FOCAL_LENGTH as i32, view_cos);
+    let view_y = player.y + fixed_mul(FOCAL_LENGTH as i32, view_sin);
     
     let focal_tx = view_x >> TILESHIFT;
     let focal_ty = view_y >> TILESHIFT;
 
-    let view_tx = level.player.x >> TILESHIFT;
-    let view_ty = level.player.y >> TILESHIFT;
+    let view_tx = player.x >> TILESHIFT;
+    let view_ty = player.y >> TILESHIFT;
 
     let x_partialdown = view_x&(TILEGLOBAL-1);
     let x_partialup = TILEGLOBAL-x_partialdown;
@@ -419,7 +400,7 @@ fn wall_refresh(level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig, asset
 
     let mid_wallheight = prj.view_height;
     let lastside = -1;
-    let view_shift = fixed_mul(prj.focal_length_y, prj.fine_tangents[(ANGLE_180 + level.player.pitch >> ANGLE_TO_FINE_SHIFT) as usize]);
+    let view_shift = fixed_mul(prj.focal_length_y, prj.fine_tangents[(ANGLE_180 + player.pitch >> ANGLE_TO_FINE_SHIFT) as usize]);
 
     let mut x_partial = 0;
     let mut y_partial = 0;
@@ -479,7 +460,7 @@ fn wall_refresh(level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig, asset
         rc.y_spot[1] = rc.y_tile;
         let tex_delta = 0;
 
-        rc.cast(level);
+        rc.cast(&level_state.level);
         
         let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, view_x, view_y, view_cos, view_sin);
 
@@ -547,92 +528,6 @@ fn clear_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
 	let half = prj.view_height/2;
 	rdr.bar(0, 0, prj.view_width, half, ceil_color); 
 	rdr.bar(0, half, prj.view_width, half, 0x19);
-}
-
-fn setup_game_level(state: &GameState, assets: &Assets) -> Result<Level, String> {
-	let map = &assets.map_headers[state.map_on];
-	if map.width != MAP_SIZE as u16 || map.height != MAP_SIZE as u16 {
-		panic!("Map not 64*64!");
-	}
-
-	let map_data = load_map_from_assets(assets, state.map_on)?;
-
-    //TODO Do not allocate this on the stack
-	let mut tile_map = [[0;MAP_SIZE];MAP_SIZE];
-	let actor_at = [[None;MAP_SIZE];MAP_SIZE];
-
-	let mut map_ptr = 0;
-	for y in 0..MAP_SIZE {
-		for x in 0..MAP_SIZE {
-			let tile = map_data.segs[0][map_ptr];
-			map_ptr += 1;
-			if tile < AREATILE {
-				tile_map[x][y] = tile as u8;
-			} else {
-				tile_map[x][y] = 0;
-			}
-		}
-	}
-
-	//TODO init_actor_list?
-	//TODO init_door_list?
-	//TODO init_static_list?
-
-	//TODO something with doors 90 to 101
-
-	let player = scan_info_plane(&map_data);
-
-	//TODO ambush markers
-
-	Ok(Level {
-		tile_map,
-		actor_at,
-		player,
-	})
-}
-
-//Returns the player object
-fn scan_info_plane(map_data: &libiw::map::MapData) -> ObjType {
-
-	let mut player = None;
-
-	let mut map_ptr = 0;
-	for y in 0..MAP_SIZE {
-		for x in 0..MAP_SIZE {
-			let tile = map_data.segs[1][map_ptr];
-			map_ptr += 1;
-			match tile {
-				19..=22 => player = Some(spawn_player(x, y, NORTH+(tile-19)as i32)),
-				_ => {},
-			}
-		}
-	}
-
-	if player.is_none() {
-		panic!("No player start position in map");
-	}
-
-	player.unwrap()
-}
-
-fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
-    let mut angle = (1-dir)*90;
-    if angle == 0 {
-        angle = 360
-    }
-    if angle < 0 {
-        angle += ANGLES;
-    }
-
-	let r = ObjType{
-		angle: angle as u32 * ANGLE_1, 
-        pitch: 0,
-		tilex,
-		tiley,
-		x: ((tilex as i32) << TILESHIFT) + TILEGLOBAL / 2,
-		y: ((tiley as i32) << TILESHIFT) + TILEGLOBAL / 2,
-	};
-    r
 }
 
 fn draw_play_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
@@ -765,7 +660,6 @@ fn latch_number(rdr: &dyn Renderer, x_start: usize, y: usize, width: usize, num:
 fn poll_controls(ticker: &time::Ticker, input: &input::Input) -> Control {
 
     let tics = ticker.calc_tics() as i32;
-    println!("## tics = {}", tics);
 
     let mut control = Control{x:0, y:0};
 

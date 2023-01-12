@@ -1,13 +1,15 @@
-pub mod def;
+
 pub mod assets;
-pub mod vga_render;
-pub mod vl;
 pub mod config;
+pub mod def;
+pub mod game;
 pub mod input;
-pub mod time;
 pub mod play;
+pub mod time;
 pub mod user;
 pub mod util;
+pub mod vga_render;
+pub mod vl;
 
 use std::sync::Arc;
 use std::io::prelude::*;
@@ -102,8 +104,7 @@ fn demo_loop(ticker: time::Ticker, rdr: &dyn Renderer, input: &input::Input, prj
             //TODO PlayDemo() here
         }
 
-        let game_state = new_game_state();
-        play::game_loop(&ticker, &game_state, rdr, input, prj, assets);
+        play::game_loop(&ticker, rdr, input, prj, assets);
         rdr.fade_out();
     }
 }

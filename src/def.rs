@@ -1,7 +1,9 @@
 use std::path::Path;
 
 use libiw::map::{MapType, MapFileType};
-use libiw::gamedata::{Texture};
+use libiw::gamedata::Texture;
+
+pub const MAP_SIZE : usize = 64;
 
 #[derive(Copy, Clone)]
 pub enum WeaponType {
@@ -11,6 +13,29 @@ pub enum WeaponType {
 	ChainGun,
 }
 
+/// static level data (map and actors)
+pub struct Level {
+	pub tile_map: [[u8;MAP_SIZE]; MAP_SIZE],
+	pub actor_at: [[Option<ObjType>;MAP_SIZE]; MAP_SIZE],
+}
+
+/// State for one level
+pub struct LevelState {
+    pub level: Level,
+    pub actors: Vec<ObjType>,
+}
+
+impl LevelState {
+    pub fn mut_player(&mut self) -> &mut ObjType {
+        &mut self.actors[0]
+    }
+
+    pub fn player(&self) -> &ObjType {
+        &self.actors[0]
+    }
+}
+
+/// State across the whole game
 pub struct GameState {
 	pub map_on: usize,
 	pub score: usize,
