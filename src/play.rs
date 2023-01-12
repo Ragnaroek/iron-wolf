@@ -59,6 +59,9 @@ const TEXTURE_HEIGHT : usize = 64;
 
 const RAD_TO_INT : f64 = FINE_ANGLES as f64 / 2.0 / std::f64::consts::PI;
 
+const RUN_MOVE : i32 = 70;
+const BASE_MOVE: i32 = 35;
+
 static SCREENLOC : [usize; 3] = [vga_render::PAGE_1_START, vga_render::PAGE_2_START, vga_render::PAGE_3_START];
 
 static VGA_CEILING : [u8; 60] = [	
@@ -72,8 +75,8 @@ static VGA_CEILING : [u8; 60] = [
 ];
 
 pub struct Control {
-    pub x: usize,
-    pub y: usize,
+    pub x: i32,
+    pub y: i32,
 }
 
 pub struct ProjectionConfig {
@@ -197,7 +200,6 @@ struct Level {
 pub fn game_loop(ticker: &time::Ticker, state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
 	draw_play_screen(state, rdr, prj);
 	
-    // TODO do player 
 	let mut level = setup_game_level(state, assets).unwrap();
 
 	//TODO StartMusic
@@ -214,40 +216,16 @@ pub fn game_loop(ticker: &time::Ticker, state: &GameState, rdr: &dyn Renderer, i
 	input.wait_user_input(time::TICK_BASE*1000);
 }
 
-//super akward to use since movement is in map space, not player space
-fn simple_move(input: &input::Input) -> (i32, i32) {
-    let mut xmove = 0;
-    if input.input_monitoring.key_pressed(NumCode::RightArrow) {
-        xmove += 2000;
-    }
-    if input.input_monitoring.key_pressed(NumCode::LeftArrow) {
-        xmove -= 2000;
-    }
-
-    let mut ymove = 0;
-    if input.input_monitoring.key_pressed(NumCode::UpArrow) {
-        ymove += 2000;
-    }
-    if input.input_monitoring.key_pressed(NumCode::DownArrow) {
-        ymove -= 2000;
-    }
-
-    input.input_monitoring.clear_keyboard();
-    (xmove, ymove)
-}
-
 fn play_loop(ticker: &time::Ticker, level: &mut Level, state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
 	//TODO A lot to do here (clear palette, poll controls, prepare world)
     loop {
-        level.player.angle += 1;
-        if level.player.angle > 359  {
-            level.player.angle = 0;
-        }
-        let (xmove, ymove) = simple_move(input);
-        level.player.x += xmove;
-        level.player.y += ymove;
+        level.player.angle = 0;
+        let control = poll_controls(ticker, input);
+        level.player.x += control.x; //TODO movement still in map space
+        level.player.y += control.y;
 
-        poll_controls(ticker);
+        // TODO DoActor loop
+        
 
 	    three_d_refresh(state, level, rdr, prj, assets);
 
@@ -784,24 +762,56 @@ fn latch_number(rdr: &dyn Renderer, x_start: usize, y: usize, width: usize, num:
 }
 
 // reads input delta since last tic and manipulates the player state
-fn poll_controls(ticker: &time::Ticker) -> Control {
+fn poll_controls(ticker: &time::Ticker, input: &input::Input) -> Control {
 
-    //PollXXXButtons done here in the original is already done in vga-emu (SDL)
-
-    let tics = ticker.calc_tics();
-    rintln!("## tics = {}", tics);
+    let tics = ticker.calc_tics() as i32;
+    println!("## tics = {}", tics);
 
     let mut control = Control{x:0, y:0};
 
-    poll_keyboard_move(&mut control);
+    poll_keyboard_move(&mut control, input, tics);
     //TODO Mouse Move
     //TODO Joystick Move?
+
+    //bound movement to a maximum
+    let max = 100*tics;
+    let min = -max;
+
+    if control.x > max {
+        control.x = max;
+    } else if control.x < min {
+        control.x = min;
+    }
+
+    if control.y > max {
+        control.y = max;
+    } else if control.y < min {
+        control.y  = min;
+    }
 
     control
 }
 
-fn poll_keyboard_move(control: &mut Control) {
+fn poll_keyboard_move(control: &mut Control, input: &input::Input, tics: i32) {
+    //TODO impl button mapping, uses hardcoded buttons as for now
+    let move_factor = if input.key_pressed(NumCode::RShift) {
+        RUN_MOVE * tics
+    } else {
+        BASE_MOVE * tics
+    };
 
+    if input.key_pressed(NumCode::UpArrow) {
+        control.y -= move_factor;
+    }
+    if input.key_pressed(NumCode::DownArrow) {
+        control.y += move_factor;
+    }
+    if input.key_pressed(NumCode::LeftArrow) {
+        control.x -= move_factor;
+    }
+    if input.key_pressed(NumCode::RightArrow) {
+        control.x += move_factor;
+    }
 }
 
 
