@@ -2,3 +2,5 @@
 
 # iron-wolf
 wolf3D in Rust
+
+The goal is to have a pixel perfect recreation of Wolfenstein 3D in Rust.
