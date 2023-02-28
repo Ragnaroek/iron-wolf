@@ -25,6 +25,10 @@ pub const TILEGLOBAL : i32 = 1<<16;
 #[derive(PartialEq, Clone, Copy)]
 pub struct Fixed(i32); //16:16 fixed point
 
+pub fn new_fixed_u16(int_part: u16, frac_part: u16) -> Fixed {
+    new_fixed_u32((int_part as u32) << 16 | frac_part as u32)
+}
+
 pub fn new_fixed_i16(int_part: i16, frac_part: i16) -> Fixed {
     new_fixed(int_part as i32, frac_part as i32)
 }
