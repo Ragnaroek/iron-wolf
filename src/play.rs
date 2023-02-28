@@ -2,8 +2,10 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
+use crate::def::{new_fixed, new_fixed_u32, new_fixed_i32};
+
 use super::vga_render::Renderer;
-use super::def::{GameState, WeaponType, Assets, Level, ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, MAP_SIZE, ANGLES, ANGLE_QUAD};
+use super::def::{GameState, WeaponType, Assets, Level, ObjKey, LevelState, Control, Fixed, GLOBAL1, TILEGLOBAL, MAP_SIZE, ANGLES, ANGLE_QUAD};
 use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
 use libiw::gamedata::Texture;
 use vgaemu::input::NumCode;
@@ -68,17 +70,17 @@ pub struct ProjectionConfig {
 	screenofs: usize,
     height_numerator: i32,
 	pixelangle: Vec<i32>,
-    sines: Vec<i32>,
+    sines: Vec<Fixed>,
     fine_tangents: [i32; NUM_FINE_TANGENTS],
     focal_length_y: i32,
 }
 
 impl ProjectionConfig {
-    pub fn sin(&self, ix: usize) -> i32 {
+    pub fn sin(&self, ix: usize) -> Fixed {
         self.sines[ix]
     }
 
-    pub fn cos(&self, ix: usize) -> i32 {
+    pub fn cos(&self, ix: usize) -> Fixed {
         self.sines[ix+ANGLE_QUAD as usize]
     }
 }
@@ -111,8 +113,8 @@ pub fn new_projection_config(view_size: usize) -> ProjectionConfig {
     let fine_tangents = calc_fine_tangents();
 
     let center_x = view_width/2-1;
-    let y_aspect = fixed_mul((320<<FRAC_BITS)/200, ((SCREEN_HEIGHT_PIXEL<<FRAC_BITS)/SCREEN_WIDTH_PIXEL) as i32);
-    let focal_length_y = center_x as i32 * y_aspect/fine_tangents[FINE_ANGLES/2+(ANGLE_45 >> ANGLE_TO_FINE_SHIFT) as usize];
+    let y_aspect = fixed_mul(new_fixed_u32((320<<FRAC_BITS)/200), new_fixed_u32(((SCREEN_HEIGHT_PIXEL<<FRAC_BITS)/SCREEN_WIDTH_PIXEL) as u32));
+    let focal_length_y = center_x as i32 * y_aspect.to_i32()/fine_tangents[FINE_ANGLES/2+(ANGLE_45 >> ANGLE_TO_FINE_SHIFT) as usize];
     let scale = half_view as i32 * face_dist/(VIEW_GLOBAL as i32/2);
 
     let height_numerator = (TILEGLOBAL*scale)>>6;
@@ -165,19 +167,21 @@ fn calc_pixelangle(view_width: usize, projection_fov: f64, face_dist: f64) -> Ve
 	pixelangles
 }
 
-fn calc_sines() -> Vec<i32> {
+fn calc_sines() -> Vec<Fixed> {
     //TODO_VANILLA +1?? Bug in the original? does it write outside they array there in the original?
-    let mut sines: Vec<i32> = vec![0; ANGLES+ANGLE_QUAD+1]; 
+    let mut sines: Vec<Fixed> = vec![new_fixed(0, 0); ANGLES+ANGLE_QUAD+1]; 
 
     let mut angle : f32 = 0.0;
     let angle_step = PI/2.0/ANGLE_QUAD as f32;
     for i in 0..=ANGLE_QUAD {
         let value : u32 = (GLOBAL1 as f32 * angle.sin()) as u32;
-        sines[i] = value as i32;
-        sines[i+ANGLES] = value as i32;
-        sines[ANGLES/2-i] = value as i32;
-        sines[ANGLES-i] = (value | 0x80000000u32) as i32;
-        sines[ANGLES/2+i] = (value | 0x80000000u32) as i32;
+        let v_fixed = new_fixed_u32(value.min(65535));
+        let v_fixed_neg = new_fixed_u32(value | 0x80000000u32);
+        sines[i] = v_fixed;
+        sines[i+ANGLES] = v_fixed;
+        sines[ANGLES/2-i] = v_fixed;
+        sines[ANGLES-i] = v_fixed_neg;
+        sines[ANGLES/2+i] = v_fixed_neg;
         angle += angle_step;   
     }
     sines
@@ -400,8 +404,8 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
     let mid_angle = view_angle * (FINE_ANGLES as i32/ANGLES as i32);
     let view_sin = prj.sin((view_angle >> ANGLE_TO_FINE_SHIFT) as usize);
     let view_cos = prj.cos((view_angle >> ANGLE_TO_FINE_SHIFT) as usize);
-    let view_x = player.x - fixed_mul(FOCAL_LENGTH as i32, view_cos);
-    let view_y = player.y + fixed_mul(FOCAL_LENGTH as i32, view_sin);
+    let view_x = player.x - fixed_mul(new_fixed_i32(FOCAL_LENGTH), view_cos).to_i32();
+    let view_y = player.y + fixed_mul(new_fixed_i32(FOCAL_LENGTH), view_sin).to_i32();
     
     let focal_tx = view_x >> TILESHIFT;
     let focal_ty = view_y >> TILESHIFT;
@@ -416,7 +420,7 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
 
     let mid_wallheight = prj.view_height;
     let lastside = -1;
-    let view_shift = fixed_mul(prj.focal_length_y, prj.fine_tangents[(ANGLE_180 + player.pitch >> ANGLE_TO_FINE_SHIFT) as usize]);
+    let view_shift = fixed_mul(new_fixed_i32(prj.focal_length_y), new_fixed_i32(prj.fine_tangents[(ANGLE_180 + player.pitch >> ANGLE_TO_FINE_SHIFT) as usize]));
 
     let mut x_partial = 0;
     let mut y_partial = 0;
@@ -466,11 +470,11 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
             x_partial=x_partialup;
             y_partial=y_partialup;
         }
-        rc.y_intercept = fixed_mul(rc.y_step, x_partial) + view_y;
+        rc.y_intercept = fixed_mul(new_fixed_i32(rc.y_step), new_fixed_i32(x_partial)).to_i32() + view_y;
         rc.x_tile = focal_tx+rc.x_tilestep;
         rc.x_spot[0] = rc.x_tile;
         rc.x_spot[1] = rc.y_intercept >> 16;
-        rc.x_intercept = fixed_mul(rc.x_step, y_partial) + view_x;
+        rc.x_intercept = fixed_mul(new_fixed_i32(rc.x_step), new_fixed_i32(y_partial)).to_i32() + view_x;
         rc.y_tile = focal_ty + rc.y_tilestep;
         rc.y_spot[0] = rc.x_intercept>>16;
         rc.y_spot[1] = rc.y_tile;
@@ -478,7 +482,7 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
 
         rc.cast(&level_state.level);
         
-        let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, view_x, view_y, view_cos, view_sin);
+        let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, view_x, view_y, view_cos.to_i32(), view_sin.to_i32());
 
         let side = match rc.hit {
             Hit::HorizontalBorder|Hit::HorizontalWall => 0,
@@ -526,7 +530,7 @@ fn draw_scaled(x: usize, post_src: i32, height: i32, view_height: i32, texture: 
 }
 
 fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, view_x: i32, view_y: i32, view_cos: i32, view_sin: i32) -> i32 {
-    let mut z = fixed_mul(x_intercept-view_x, view_cos) - fixed_mul(y_intercept - view_y, view_sin);
+    let mut z = fixed_mul(new_fixed_i32(x_intercept-view_x), new_fixed_i32(view_cos)).to_i32() - fixed_mul(new_fixed_i32(y_intercept - view_y), new_fixed_i32(view_sin)).to_i32();
     if z < MIN_DIST {
          z = MIN_DIST;
     }
