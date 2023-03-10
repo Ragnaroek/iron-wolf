@@ -2,11 +2,12 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
+use crate::draw::{hit_vert_wall, hit_horiz_wall, initial_scaler_state};
+
 use super::draw::calc_height;
 use super::vga_render::Renderer;
 use super::def::{GameState, WeaponType, Assets, Level, ObjKey, LevelState, Control, Fixed, new_fixed, new_fixed_u32, new_fixed_i32, GLOBAL1, TILEGLOBAL, MAP_SIZE, ANGLES, ANGLE_QUAD};
 use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
-use libiw::gamedata::Texture;
 use vgaemu::input::NumCode;
 use super::input;
 use super::time;
@@ -64,14 +65,14 @@ static VGA_CEILING : [u8; 60] = [
 ];
 
 pub struct ProjectionConfig {
-	view_width: usize,
-	view_height: usize,
-	screenofs: usize,
-    height_numerator: i32,
-	pixelangle: Vec<i32>,
-    sines: Vec<Fixed>,
-    fine_tangents: [i32; NUM_FINE_TANGENTS],
-    focal_length_y: i32,
+	pub view_width: usize,
+	pub view_height: usize,
+	pub screenofs: usize,
+    pub height_numerator: i32,
+	pub pixelangle: Vec<i32>,
+    pub sines: Vec<Fixed>,
+    pub fine_tangents: [i32; NUM_FINE_TANGENTS],
+    pub focal_length_y: i32,
 }
 
 impl ProjectionConfig {
@@ -98,7 +99,7 @@ pub fn new_game_state() -> GameState {
 	}
 }
 
-pub fn new_projection_config(view_size: usize) -> ProjectionConfig {
+pub fn calc_projection(view_size: usize) -> ProjectionConfig {
 	let view_width = (view_size * 16) & !15;
 	let view_height = ((((view_size * 16) as f32 * HEIGHT_RATIO) as u16) & !1) as usize;
 	let screenofs = (200-STATUS_LINES-view_height)/2*SCREEN_WIDTH+(320-view_width)/8;
@@ -258,26 +259,26 @@ fn three_d_refresh(game_state: &GameState, level_state: &LevelState, rdr: &dyn R
 }
 
 #[derive(Debug)]
-enum Hit {
+pub enum Hit {
     VerticalBorder,
     HorizontalBorder,
     VerticalWall,
     HorizontalWall,
 }
 
-struct RayCast {
-    tile_hit: u16,
-    hit: Hit, 
-    y_tile: i32,
-    x_tile: i32,
-    y_intercept: i32,
-    x_intercept: i32,
-    x_spot: [i32; 2],
-    y_spot: [i32; 2],
-    x_tilestep: i32,
-    y_tilestep: i32,
-    x_step: i32,
-    y_step: i32,
+pub struct RayCast {
+    pub tile_hit: u16,
+    pub hit: Hit, 
+    pub y_tile: i32,
+    pub x_tile: i32,
+    pub y_intercept: i32,
+    pub x_intercept: i32,
+    pub x_spot: [i32; 2],
+    pub y_spot: [i32; 2],
+    pub x_tilestep: i32,
+    pub y_tilestep: i32,
+    pub x_step: i32,
+    pub y_step: i32,
 }
 enum Dir {
     Vertical,
@@ -418,7 +419,6 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
     let y_partialup = TILEGLOBAL-y_partialdown;
 
     let mid_wallheight = prj.view_height;
-    let lastside = -1;
     let view_shift = fixed_mul(new_fixed_i32(prj.focal_length_y), new_fixed_i32(prj.fine_tangents[(ANGLE_180 + player.pitch >> ANGLE_TO_FINE_SHIFT) as usize]));
 
     let mut x_partial = 0;
@@ -430,7 +430,10 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
         x_tile: 0, y_tile:0,
         x_tilestep: 0, y_tilestep: 0,
         x_step: 0, y_step: 0, 
-        x_spot: [0, 0], y_spot: [0, 0]};
+        x_spot: [0, 0], y_spot: [0, 0],
+    };
+
+    let mut scaler_state = initial_scaler_state();
 
     for pixx in 0..prj.view_width {
         let mut angl=mid_angle as i32 + prj.pixelangle[pixx];
@@ -483,6 +486,13 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
         
         let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, view_x, view_y, view_cos, view_sin);
 
+        match rc.hit {
+            Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, &rc, pixx, height, prj.view_height, rdr, assets),
+            Hit::HorizontalWall|Hit::HorizontalBorder => hit_horiz_wall(&mut scaler_state, &rc, pixx, height),
+            // TODO hit other things (door, pwall)
+        }
+
+    /*
         let side = match rc.hit {
             Hit::HorizontalBorder|Hit::HorizontalWall => 0,
             Hit::VerticalBorder|Hit::VerticalWall => 1,
@@ -501,31 +511,11 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
         };
 
         draw_scaled(pixx, post_src, height, prj.view_height as i32, texture, rdr);
+        */
     }
-}
 
-fn draw_scaled(x: usize, post_src: i32, height: i32, view_height: i32, texture: Option<&Texture>, rdr: &dyn Renderer) {
-    //TODO use the exact copy statements as the compiled scalers do! (compare scaling code in the original with this => step_size and clamping)
-    let line_height = if height > 512 {
-        view_height
-    } else {
-        (height as f64 / 512.0 * view_height as f64) as i32
-    };
-    let step = TEXTURE_HEIGHT as f64 / line_height as f64;
-   
-    let y = view_height/2 - line_height/2;
+    panic!("term first frame");
 
-    let mut src = post_src as f64;
-    for y_draw in y..(y+line_height) {
-        let pixel = if let Some(tex) = texture {
-            tex.bytes[src as usize]
-        } else {
-            0x50
-        };
-        // TODO replace this with a faster? buffered draw
-        rdr.plot(x, y_draw as usize, pixel);
-        src += step;
-    }
 }
 
 // Clears the screen and already draws the bottom and ceiling
