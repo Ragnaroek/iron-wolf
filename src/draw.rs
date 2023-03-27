@@ -4,6 +4,8 @@ mod draw_test;
 
 use libiw::gamedata::Texture;
 
+use crate::play::ProjectionConfig;
+
 use super::def::{Fixed, Assets, new_fixed_u16, new_fixed_i32, MIN_DIST};
 use super::play::RayCast;
 use super::vga_render::{Renderer, SCREENBWIDE};
@@ -82,7 +84,7 @@ pub fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, vi
     height_numerator/(nx >> 8)
 }
 
-pub fn scale_post(scaler_state: &ScalerState, height: i32, view_height: usize, rdr: &dyn Renderer, assets: &Assets) {
+pub fn scale_post(scaler_state: &ScalerState, height: i32, prj: &ProjectionConfig, rdr: &dyn Renderer, assets: &Assets) {
     let texture = &assets.textures[scaler_state.texture_ix];
 
     // TODO lookup "compiled" scaler here
@@ -114,11 +116,11 @@ fn draw_scaled(x: usize, post_src: i32, height: i32, view_height: i32, texture: 
     }
 }*/
 
-pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &RayCast, pixx: usize, height: i32, view_height: usize, rdr: &dyn Renderer, assets: &Assets) {
+pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &RayCast, pixx: usize, height: i32, prj: &ProjectionConfig, rdr: &dyn Renderer, assets: &Assets) {
     let post_source = 0xFC0 - ((rc.x_intercept>>4) & 0xFC0);
 
     if scaler_state.last_side {
-        scale_post(scaler_state, height, view_height, rdr, assets)
+        scale_post(scaler_state, height, prj, rdr, assets)
     }
     scaler_state.last_side = true;
     scaler_state.post_x = pixx;

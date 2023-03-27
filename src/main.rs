@@ -28,7 +28,6 @@ use assets::GraphicNum;
 use vga_render::Renderer;
 
 fn main() -> Result<(), String> {
-
     let iw_config = config::load_iw_config();
     let config = config::load_wolf_config(&iw_config);
 
@@ -54,7 +53,6 @@ fn main() -> Result<(), String> {
 
     // TODO calc_projection and setup_scaling have to be re-done if view size changes in config
     let prj = play::calc_projection(config.viewsize as usize);
-    let scaler = scale::setup_scaling((prj.view_width as f32 * 1.5) as usize, prj.view_height);
 
     let input_monitoring = vgaemu::input::new_input_monitoring();
 

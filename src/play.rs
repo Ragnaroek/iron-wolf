@@ -2,9 +2,7 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
-use crate::draw::{hit_vert_wall, hit_horiz_wall, initial_scaler_state};
-
-use super::draw::calc_height;
+use super::draw::{calc_height, hit_vert_wall, hit_horiz_wall, initial_scaler_state};
 use super::vga_render::Renderer;
 use super::def::{GameState, WeaponType, Assets, Level, ObjKey, LevelState, Control, Fixed, new_fixed, new_fixed_u32, new_fixed_i32, GLOBAL1, TILEGLOBAL, MAP_SIZE, ANGLES, ANGLE_QUAD};
 use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
@@ -14,6 +12,7 @@ use super::time;
 use super::vga_render;
 use super::game::{setup_game_level, TILESHIFT, ANGLE_45, ANGLE_180};
 use super::wolf_hack::fixed_mul;
+use super::scale::{CompiledScaler, setup_scaling};
 
 //TODO separate draw.c stuff from play.c stuff in here
 
@@ -73,6 +72,7 @@ pub struct ProjectionConfig {
     pub sines: Vec<Fixed>,
     pub fine_tangents: [i32; NUM_FINE_TANGENTS],
     pub focal_length_y: i32,
+    pub scaler: CompiledScaler,
 }
 
 impl ProjectionConfig {
@@ -119,6 +119,8 @@ pub fn calc_projection(view_size: usize) -> ProjectionConfig {
 
     let height_numerator = (TILEGLOBAL*scale)>>6;
 
+    let scaler = setup_scaling((view_width as f32 * 1.5) as usize, view_height);
+
 	ProjectionConfig {
 		view_width,
 		view_height,
@@ -128,6 +130,7 @@ pub fn calc_projection(view_size: usize) -> ProjectionConfig {
         sines,
         fine_tangents,
         focal_length_y,
+        scaler,
 	}
 }
 
@@ -487,7 +490,7 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
         let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, view_x, view_y, view_cos, view_sin);
 
         match rc.hit {
-            Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, &rc, pixx, height, prj.view_height, rdr, assets),
+            Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, &rc, pixx, height, prj, rdr, assets),
             Hit::HorizontalWall|Hit::HorizontalBorder => hit_horiz_wall(&mut scaler_state, &rc, pixx, height),
             // TODO hit other things (door, pwall)
         }
