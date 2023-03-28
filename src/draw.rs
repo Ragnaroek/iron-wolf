@@ -4,16 +4,25 @@ mod draw_test;
 
 use libiw::gamedata::Texture;
 
+use crate::def::TILEGLOBAL;
 use crate::play::ProjectionConfig;
 
 use super::def::{Fixed, Assets, new_fixed_u16, new_fixed_i32, MIN_DIST};
 use super::play::RayCast;
 use super::vga_render::{Renderer, SCREENBWIDE};
 
+static MAP_MASKS_1 : [u8; 4*8] = [
+    1 ,3 ,7 ,15,15,15,15,15,
+    2 ,6 ,14,14,14,14,14,14,
+    4 ,12,12,12,12,12,12,12,
+    8 ,8 ,8 ,8 ,8 ,8 ,8 ,8
+];
+
 pub struct ScalerState {
     last_side: bool,
     post_x: usize,
     post_width: usize,
+    post_source: usize,
     texture_ix: usize,
 }
 
@@ -22,6 +31,7 @@ pub fn initial_scaler_state() -> ScalerState {
         last_side: false,
         post_x: 0,
         post_width: 1,
+        post_source: 0,
         texture_ix: 0,
      }
 }
@@ -87,63 +97,93 @@ pub fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, vi
 pub fn scale_post(scaler_state: &ScalerState, height: i32, prj: &ProjectionConfig, rdr: &dyn Renderer, assets: &Assets) {
     let texture = &assets.textures[scaler_state.texture_ix];
 
-    // TODO lookup "compiled" scaler here
-    //full_scale(height, view_height, texture, rdr)
+    let mut h = ((height & 0xFFF8)>>1) as usize;
+    if h > prj.scaler.max_scale_shl2 {
+        h = prj.scaler.max_scale_shl2
+    }
+
+    //both additionally shift by 1, in the original the computed offsets are in 16-bit words that
+    //point into a 32-bit array 
+    let ix = prj.scaler.scale_call[h>>1];
+    let scaler = &prj.scaler.scalers[ix>>1];
+
+    let bx = ((scaler_state.post_x &0x03) << 3) + scaler_state.post_width;				
+    rdr.set_mask(MAP_MASKS_1[bx-1]);
+
+    let line_start = (scaler_state.post_x >> 2) + rdr.buffer_offset();
+    for pix_scaler in &scaler.pixel_scalers {
+        let pix = texture.bytes[scaler_state.post_source + pix_scaler.texture_src];
+        for mem_dest in &pix_scaler.mem_dests {
+            rdr.write_mem(line_start + *mem_dest as usize, pix);
+        }
+    }
 }
 
-/*
-fn draw_scaled(x: usize, post_src: i32, height: i32, view_height: i32, texture: Option<&Texture>, rdr: &dyn Renderer) {
-    //TODO use the exact copy statements as the compiled scalers do! (compare scaling code in the original with this => step_size and clamping)
-    let line_height = if height > 512 {
-        view_height
-    } else {
-        (height as f64 / 512.0 * view_height as f64) as i32
-    };
-    let step = TEXTURE_HEIGHT as f64 / line_height as f64;
-   
-    let y = view_height/2 - line_height/2;
-
-    let mut src = post_src as f64;
-    for y_draw in y..(y+line_height) {
-        let pixel = if let Some(tex) = texture {
-            tex.bytes[src as usize]
-        } else {
-            0x50
-        };
-        // TODO replace this with a faster? buffered draw
-        rdr.plot(x, y_draw as usize, pixel);
-        src += step;
+pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, pixx: usize, height: i32, prj: &ProjectionConfig, rdr: &dyn Renderer, assets: &Assets) {
+    let mut post_source = 0xFC0 - ((rc.y_intercept>>4) & 0xFC0);
+    if rc.x_tilestep == -1 {
+        post_source = 0xFC0-post_source;
+        rc.x_intercept += TILEGLOBAL;
     }
-}*/
-
-pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &RayCast, pixx: usize, height: i32, prj: &ProjectionConfig, rdr: &dyn Renderer, assets: &Assets) {
-    let post_source = 0xFC0 - ((rc.x_intercept>>4) & 0xFC0);
 
     if scaler_state.last_side {
-        scale_post(scaler_state, height, prj, rdr, assets)
+        scale_post(scaler_state, height, prj, rdr, assets);
     }
+
+    let texture_ix = if rc.tile_hit & 0x040 != 0 {
+        vert_wall(rc.tile_hit as usize & !0x40)
+    } else {
+        vert_wall(rc.tile_hit as usize)
+    };
+
     scaler_state.last_side = true;
     scaler_state.post_x = pixx;
     scaler_state.post_width = 1;
-    scaler_state.texture_ix = 49; //TODO only for testing!
+    scaler_state.post_source = post_source as usize;
+    scaler_state.texture_ix = texture_ix;
 }
 
-pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &RayCast, pixx: usize, height: i32) {
+pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, pixx: usize, height: i32, prj: &ProjectionConfig, rdr: &dyn Renderer, assets: &Assets) {
+    let mut post_source = 0xFC0 - ((rc.x_intercept>>4) & 0xFC0);
+    if rc.y_tilestep == -1 {
+        rc.y_intercept += TILEGLOBAL;
+    } else {
+        post_source = 0xFC0-post_source;
+    }
 
+    if scaler_state.last_side {
+        scale_post(scaler_state, height, prj, rdr, assets);
+    }
+
+    let texture_ix = if rc.tile_hit & 0x040 != 0 {
+        horiz_wall(rc.tile_hit as usize & !0x40)
+    } else {
+        horiz_wall(rc.tile_hit as usize)
+    };
+
+    scaler_state.last_side = true;
+    scaler_state.post_x = pixx;
+    scaler_state.post_width = 1;
+    scaler_state.post_source = post_source as usize;
+    scaler_state.texture_ix = texture_ix;
+}
+
+fn horiz_wall(i: usize) -> usize {
+    (i-1)*2
+}
+
+fn vert_wall(i: usize) -> usize {
+    (i-1)*2+1
 }
 
 pub fn hit_horiz_door() {
-
 }
 
 pub fn hit_vert_door() {
-
 }
 
 pub fn hit_horiz_pwall() {
-
 }
 
 pub fn hit_vert_pwall() {
-
 }

@@ -27,11 +27,13 @@ const VSYNC_MASK: u8 = 0x08;
 const POLL_WAIT_MICROS : u64 = 500;
 
 pub trait Renderer {
-
 	fn set_buffer_offset(&self, offset: usize);
 	fn buffer_offset(&self) -> usize;
     fn activate_buffer(&self, offset: usize);
-    fn write_mem(&self, offset: usize, v_in: u8);
+
+	// writes straight into the vga memory (you have to take of the buffer_offset yourself)
+    fn write_mem(&self, offset: usize, v_in: u8); //TODO replace with direct VGA access
+	fn set_mask(&self, m: u8); //TOOD repace with direct VGA access
 
 	fn bar(&self, x: usize, y: usize, width: usize, height: usize, color: u8);
 	fn pic(&self, x: usize, y: usize, picnum: GraphicNum);
@@ -40,7 +42,6 @@ pub trait Renderer {
 	fn plot(&self, x: usize, y: usize, color: u8);
 	fn fade_out(&self);
 	fn fade_in(&self);
-
 
     fn debug_pic(&self, data: &Vec<u8>);
 }
@@ -111,6 +112,10 @@ impl Renderer for VGARenderer {
     fn write_mem(&self, offset: usize, v_in: u8) {
         self.vga.write_mem(offset, v_in)
     }
+
+	fn set_mask(&self, m: u8) {
+		self.vga.set_sc_data(SCReg::MapMask, m)
+	}
 
 	fn bar(&self, x: usize, y: usize, width: usize, height: usize, color: u8) {
 		let leftmask = LEFTMASKS[x & 3];
