@@ -97,14 +97,14 @@ pub fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, vi
 pub fn scale_post(scaler_state: &ScalerState, height: i32, prj: &ProjectionConfig, rdr: &dyn Renderer, assets: &Assets) {
     let texture = &assets.textures[scaler_state.texture_ix];
 
-    let mut h = ((height & 0xFFF8)>>1) as usize;
-    if h > prj.scaler.max_scale_shl2 {
-        h = prj.scaler.max_scale_shl2
+    let mut h = ((height & 0xFFF8)>>2) as usize;
+    if h >= prj.scaler.scale_call.len() {
+        h = prj.scaler.scale_call.len()-1;
     }
 
     //both additionally shift by 1, in the original the computed offsets are in 16-bit words that
     //point into a 32-bit array 
-    let ix = prj.scaler.scale_call[h>>1];
+    let ix = prj.scaler.scale_call[h];
     let scaler = &prj.scaler.scalers[ix>>1];
 
     let bx = ((scaler_state.post_x &0x03) << 3) + scaler_state.post_width;				
@@ -169,11 +169,11 @@ pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, pixx: 
 }
 
 fn horiz_wall(i: usize) -> usize {
-    (i-1)*2
+    if i == 0 { 0 } else { (i-1)*2 }
 }
 
 fn vert_wall(i: usize) -> usize {
-    (i-1)*2+1
+    if i == 0 { 0 } else { (i-1)*2+1 }
 }
 
 pub fn hit_horiz_door() {
