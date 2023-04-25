@@ -4,7 +4,6 @@ use super::assets::load_map_from_assets;
 use super::agent::{spawn_player, thrust};
 use super::play::ProjectionConfig;
 
-pub const TILESHIFT : i32 = 16;
 pub const AREATILE : u16 = 107;
 
 pub const NORTH : i32 = 0;

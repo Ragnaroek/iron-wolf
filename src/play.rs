@@ -2,17 +2,18 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
-use super::draw::{calc_height, hit_vert_wall, hit_horiz_wall, initial_scaler_state};
-use super::vga_render::Renderer;
-use super::def::{GameState, WeaponType, Assets, Level, ObjKey, LevelState, Control, Fixed, new_fixed, new_fixed_u32, new_fixed_i32, GLOBAL1, TILEGLOBAL, MAP_SIZE, ANGLES, ANGLE_QUAD};
-use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
 use vgaemu::input::NumCode;
-use super::input;
-use super::time;
-use super::vga_render;
-use super::game::{setup_game_level, TILESHIFT, ANGLE_45, ANGLE_180};
-use super::wolf_hack::fixed_mul;
-use super::scale::{CompiledScaler, setup_scaling};
+
+use crate::fixed::{Fixed, new_fixed, new_fixed_u32, fixed_mul};
+use crate::draw::three_d_refresh;
+use crate::vga_render::Renderer;
+use crate::def::{GameState, WeaponType, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH};
+use crate::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
+use crate::input;
+use crate::time;
+use crate::vga_render;
+use crate::game::{setup_game_level, ANGLE_45};
+use crate::scale::{CompiledScaler, setup_scaling};
 
 //TODO separate draw.c stuff from play.c stuff in here
 
@@ -31,37 +32,19 @@ const FRAC_UNIT : usize = 1<<FRAC_BITS;
 const PI : f32 = 3.141592657;
 
 const ANGLE_TO_FINE_SHIFT : u32 = 19;
-const FINE_ANGLES : usize = 8192;
 const ANG90 : usize = FINE_ANGLES/4;
 const ANG180 : usize = ANG90*2;
-const ANG270 : usize = ANG90*3;
-const ANG360 : usize = ANG90*4;
 
 const NUM_FINE_TANGENTS : usize = FINE_ANGLES/2 + ANG180;
-const NUM_FINE_SINES : usize = FINE_ANGLES+ANG90;
-
 const VIEW_GLOBAL : usize = 0x10000;
-const FOCAL_LENGTH : i32 = 0x5700;
-
 const TEXTURE_WIDTH : usize = 64;
 const TEXTURE_HEIGHT : usize = 64;
-
 const RAD_TO_INT : f64 = FINE_ANGLES as f64 / 2.0 / std::f64::consts::PI;
 
 const RUN_MOVE : i32 = 70;
 const BASE_MOVE: i32 = 35;
 
 static SCREENLOC : [usize; 3] = [vga_render::PAGE_1_START, vga_render::PAGE_2_START, vga_render::PAGE_3_START];
-
-static VGA_CEILING : [u8; 60] = [	
-	0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0xbf,
-	0x4e,0x4e,0x4e,0x1d,0x8d,0x4e,0x1d,0x2d,0x1d,0x8d,
-	0x1d,0x1d,0x1d,0x1d,0x1d,0x2d,0xdd,0x1d,0x1d,0x98,
-   
-	0x1d,0x9d,0x2d,0xdd,0xdd,0x9d,0x2d,0x4d,0x1d,0xdd,
-	0x7d,0x1d,0x2d,0x2d,0xdd,0xd7,0x1d,0x1d,0x1d,0x2d,
-	0x1d,0x1d,0x1d,0x1d,0xdd,0xdd,0x7d,0xdd,0xdd,0xdd
-];
 
 pub struct ProjectionConfig {
 	pub view_width: usize,
@@ -71,7 +54,6 @@ pub struct ProjectionConfig {
 	pub pixelangle: Vec<i32>,
     pub sines: Vec<Fixed>,
     pub fine_tangents: [i32; NUM_FINE_TANGENTS],
-    pub focal_length_y: i32,
     pub scaler: CompiledScaler,
 }
 
@@ -104,19 +86,14 @@ pub fn calc_projection(view_size: usize) -> ProjectionConfig {
 	let view_height = ((((view_size * 16) as f32 * HEIGHT_RATIO) as u16) & !1) as usize;
 	let screenofs = (200-STATUS_LINES-view_height)/2*SCREEN_WIDTH+(320-view_width)/8;
     let half_view = view_width/2;
-    let projection_fov = VIEW_GLOBAL as f64;
 
     let face_dist = FOCAL_LENGTH + MIN_DIST;
 
-	let pixelangle = calc_pixelangle(view_width, projection_fov, face_dist as f64);
+	let pixelangle = calc_pixelangle(view_width, face_dist as f64);
     let sines = calc_sines();
     let fine_tangents = calc_fine_tangents();
 
-    let center_x = view_width/2-1;
-    let y_aspect = fixed_mul(new_fixed_u32((320<<FRAC_BITS)/200), new_fixed_u32(((SCREEN_HEIGHT_PIXEL<<FRAC_BITS)/SCREEN_WIDTH_PIXEL) as u32));
-    let focal_length_y = center_x as i32 * y_aspect.to_i32()/fine_tangents[FINE_ANGLES/2+(ANGLE_45 >> ANGLE_TO_FINE_SHIFT) as usize];
     let scale = half_view as i32 * face_dist/(VIEW_GLOBAL as i32/2);
-
     let height_numerator = (TILEGLOBAL*scale)>>6;
 
     let scaler = setup_scaling((view_width as f32 * 1.5) as usize, view_height);
@@ -129,15 +106,18 @@ pub fn calc_projection(view_size: usize) -> ProjectionConfig {
 		pixelangle,
         sines,
         fine_tangents,
-        focal_length_y,
         scaler,
 	}
 }
 
 fn calc_fine_tangents() -> [i32; NUM_FINE_TANGENTS] {
-    let mut tangents = [0; NUM_FINE_TANGENTS];
+    let mut tangents = [0; FINE_ANGLES];
 
     for i in 0..FINE_ANGLES/8 {
+        let tang = ((i as f64 +0.5)/RAD_TO_INT).tan();
+        tangents[i] = (tang * TILEGLOBAL as f64) as i32;
+        tangents[FINE_ANGLES/4-1-i] = (1.0/tang*TILEGLOBAL as f64) as i32;
+        /*
         let tang = ((i as f64 +0.5)/RAD_TO_INT).tan();
         let t = (tang * FRAC_UNIT as f64) as i32;
         tangents[i] = t;
@@ -145,33 +125,34 @@ fn calc_fine_tangents() -> [i32; NUM_FINE_TANGENTS] {
         tangents[FINE_ANGLES/4-1-i] = ((1.0/tang)*FRAC_UNIT as f64) as i32;
         tangents[FINE_ANGLES/4+i]=-tangents[FINE_ANGLES/4-1-i];
         tangents[FINE_ANGLES/2-1-i]=-tangents[i];
+        */
     }
+    /*
     let mut src = 0;
     for i in FINE_ANGLES/2..FINE_ANGLES {
         tangents[i] = tangents[src];
         src += 1;
-    }
+    }*/
 
     tangents
 }
 
-fn calc_pixelangle(view_width: usize, projection_fov: f64, face_dist: f64) -> Vec<i32> {
+fn calc_pixelangle(view_width: usize, face_dist: f64) -> Vec<i32> {
 	let half_view = view_width/2;
 
 	let mut pixelangles = vec![0; view_width as usize]; 
-
-	for i in 0..(half_view+1) {
-		let tang = (((i as f64 + 0.5) * projection_fov) / view_width as f64) / face_dist;
+	for i in 0..half_view {
+		let tang = ((i * VIEW_GLOBAL) as f64 / view_width as f64) / face_dist;
 		let angle = (tang.atan() * RAD_TO_INT) as i32;
-        pixelangles[half_view-i] = angle;
-		pixelangles[half_view-1+i] = -angle;
+        pixelangles[half_view-1-i] = angle;
+		pixelangles[half_view+i] = -angle;
 	}
 
 	pixelangles
 }
 
 fn calc_sines() -> Vec<Fixed> {
-    //TODO_VANILLA +1?? Bug in the original? does it write outside they array there in the original?
+    //TODO_VANILLA +1?? Bug in the original? does it write outside the array there in the original?
     let mut sines: Vec<Fixed> = vec![new_fixed(0, 0); ANGLES+ANGLE_QUAD+1]; 
 
     let mut angle : f32 = 0.0;
@@ -191,11 +172,10 @@ fn calc_sines() -> Vec<Fixed> {
 }
 
 pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
-	
     let game_state = new_game_state();
     
     draw_play_screen(&game_state, rdr, prj);
-	
+
 	let mut level = setup_game_level(prj, game_state.map_on, assets).unwrap();
 
 	//TODO StartMusic
@@ -214,6 +194,10 @@ pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input
 
 fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
 	//TODO A lot to do here (clear palette, poll controls, prepare world)
+
+    //TODO DEBUG
+    level_state.mut_player().angle = 63;
+
     loop {
         level_state.control = poll_controls(ticker, input);
 
@@ -241,289 +225,6 @@ fn do_actor(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig) {
     //TODO remove obj if state becomes None
     //TODO return if flag = FL_NEVERMARK (the player obj always has this flag)
     //TODO Impl think for player = T_Player function and supply the corret (mutable) args
-}
-
-fn three_d_refresh(game_state: &GameState, level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
-    rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
-
-	clear_screen(game_state, rdr, prj);
-    wall_refresh(level_state, rdr, prj, assets);
-
-	rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
-    rdr.activate_buffer(rdr.buffer_offset());
-
-    //set offset to buffer for next frame
-    let mut next_offset = rdr.buffer_offset() + vga_render::SCREEN_SIZE;
-    if next_offset > vga_render::PAGE_3_START {
-        next_offset = vga_render::PAGE_1_START;
-    }
-    rdr.set_buffer_offset(next_offset);
-}
-
-#[derive(Debug)]
-pub enum Hit {
-    VerticalBorder,
-    HorizontalBorder,
-    VerticalWall,
-    HorizontalWall,
-}
-
-pub struct RayCast {
-    pub tile_hit: u16,
-    pub hit: Hit, 
-    pub y_tile: i32,
-    pub x_tile: i32,
-    pub y_intercept: i32,
-    pub x_intercept: i32,
-    pub x_spot: [i32; 2],
-    pub y_spot: [i32; 2],
-    pub x_tilestep: i32,
-    pub y_tilestep: i32,
-    pub x_step: i32,
-    pub y_step: i32,
-}
-enum Dir {
-    Vertical,
-    Horizontal,
-}
-
-impl RayCast {
-    fn cast(&mut self, level: &Level) {
-        let mut dir = Dir::Vertical;
-        loop {
-            match dir {
-                Dir::Vertical => {
-                    if self.y_tilestep == -1 && (self.y_intercept>>16)<=self.y_tile || self.y_tilestep == 1 && (self.y_intercept>>16)>=self.y_tile {
-                        dir = Dir::Horizontal
-                    }
-                }
-                Dir::Horizontal => {
-                    if self.x_tilestep == -1 && (self.x_intercept>>16)<=self.x_tile || self.x_tilestep == 1 && (self.x_intercept>>16)>=self.x_tile {
-                        dir = Dir::Vertical
-                    }
-                } 
-            }
-
-            if match dir {
-                Dir::Vertical => self.vert_entry(level),
-                Dir::Horizontal => self.horiz_entry(level),
-            } {
-                break;
-            }
-        }
-    }
-
-    fn vert_entry(&mut self, level: &Level) -> bool {
-        if self.y_intercept > (MAP_SIZE*65536-1) as i32 || self.x_tile >= MAP_SIZE as i32 {
-            if self.x_tile < 0 {
-                self.x_intercept = 0;
-                self.x_tile = 0;
-            } else if self.x_tile >= MAP_SIZE as i32 {
-                self.x_intercept = (MAP_SIZE as i32) << TILESHIFT;
-                self.x_tile = MAP_SIZE as i32 - 1;
-            } else {
-                self.x_tile = self.x_intercept >> TILESHIFT;
-            }
-
-            if self.y_intercept < 0 {
-                self.y_intercept = 0;
-                self.y_tile = 0;
-            } else if self.y_intercept >= (MAP_SIZE as i32) << TILESHIFT {
-                self.y_intercept = (MAP_SIZE as i32) << TILESHIFT;
-                self.y_tile = MAP_SIZE as i32 - 1;
-            }
-            self.y_spot[0] = 0xffff;
-            self.tile_hit = 0;
-            self.hit = Hit::HorizontalBorder;
-            return true;
-        }
-        if self.x_spot[0] >= MAP_SIZE as i32 || self.x_spot[1] >= MAP_SIZE as i32 {
-            return true;
-        }
-        self.tile_hit = level.tile_map[self.x_spot[0] as usize][self.x_spot[1] as usize];
-        if self.tile_hit != 0 {
-            //TODO Ignored tile.offsetVertical and pushWall handling here!
-            self.x_intercept = self.x_tile << TILESHIFT;
-            self.y_tile = self.y_intercept >> TILESHIFT;
-            self.hit = Hit::VerticalWall;
-            return true;
-        }
-        self.x_tile += self.x_tilestep;
-        self.y_intercept += self.y_step;
-        self.x_spot[0] = self.x_tile;
-        self.x_spot[1] = self.y_intercept >> 16;
-        false
-    }
-
-    fn horiz_entry(&mut self, level: &Level) -> bool {
-        if self.x_intercept > (MAP_SIZE*65536-1) as i32 || self.y_tile >= MAP_SIZE as i32  {
-            if self.y_tile < 0 {
-                self.y_intercept=0;
-                self.y_tile=0;
-            } else if self.y_tile >= MAP_SIZE as i32 {
-                self.y_intercept = (MAP_SIZE as i32) << TILESHIFT;
-                self.y_tile=MAP_SIZE as i32 - 1;
-            } else {
-                self.y_tile = self.y_intercept >> TILESHIFT;
-            }
-
-            if self.x_intercept < 0 {
-                self.x_intercept = 0;
-                self.x_tile = 0;
-            } else if self.x_intercept >= (MAP_SIZE as i32) << TILESHIFT {
-                self.x_intercept = (MAP_SIZE as i32) << TILESHIFT;
-                self.x_tile = MAP_SIZE as i32 - 1;
-            }
-
-            self.x_spot[0] = 0xffff;
-            self.tile_hit = 0;
-            self.hit = Hit::VerticalBorder;
-            return true;
-        }
-        if self.y_spot[0]>=MAP_SIZE as i32 || self.y_spot[1]>=MAP_SIZE as i32 {
-            return true;
-        }
-        self.tile_hit = level.tile_map[self.y_spot[0] as usize][self.y_spot[1] as usize];
-        if self.tile_hit != 0 {
-            //TODO Ignored tile.offsetHorizontal and pushWall handling here!
-            self.y_intercept = self.y_tile<<TILESHIFT;
-            self.x_tile = self.x_intercept >> TILESHIFT;
-            self.hit = Hit::HorizontalWall;
-            return true;
-        }
-        //passhoriz
-        self.y_tile += self.y_tilestep;
-        self.x_intercept += self.x_step;
-        self.y_spot[0] = self.x_intercept >> 16;
-        self.y_spot[1] = self.y_tile;
-        false
-    }
-}
-
-fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
-    let player = level_state.player();
-    let view_angle = player.angle;
-    let mid_angle = view_angle * (FINE_ANGLES as i32/ANGLES as i32);
-    let view_sin = prj.sin((view_angle >> ANGLE_TO_FINE_SHIFT) as usize);
-    let view_cos = prj.cos((view_angle >> ANGLE_TO_FINE_SHIFT) as usize);
-    let view_x = player.x - fixed_mul(new_fixed_i32(FOCAL_LENGTH), view_cos).to_i32();
-    let view_y = player.y + fixed_mul(new_fixed_i32(FOCAL_LENGTH), view_sin).to_i32();
-    
-    let focal_tx = view_x >> TILESHIFT;
-    let focal_ty = view_y >> TILESHIFT;
-
-    let view_tx = player.x >> TILESHIFT;
-    let view_ty = player.y >> TILESHIFT;
-
-    let x_partialdown = view_x&(TILEGLOBAL-1);
-    let x_partialup = TILEGLOBAL-x_partialdown;
-    let y_partialdown = view_y&(TILEGLOBAL-1);
-    let y_partialup = TILEGLOBAL-y_partialdown;
-
-    let mid_wallheight = prj.view_height;
-    let view_shift = fixed_mul(new_fixed_i32(prj.focal_length_y), new_fixed_i32(prj.fine_tangents[(ANGLE_180 + player.pitch >> ANGLE_TO_FINE_SHIFT) as usize]));
-
-    let mut x_partial = 0;
-    let mut y_partial = 0;
-
-    //asm_refresh / ray casting core loop
-    let mut rc = RayCast{tile_hit: 0, hit: Hit::VerticalBorder, 
-        x_intercept:0, y_intercept:0, 
-        x_tile: 0, y_tile:0,
-        x_tilestep: 0, y_tilestep: 0,
-        x_step: 0, y_step: 0, 
-        x_spot: [0, 0], y_spot: [0, 0],
-    };
-
-    let mut scaler_state = initial_scaler_state();
-
-    for pixx in 0..prj.view_width {
-        let mut angl=mid_angle as i32 + prj.pixelangle[pixx];
-        if angl<0 {
-            angl+=FINE_ANGLES as i32;
-        }
-        if angl>=ANG360 as i32 {
-            angl-=FINE_ANGLES as i32;
-        }
-        if angl<ANG90 as i32 {
-            rc.x_tilestep = 1;
-            rc.y_tilestep = -1;
-            rc.x_step = prj.fine_tangents[ANG90-1-angl as usize];
-            rc.y_step = -prj.fine_tangents[angl as usize];
-            x_partial = x_partialup;
-            y_partial = y_partialdown;
-        } else if angl<ANG180 as i32 {
-            rc.x_tilestep = -1;
-            rc.y_tilestep = -1;
-            rc.x_step = -prj.fine_tangents[angl as usize -ANG90];
-            rc.y_step = -prj.fine_tangents[ANG180-1-angl as usize];
-            x_partial=x_partialdown;
-            y_partial=y_partialdown;
-        } else if angl<ANG270 as i32 {
-            rc.x_tilestep = -1;
-            rc.y_tilestep = 1;
-            rc.x_step = -prj.fine_tangents[ANG270-1-angl as usize];
-            rc.y_step = prj.fine_tangents[angl as usize - ANG180 as usize];
-            x_partial=x_partialup;
-            y_partial=y_partialup; 
-        } else if angl<ANG360 as i32 {
-            rc.x_tilestep = 1;
-            rc.y_tilestep = 1;
-            rc.x_step = prj.fine_tangents[angl as usize - ANG270];
-            rc.y_step = prj.fine_tangents[ANG360-1-angl as usize];
-            x_partial=x_partialup;
-            y_partial=y_partialup;
-        }
-        rc.y_intercept = fixed_mul(new_fixed_i32(rc.y_step), new_fixed_i32(x_partial)).to_i32() + view_y;
-        rc.x_tile = focal_tx+rc.x_tilestep;
-        rc.x_spot[0] = rc.x_tile;
-        rc.x_spot[1] = rc.y_intercept >> 16;
-        rc.x_intercept = fixed_mul(new_fixed_i32(rc.x_step), new_fixed_i32(y_partial)).to_i32() + view_x;
-        rc.y_tile = focal_ty + rc.y_tilestep;
-        rc.y_spot[0] = rc.x_intercept>>16;
-        rc.y_spot[1] = rc.y_tile;
-        let tex_delta = 0;
-
-        rc.cast(&level_state.level);
-        
-        let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, view_x, view_y, view_cos, view_sin);
-
-        match rc.hit {
-            Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, &mut rc, pixx, height, prj, rdr, assets),
-            Hit::HorizontalWall|Hit::HorizontalBorder => hit_horiz_wall(&mut scaler_state, &mut rc, pixx, height, prj, rdr, assets),
-            // TODO hit other things (door, pwall)
-        }
-
-    /*
-        let side = match rc.hit {
-            Hit::HorizontalBorder|Hit::HorizontalWall => 0,
-            Hit::VerticalBorder|Hit::VerticalWall => 1,
-        };
-       
-        let post_src = match rc.hit {
-            Hit::HorizontalBorder|Hit::HorizontalWall => (rc.x_intercept>>4)&0xFC0,
-            Hit::VerticalBorder|Hit::VerticalWall => (rc.y_intercept>>4)&0xFC0,
-        };
-
-        let texture = if rc.tile_hit < 50 && rc.tile_hit > 0 {
-            Some(&assets.textures[((rc.tile_hit - 1) * 2 + side) as usize])
-        } else {
-            //TODO totally only for test
-            None
-        };
-
-        draw_scaled(pixx, post_src, height, prj.view_height as i32, texture, rdr);
-        */
-    }
-}
-
-// Clears the screen and already draws the bottom and ceiling
-fn clear_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
-	let ceil_color = VGA_CEILING[state.episode*10+state.map_on];
-
-	let half = prj.view_height/2;
-	rdr.bar(0, 0, prj.view_width, half, ceil_color); 
-	rdr.bar(0, half, prj.view_width, half, 0x19);
 }
 
 fn draw_play_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {

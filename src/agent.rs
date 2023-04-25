@@ -1,8 +1,6 @@
-
-use super::play::ProjectionConfig;
-use super::game::TILESHIFT;
-use super::draw::fixed_by_frac;
-use super::def::{StateType, ObjType, ObjKey, LevelState, At, new_fixed_i32, ANGLES, MIN_DIST, PLAYER_SIZE, TILEGLOBAL};
+use crate::play::ProjectionConfig;
+use crate::def::{StateType, ObjType, ObjKey, LevelState, At, ANGLES, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT};
+use crate::fixed::{new_fixed_i32, fixed_by_frac};
 
 const ANGLE_SCALE : i32 = 20;
 const MOVE_SCALE : i32 = 150;
@@ -78,10 +76,6 @@ pub fn thrust(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig, a
 
     let x_move = fixed_by_frac(speed, prj.cos(angle as usize));
     let y_move = -fixed_by_frac(speed, prj.sin(angle as usize));
-
-    //println!("xmove={}, ymove={}, angle={}", x_move, y_move, angle);
-    println!("xmove=({}, {})={};a={}", speed.to_i32(), prj.cos(angle as usize), x_move.to_i32(), angle);
-    println!("ymove=({}, {})={};a={}", speed.to_i32(), prj.sin(angle as usize), y_move.to_i32(), angle);
 
     /*{
         let ob = level_state.obj(k);

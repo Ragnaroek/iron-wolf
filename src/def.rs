@@ -1,9 +1,4 @@
-#[cfg(test)]
-#[path = "./def_test.rs"]
-mod draw_test;
-
 use std::path::Path;
-use std::fmt;
 
 use libiw::map::{MapType, MapFileType};
 use libiw::gamedata::Texture;
@@ -11,67 +6,15 @@ use libiw::gamedata::Texture;
 use crate::play::ProjectionConfig;
 
 pub const GLOBAL1 : i32	= 1<<16;
-
 pub const MAP_SIZE : usize = 64;
-
 pub const MIN_DIST : i32 = 0x5800;
 pub const PLAYER_SIZE : i32 = MIN_DIST;
-
 pub const ANGLES : usize = 360; //must be divisable by 4
 pub const ANGLE_QUAD : usize = ANGLES/4;
-
 pub const TILEGLOBAL : i32 = 1<<16;
-
-#[derive(PartialEq, Clone, Copy)]
-pub struct Fixed(i32); //16:16 fixed point
-
-pub fn new_fixed_u16(int_part: u16, frac_part: u16) -> Fixed {
-    new_fixed_u32((int_part as u32) << 16 | frac_part as u32)
-}
-
-pub fn new_fixed_i16(int_part: i16, frac_part: i16) -> Fixed {
-    new_fixed(int_part as i32, frac_part as i32)
-}
-
-pub fn new_fixed(int_part: i32, frac_part: i32) -> Fixed {
-    Fixed(int_part << 16 | frac_part)
-}
-
-pub fn new_fixed_i32(raw: i32) -> Fixed {
-    Fixed(raw)
-}
-
-pub fn new_fixed_u32(raw: u32) -> Fixed {
-    Fixed(raw as i32)
-}
-
-impl Fixed {
-    pub fn to_i32(&self) -> i32 {
-        self.0
-    }
-}
-
-impl fmt::Display for Fixed {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}.{}", self.0 >> 16, self.0 & 0xFFFF)
-    }
-}
-
-impl fmt::Debug for Fixed {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let i = self.0 >> 16;
-        let frac = self.0 & 0xFFFF;
-        write!(f, "{:#04x}.{:#04x}({}.{})", i, frac, i, frac)
-    }
-}
-
-impl std::ops::Neg for Fixed {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        new_fixed_i32(-self.0)
-    }
-}
+pub const TILESHIFT : i32 = 16;
+pub const FOCAL_LENGTH : i32 = 0x5700;
+pub const FINE_ANGLES : usize = 3600;
 
 #[derive(Copy, Clone)]
 pub enum WeaponType {
