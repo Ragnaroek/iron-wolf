@@ -4,6 +4,7 @@ use std::path::Path;
 use crate::assets;
 use crate::def::{IWConfig, ObjType};
 use crate::draw::{Op, Hit, init_ray_cast, init_ray_cast_consts, calc_height};
+use crate::fixed::new_fixed_i32;
 use crate::play;
 use crate::agent::S_PLAYER;
 use crate::game::setup_game_level;
@@ -11,7 +12,7 @@ use crate::game::setup_game_level;
 use super::RayCast;
 
 #[test]
-fn test_cast() -> Result<(), String>{
+fn test_cast_angle_63() -> Result<(), String>{
     // TODO Test will not work on CI or somewhere else
     // Use public shareware data for this test or mock the tile data to only what is needed
     let assets = assets::load_assets(IWConfig {
@@ -33,7 +34,6 @@ fn test_cast() -> Result<(), String>{
     assert_eq!(consts.x_partialdown, 22657);
     assert_eq!(consts.y_partialdown, 52612);
 
-    //TODO start from 0 again!
     for pixx in 0..prj.view_width {
         rc.init_cast(&prj, pixx, &consts);
         match pixx {
@@ -166,6 +166,40 @@ fn check_cast_pixx_46(rc : &RayCast) {
     assert_eq!(rc.y_intercept, 0x370000, "y_intercept={:x}", rc.y_intercept);
     assert_eq!(rc.x_tile, 0x1D);
     assert_eq!(rc.y_tile, 0x37);
+}
+
+#[test]
+fn test_cast_angle_353() -> Result<(), String>{
+    // TODO Test will not work on CI or somewhere else
+    // Use public shareware data for this test or mock the tile data to only what is needed
+    let assets = assets::load_assets(IWConfig {
+        wolf3d_data: Path::new("/Users/michaelbohn/_w3d/w3d_data"),
+        no_wait: true,
+    })?;
+    let prj = play::calc_projection(19);
+    
+    let mut level_state = setup_game_level(&prj, 0, &assets).unwrap();
+    level_state.mut_player().angle = 353;
+    let consts = init_ray_cast_consts(&prj, level_state.player());
+    let mut rc = init_ray_cast(prj.view_width);
+
+    assert_eq!(level_state.player().x, 1933312);
+    assert_eq!(level_state.player().y, 3768320);
+    assert_eq!(consts.view_cos, new_fixed_i32(65047));
+    assert_eq!(consts.view_sin, new_fixed_i32(-2147475662));
+    assert_eq!(consts.view_x, 1911207);
+    assert_eq!(consts.view_y, 3765607); 
+    assert_eq!(consts.x_partialup, 54873);
+    assert_eq!(consts.y_partialup, 35481);
+    assert_eq!(consts.x_partialdown, 10663);
+    assert_eq!(consts.y_partialdown, 30055);
+
+    //Do one ray cast with the const vars
+    for pixx in 0..prj.view_width {
+        rc.init_cast(&prj, pixx, &consts);
+        rc.cast(&level_state.level);
+    }
+    Ok(())
 }
 
 #[test]

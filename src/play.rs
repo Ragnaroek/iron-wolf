@@ -196,8 +196,7 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
 	//TODO A lot to do here (clear palette, poll controls, prepare world)
 
     //TODO DEBUG
-    level_state.mut_player().angle = 63;
-
+    level_state.mut_player().angle = 353;
     loop {
         level_state.control = poll_controls(ticker, input);
 
