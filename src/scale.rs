@@ -38,7 +38,7 @@ pub fn setup_scaling(scaler_height: usize, view_height: usize) -> CompiledScaler
 
     let mut scale_call = vec![0; max_scale_height+1];
     let mut i = 1;
-    let mut ptr = 1;
+    let mut ptr = 0;
     while i <= max_scale_height {
         scale_call[i]=ptr;
         if i >= step_by_two {
