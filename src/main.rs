@@ -1,3 +1,4 @@
+pub mod act1;
 pub mod agent;
 pub mod assets;
 pub mod config;

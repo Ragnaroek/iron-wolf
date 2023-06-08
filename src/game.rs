@@ -1,6 +1,7 @@
 
 use super::def::{Assets, ObjType, Level, LevelState, Control, At, MAP_SIZE, PLAYER_KEY, ANGLES};
 use super::assets::load_map_from_assets;
+use super::act1::{spawn_door};
 use super::agent::{spawn_player, thrust};
 use super::play::ProjectionConfig;
 
@@ -38,6 +39,24 @@ pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) 
 			}
 		}
 	}
+
+	// spawn doors
+	map_ptr = 0;
+	let mut doornum = 0;
+	for y in 0..MAP_SIZE {
+		for x in 0..MAP_SIZE {
+			let tile = map_data.segs[0][map_ptr];
+			map_ptr += 1;
+			if tile >= 90 && tile <= 101 {
+				match tile {
+					90 | 92 | 94 | 96 | 98 | 100 => spawn_door(&mut tile_map, doornum, x, y, true, (tile-90)/2),
+					91 | 93 | 95 | 97 | 99 | 101 => spawn_door(&mut tile_map, doornum, x, y, false, (tile-91)/2),
+					_ => unreachable!("tile guaranteed to be in range through the if check")
+				}
+				doornum += 1;
+			}
+		}
+	}	
 
 	let player = scan_info_plane( &map_data);
     let actors = init_actors(player);
