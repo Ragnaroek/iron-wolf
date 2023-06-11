@@ -19,7 +19,7 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         profile: minimal
-        toochain: stable
+        toolchain: stable
     - name: Update
       run: sudo apt-get update
     - name: Install SDL
