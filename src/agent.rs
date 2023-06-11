@@ -77,16 +77,7 @@ pub fn thrust(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig, a
     let x_move = fixed_by_frac(speed, prj.cos(angle as usize));
     let y_move = -fixed_by_frac(speed, prj.sin(angle as usize));
 
-    /*{
-        let ob = level_state.obj(k);
-        println!("before: ob.x={},ob.y={},ob.angle={}", ob.x, ob.y, ob.angle);
-    }*/
     clip_move(k, level_state, x_move.to_i32(), y_move.to_i32());
-    /*{
-        let ob = level_state.obj(k);
-        println!("after: ob.x={},ob.y={},ob.angle={}", ob.x, ob.y, ob.angle);
-    }*/
-
 
     let mut ob = level_state.mut_obj(k);
     ob.tilex = ob.x as usize >> TILESHIFT;

@@ -2,7 +2,7 @@
 use std::path::Path;
 
 use crate::assets;
-use crate::def::{IWConfig, ObjType};
+use crate::def::{IWConfig, ObjType, LevelState, Level, Control, MAP_SIZE};
 use crate::draw::{Op, Hit, init_ray_cast, init_ray_cast_consts, calc_height};
 use crate::fixed::new_fixed_i32;
 use crate::play;
@@ -13,18 +13,11 @@ use super::RayCast;
 
 #[test]
 fn test_cast_angle_63() -> Result<(), String>{
-    // TODO Test will not work on CI or somewhere else
-    // Use public shareware data for this test or mock the tile data to only what is needed
-    let assets = assets::load_assets(IWConfig {
-        wolf3d_data: Path::new("/Users/michaelbohn/_w3d/w3d_data"),
-        no_wait: true,
-    })?;
     let mut prj = play::calc_projection(19);
     // fix rounding errors fine_tangents to make the
     // test results fully compatible with the original
     prj.fine_tangents[898] = prj.fine_tangents[898]+2; 
-    
-    let mut level_state = setup_game_level(&prj, 0, &assets).unwrap();
+    let mut level_state = mock_level_state(); 
     level_state.mut_player().angle = 63; // an interesting angle in the start level
     let consts = init_ray_cast_consts(&prj, level_state.player());
     let mut rc = init_ray_cast(prj.view_width);
@@ -204,14 +197,8 @@ fn test_cast_angle_353() -> Result<(), String>{
 
 #[test]
 fn test_cast_angle_26() -> Result<(), String>{
-    // TODO Test will not work on CI or somewhere else
-    // Use public shareware data for this test or mock the tile data to only what is needed
-    let assets = assets::load_assets(IWConfig {
-        wolf3d_data: Path::new("/Users/michaelbohn/_w3d/w3d_data"),
-        no_wait: true,
-    })?;
     let prj = play::calc_projection(19);
-    let mut level_state = setup_game_level(&prj, 0, &assets).unwrap();
+    let mut level_state = mock_level_state();
     level_state.mut_player().angle = 26; 
     let consts = init_ray_cast_consts(&prj, level_state.player());
     let mut rc = init_ray_cast(prj.view_width);
@@ -267,14 +254,8 @@ fn check_cast_angle_26_pixx_0(rc : &RayCast) {
 
 #[test]
 fn test_cast_angle_288() -> Result<(), String>{
-    // TODO Test will not work on CI or somewhere else
-    // Use public shareware data for this test or mock the tile data to only what is needed
-    let assets = assets::load_assets(IWConfig {
-        wolf3d_data: Path::new("/Users/michaelbohn/_w3d/w3d_data"),
-        no_wait: true,
-    })?;
     let prj = play::calc_projection(19);
-    let mut level_state = setup_game_level(&prj, 0, &assets).unwrap();
+    let mut level_state = mock_level_state();
     level_state.mut_player().angle = 288; 
     let consts = init_ray_cast_consts(&prj, level_state.player());
     let mut rc = init_ray_cast(prj.view_width);
@@ -364,4 +345,38 @@ fn test_calc_height() {
         calc_height(prj.height_numerator, 1904384, 3670016, &consts),
         562,
     )
+}
+
+// Helper
+
+fn mock_level_state() -> LevelState {
+    let mut tile_map = vec![vec![0; MAP_SIZE]; MAP_SIZE]; 
+    tile_map[28][59] = 9;
+    tile_map[29][55] = 9;
+    tile_map[29][59] = 9;
+    tile_map[30][55] = 8;
+    tile_map[30][59] = 8;
+    tile_map[31][55] = 8;
+    tile_map[31][59] = 8;
+    tile_map[32][56] = 72;
+    tile_map[32][57] = 148;
+    tile_map[32][58] = 72;
+
+    LevelState {
+        level: Level {
+            tile_map,
+        },
+        actors: vec![ObjType{ //actor start in the level 1
+            angle: 0,
+            pitch: 0,
+            tilex: 29,
+            tiley: 57,
+            x: 1933312,
+            y: 3768320,
+            state: &S_PLAYER,
+        }],
+        actor_at: Vec::with_capacity(0),
+        control: Control{x:0, y:0},
+        angle_frac: 0,
+    }
 }

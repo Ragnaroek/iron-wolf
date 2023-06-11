@@ -338,7 +338,6 @@ fn latch_number(rdr: &dyn Renderer, x_start: usize, y: usize, width: usize, num:
 
 // reads input delta since last tic and manipulates the player state
 fn poll_controls(ticker: &time::Ticker, input: &input::Input) -> Control {
-
     let tics = ticker.calc_tics() as i32;
 
     let mut control = Control{x:0, y:0};
@@ -377,7 +376,6 @@ fn poll_keyboard_move(control: &mut Control, input: &input::Input, tics: i32) {
     };
 
     if input.key_pressed(NumCode::UpArrow) {
-        println!("tics={}", tics);
         control.y -= move_factor;
     }
     if input.key_pressed(NumCode::DownArrow) {

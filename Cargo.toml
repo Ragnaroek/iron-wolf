@@ -6,5 +6,5 @@ description = "Iron-Wolf a Wolfenstein 3D source port"
 
 [dependencies]
 sdl2 = "0.35.2"
-vga-emu = {path="../vga-emu/"} #"0.2.1"
-libiw = {path="../libiw"} #"0.1.0"
+vga-emu = "0.3.0" #{path="../vga-emu/"}
+libiw = "0.2.0" #{path="../libiw"}
