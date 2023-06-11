@@ -1,13 +1,8 @@
-
-use std::path::Path;
-
-use crate::assets;
-use crate::def::{IWConfig, ObjType, LevelState, Level, Control, MAP_SIZE};
+use crate::def::{ObjType, LevelState, Level, Control, MAP_SIZE};
 use crate::draw::{Op, Hit, init_ray_cast, init_ray_cast_consts, calc_height};
 use crate::fixed::new_fixed_i32;
 use crate::play;
 use crate::agent::S_PLAYER;
-use crate::game::setup_game_level;
 
 use super::RayCast;
 
@@ -163,15 +158,8 @@ fn check_cast_pixx_46(rc : &RayCast) {
 
 #[test]
 fn test_cast_angle_353() -> Result<(), String>{
-    // TODO Test will not work on CI or somewhere else
-    // Use public shareware data for this test or mock the tile data to only what is needed
-    let assets = assets::load_assets(IWConfig {
-        wolf3d_data: Path::new("/Users/michaelbohn/_w3d/w3d_data"),
-        no_wait: true,
-    })?;
     let prj = play::calc_projection(19);
-    
-    let mut level_state = setup_game_level(&prj, 0, &assets).unwrap();
+    let mut level_state = mock_level_state(); 
     level_state.mut_player().angle = 353;
     let consts = init_ray_cast_consts(&prj, level_state.player());
     let mut rc = init_ray_cast(prj.view_width);
