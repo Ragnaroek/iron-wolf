@@ -241,7 +241,7 @@ impl RayCast {
         self.dx = self.y_intercept >> 16;
     }
 
-    fn cast(&mut self, level: &Level) {
+    fn cast(&mut self, level_state: &LevelState) {
         let mut check = DirCheck::VertCheck;
         let mut dir : DirJmp;
         
@@ -258,21 +258,51 @@ impl RayCast {
 
             match dir {
                 DirJmp::VertEntry => {
-                    let (hit, tile) = hit(level, self.si.try_into().unwrap());
+                    let (hit, tile) = hit(&level_state.level, self.si.try_into().unwrap());
                     if hit {
                         self.tile_hit = tile;
-                        if tile & 0x80 != 0 {
-                            // TODO handle half-closed doors here
-                            self.hit = Hit::VerticalDoor
+                        let mut do_break = false;
+                        if tile & 0x80 != 0 { // vertdoor
+                            self.x_tile = self.bx; // save off live register variables
+                            self.y_intercept = self.y_intercept & 0xFFFF | self.dx << 16;
+
+                            if tile & 0x40 != 0 {
+                                //TOOD handle vertpushwall here
+                            }
+
+                            let door_num = (self.tile_hit & 0x7f) as usize;
+                            let x_0 = self.y_step >> 1;
+                            let x = x_0 + self.y_intercept;
+                            let dx = (x >> 16) & 0xFFFF;
+                            let ic = (self.y_intercept >> 16) & 0xFFFF;
+                            if ic == dx { // is it still in the same tile?
+                                //hitvmid
+                                let door_pos = level_state.door_position[door_num];
+                                let ax = (x & 0xFFFF) as u16;
+                                if ax < door_pos {
+                                    self.bx = self.x_tile;
+                                    self.dx = ic;
+                                    do_break = false //continue with passvert
+                                } else { //draw the door
+                                    self.y_intercept = (self.y_intercept & (0xFFFF << 16)) | ax as i32; 
+                                    self.x_intercept = (self.x_tile & 0xFFFF as i32) << 16 | 0x8000;
+                                    do_break = true;
+                                    self.hit = Hit::VerticalDoor
+                                }
+                            } //else continue with tracing in passvert    
                         } else {
+                            do_break = true;
                             self.hit = Hit::VerticalWall;
+                            self.x_intercept = self.bx << 16;
+                            self.x_tile = self.bx;
+                            self.y_intercept &= 0xFFFF;
+                            self.y_intercept |= self.dx << 16;
+                            self.y_tile = self.dx;
                         }
-                        self.x_intercept = self.bx << 16;
-                        self.x_tile = self.bx;
-                        self.y_intercept &= 0xFFFF;
-                        self.y_intercept |= self.dx << 16;
-                        self.y_tile = self.dx;
-                        break 'checkLoop;
+
+                        if do_break {
+                            break 'checkLoop;
+                        }
                     }
                     //passvert:
                     //TODO Update spotvis
@@ -287,7 +317,7 @@ impl RayCast {
                     check = DirCheck::VertCheck;
                 },
                 DirJmp::HorizEntry => {
-                    let (hit, tile) = hit(level, self.di.try_into().unwrap());
+                    let (hit, tile) = hit(&level_state.level, self.di.try_into().unwrap());
                     if hit {
                         //hithoriz:
                         self.tile_hit = tile;
@@ -369,7 +399,7 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
     //asm_refresh / ray casting core loop
     for pixx in 0..prj.view_width {
         rc.init_cast(prj, pixx, &consts);
-        rc.cast(&level_state.level);
+        rc.cast(level_state);
 
         match rc.hit {
             Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state.level, assets),
@@ -521,10 +551,8 @@ pub fn hit_horiz_door() {
 }
 
 pub fn hit_vert_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &dyn Renderer, level: &Level, assets: &Assets) {
-    
     //TOOD incorporate doorposition here
     let post_source = rc.y_intercept >> 4 & 0xFC0;
-    
     let doornum = rc.tile_hit & 0x7F;
     let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, consts);
     rc.wall_height[pixx] = height;

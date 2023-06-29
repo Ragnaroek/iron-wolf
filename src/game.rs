@@ -1,4 +1,6 @@
 
+use crate::def::MAX_DOORS;
+
 use super::def::{Assets, ObjType, Level, LevelState, Control, At, MAP_SIZE, PLAYER_KEY, ANGLES};
 use super::assets::load_map_from_assets;
 use super::act1::{spawn_door};
@@ -43,20 +45,24 @@ pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) 
 	// spawn doors
 	map_ptr = 0;
 	let mut doornum = 0;
+	let mut doors = Vec::with_capacity(MAX_DOORS);
+	let mut door_position = Vec::with_capacity(MAX_DOORS);
 	for y in 0..MAP_SIZE {
 		for x in 0..MAP_SIZE {
 			let tile = map_data.segs[0][map_ptr];
 			map_ptr += 1;
 			if tile >= 90 && tile <= 101 {
-				match tile {
+				let door = match tile {
 					90 | 92 | 94 | 96 | 98 | 100 => spawn_door(&mut tile_map, doornum, x, y, true, (tile-90)/2),
 					91 | 93 | 95 | 97 | 99 | 101 => spawn_door(&mut tile_map, doornum, x, y, false, (tile-91)/2),
 					_ => unreachable!("tile guaranteed to be in range through the if check")
-				}
+				};
+				doors.push(door);
+				door_position.push(0x0); // doors start out fully closed
 				doornum += 1;
 			}
 		}
-	}	
+	}
 
 	let player = scan_info_plane( &map_data);
     let actors = init_actors(player);
@@ -67,17 +73,16 @@ pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) 
         },
         actors,
         actor_at,
+		doors,
+		door_position,
         control: Control{x:0, y:0},
         angle_frac: 0,
 	};
 
     thrust(PLAYER_KEY, &mut level_state, prj, 0, 0); // set some variables
-    //TODO init_door_list?
 	//TODO init_static_list?
 
-	//TODO something with doors 90 to 101
 	//TODO ambush markers
-
 	Ok(level_state)
 }
 
