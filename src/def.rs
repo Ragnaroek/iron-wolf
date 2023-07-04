@@ -18,6 +18,8 @@ pub const FINE_ANGLES : usize = 3600;
 
 pub const MAX_DOORS : usize = 64;
 
+pub const NUM_BUTTONS : usize = 8;
+
 #[derive(Copy, Clone)]
 pub enum WeaponType {
 	Knife,
@@ -54,9 +56,7 @@ pub struct LevelState {
     pub doors: Vec<DoorType>, 
     pub door_position: Vec<u16>,
     
-    /// Control diff from last frame for player
-    pub control: Control,
-    pub angle_frac: i32,
+
 }
 
 // This is the key of the actor in the LevelState actors[] array
@@ -81,6 +81,13 @@ impl LevelState {
     pub fn mut_obj(&mut self, k: ObjKey) -> &mut ObjType {
         &mut self.actors[k.0]
     }
+}
+
+/// State about the controls
+pub struct ControlState {
+    pub control: Control,
+    pub angle_frac: i32,
+    pub button_state : [bool; NUM_BUTTONS],
 }
 
 /// State across the whole game
@@ -139,7 +146,7 @@ pub struct Assets {
     pub textures: Vec<Texture>,
 }
 
-type Think = fn(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig); 
+type Think = fn(k: ObjKey, level_state: &mut LevelState, &mut ControlState, prj: &ProjectionConfig); 
 
 #[derive(Debug)]
 pub struct StateType {
