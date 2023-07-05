@@ -10,6 +10,7 @@ pub const MAP_SIZE : usize = 64;
 pub const MIN_DIST : i32 = 0x5800;
 pub const PLAYER_SIZE : i32 = MIN_DIST;
 pub const ANGLES : usize = 360; //must be divisable by 4
+pub const ANGLES_I32 : i32 = ANGLES as i32;
 pub const ANGLE_QUAD : usize = ANGLES/4;
 pub const TILEGLOBAL : i32 = 1<<16;
 pub const TILESHIFT : i32 = 16;
@@ -83,11 +84,33 @@ impl LevelState {
     }
 }
 
+pub enum Dir {
+    North,
+    East,
+    South,
+    West
+}
+
 /// State about the controls
 pub struct ControlState {
     pub control: Control,
     pub angle_frac: i32,
+    pub button_held : [bool; NUM_BUTTONS],
     pub button_state : [bool; NUM_BUTTONS],
+}
+
+// nums here are an index into ControlState::button_state
+#[repr(usize)]
+pub enum Button {
+    NoButton = usize::MAX,
+    Attack = 0,
+    Strafe = 1,
+    Run = 2,
+    Use = 3,
+    ReadyKnife = 4,
+    ReadyPistol = 5,
+    ReadyMachineGun = 6,
+    ReadyChainGun = 7,
 }
 
 /// State across the whole game
