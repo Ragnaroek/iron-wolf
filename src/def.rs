@@ -139,6 +139,7 @@ pub struct ObjType {
     pub state: &'static StateType,
 }
 
+#[derive(Eq, PartialEq)]
 pub enum DoorAction {
     Open,
     Closed,

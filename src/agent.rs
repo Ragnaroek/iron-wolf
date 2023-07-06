@@ -1,3 +1,4 @@
+use crate::act1::operate_door;
 use crate::play::ProjectionConfig;
 use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT};
 use crate::fixed::{new_fixed_i32, fixed_by_frac};
@@ -20,7 +21,7 @@ fn t_player(k: ObjKey, level_state: &mut LevelState, control_state: &mut Control
     control_movement(k, level_state, control_state, prj);
 }
 
-fn cmd_use(level_state: &LevelState, control_state: &ControlState) {
+fn cmd_use(level_state: &mut LevelState, control_state: &mut ControlState) {
 
     //TODO pushable wall, elevator
 
@@ -55,7 +56,8 @@ fn cmd_use(level_state: &LevelState, control_state: &ControlState) {
 
     let doornum = level_state.level.tile_map[check_x][check_y];
     if !control_state.button_held[Button::Use as usize] && doornum & 0x80 != 0 {
-        println!("used door {}", doornum)
+        control_state.button_held[Button::Use as usize] = true;
+        operate_door(doornum & !0x80, level_state);
     }
 }
 
