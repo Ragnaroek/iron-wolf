@@ -17,6 +17,7 @@ fn test_fixed_by_frac() {
     assert_eq!(fixed_by_frac(new_fixed_i32(21000), new_fixed_i32(65536)), new_fixed_i32(0));
     assert_eq!(fixed_by_frac(new_fixed_i32(135055), new_fixed_i32(65535)), new_fixed_i32(135052));
     assert_eq!(fixed_by_frac(new_fixed_i32(165891), new_fixed_i32(65535)), new_fixed_i32(165888));
+    assert_eq!(fixed_by_frac(new_fixed_i32(14000), new_fixed_i32(-2147418113)), new_fixed_i32(-13999));
 }
 
 #[test]
