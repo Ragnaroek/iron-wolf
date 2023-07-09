@@ -4,6 +4,7 @@ mod play_test;
 
 use vgaemu::input::NumCode;
 
+use crate::act1::move_doors;
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::three_d_refresh;
 use crate::vga_render::Renderer;
@@ -12,7 +13,7 @@ use crate::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
 use crate::input;
 use crate::time;
 use crate::vga_render;
-use crate::game::{setup_game_level};
+use crate::game::setup_game_level;
 use crate::scale::{CompiledScaler, setup_scaling};
 
 //TODO separate draw.c stuff from play.c stuff in here
@@ -32,8 +33,8 @@ const NUM_FINE_TANGENTS : usize = FINE_ANGLES/2 + ANG180;
 const VIEW_GLOBAL : usize = 0x10000;
 const RAD_TO_INT : f64 = FINE_ANGLES as f64 / 2.0 / std::f64::consts::PI;
 
-const RUN_MOVE : i32 = 70;
-const BASE_MOVE: i32 = 35;
+const RUN_MOVE : u64 = 70;
+const BASE_MOVE: u64 = 35;
 
 static SCREENLOC : [usize; 3] = [vga_render::PAGE_1_START, vga_render::PAGE_2_START, vga_render::PAGE_3_START];
 
@@ -180,9 +181,12 @@ pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input
 
 fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &GameState, control_state: &mut ControlState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
 	//TODO A lot to do here (clear palette, poll controls, prepare world)
-    
     loop {
-        poll_controls(control_state, ticker, input);
+        let tics = ticker.calc_tics();
+
+        poll_controls(control_state, tics, input);
+
+        move_doors(level_state, tics);
 
         for i in 0..level_state.actors.len() {
             do_actor(ObjKey(i), level_state, control_state, prj);
@@ -337,9 +341,7 @@ fn latch_number(rdr: &dyn Renderer, x_start: usize, y: usize, width: usize, num:
 }
 
 // reads input delta since last tic and manipulates the player state
-fn poll_controls(state: &mut ControlState, ticker: &time::Ticker, input: &input::Input) {
-    let tics = ticker.calc_tics() as i32;
-
+fn poll_controls(state: &mut ControlState, tics: u64, input: &input::Input) {
     state.control.x = 0;
     state.control.y = 0;
     state.button_held.copy_from_slice(&state.button_state);
@@ -353,7 +355,7 @@ fn poll_controls(state: &mut ControlState, ticker: &time::Ticker, input: &input:
     //TODO Joystick Move?
 
     //bound movement to a maximum
-    let max = 100*tics;
+    let max = 100*tics as i32;
     let min = -max;
 
     if state.control.x > max {
@@ -375,13 +377,13 @@ fn poll_keyboard_buttons(state: &mut ControlState, input: &input::Input) {
     }
 }
 
-fn poll_keyboard_move(state: &mut ControlState, input: &input::Input, tics: i32) {
+fn poll_keyboard_move(state: &mut ControlState, input: &input::Input, tics: u64) {
     //TODO impl button mapping, uses hardcoded buttons as for now
     let move_factor = if state.button_state[Button::Run as usize] {
         RUN_MOVE * tics
     } else {
         BASE_MOVE * tics
-    };
+    } as i32;
 
     if input.key_pressed(NumCode::UpArrow) {
         state.control.y -= move_factor;

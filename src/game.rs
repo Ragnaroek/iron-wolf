@@ -46,7 +46,6 @@ pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) 
 	map_ptr = 0;
 	let mut doornum = 0;
 	let mut doors = Vec::with_capacity(MAX_DOORS);
-	let mut door_position = Vec::with_capacity(MAX_DOORS);
 	for y in 0..MAP_SIZE {
 		for x in 0..MAP_SIZE {
 			let tile = map_data.segs[0][map_ptr];
@@ -58,7 +57,6 @@ pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) 
 					_ => unreachable!("tile guaranteed to be in range through the if check")
 				};
 				doors.push(door);
-				door_position.push(0x0); // doors start out fully closed
 				doornum += 1;
 			}
 		}
@@ -74,7 +72,6 @@ pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) 
         actors,
         actor_at,
 		doors,
-		door_position,
 	};
 
     thrust(PLAYER_KEY, &mut level_state, prj, 0, 0); // set some variables
