@@ -404,7 +404,7 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
         match rc.hit {
             Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state.level, assets),
             Hit::HorizontalWall|Hit::HorizontalBorder => hit_horiz_wall(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state.level, assets),
-            Hit::VerticalDoor => hit_vert_door(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state.level, assets),
+            Hit::VerticalDoor => hit_vert_door(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state, assets),
             Hit::HorizontalDoor => hit_horiz_door(),
             // TODO hit other things (pwall)
         }
@@ -550,10 +550,11 @@ pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts
 pub fn hit_horiz_door() {
 }
 
-pub fn hit_vert_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &dyn Renderer, level: &Level, assets: &Assets) {
+pub fn hit_vert_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &dyn Renderer, level_state: &LevelState, assets: &Assets) {
     //TOOD incorporate doorposition here
-    let post_source = rc.y_intercept >> 4 & 0xFC0;
     let doornum = rc.tile_hit & 0x7F;
+    let doorpos = level_state.doors[doornum as usize].position as i32;
+    let post_source = (rc.y_intercept - doorpos ) >> 4 & 0xFC0;
     let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, consts);
     rc.wall_height[pixx] = height;
     if scaler_state.last_side {
