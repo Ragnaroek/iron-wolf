@@ -1,4 +1,4 @@
-use crate::def::{ObjType, LevelState, Level, Control, MAP_SIZE, DoorType, DoorAction};
+use crate::def::{ObjType, LevelState, Level, MAP_SIZE, DoorType, DoorAction};
 use crate::draw::{Op, Hit, init_ray_cast, init_ray_cast_consts, calc_height};
 use crate::fixed::new_fixed_i32;
 use crate::play;

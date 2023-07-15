@@ -1,6 +1,6 @@
-use std::path::Path;
+use std::path::PathBuf;
 use super::user;
-use super::def::{IWConfig};
+use super::def::IWConfig;
 use super::util;
 
 use vgaemu::input::{NumCode, to_numcode};
@@ -11,8 +11,10 @@ pub const MAX_SCORES : usize = 7;
 
 pub fn load_iw_config() -> IWConfig {
     //TODO load from a toml file
+    let mut path = PathBuf::new();
+    path.push("/Users/michaelbohn/_w3d/w3d_data");
     IWConfig {
-        wolf3d_data: Path::new("/Users/michaelbohn/_w3d/w3d_data"),
+        wolf3d_data: path,
         no_wait: true,
     }
 }

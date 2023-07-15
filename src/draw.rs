@@ -217,7 +217,7 @@ impl RayCast {
         self.y_intercept = fixed_by_frac(new_fixed_i32(self.y_step), new_fixed_i32(self.x_partial)).to_i32();
         self.y_intercept += consts.view_y;
         self.dx = self.y_intercept >> 16;
-        
+
         self.si = consts.focal_tx+self.x_tilestep;
         self.x_tile = self.si;
         self.si <<= 6;
@@ -426,7 +426,7 @@ impl RayCast {
     }
 }
 
-fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+pub fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
     let player = level_state.player();
     // TODO allocate memory for RayCast + RayCastConsts only once, not on each wall_refresh (benchmark it)!
     let consts = init_ray_cast_consts(prj, player);

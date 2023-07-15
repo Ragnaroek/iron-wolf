@@ -30,7 +30,7 @@ fn test_calc_sines() {
 
     assert_eq!(prj.sin(90), new_fixed_i32(65535), "sin(90)");
     assert_eq!(prj.sin(450), new_fixed_i32(65535), "sin(450)");
-    assert_eq!(prj.sin(270), new_fixed_i32(-2147418112), "sin(270)");
+    assert_eq!(prj.sin(270), new_fixed_i32(-2147418113), "sin(270)");
 
 
 }

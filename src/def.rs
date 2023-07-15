@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use libiw::map::{MapType, MapFileType};
 use libiw::gamedata::Texture;
@@ -157,7 +157,7 @@ pub struct DoorType {
 
 // iron-wolf specific configuration
 pub struct IWConfig {
-	pub wolf3d_data: &'static Path,
+	pub wolf3d_data: PathBuf,
     pub no_wait: bool,
 }
 
