@@ -10,7 +10,7 @@ use crate::draw::three_d_refresh;
 use crate::vga_render::Renderer;
 use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS};
 use crate::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
-use crate::{input, play};
+use crate::input;
 use crate::time;
 use crate::vga_render;
 use crate::game::setup_game_level;
@@ -175,7 +175,7 @@ pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input
 
 	//TODO StartMusic
 	//TODO PreloadGraphics
-
+    
 	draw_level(&game_state, rdr);
     
     rdr.fade_in();
