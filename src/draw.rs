@@ -3,7 +3,8 @@
 mod draw_test;
 
 use crate::play::ProjectionConfig;
-use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES};
+use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS};
+use crate::scale::{simple_scale_shape, MAP_MASKS_1};
 use crate::vga_render::Renderer;
 use crate::vga_render;
 use crate::fixed::{Fixed, fixed_by_frac, new_fixed_i32};
@@ -12,13 +13,6 @@ const DEG90 : usize = 900;
 const DEG180 : usize = 1800;
 const DEG270 : usize = 2700;
 const DEG360 : usize = 3600;
-
-static MAP_MASKS_1 : [u8; 4*8] = [
-    1 ,3 ,7 ,15,15,15,15,15,
-    2 ,6 ,14,14,14,14,14,14,
-    4 ,12,12,12,12,12,12,12,
-    8 ,8 ,8 ,8 ,8 ,8 ,8 ,8
-];
 
 static VGA_CEILING : [u8; 60] = [	
 	0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0xbf,
@@ -29,6 +23,8 @@ static VGA_CEILING : [u8; 60] = [
 	0x7d,0x1d,0x2d,0x2d,0xdd,0xd7,0x1d,0x1d,0x1d,0x2d,
 	0x1d,0x1d,0x1d,0x1d,0xdd,0xdd,0x7d,0xdd,0xdd,0xdd
 ];
+
+static WEAPON_SCALE : [Sprite; NUM_WEAPONS] = [Sprite::None, Sprite::KnifeReady, Sprite::PistolReady, Sprite::MachinegunReady, Sprite::ChainReady];
 
 pub struct ScalerState {
     last_side: bool,
@@ -454,6 +450,9 @@ pub fn three_d_refresh(game_state: &GameState, level_state: &LevelState, rdr: &d
 	clear_screen(game_state, rdr, prj);
     wall_refresh(level_state, rdr, prj, assets);
 
+    // TODO draw_scaleds
+    draw_player_weapon(game_state, rdr, prj, assets);
+
 	rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
     rdr.activate_buffer(rdr.buffer_offset());
 
@@ -630,4 +629,15 @@ fn horiz_wall(i: usize) -> usize {
 
 fn vert_wall(i: usize) -> usize {
     if i == 0 { 0 } else { (i-1)*2+1 }
+}
+
+fn draw_player_weapon(game_state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+    // TODO Handle victoryflag here (for non SPEAR)
+
+    let shape_num = WEAPON_SCALE[game_state.weapon as usize] as usize + game_state.weapon_frame;
+    let sprite = &assets.sprites[shape_num]; 
+    
+    simple_scale_shape(rdr, prj, prj.view_width/2, sprite, prj.view_height+1);
+
+    // TODO handle demorecord || demoplayback
 }
