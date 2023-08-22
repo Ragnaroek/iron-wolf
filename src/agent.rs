@@ -13,7 +13,6 @@ pub const S_PLAYER : StateType = StateType{
 };
 
 fn t_player(k: ObjKey, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
-
     if control_state.button_state[Button::Use as usize] {
         cmd_use(level_state, control_state);
     }

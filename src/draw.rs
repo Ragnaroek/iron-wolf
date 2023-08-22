@@ -3,8 +3,8 @@
 mod draw_test;
 
 use crate::play::ProjectionConfig;
-use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS};
-use crate::scale::{simple_scale_shape, MAP_MASKS_1};
+use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS};
+use crate::scale::{simple_scale_shape, scale_shape, MAP_MASKS_1};
 use crate::vga_render::Renderer;
 use crate::vga_render;
 use crate::fixed::{Fixed, fixed_by_frac, new_fixed_i32};
@@ -51,6 +51,7 @@ pub enum Op {
 }
 
 // const throughout the core cast loop
+// TODO merge with RayCast
 pub struct RayCastConsts {
     pub view_angle : i32,
     pub mid_angle: i32,
@@ -81,8 +82,9 @@ pub struct RayCast {
     pub y_partial: i32,
     
     pub wall_height: Vec<i32>,
+    pub spotvis : Vec<Vec<bool>>,
 
-    // register names from the assembler port (rename after port is complete)
+    // register names from the assembler port (TODO rename after port is complete)
     pub si: i32, // xspot
     pub di: i32, // yspot
     pub cx: i32, // high word of xintercept 
@@ -113,14 +115,18 @@ pub fn init_scaler_state() -> ScalerState {
      }
 }
 
-fn hit(level: &Level, linear_offset: usize) -> (bool, u16) {
+fn xy(linear_offset: usize) -> (usize, usize) {
     let x = linear_offset/MAP_SIZE;
     let y = linear_offset - x*MAP_SIZE;
+    return (x, y); 
+}
+
+fn hit(level: &Level, x: usize, y: usize) -> (bool, u16) {
     let tile = level.tile_map[x][y];
     ((tile & 0xFF) != 0, tile)
 }
 
-fn init_ray_cast_consts(prj: &ProjectionConfig, player: &ObjType) -> RayCastConsts {
+pub fn init_ray_cast_consts(prj: &ProjectionConfig, player: &ObjType) -> RayCastConsts {
     let view_sin = prj.sin(player.angle as usize);
     let view_cos = prj.cos(player.angle as usize);
     let view_x = player.x - fixed_by_frac(new_fixed_i32(FOCAL_LENGTH), view_cos).to_i32();
@@ -160,6 +166,7 @@ pub fn init_ray_cast(view_width: usize) -> RayCast {
         horizop: Op::JLE, vertop: Op::JLE,
         x_partial: 0, y_partial: 0,
         wall_height: vec![0; view_width],
+        spotvis: vec![vec![false; MAP_SIZE]; MAP_SIZE],
     } 
 }
 
@@ -237,7 +244,7 @@ impl RayCast {
         self.dx = self.y_intercept >> 16;
     }
 
-    fn cast(&mut self, level_state: &LevelState) {
+    fn cast(&mut self, level_state: &mut LevelState) {
         let mut check = DirCheck::VertCheck;
         let mut dir : DirJmp;
         
@@ -254,7 +261,8 @@ impl RayCast {
 
             match dir {
                 DirJmp::VertEntry => {
-                    let (hit, tile) = hit(&level_state.level, self.si.try_into().unwrap());
+                    let (x, y) = xy(self.si.try_into().unwrap());
+                    let (hit, tile) = hit(&level_state.level, x, y);
                     if hit {
                         self.tile_hit = tile;
                         let do_break;
@@ -305,7 +313,7 @@ impl RayCast {
                         }
                     }
                     //passvert:
-                    //TODO Update spotvis
+                    level_state.spotvis[x][y] = true;
                     self.bx += self.x_tilestep;
                     let y_intercept_low = (self.y_intercept & 0xFFFF) as u16;
                     let (y_intercept_low, carry) = y_intercept_low.overflowing_add(self.y_step as u16);
@@ -317,7 +325,8 @@ impl RayCast {
                     check = DirCheck::VertCheck;
                 },
                 DirJmp::HorizEntry => {
-                    let (hit, tile) = hit(&level_state.level, self.di.try_into().unwrap());
+                    let (x, y) = xy(self.di.try_into().unwrap());
+                    let (hit, tile) = hit(&level_state.level, x, y);
                     if hit {
                         //hithoriz:
                         self.tile_hit = tile;
@@ -368,7 +377,7 @@ impl RayCast {
                         }
                     }
                     //passhoriz:
-                    // TODO update spotvis
+                    level_state.spotvis[x][y] = true;
                     self.bp += self.y_tilestep;
                     let x_intercept_low = (self.x_intercept & 0xFFFF) as u16;
                     let (x_intercept_low, carry) = x_intercept_low.overflowing_add(self.x_step as u16);
@@ -422,11 +431,13 @@ impl RayCast {
     }
 }
 
-pub fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
-    let player = level_state.player();
-    // TODO allocate memory for RayCast + RayCastConsts only once, not on each wall_refresh (benchmark it)!
-    let consts = init_ray_cast_consts(prj, player);
-    let mut rc = init_ray_cast(prj.view_width);
+pub fn wall_refresh(level_state: &mut LevelState, rc: &mut RayCast, consts: &RayCastConsts, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+    // TODO Is there a faster way to do this? 
+    for x in 0..MAP_SIZE {
+        for y in 0..MAP_SIZE {
+            level_state.spotvis[x][y] = false;
+        }
+    }
     let mut scaler_state = init_scaler_state();
 
     //asm_refresh / ray casting core loop
@@ -435,22 +446,25 @@ pub fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &Projecti
         rc.cast(level_state);
 
         match rc.hit {
-            Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state.level, assets),
-            Hit::HorizontalWall|Hit::HorizontalBorder => hit_horiz_wall(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state.level, assets),
-            Hit::VerticalDoor => hit_vert_door(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state, assets),
-            Hit::HorizontalDoor => hit_horiz_door(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state, assets),
+            Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, rc, &consts, pixx, prj, rdr, &level_state.level, assets),
+            Hit::HorizontalWall|Hit::HorizontalBorder => hit_horiz_wall(&mut scaler_state, rc, &consts, pixx, prj, rdr, &level_state.level, assets),
+            Hit::VerticalDoor => hit_vert_door(&mut scaler_state, rc, &consts, pixx, prj, rdr, &level_state, assets),
+            Hit::HorizontalDoor => hit_horiz_door(&mut scaler_state, rc, &consts, pixx, prj, rdr, &level_state, assets),
             // TODO hit other things (pwall)
         }
     }
 }
 
-pub fn three_d_refresh(game_state: &GameState, level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+pub fn three_d_refresh(game_state: &GameState, level_state: &mut LevelState, rc: &mut RayCast, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
     rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
 
-	clear_screen(game_state, rdr, prj);
-    wall_refresh(level_state, rdr, prj, assets);
+    let player = level_state.player();
+    let consts = init_ray_cast_consts(prj, player);
 
-    // TODO draw_scaleds
+	clear_screen(game_state, rdr, prj);
+    wall_refresh(level_state, rc, &consts, rdr, prj, assets);
+
+    draw_scaleds(level_state, &rc.wall_height, &consts, rdr, prj, assets);
     draw_player_weapon(game_state, rdr, prj, assets);
 
 	rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
@@ -506,10 +520,12 @@ pub fn scale_post(scaler_state: &ScalerState, height: i32, prj: &ProjectionConfi
     let offset = (scaler_state.post_x >> 2) + rdr.buffer_offset();
     let mask = ((scaler_state.post_x & 3) << 3)+1;
     rdr.set_mask(MAP_MASKS_1[mask-1]);
-    for pix_scaler in &scaler.pixel_scalers {
-        let pix = texture.bytes[scaler_state.post_source + pix_scaler.texture_src];
-        for mem_dest in &pix_scaler.mem_dests {
-            rdr.write_mem(offset + *mem_dest as usize, pix);
+    for pix_scaler_opt in &scaler.pixel_scalers {
+        if let Some(pix_scaler) = pix_scaler_opt {
+            let pix = texture.bytes[scaler_state.post_source + pix_scaler.texture_src];
+            for mem_dest in &pix_scaler.mem_dests {
+                rdr.write_mem(offset + *mem_dest as usize, pix);
+            }
         }
     }
 }
@@ -636,8 +652,80 @@ fn draw_player_weapon(game_state: &GameState, rdr: &dyn Renderer, prj: &Projecti
 
     let shape_num = WEAPON_SCALE[game_state.weapon as usize] as usize + game_state.weapon_frame;
     let sprite = &assets.sprites[shape_num]; 
-    
     simple_scale_shape(rdr, prj, prj.view_width/2, sprite, prj.view_height+1);
-
     // TODO handle demorecord || demoplayback
+}
+
+fn draw_scaleds(level_state: &mut LevelState, wall_height: &Vec<i32>, consts: &RayCastConsts, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+    let mut visptr = 0;
+    // place static objects
+    for stat in &level_state.statics {
+        if stat.sprite == Sprite::None {
+            continue // object has been deleted
+        }
+        level_state.vislist[visptr].sprite = stat.sprite;
+
+        if !level_state.spotvis[stat.tile_x][stat.tile_y] {
+            continue // not visible shape
+        }
+
+        let vis = &mut level_state.vislist[visptr];
+        let can_grab = transform_tile(consts, prj, stat, vis);
+        if can_grab && (stat.flags & FL_BONUS) != 0 {
+            get_bonus(); // TODO implement get_bonus and the state manipulation in it
+            continue
+        }
+
+        if vis.view_height == 0 {
+            continue;
+        }
+
+        if visptr < level_state.vislist.len()-1 {
+            visptr += 1;
+        }
+    }
+
+    // TODO place active objects (player + enemies)
+
+    // draw from back to front
+    level_state.vislist[0..visptr].sort_by(|a, b | a.view_height.cmp(&b.view_height));
+    for i in 0..visptr {
+        let vis_obj = &level_state.vislist[i];
+        let sprite_data = &assets.sprites[vis_obj.sprite as usize];
+        scale_shape(rdr, wall_height, prj, vis_obj.view_x as usize, sprite_data, vis_obj.view_height as usize);
+    }
+}
+
+fn transform_tile(consts: &RayCastConsts, prj: &ProjectionConfig, stat: &StaticType, visobj: &mut VisObj) -> bool {
+    // translate point to view centered coordinates
+    let gx = new_fixed_i32(((stat.tile_x as i32) << TILESHIFT) + 0x8000 - consts.view_x);
+    let gy = new_fixed_i32(((stat.tile_y as i32) << TILESHIFT) + 0x8000 - consts.view_y);
+
+    let gxt = fixed_by_frac(gx, consts.view_cos);
+    let gyt = fixed_by_frac(gy, consts.view_sin);
+    let nx = gxt.to_i32() - gyt.to_i32() - 0x2000; // 0x2000 is size of object
+
+    let gxt = fixed_by_frac(gx, consts.view_sin);
+    let gyt = fixed_by_frac(gy, consts.view_cos);
+    let ny = gyt.to_i32() + gxt.to_i32();
+
+    // calculate perspective ratio
+    if nx < MIN_DIST { // too close, don't overflow the divide
+        visobj.view_height = 0;
+        return false
+    }
+    visobj.view_x = prj.center_x as i32 + ny * prj.scale/nx;
+
+    // calculate height (heightnumerator/(nx>>8))
+    visobj.view_height = prj.height_numerator / (nx >> 8);
+
+    // see if it should be grabbed
+    if nx < TILEGLOBAL && ny > -TILEGLOBAL/2 && ny < TILEGLOBAL/2 {
+        return true
+    }
+    return false;
+}
+
+fn get_bonus() {
+    // TODO implement
 }

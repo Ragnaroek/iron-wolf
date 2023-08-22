@@ -17,10 +17,13 @@ pub const TILESHIFT : i32 = 16;
 pub const FOCAL_LENGTH : i32 = 0x5700;
 pub const FINE_ANGLES : usize = 3600;
 
+pub const MAX_STATS	: usize = 400;	
 pub const MAX_DOORS : usize = 64;
 
 pub const NUM_BUTTONS : usize = 8;
 pub const NUM_WEAPONS : usize = 5;
+
+pub const FL_BONUS : u8 = 2;
 
 #[derive(Copy, Clone)]
 #[repr(usize)]
@@ -48,6 +51,14 @@ pub enum At {
     Nothing,
     Wall(u16),
     Obj(ObjKey),
+    Blocked, // magical blocked area
+}
+
+#[derive(Clone, Copy)]
+pub struct VisObj {
+    pub view_x : i32,
+    pub view_height : i32,
+    pub sprite: Sprite,
 }
 
 /// State for one level
@@ -58,6 +69,9 @@ pub struct LevelState {
     pub actors: Vec<ObjType>,
     /// Door stuff
     pub doors: Vec<DoorType>, 
+    pub statics: Vec<StaticType>,
+    pub spotvis: Vec<Vec<bool>>,
+    pub vislist: Vec<VisObj>, // allocate this once and re-use
 }
 
 // This is the key of the actor in the LevelState actors[] array
@@ -159,6 +173,15 @@ pub struct DoorType {
     pub position: u16,
 }
 
+#[derive(Debug)]
+pub struct StaticType {
+    pub tile_x: usize,
+    pub tile_y: usize,
+    pub sprite: Sprite,
+    pub flags: u8,
+    pub item_number: StaticKind,
+}
+
 // iron-wolf specific configuration
 pub struct IWConfig {
 	pub wolf3d_data: PathBuf,
@@ -183,13 +206,61 @@ pub struct StateType {
 }
 
 #[repr(usize)]
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Sprite {
+    None = usize::MAX,
 
-    None = 0,
+    Demo = 0,
+    DeathCam = 1,
 
+    // static sprites
+    Stat0 = 2, Stat1 = 3, Stat2 = 4, Stat3 = 5,
+    Stat4 = 6, Stat5 = 7, Stat6 = 8, Stat7 = 9,
+    Stat8 = 10, Stat9 = 11, Stat10 = 12, Stat11 = 13,
+    Stat12 = 14, Stat13 = 15, Stat14 = 16, Stat15 = 17,
+    Stat16 = 18, Stat17 = 19, Stat18 = 20, Stat19 = 21,
+    Stat20 = 22, Stat21 = 23, Stat22 = 24, Stat23 = 25,
+    Stat24 = 26, Stat25 = 27, Stat26 = 28, Stat27 = 29,
+    Stat28 = 30, Stat29 = 31, Stat30 = 32, Stat31 = 33,
+    Stat32 = 34, Stat33 = 35, Stat34 = 36, Stat35 = 37,
+    Stat36 = 38, Stat37 = 39, Stat38 = 40, Stat39 = 41,
+    Stat40 = 42, Stat41 = 43, Stat42 = 44, Stat43 = 45,
+    Stat44 = 46, Stat45 = 47, Stat46 = 48, Stat47 = 49,
+
+    // player attack frames
     KnifeReady = 416, KnifeAtk1 = 417, KnifeAtk2 = 418, KnifeAtk3 = 419, KnifeAtk4 = 420, 
     PistolReady = 421, PistolAtk1 = 422, PistolAtk2 = 423, PistolAtk3 = 424, PistolAtk4 = 425,  
     MachinegunReady = 426, MachinegunAtk1 = 427, MachinegunAtk2 = 428, MachinegunAtk3 = 429, MachinegunAtk4 = 430,
     ChainReady = 431, ChainAtk1 = 432, ChainAtk2 = 433, ChainAtk3 = 434, ChainAtk4 = 435,  
+}
+
+pub struct StaticInfo {
+    pub sprite: Sprite,
+    pub kind: StaticKind
+}
+
+#[derive(Eq, PartialEq, Clone, Copy, Debug)]
+pub enum StaticKind {
+    None,
+    Dressing,
+	Block,
+	BoGibs,
+	BoAlpo,
+	BoFirstaid,
+	BoKey1,
+	BoKey2,
+	BoKey3,
+	BoKey4,
+	BoCross,
+	BoChalice,
+	BoBible,
+	BoCrown,
+	BoClip,
+	BoClip2,
+	BoMachinegun,
+	BoChaingun,
+	BoFood,
+	BoFullheal,
+	Bo25clip,
+	BoSpear
 }
