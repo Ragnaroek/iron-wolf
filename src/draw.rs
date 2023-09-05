@@ -3,7 +3,7 @@
 mod draw_test;
 
 use crate::play::ProjectionConfig;
-use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS};
+use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS, FL_VISABLE};
 use crate::scale::{simple_scale_shape, scale_shape, MAP_MASKS_1};
 use crate::vga_render::Renderer;
 use crate::vga_render;
@@ -13,6 +13,8 @@ const DEG90 : usize = 900;
 const DEG180 : usize = 1800;
 const DEG270 : usize = 2700;
 const DEG360 : usize = 3600;
+
+const ACTOR_SIZE : i32 = 0x4000;
 
 static VGA_CEILING : [u8; 60] = [	
 	0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0x1d,0xbf,
@@ -685,7 +687,48 @@ fn draw_scaleds(level_state: &mut LevelState, wall_height: &Vec<i32>, consts: &R
         }
     }
 
-    // TODO place active objects (player + enemies)
+    // place active objects (player + enemies)
+
+    // just to have shorter names below
+    let vis = &level_state.spotvis;
+    let tile = &level_state.level.tile_map;
+    for obj in &mut level_state.actors {
+        if obj.state.sprite.is_none() {
+            continue; // no shape
+        }
+        let visobj = &mut level_state.vislist[visptr];
+        visobj.sprite = obj.state.sprite.unwrap();
+
+        if vis[obj.tilex][obj.tiley]
+           || (vis[obj.tilex-1][obj.tiley+1] && tile[obj.tilex-1][obj.tiley+1] == 0) 
+           || (vis[obj.tilex][obj.tiley+1] && tile[obj.tilex][obj.tiley+1] == 0) 
+           || (vis[obj.tilex+1][obj.tiley+1] && tile[obj.tilex+1][obj.tiley+1] == 0) 
+           || (vis[obj.tilex-1][obj.tiley] && tile[obj.tilex-1][obj.tiley] == 0) 
+           || (vis[obj.tilex+1][obj.tiley] && tile[obj.tilex+1][obj.tiley] == 0) 
+           || (vis[obj.tilex-1][obj.tiley-1] && tile[obj.tilex-1][obj.tiley-1] == 0) 
+           || (vis[obj.tilex][obj.tiley-1] && tile[obj.tilex][obj.tiley-1] == 0) 
+           || (vis[obj.tilex+1][obj.tiley-1] && tile[obj.tilex+1][obj.tiley-1] == 0) {
+                transform_actor(consts, prj, obj);
+                if obj.view_height == 0 {
+                    continue; // too close or far away
+                }
+                visobj.view_x = obj.view_x;
+                visobj.view_height = obj.view_height;
+
+                // TODO set special shape
+
+                if obj.state.rotate {
+                    panic!("impl: rotate for type {:?}", obj)
+                }
+
+                if visptr < level_state.vislist.len()-1 {
+                    visptr += 1;
+                }
+                obj.flags |= FL_VISABLE;
+           } else {
+            obj.flags &= !FL_VISABLE;
+           }
+    }
 
     // draw from back to front
     level_state.vislist[0..visptr].sort_by(|a, b | a.view_height.cmp(&b.view_height));
@@ -694,6 +737,36 @@ fn draw_scaleds(level_state: &mut LevelState, wall_height: &Vec<i32>, consts: &R
         let sprite_data = &assets.sprites[vis_obj.sprite as usize];
         scale_shape(rdr, wall_height, prj, vis_obj.view_x as usize, sprite_data, vis_obj.view_height as usize);
     }
+}
+
+fn transform_actor(consts: &RayCastConsts, prj: &ProjectionConfig, obj: &mut ObjType) {
+    let gx = new_fixed_i32(obj.x - consts.view_x);
+    let gy = new_fixed_i32(obj.y - consts.view_y);
+
+    let gxt = fixed_by_frac(gx, consts.view_cos);
+    let gyt = fixed_by_frac(gy, consts.view_sin);
+    let nx = gxt.to_i32() - gyt.to_i32() - ACTOR_SIZE; // fudge the shape forward a bit, because
+                                                            // the midpoint could put parts of the shape
+                                                            // into an adjacent wall
+    let gxt = fixed_by_frac(gx, consts.view_sin);
+    let gyt = fixed_by_frac(gy, consts.view_cos);
+    let ny = gyt.to_i32() + gxt.to_i32();
+
+    // calculate perspective ratio
+
+    obj.trans_x = new_fixed_i32(nx);
+    obj.trans_y = new_fixed_i32(ny);
+
+    if nx < MIN_DIST { // too close, don't overflow the divide
+        obj.view_height = 0;
+        return;
+    }
+
+    obj.view_x = prj.center_x as i32 + ny * prj.scale/nx;
+
+    // calculate height (heightnumerator/(nx>>8))
+    obj.view_height = prj.height_numerator / (nx >> 8); 
+
 }
 
 fn transform_tile(consts: &RayCastConsts, prj: &ProjectionConfig, stat: &StaticType, visobj: &mut VisObj) -> bool {

@@ -1,4 +1,4 @@
-use crate::def::{ObjType, LevelState, Level, MAP_SIZE, DoorType, DoorAction};
+use crate::def::{ObjType, LevelState, Level, MAP_SIZE, DoorType, DoorAction, FL_NEVERMARK};
 use crate::draw::{Op, Hit, init_ray_cast, init_ray_cast_consts, calc_height};
 use crate::fixed::new_fixed_i32;
 use crate::play;
@@ -301,15 +301,8 @@ fn check_cast_angle_288_pixx_274(rc : &RayCast) {
 #[test]
 fn test_init_ray_cast_consts() {
     let prj = play::calc_projection(19);
-    let player = ObjType{
-        angle: 63,
-        pitch: 0,
-        x: 1933312,
-        y: 3768320,
-        tilex: 1904384,
-        tiley: 1923201,
-        state: &S_PLAYER,
-    };
+    let mut player = test_player();
+    player.angle = 63;
     let consts = init_ray_cast_consts(&prj, &player);
     assert_eq!(consts.view_x, 1923201);
     assert_eq!(consts.view_y, 3788164);
@@ -318,15 +311,8 @@ fn test_init_ray_cast_consts() {
 #[test]
 fn test_calc_height() {
     let prj = play::calc_projection(19);
-    let player = ObjType{
-        angle: 63,
-        pitch: 0,
-        x: 1933312,
-        y: 3768320,
-        tilex: 1904384,
-        tiley: 1923201,
-        state: &S_PLAYER,
-    };
+    let mut player = test_player();
+    player.angle = 63;
 
     let consts = init_ray_cast_consts(&prj, &player);
     assert_eq!(
@@ -350,19 +336,15 @@ fn mock_level_state() -> LevelState {
     tile_map[32][57] = 148;
     tile_map[32][58] = 72;
 
+    let mut player = test_player();
+    player.tilex = 29;
+    player.tiley = 57;
+    
     LevelState {
         level: Level {
             tile_map,
         },
-        actors: vec![ObjType{ //actor start in the level 1
-            angle: 0,
-            pitch: 0,
-            tilex: 29,
-            tiley: 57,
-            x: 1933312,
-            y: 3768320,
-            state: &S_PLAYER,
-        }],
+        actors: vec![player],
         actor_at: Vec::with_capacity(0),
         doors: mock_doors(),
         statics: Vec::with_capacity(0),
@@ -386,4 +368,22 @@ fn mock_doors() -> Vec<DoorType>{
         });
     }
     return doors;
+}
+
+fn test_player() -> ObjType {
+    ObjType{
+        flags: FL_NEVERMARK,
+        view_height: 0,
+        view_x: 0,
+        trans_x: new_fixed_i32(0),
+        trans_y: new_fixed_i32(0),
+        active: true,
+        angle: 0,
+        pitch: 0,
+        x: 1933312,
+        y: 3768320,
+        tilex: 1904384,
+        tiley: 1923201,
+        state: &S_PLAYER,
+    }
 }

@@ -1,4 +1,4 @@
-use crate::def::{DoorType, StaticType, StaticKind, StaticInfo, Sprite, DoorAction, LevelState, At, FL_BONUS};
+use crate::def::{DoorType, StaticType, StaticKind, StaticInfo, Sprite, DoorAction, LevelState, At, FL_BONUS, ObjKey};
 
 const OPENTICS : u32 = 300;
 

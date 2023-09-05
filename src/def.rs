@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use libiw::map::{MapType, MapFileType};
 use libiw::gamedata::{TextureData, SpriteData};
 
+use crate::fixed::Fixed;
 use crate::play::ProjectionConfig;
 
 pub const GLOBAL1 : i32	= 1<<16;
@@ -23,7 +24,14 @@ pub const MAX_DOORS : usize = 64;
 pub const NUM_BUTTONS : usize = 8;
 pub const NUM_WEAPONS : usize = 5;
 
-pub const FL_BONUS : u8 = 2;
+pub const FL_SHOOTABLE: u8 = 1;
+pub const FL_BONUS: u8 = 2;
+pub const FL_NEVERMARK: u8 = 4;
+pub const FL_VISABLE: u8 = 8;
+pub const FL_ATTACKMODE: u8 = 16;
+pub const FL_FIRSTATTACK: u8 = 32;
+pub const FL_AMBUSH: u8 = 64;
+pub const FL_NONMARK: u8 = 128;
 
 #[derive(Copy, Clone)]
 #[repr(usize)]
@@ -145,13 +153,24 @@ pub struct GameState {
 
 #[derive(Debug, Clone, Copy)] //XXX do not make this Clone, fix actor_at (also takes a ObjKey instead ObjType???)
 pub struct ObjType {
-	pub angle: i32,
-    pub pitch: u32,
+    pub active: bool,
+    pub state: &'static StateType,
+    
+    pub flags: u8,
+
+    pub x: i32,
+	pub y: i32,
 	pub tilex: usize,
 	pub tiley: usize,
-	pub x: i32,
-	pub y: i32,
-    pub state: &'static StateType,
+    
+    pub view_x: i32,
+    pub view_height: i32,
+    pub trans_x: Fixed, // in global coord
+    pub trans_y: Fixed,
+
+    pub angle: i32,
+    pub pitch: u32,
+
 }
 
 #[derive(Eq, PartialEq)]
@@ -201,8 +220,18 @@ type Think = fn(k: ObjKey, level_state: &mut LevelState, &mut ControlState, prj:
 
 #[derive(Debug)]
 pub struct StateType {
+    pub rotate: bool,
+    pub sprite: Option<Sprite>, // None means get from obj->temp1
+    pub tic_count: u32,
     pub think: Option<Think>,
-    pub next: Option<&'static StateType>
+    pub next: StateNext,
+}
+
+#[derive(Debug)]
+pub enum StateNext {
+    None,
+    Next(&'static StateType),
+    Cycle, // use same state again
 }
 
 #[repr(usize)]
@@ -226,6 +255,9 @@ pub enum Sprite {
     Stat36 = 38, Stat37 = 39, Stat38 = 40, Stat39 = 41,
     Stat40 = 42, Stat41 = 43, Stat42 = 44, Stat43 = 45,
     Stat44 = 46, Stat45 = 47, Stat46 = 48, Stat47 = 49,
+
+    GuardPain1 = 90, GuardDie1 = 91, GuardDie2 = 92, GuardDie3 = 93,
+    GuardPain2 = 94, GuardDead = 95,
 
     // player attack frames
     KnifeReady = 416, KnifeAtk1 = 417, KnifeAtk2 = 418, KnifeAtk3 = 419, KnifeAtk4 = 420, 
