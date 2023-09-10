@@ -13,7 +13,7 @@ use iw::draw::{wall_refresh, init_ray_cast_consts, init_ray_cast};
 use iw::game::setup_game_level;
 use iw::assets;
 use iw::vga_render;
-use iw::play;
+use iw::play::{self, new_game_state};
 
 #[bench]
 fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
@@ -33,7 +33,9 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
     let vga_screen = Arc::new(vga);
     let render = vga_render::init(vga_screen.clone(), graphics);
 
-    let mut level_state = setup_game_level(&prj, 0, &assets).unwrap();
+    let game_state = new_game_state();
+
+    let mut level_state = setup_game_level(&prj, &game_state, &assets).unwrap();
 
     let player = level_state.player();
     let mut rc = init_ray_cast(prj.view_width);

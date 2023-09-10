@@ -8,7 +8,7 @@ use crate::act1::move_doors;
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::{three_d_refresh, init_ray_cast};
 use crate::vga_render::Renderer;
-use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS};
+use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty};
 use crate::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
 use crate::input;
 use crate::time;
@@ -66,6 +66,7 @@ impl ProjectionConfig {
 pub fn new_game_state() -> GameState {
 	GameState {
 		map_on: 0,
+        difficulty: Difficulty::Hard,
 		score: 0,
 		lives: 3,
 		health: 100,
@@ -177,7 +178,7 @@ pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input
     
     draw_play_screen(&game_state, rdr, prj);
 
-	let mut level_state = setup_game_level(prj, game_state.map_on, assets).unwrap();
+	let mut level_state = setup_game_level(prj, &game_state, assets).unwrap();
 
 	//TODO StartMusic
 	//TODO PreloadGraphics

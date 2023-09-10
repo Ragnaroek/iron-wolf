@@ -1,11 +1,10 @@
-use crate::{def::{ObjType, TILESHIFT, TILEGLOBAL, StateType}, fixed::new_fixed_i32};
-
+use crate::{def::{ObjType, TILESHIFT, TILEGLOBAL, StateType, DirType, ClassType}, fixed::new_fixed_i32};
 
 pub fn spawn_new_obj(tile_x: usize, tile_y: usize, state: &'static StateType) -> ObjType {
     // TODO set areanumber (what is it used for?)
     // TODO set ticcount (what is it used for?)
-    // TODO set dir (what is it used for?)
     ObjType { 
+        class: ClassType::Nothing,
         active: true,
         flags: 0,
         angle: 0, 
@@ -17,7 +16,9 @@ pub fn spawn_new_obj(tile_x: usize, tile_y: usize, state: &'static StateType) ->
         trans_x: new_fixed_i32(0),
         trans_y: new_fixed_i32(0),
 		x: ((tile_x as i32) << TILESHIFT) + TILEGLOBAL / 2,
-		y: ((tile_y as i32) << TILESHIFT) + TILEGLOBAL / 2, 
+		y: ((tile_y as i32) << TILESHIFT) + TILEGLOBAL / 2,
+        dir: DirType::NoDir,
+        speed: 0,
         state,
     }
 }

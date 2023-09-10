@@ -3,7 +3,7 @@
 mod draw_test;
 
 use crate::play::ProjectionConfig;
-use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS, FL_VISABLE};
+use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS, FL_VISABLE, ClassType, DIR_ANGLE};
 use crate::scale::{simple_scale_shape, scale_shape, MAP_MASKS_1};
 use crate::vga_render::Renderer;
 use crate::vga_render;
@@ -655,6 +655,7 @@ fn draw_player_weapon(game_state: &GameState, rdr: &dyn Renderer, prj: &Projecti
     let shape_num = WEAPON_SCALE[game_state.weapon as usize] as usize + game_state.weapon_frame;
     let sprite = &assets.sprites[shape_num]; 
     simple_scale_shape(rdr, prj, prj.view_width/2, sprite, prj.view_height+1);
+    
     // TODO handle demorecord || demoplayback
 }
 
@@ -692,6 +693,7 @@ fn draw_scaleds(level_state: &mut LevelState, wall_height: &Vec<i32>, consts: &R
     // just to have shorter names below
     let vis = &level_state.spotvis;
     let tile = &level_state.level.tile_map;
+    let player_angle = level_state.player().angle;
     for obj in &mut level_state.actors {
         if obj.state.sprite.is_none() {
             continue; // no shape
@@ -717,8 +719,10 @@ fn draw_scaleds(level_state: &mut LevelState, wall_height: &Vec<i32>, consts: &R
 
                 // TODO set special shape
 
-                if obj.state.rotate {
-                    panic!("impl: rotate for type {:?}", obj)
+                if obj.state.rotate != 0 {
+                    let rotate = calc_rotate(prj, player_angle, obj);
+                    let sprite_base = obj.state.sprite.expect("sprite be present (checked above)");
+                    visobj.sprite = Sprite::try_from(sprite_base as usize + rotate).expect("valid sprite");
                 }
 
                 if visptr < level_state.vislist.len()-1 {
@@ -737,6 +741,28 @@ fn draw_scaleds(level_state: &mut LevelState, wall_height: &Vec<i32>, consts: &R
         let sprite_data = &assets.sprites[vis_obj.sprite as usize];
         scale_shape(rdr, wall_height, prj, vis_obj.view_x as usize, sprite_data, vis_obj.view_height as usize);
     }
+}
+
+fn calc_rotate(prj: &ProjectionConfig, player_angle: i32, obj: &ObjType) -> usize {
+    let view_angle = player_angle + (prj.center_x as i32 - obj.view_x)/8;
+    let mut angle = if obj.class == ClassType::Rocket || obj.class == ClassType::HRocket {
+        (view_angle - 180) - obj.angle
+    } else {
+        (view_angle - 180) - DIR_ANGLE[obj.dir as usize] as i32
+    };
+    angle += ANGLES as i32 /16;
+    while angle >= ANGLES as i32 {
+        angle -= ANGLES as i32;
+    }
+    while angle < 0 {
+        angle += ANGLES as i32;
+    }
+
+    if obj.state.rotate == 2 {
+        return 4 * (angle as usize/(ANGLES/2));        
+    }
+
+    angle as usize /(ANGLES/8)
 }
 
 fn transform_actor(consts: &RayCastConsts, prj: &ProjectionConfig, obj: &mut ObjType) {
