@@ -12,3 +12,6 @@ libiw = "0.3.0" #{path="../iw-lib"}
 
 [profile.bench]
 debug = true
+
+[profile.release]
+debug = true

@@ -1,4 +1,4 @@
-use crate::{def::{ObjType, StateType, Sprite, StateNext, DirType, EnemyType, SPD_PATROL, ObjKey, LevelState, ControlState, At, FL_SHOOTABLE}, state::spawn_new_obj, play::ProjectionConfig};
+use crate::{def::{ObjType, StateType, Sprite, StateNext, DirType, EnemyType, SPD_PATROL, ObjKey, LevelState, ControlState, At, FL_SHOOTABLE, ClassType}, state::{spawn_new_obj, sight_player}, play::ProjectionConfig, time};
 
 // guards
 
@@ -53,22 +53,20 @@ pub const S_SSSTAND : StateType = StateType {
     next: StateNext::Cycle,   
 };
 
-fn t_stand(k: ObjKey, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
-    // TODO Impl (SightPlayer)
+fn t_stand(k: ObjKey, level_state: &mut LevelState, ticker: &time::Ticker, control_state: &mut ControlState, prj: &ProjectionConfig) {
+    sight_player(k, level_state, ticker);
 }
 
 pub fn dead_guard(x_tile: usize, y_tile: usize) -> ObjType {
-    let guard = spawn_new_obj(x_tile, y_tile, &S_GRDDIE4);
-    // TODO: Set obclass here (what is it used for)?
-    guard
+    spawn_new_obj(x_tile, y_tile, &S_GRDDIE4, ClassType::Inert)
 }
 
 pub fn stand(which: EnemyType, x_tile: usize, y_tile: usize, tile_dir: u16) -> ObjType {
     let mut stand = match which {
-        EnemyType::Guard => spawn_new_obj(x_tile, y_tile, &S_GRDSTAND),
-        EnemyType::Officer => spawn_new_obj(x_tile, y_tile, &S_OFCSTAND),
-        EnemyType::Mutant => spawn_new_obj(x_tile, y_tile, &S_MUTSTAND),
-        EnemyType::SS => spawn_new_obj(x_tile, y_tile, &S_SSSTAND),
+        EnemyType::Guard => spawn_new_obj(x_tile, y_tile, &S_GRDSTAND, ClassType::Guard),
+        EnemyType::Officer => spawn_new_obj(x_tile, y_tile, &S_OFCSTAND, ClassType::Officer),
+        EnemyType::Mutant => spawn_new_obj(x_tile, y_tile, &S_MUTSTAND, ClassType::Mutant),
+        EnemyType::SS => spawn_new_obj(x_tile, y_tile, &S_SSSTAND, ClassType::SS),
         _ => {
             panic!("illegal stand enemy type: {:?}", which)
         }
@@ -78,6 +76,8 @@ pub fn stand(which: EnemyType, x_tile: usize, y_tile: usize, tile_dir: u16) -> O
     // TODO: update gamestate.killtotal
 
     // TODO: update ambush info
+
+    // TODO: set hitpoints
 
     stand.dir = dir_from_tile(tile_dir*2);
     stand.flags |= FL_SHOOTABLE;

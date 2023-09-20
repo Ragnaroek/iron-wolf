@@ -5,6 +5,7 @@ use libiw::gamedata::{TextureData, SpriteData};
 
 use crate::fixed::Fixed;
 use crate::play::ProjectionConfig;
+use crate::time;
 
 pub const GLOBAL1 : i32	= 1<<16;
 pub const MAP_SIZE : usize = 64;
@@ -14,7 +15,10 @@ pub const ANGLES : usize = 360; //must be divisable by 4
 pub const ANGLES_I32 : i32 = ANGLES as i32;
 pub const ANGLE_QUAD : usize = ANGLES/4;
 pub const TILEGLOBAL : i32 = 1<<16;
+
 pub const TILESHIFT : i32 = 16;
+pub const UNSIGNEDSHIFT : i32 =	8;
+
 pub const FOCAL_LENGTH : i32 = 0x5700;
 pub const FINE_ANGLES : usize = 3600;
 
@@ -115,20 +119,31 @@ pub struct ObjKey(pub usize);
 pub const PLAYER_KEY : ObjKey = ObjKey(0); // The player is always at position 0
 
 impl LevelState {
+    #[inline]
     pub fn mut_player(&mut self) -> &mut ObjType {
         &mut self.actors[0]
     }
 
+    #[inline]
     pub fn player(&self) -> &ObjType {
         &self.actors[0]
     }
 
+    #[inline]
     pub fn obj(&self, k: ObjKey) -> &ObjType {
         &self.actors[k.0]
     }
 
+    #[inline]
     pub fn mut_obj(&mut self, k: ObjKey) -> &mut ObjType {
         &mut self.actors[k.0]
+    }
+
+    #[inline]
+    pub fn update_obj<F>(&mut self, k: ObjKey, f: F)
+    where F: FnOnce(&mut ObjType)
+    {
+        f(&mut self.actors[k.0])
     }
 }
 
@@ -284,6 +299,10 @@ pub struct ObjType {
     pub angle: i32,
     pub speed: i32,
 
+    pub temp1: i32,
+    pub temp2: i32,
+    pub temp3: i32,
+
     pub pitch: u32,
 }
 
@@ -330,7 +349,7 @@ pub struct Assets {
     pub sprites: Vec<SpriteData>,
 }
 
-type Think = fn(k: ObjKey, level_state: &mut LevelState, &mut ControlState, prj: &ProjectionConfig); 
+type Think = fn(k: ObjKey, level_state: &mut LevelState, ticker: &time::Ticker, &mut ControlState, prj: &ProjectionConfig); 
 type Action = fn(k: ObjKey);
 
 #[derive(Debug)]

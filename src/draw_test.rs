@@ -387,6 +387,9 @@ fn test_player() -> ObjType {
         tiley: 1923201,
         dir: DirType::NoDir,
         speed: 0,
+        temp1: 0,
+        temp2: 0,
+        temp3: 0,
         state: &S_PLAYER,
     }
 }
