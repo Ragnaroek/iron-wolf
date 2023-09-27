@@ -110,7 +110,7 @@ pub fn operate_door(doornum: u16, level_state: &mut LevelState) {
     }
 }
 
-fn open_door(door: &mut DoorType) {
+pub fn open_door(door: &mut DoorType) {
     if door.action == DoorAction::Open {
         door.tic_count = 0; // reset open time
     } else {
