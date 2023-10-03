@@ -169,7 +169,7 @@ fn t_chase(k: ObjKey, level_state: &mut LevelState, ticker: &time::Ticker, contr
         };
 
         if (rnd_t() as usize) < chance {
-            // go into attach frame
+            // go into attack frame
             let state_change = match obj.class {
                 ClassType::Guard => Some(&S_GRDSHOOT1),
                 _ => panic!("impl state change for {:?}", obj.class)
@@ -197,7 +197,6 @@ fn t_chase(k: ObjKey, level_state: &mut LevelState, ticker: &time::Ticker, contr
 
     let mut mov = level_state.obj(k).speed * tics as i32; 
     while mov != 0 {
-        println!("mov = {}, dodge = {}", mov, dodge);
         let distance = level_state.obj(k).distance;
         if distance < 0 {
             // waiting for a door to open
@@ -285,5 +284,5 @@ fn dir_from_tile(tile_dir: u16) -> DirType {
 // FIGHT
 
 fn t_shoot(k: ObjKey) {
-    // TODO Impl
+    panic!("impl t_shoot");
 }
