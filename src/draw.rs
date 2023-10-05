@@ -695,11 +695,11 @@ fn draw_scaleds(level_state: &mut LevelState, wall_height: &Vec<i32>, consts: &R
     let tile = &level_state.level.tile_map;
     let player_angle = level_state.player().angle;
     for obj in &mut level_state.actors {
-        if obj.state.sprite.is_none() {
+        if obj.state.expect("state").sprite.is_none() {
             continue; // no shape
         }
         let visobj = &mut level_state.vislist[visptr];
-        visobj.sprite = obj.state.sprite.unwrap();
+        visobj.sprite = obj.state.expect("state").sprite.expect("sprite");
 
         if vis[obj.tilex][obj.tiley]
            || (vis[obj.tilex-1][obj.tiley+1] && tile[obj.tilex-1][obj.tiley+1] == 0) 
@@ -724,9 +724,9 @@ fn draw_scaleds(level_state: &mut LevelState, wall_height: &Vec<i32>, consts: &R
                     }
                 }
 
-                if obj.state.rotate != 0 {
+                if obj.state.expect("state").rotate != 0 {
                     let rotate = calc_rotate(prj, player_angle, obj);
-                    let sprite_base = obj.state.sprite.expect("sprite be present (checked above)");
+                    let sprite_base = obj.state.expect("state").sprite.expect("sprite be present (checked above)");
                     visobj.sprite = Sprite::try_from(sprite_base as usize + rotate).expect("valid sprite");
                 }
 
@@ -763,7 +763,7 @@ fn calc_rotate(prj: &ProjectionConfig, player_angle: i32, obj: &ObjType) -> usiz
         angle += ANGLES as i32;
     }
 
-    if obj.state.rotate == 2 {
+    if obj.state.expect("state").rotate == 2 {
         return 4 * (angle as usize/(ANGLES/2));        
     }
 

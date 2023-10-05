@@ -86,7 +86,7 @@ pub struct Control {
     pub y: i32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum At {
     Nothing,
     Wall(u16),
@@ -115,7 +115,7 @@ pub struct LevelState {
 }
 
 // This is the key of the actor in the LevelState actors[] array
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ObjKey(pub usize);
 
 pub const PLAYER_KEY : ObjKey = ObjKey(0); // The player is always at position 0
@@ -289,7 +289,7 @@ pub struct ObjType {
     pub active: bool,
     pub tic_count: u32,
     pub class: ClassType,
-    pub state: &'static StateType,
+    pub state: Option<&'static StateType>,
     
     pub flags: u8,
 
@@ -360,8 +360,8 @@ pub struct Assets {
     pub sprites: Vec<SpriteData>,
 }
 
-type Think = fn(k: ObjKey, level_state: &mut LevelState, ticker: &time::Ticker, &mut ControlState, prj: &ProjectionConfig); 
-type Action = fn(k: ObjKey);
+type Think = fn(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &mut ControlState, prj: &ProjectionConfig); 
+type Action = fn(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &mut ControlState, prj: &ProjectionConfig);
 
 #[derive(Debug)]
 pub struct StateType {
@@ -370,13 +370,7 @@ pub struct StateType {
     pub tic_time: u32,
     pub think: Option<Think>,
     pub action: Option<Action>,
-    pub next: StateNext,
-}
-
-#[derive(Debug)]
-pub enum StateNext {
-    None,
-    Next(&'static StateType),
+    pub next: Option<&'static StateType>,
 }
 
 derive_from!{

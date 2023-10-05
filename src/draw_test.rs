@@ -393,6 +393,6 @@ fn test_player() -> ObjType {
         temp1: 0,
         temp2: 0,
         temp3: 0,
-        state: &S_PLAYER,
+        state: Some(&S_PLAYER),
     }
 }

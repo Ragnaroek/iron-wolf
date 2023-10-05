@@ -51,7 +51,7 @@ pub fn spawn_new_obj(tile_x: usize, tile_y: usize, state: &'static StateType, cl
         temp1: 0,
         temp2: 0,
         temp3: 0,
-        state,
+        state: Some(state),
     }
 }
 
@@ -201,7 +201,7 @@ fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
                     }
                     door_num = door;
                 }
-                level_state.update_obj(k, |obj|obj.tiley -= 1); 
+                level_state.update_obj(k, |obj|obj.tilex -= 1); 
             },
             DirType::NorthWest => {
                 if !check_diag(level_state, obj.tilex-1, obj.tiley-1) {
@@ -269,7 +269,7 @@ fn check_side(level_state: &LevelState, x: usize, y: usize) -> (bool, i32) {
 }
 
 pub fn select_dodge_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: usize, player_tile_y: usize) {
-    let mut dir_try = [DirType::NoDir; 5];
+    let mut dir_try: [DirType; 5] = [DirType::NoDir; 5];
     let turn_around = if level_state.obj(k).flags & FL_FIRSTATTACK != 0 {
         // turning around is only ok the very first time after noticing the
 	    // player
@@ -355,8 +355,92 @@ pub fn select_dodge_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: 
 }
 
 pub fn select_chase_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: usize, player_tile_y: usize) {
-    // TODO Impl
-    panic!("select_chase_dir");
+    let mut d: [DirType; 3] = [DirType::NoDir; 3];
+
+    let old_dir = level_state.obj(k).dir;
+    let turn_around = OPPOSITE[old_dir as usize];
+
+    let delta_x = player_tile_x as i32 - level_state.obj(k).tilex as i32;
+    let delta_y = player_tile_y as i32 - level_state.obj(k).tiley as i32;
+
+    if delta_x > 0 {
+        d[1] = DirType::East;
+    } else if delta_x < 0 {
+        d[1] = DirType::West;
+    }
+
+    if delta_y > 0 {
+        d[2] = DirType::South;
+    } else if delta_y < 0 {
+        d[2] = DirType::North;
+    }
+
+    if delta_y.abs() > delta_x.abs() {
+        let t_dir = d[1];
+        d[1] = d[2];
+        d[2] = t_dir;
+    }
+
+    if d[1] == turn_around {
+        d[1] = DirType::NoDir;
+    }
+    if d[2] == turn_around {
+        d[2] = DirType::NoDir;
+    }
+
+    if d[1] != DirType::NoDir {
+        level_state.update_obj(k, |obj| obj.dir = d[1]);
+        if try_walk(k, level_state) {
+            return; /*either moved forward or attacked*/
+        }
+    }
+
+    if d[2] != DirType::NoDir {
+        level_state.update_obj(k, |obj| obj.dir = d[2]);
+        if try_walk(k, level_state) {
+            return;
+        }
+    }
+
+    /* there is no direct path to the player, so pick another direction */
+
+    if old_dir != DirType::NoDir {
+        level_state.update_obj(k, |obj| obj.dir = old_dir);
+        if try_walk(k, level_state) {
+            return;
+        }
+    }
+
+    if rnd_t() > 128 { /*randomly determine direction of search*/
+        for t_dir in [DirType::North, DirType::NorthWest, DirType::West] {
+            if t_dir != turn_around {
+                level_state.update_obj(k, |obj| obj.dir = t_dir);
+                if try_walk(k, level_state) {
+                    return;
+                }
+            }
+        }
+    } else {
+        for t_dir in [DirType::West, DirType::NorthWest, DirType::North] {
+            if t_dir != turn_around {
+                level_state.update_obj(k, |obj| obj.dir = t_dir);
+                if try_walk(k, level_state) {
+                    return;
+                }
+            } 
+        }
+    }
+
+    if turn_around != DirType::NoDir {
+        level_state.update_obj(k, |obj| obj.dir = turn_around);
+        if level_state.obj(k).dir != DirType::NoDir {
+            if try_walk(k, level_state) {
+                return;
+            }
+        } 
+    }
+
+    level_state.update_obj(k, |obj| obj.dir = DirType::NoDir); // can't move
 }
 
 // Moves ob be move global units in ob->dir direction
@@ -458,7 +542,7 @@ pub fn move_obj(player_x: i32, player_y: i32, obj: &mut ObjType, mov: i32, tics:
 /// it's combat frame and true is returned.
 ///
 /// Incorporates a random reaction delay
-pub fn sight_player(k: ObjKey, level_state: &mut LevelState, ticker: &time::Ticker) -> bool {
+pub fn sight_player(k: ObjKey, level_state: &mut LevelState, tics: u64) -> bool {
     let obj = level_state.obj(k);
     
     if obj.flags & FL_ATTACKMODE != 0 {
@@ -466,7 +550,6 @@ pub fn sight_player(k: ObjKey, level_state: &mut LevelState, ticker: &time::Tick
     }
 
     if obj.temp2 != 0 {
-        let tics = ticker.calc_tics();
         level_state.update_obj(k, |obj| obj.temp2 -= tics as i32);
         if level_state.obj(k).temp2 > 0 {
             return false;
@@ -539,7 +622,7 @@ pub fn first_sighting(k: ObjKey, level_state: &mut LevelState) {
 }
 
 pub fn new_state(obj: &mut ObjType, state: &'static StateType) {
-    obj.state = state;
+    obj.state = Some(state);
     obj.tic_count = state.tic_time;
 }
 
