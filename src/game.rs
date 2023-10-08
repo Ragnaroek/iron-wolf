@@ -71,6 +71,7 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &GameState, assets: 
 		statics,
 		spotvis: vec![vec![false; MAP_SIZE]; MAP_SIZE],
 		vislist: vec![VisObj{view_x: 0, view_height: 0, sprite: Sprite::None}; MAX_STATS],
+		thrustspeed: 0,
 	};
 
     thrust(PLAYER_KEY, &mut level_state, prj, 0, 0); // set some variables
