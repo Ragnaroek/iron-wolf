@@ -1,9 +1,10 @@
 use crate::act1::open_door;
 use crate::agent::take_damage;
-use crate::def::{ObjType, StateType, Sprite, DirType, EnemyType, SPD_PATROL, ObjKey, LevelState, ControlState, FL_SHOOTABLE, ClassType, DoorAction, TILEGLOBAL, TILESHIFT, RUN_SPEED, FL_VISABLE};
+use crate::def::{ObjType, StateType, Sprite, DirType, EnemyType, SPD_PATROL, ObjKey, LevelState, ControlState, FL_SHOOTABLE, ClassType, DoorAction, TILEGLOBAL, TILESHIFT, RUN_SPEED, FL_VISABLE, GameState};
 use crate::state::{spawn_new_obj, new_state, sight_player, check_line, select_dodge_dir, select_chase_dir, move_obj};
 use crate::play::ProjectionConfig;
 use crate::user::rnd_t;
+use crate::vga_render::Renderer;
 
 // guards
 
@@ -141,11 +142,11 @@ pub static S_SSSTAND : StateType = StateType {
     next: Some(&S_SSSTAND),   
 };
 
-fn t_stand(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn t_stand(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
     sight_player(k, level_state, tics);
 }
 
-fn t_chase(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn t_chase(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
     let (player_tile_x, player_tile_y) = {
         let player = level_state.player();
         (player.tilex, player.tiley)
@@ -212,7 +213,7 @@ fn t_chase(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &m
                 let player = level_state.player();
                 (player.x, player.y)
             };
-            level_state.update_obj(k, |obj| move_obj(x, y, obj, mov, tics));
+            move_obj(k, level_state, game_state, rdr, x, y, mov, tics);
             break;
         }
 
@@ -289,10 +290,8 @@ fn dir_from_tile(tile_dir: u16) -> DirType {
 */
 
 /// Try to damage the player, based on skill level and player's speed
-fn t_shoot(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn t_shoot(k: ObjKey, _: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, _: &mut ControlState, _: &ProjectionConfig) {
     
-    let mut hit_chance = 128;
-
     // TODO areabyplayer check!
 
     let obj = level_state.obj(k);
@@ -309,6 +308,7 @@ fn t_shoot(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &m
         dist = dist * 2 / 3; // ss are better shots
     }
 
+    let hit_chance;
     if level_state.thrustspeed >= RUN_SPEED {
         if obj.flags & FL_VISABLE != 0 {
             hit_chance = 160 - dist * 16; // player can see to dodge
@@ -334,7 +334,7 @@ fn t_shoot(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &m
             rnd_t() >> 4
         };
 
-        take_damage(obj, damage as u64)
+        take_damage(k, damage as i32, level_state, game_state, rdr)
     }
 
     // TODO Play fire sounds!

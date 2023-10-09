@@ -5,14 +5,14 @@ mod play_test;
 use vgaemu::input::NumCode;
 
 use crate::act1::move_doors;
+use crate::agent::{draw_health, draw_level, draw_face, draw_lives, draw_ammo, draw_keys, draw_weapon, draw_score};
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::{three_d_refresh, init_ray_cast};
 use crate::vga_render::Renderer;
-use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty, FL_NONMARK, FL_NEVERMARK, At};
-use crate::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
+use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC};
+use crate::assets::GraphicNum;
 use crate::input;
 use crate::time;
-use crate::vga_render;
 use crate::game::setup_game_level;
 use crate::scale::{CompiledScaler, setup_scaling};
 
@@ -20,7 +20,7 @@ use crate::scale::{CompiledScaler, setup_scaling};
 
 const MIN_DIST : i32 = 0x5800;
 
-const STATUS_LINES : usize = 40;
+
 const HEIGHT_RATIO : f32 = 0.5;
 const SCREEN_WIDTH : usize = 80;
 
@@ -35,8 +35,6 @@ const RAD_TO_INT : f64 = FINE_ANGLES as f64 / 2.0 / std::f64::consts::PI;
 
 const RUN_MOVE : u64 = 70;
 const BASE_MOVE: u64 = 35;
-
-static SCREENLOC : [usize; 3] = [vga_render::PAGE_1_START, vga_render::PAGE_2_START, vga_render::PAGE_3_START];
 
 static BUTTON_SCAN : [NumCode; NUM_BUTTONS] = [NumCode::Control, NumCode::Alt, NumCode::RShift, NumCode::Space, NumCode::Num1, NumCode::Num2, NumCode::Num3, NumCode::Num4];
 
@@ -75,7 +73,11 @@ pub fn new_game_state() -> GameState {
 		weapon: WeaponType::Pistol,
         weapon_frame: 0,
 		face_frame: 0,
-		episode: 0
+		episode: 0,
+        victory_flag: false,
+        god_mode: false,
+        play_state: PlayState::StillPlaying,
+        killer_obj: None,
 	}
 }
 
@@ -173,7 +175,7 @@ fn calc_sines() -> Vec<Fixed> {
 }
 
 pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
-    let game_state = new_game_state();
+    let mut game_state = new_game_state();
     let mut control_state : ControlState = new_control_state();
     
     draw_play_screen(&game_state, rdr, prj);
@@ -187,14 +189,14 @@ pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input
     
     rdr.fade_in();
 
-	play_loop(ticker, &mut level_state, &game_state, &mut control_state, rdr, input, prj, assets);
+	play_loop(ticker, &mut level_state, &mut game_state, &mut control_state, rdr, input, prj, assets);
 
 	//TODO Go to next level (gamestate.map_on+=1)
 
 	input.wait_user_input(time::TICK_BASE*1000);
 }
 
-fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &GameState, control_state: &mut ControlState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let mut rc = init_ray_cast(prj.view_width);
 
     /*{
@@ -224,7 +226,7 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
         move_doors(level_state, tics);
 
         for i in 0..level_state.actors.len() {
-            do_actor(ObjKey(i), tics, level_state, control_state, prj);
+            do_actor(ObjKey(i), tics, level_state, game_state, rdr, control_state, prj);
         }
         
 	    three_d_refresh(game_state, level_state, &mut rc, rdr, prj, assets);
@@ -237,7 +239,7 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
     }
 }
 
-fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
 
     // TODO areabyplayer check here!
 
@@ -253,7 +255,7 @@ fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, control_state: &
 
     if level_state.obj(k).tic_count == 0 {
         if let Some(think) = level_state.obj(k).state.expect("state").think {
-            think(k, level_state, tics, control_state, prj);
+            think(k, tics, level_state, game_state, rdr, control_state, prj);
             if level_state.obj(k).state.is_none() {
                 return;
             } 
@@ -278,7 +280,7 @@ fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, control_state: &
     level_state.update_obj(k, |obj| obj.tic_count -= tics as u32);
     while level_state.obj(k).tic_count <= 0 {
         if let Some(action) = level_state.obj(k).state.expect("state").action {
-            action(k, level_state, tics, control_state, prj);
+            action(k, tics, level_state, game_state, rdr, control_state, prj);
             if level_state.obj(k).state.is_none() {
                 return;
             } 
@@ -297,7 +299,7 @@ fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, control_state: &
     }
 
     if let Some(think) = level_state.obj(k).state.expect("state").think {
-        think(k, level_state, tics, control_state, prj);
+        think(k, tics, level_state, game_state, rdr, control_state, prj);
         if level_state.obj(k).state.is_none() {
             return;
         } 
@@ -362,84 +364,6 @@ fn hlin(rdr: &dyn Renderer, x: usize, z: usize, y: usize, c: u8) {
 
 fn vlin(rdr: &dyn Renderer, y: usize, z: usize, x: usize, c: u8) {
 	rdr.vlin(x, y, (z-y)+1, c)
-}
-
-fn draw_face(state: &GameState, rdr: &dyn Renderer) {
-	if state.health > 0 {
-		status_draw_pic(rdr, 17, 4, face_pic(3*((100-state.health)/16)+state.face_frame));
-	} else {
-		// TODO draw mutant face if last attack was needleobj
-		status_draw_pic(rdr, 17, 4, GraphicNum::FACE8APIC)
-	}
-}
-
-fn draw_health(state: &GameState, rdr: &dyn Renderer) {
-	latch_number(rdr, 21, 16, 3, state.health);
-}
-
-fn draw_lives(state: &GameState, rdr: &dyn Renderer) {
-	latch_number(rdr, 14, 16, 1, state.lives);
-}
-
-fn draw_level(state: &GameState, rdr: &dyn Renderer) {
-	latch_number(rdr, 2, 16, 2, state.map_on+1);
-}
-
-fn draw_ammo(state: &GameState, rdr: &dyn Renderer) {
-	latch_number(rdr, 27, 16, 2, state.ammo);
-}
-
-fn draw_keys(state: &GameState, rdr: &dyn Renderer) {
-	if state.keys & 1 != 0 {
-		status_draw_pic(rdr, 30, 4, GraphicNum::GOLDKEYPIC);
-	} else {
-		status_draw_pic(rdr, 30, 4, GraphicNum::NOKEYPIC)
-	}
-
-	if state.keys & 2 != 0 {
-		status_draw_pic(rdr, 30, 20, GraphicNum::SILVERKEYPIC);
-	} else {
-		status_draw_pic(rdr, 30, 20, GraphicNum::NOKEYPIC);
-	}
-}
-
-fn draw_weapon(state: &GameState, rdr: &dyn Renderer) {
-	status_draw_pic(rdr, 32, 8, weapon_pic(state.weapon))
-}
-
-fn draw_score(state: &GameState, rdr: &dyn Renderer) {
-	latch_number(rdr, 6, 16, 6, state.score);
-}
-
-// x in bytes
-fn status_draw_pic(rdr: &dyn Renderer, x: usize, y: usize, pic: GraphicNum) {
-    let offset_prev = rdr.buffer_offset();
-    for i in 0..3 {
-        rdr.set_buffer_offset(SCREENLOC[i]);
-        let y_status = (200-STATUS_LINES) + y;
-        rdr.pic(x*8, y_status, pic);  
-    } 
-    rdr.set_buffer_offset(offset_prev);
-}
-
-fn latch_number(rdr: &dyn Renderer, x_start: usize, y: usize, width: usize, num: usize) {
-	let str = num.to_string();
-	let mut w_cnt = width;
-	let mut x = x_start;
-	while str.len() < w_cnt {
-		status_draw_pic(rdr, x, y, GraphicNum::NBLANKPIC);
-		x += 1;
-		w_cnt -= 1;
-	}
-
-	let mut c = if str.len() <= w_cnt {0} else {str.len()-w_cnt};
-	let mut chars = str.chars();
-	while c<str.len() {
-		let ch = chars.next().unwrap();
-		status_draw_pic(rdr, x, y, num_pic(ch.to_digit(10).unwrap() as usize));
-		x += 1;
-		c += 1;
-	}
 }
 
 // reads input delta since last tic and manipulates the player state

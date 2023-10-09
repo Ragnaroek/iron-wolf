@@ -1,4 +1,4 @@
-use crate::def::{ObjType, LevelState, Level, MAP_SIZE, DoorType, DoorAction, FL_NEVERMARK, DirType, ClassType};
+use crate::def::{ObjType, LevelState, Level, MAP_SIZE, DoorType, DoorAction, FL_NEVERMARK, DirType, ClassType, ObjKey};
 use crate::draw::{Op, Hit, init_ray_cast, init_ray_cast_consts, calc_height};
 use crate::fixed::new_fixed_i32;
 use crate::play;
@@ -351,6 +351,7 @@ fn mock_level_state() -> LevelState {
         spotvis: vec![vec![false; MAP_SIZE]; MAP_SIZE],
         vislist: Vec::with_capacity(0),
         thrustspeed: 0,
+        last_attacker: None,
     }
 }
 

@@ -727,7 +727,12 @@ fn draw_scaleds(level_state: &mut LevelState, wall_height: &Vec<i32>, consts: &R
                 if obj.state.expect("state").rotate != 0 {
                     let rotate = calc_rotate(prj, player_angle, obj);
                     let sprite_base = obj.state.expect("state").sprite.expect("sprite be present (checked above)");
-                    visobj.sprite = Sprite::try_from(sprite_base as usize + rotate).expect("valid sprite");
+                    
+                    let maybe_sprite = Sprite::try_from(sprite_base as usize + rotate);
+                    if maybe_sprite.is_err() {
+                        panic!("invalid sprite: {:?}, base = {:?}, base_num={} rotate = {}", maybe_sprite.err(), sprite_base, sprite_base as usize, rotate)
+                    }
+                    visobj.sprite = maybe_sprite.expect("valid sprite");
                 }
 
                 if visptr < level_state.vislist.len()-1 {
