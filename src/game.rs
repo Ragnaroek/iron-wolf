@@ -108,7 +108,7 @@ fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>,
 					// TODO push wall
 				},
 				108..=111 => { // guard stand: normal mode
-					spawn(&mut actors, actor_at, stand(EnemyType::Guard, x, y, tile-108));
+					spawn(&mut actors, actor_at, stand(EnemyType::Guard, x, y, tile-108, difficulty));
 				},
 				112..=115 => { // guard patrol: normal mode
 				
@@ -136,7 +136,7 @@ fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>,
 				},
 				144..=147 => { // guard stand: medium mode
 					if difficulty >= Difficulty::Medium {
-						spawn(&mut actors, actor_at, stand(EnemyType::Guard, x, y, tile-144));
+						spawn(&mut actors, actor_at, stand(EnemyType::Guard, x, y, tile-144, difficulty));
 					}
 				},
 				148..=151 => { // guard patrol: medium mode
@@ -162,7 +162,7 @@ fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>,
 				},
 				180..=183 => { // guard stand: hard mode
 					if difficulty >= Difficulty::Hard {
-						spawn(&mut actors, actor_at, stand(EnemyType::Guard, x, y, tile-180));
+						spawn(&mut actors, actor_at, stand(EnemyType::Guard, x, y, tile-180, difficulty));
 					}
 				},
 				184..=187 => { // guard patrol: hard mode

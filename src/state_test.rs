@@ -1,4 +1,4 @@
-use crate::{def::{ObjType, ClassType, FL_NEVERMARK, DirType, Dir, LevelState, MAP_SIZE, Level}, fixed::new_fixed_i32, agent::S_PLAYER, act2::stand};
+use crate::{def::{ObjType, ClassType, FL_NEVERMARK, DirType, Dir, LevelState, MAP_SIZE, Level, Difficulty}, fixed::new_fixed_i32, agent::S_PLAYER, act2::stand};
 
 use super::check_line;
 
@@ -11,7 +11,7 @@ fn test_check_line_1() {
     player.x = 1970056;
     player.y = 3768320;
     let level_state = mock_level_state(player);
-    let obj = &stand(crate::def::EnemyType::Guard, 29, 30, 3);
+    let obj = &stand(crate::def::EnemyType::Guard, 29, 30, 3, Difficulty::Baby);
 
     assert!(check_line(&level_state, obj));
 }
@@ -24,7 +24,7 @@ fn test_check_line_2() {
     player.x = 2106529;
     player.y = 3768320;
     let level_state = mock_level_state(player);
-    let obj = &stand(crate::def::EnemyType::Guard, 39, 61, 2);
+    let obj = &stand(crate::def::EnemyType::Guard, 39, 61, 2, Difficulty::Baby);
 
     assert!(check_line(&level_state, obj));
 }
@@ -72,5 +72,6 @@ fn test_player() -> ObjType {
         temp2: 0,
         temp3: 0,
         state: Some(&S_PLAYER),
+        hitpoints: 0,
     }
 }

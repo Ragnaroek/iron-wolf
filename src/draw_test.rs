@@ -396,5 +396,6 @@ fn test_player() -> ObjType {
         temp2: 0,
         temp3: 0,
         state: Some(&S_PLAYER),
+        hitpoints: 0,
     }
 }

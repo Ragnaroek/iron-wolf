@@ -16,6 +16,8 @@ pub const ANGLES_I32 : i32 = ANGLES as i32;
 pub const ANGLE_QUAD : usize = ANGLES/4;
 pub const TILEGLOBAL : i32 = 1<<16;
 
+pub const EXTRA_POINTS : i32 = 40000;
+
 pub const RUN_SPEED : i32 = 6000;
 
 pub const MIN_ACTOR_DIST : i32 = 0x10000;
@@ -70,7 +72,7 @@ macro_rules! derive_from {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 #[repr(usize)]
 pub enum WeaponType {
     None,
@@ -206,21 +208,30 @@ pub struct GameState {
     pub difficulty: Difficulty,
 	pub map_on: usize,
 	pub score: i32,
+    pub next_extra: i32,
 	pub lives: i32,
 	pub health: i32,
 	pub ammo: i32,
 	pub keys: i32,
 	pub weapon: WeaponType,
-    pub weapon_frame: usize,
+    pub chosen_weapon: WeaponType,
 
 	pub face_frame: usize,
+    pub attack_frame: usize,
+    pub attack_count: i32,
+    pub weapon_frame: usize,
 
 	pub episode : usize,
+    pub kill_count: i32,
     pub victory_flag : bool,
     pub play_state: PlayState,
     pub killer_obj: Option<ObjKey>,
     //cheats
     pub god_mode : bool,
+
+    pub face_count : u64,
+
+    pub made_noise: bool,
 }
 
 pub enum PlayState {
@@ -249,6 +260,8 @@ pub enum DirType {
     SouthEast = 7,
     NoDir = 8,
 }
+
+pub const NUM_ENEMIES : usize = 22;
 
 #[derive(Debug)]
 pub enum EnemyType {
@@ -334,6 +347,7 @@ pub struct ObjType {
     pub trans_y: Fixed,
 
     pub angle: i32,
+    pub hitpoints : i32,
     pub speed: i32,
 
     pub temp1: i32,
@@ -350,7 +364,6 @@ pub enum DoorAction {
     Opening,
     Closing
 }
-
 pub struct DoorType {
     pub num: u16,
     pub tile_x: usize,

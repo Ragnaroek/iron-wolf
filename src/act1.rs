@@ -1,8 +1,10 @@
-use crate::def::{DoorType, StaticType, StaticKind, StaticInfo, Sprite, DoorAction, LevelState, At, FL_BONUS};
+use crate::def::{DoorType, StaticType, StaticKind, StaticInfo, Sprite, DoorAction, LevelState, At, FL_BONUS, MAX_STATS};
 
 const OPENTICS : u32 = 300;
 
-static STAT_INFO : [StaticInfo; 49] = [
+const NUM_STAT_INFO : usize = 49;
+
+static STAT_INFO : [StaticInfo; NUM_STAT_INFO] = [
     StaticInfo{sprite: Sprite::Stat0, kind: StaticKind::None},     // puddle          spr1v
     StaticInfo{sprite: Sprite::Stat1, kind: StaticKind::Block},    // Green Barrel    "
     StaticInfo{sprite: Sprite::Stat2, kind: StaticKind::Block},    // Table/chairs    "
@@ -79,6 +81,35 @@ pub fn spawn_static(actor_at: &mut Vec<Vec<At>>, tile_x: usize, tile_y: usize, s
         sprite: info.sprite,
         flags,
         item_number: info.kind,
+    }
+}
+
+/// Called during game play to drop actors' items.  It finds the proper
+/// item number based on the item type (bo_???).  If there are no free item
+/// spots, nothing is done.
+pub fn place_item_type(level_state: &mut LevelState, item_type: StaticKind, tile_x: usize, tile_y: usize) {
+    let mut found_info = None;
+    for info in &STAT_INFO {
+        if info.kind == item_type {
+            found_info = Some(info);
+            break;
+        }
+    }
+
+    if level_state.statics.len() >= MAX_STATS {
+        return; // no free spots anymore
+    }
+
+    if let Some(info) = found_info {
+        level_state.statics.push(StaticType { 
+            tile_x, 
+            tile_y, 
+            sprite: info.sprite, 
+            flags: FL_BONUS, 
+            item_number: info.kind,
+        });
+    } else {
+        panic!("PlaceItemType: couldn't find type!");
     }
 }
 
