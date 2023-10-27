@@ -1,4 +1,4 @@
-use crate::def::{Sprite, StaticType, VisObj, ObjKey, Assets, ObjType, Level, LevelState, At, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, DirType, EnemyType, GameState, Difficulty, };
+use crate::def::{Sprite, StaticType, VisObj, ObjKey, Assets, ObjType, Level, LevelState, At, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, EnemyType, GameState, Difficulty, };
 use crate::assets::load_map_from_assets;
 use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{dead_guard, stand};

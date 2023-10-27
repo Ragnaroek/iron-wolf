@@ -2,7 +2,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::cell::Cell;
 use std::thread;
-use std::time::Instant;
 
 pub const TICK_BASE : u64 = 70; //Hz
 const TARGET_NANOS : u128 = 1_000_000_000 / TICK_BASE as u128;

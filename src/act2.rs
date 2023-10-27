@@ -294,11 +294,11 @@ pub static S_SSSTAND : StateType = StateType {
     next: Some(&S_SSSTAND),   
 };
 
-fn t_stand(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn t_stand(k: ObjKey, tics: u64, level_state: &mut LevelState, _: &mut GameState, _: &dyn Renderer, _: &mut ControlState, _: &ProjectionConfig) {
     sight_player(k, level_state, tics);
 }
 
-fn t_chase(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn t_chase(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, _: &mut ControlState, _: &ProjectionConfig) {
     let (player_tile_x, player_tile_y) = {
         let player = level_state.player();
         (player.tilex, player.tiley)
