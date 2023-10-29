@@ -2,6 +2,7 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
+use libiw::assets::GAMEPAL;
 use vgaemu::input::NumCode;
 
 use crate::act1::move_doors;
@@ -15,6 +16,7 @@ use crate::input;
 use crate::time;
 use crate::game::setup_game_level;
 use crate::scale::{CompiledScaler, setup_scaling};
+use crate::vl::{set_palette, wait_vsync};
 
 //TODO separate draw.c stuff from play.c stuff in here
 
@@ -35,7 +37,22 @@ const RAD_TO_INT : f64 = FINE_ANGLES as f64 / 2.0 / std::f64::consts::PI;
 const RUN_MOVE : u64 = 70;
 const BASE_MOVE: u64 = 35;
 
+const NUM_RED_SHIFTS : usize = 6;
+const RED_STEPS : i32 = 8;
+
+const NUM_WHITE_SHIFTS : usize = 3;
+const WHITE_STEPS : i32 = 20;
+const WHITE_TICS : i32 = 6;
+
 static BUTTON_SCAN : [NumCode; NUM_BUTTONS] = [NumCode::Control, NumCode::Alt, NumCode::RShift, NumCode::Space, NumCode::Num1, NumCode::Num2, NumCode::Num3, NumCode::Num4];
+
+// TODO red/and whiteshifts as static array that is initialised in main?
+// Or allocate in main func and supply to Update func!
+
+struct ColourShifts {
+    pub red_shifts: [[u8; 768]; NUM_RED_SHIFTS],
+    pub white_shifts: [[u8; 768]; NUM_WHITE_SHIFTS],
+}
 
 pub struct ProjectionConfig {
 	pub view_width: usize,
@@ -85,6 +102,9 @@ pub fn new_game_state() -> GameState {
         attack_count: 0,
         face_count: 0,
         made_noise: false,
+        damage_count: 0,
+        bonus_count: 0,
+        pal_shifted: false,
 	}
 }
 
@@ -183,7 +203,7 @@ fn calc_sines() -> Vec<Fixed> {
     sines
 }
 
-pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+pub fn game_loop(ticker: &time::Ticker, vga: &vgaemu::VGA, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let mut game_state = new_game_state();
     let mut control_state : ControlState = new_control_state();
     
@@ -198,15 +218,18 @@ pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input
     
     rdr.fade_in();
 
-	play_loop(ticker, &mut level_state, &mut game_state, &mut control_state, rdr, input, prj, assets);
+	play_loop(ticker, &mut level_state, &mut game_state, &mut control_state, vga, rdr, input, prj, assets);
 
 	//TODO Go to next level (gamestate.map_on+=1)
 
 	input.wait_user_input(time::TICK_BASE*1000);
 }
 
-fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState, vga: &vgaemu::VGA, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let mut rc = init_ray_cast(prj.view_width);
+    let shifts = init_colour_shifts();
+
+    clear_palette_shifts(game_state);
 
     /*{
         let player = level_state.mut_player();
@@ -237,6 +260,8 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &m
         for i in 0..level_state.actors.len() {
             do_actor(ObjKey(i), tics, level_state, game_state, rdr, control_state, prj);
         }
+
+        update_palette_shifts(game_state, vga, &shifts, tics);
         
 	    three_d_refresh(game_state, level_state, &mut rc, rdr, prj, assets);
 
@@ -286,7 +311,7 @@ fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
 
     // transitional object
 
-    level_state.update_obj(k, |obj| obj.tic_count -= tics as u32);
+    level_state.update_obj(k, |obj| obj.tic_count = obj.tic_count.saturating_sub(tics as u32));
     while level_state.obj(k).tic_count <= 0 {
         if let Some(action) = level_state.obj(k).state.expect("state").action {
             action(k, tics, level_state, game_state, rdr, control_state, prj);
@@ -432,4 +457,110 @@ fn poll_keyboard_move(state: &mut ControlState, input: &input::Input, tics: u64)
     }
 }
 
+/*
+=============================================================================
+
+					PALETTE SHIFTING STUFF
+
+=============================================================================
+*/
+
+pub fn start_bonus_flash(game_state: &mut GameState) {
+    game_state.bonus_count = NUM_WHITE_SHIFTS as i32 * WHITE_TICS;
+}
+
+pub fn start_damage_flash(game_state: &mut GameState, damage: i32) {
+    game_state.damage_count += damage;
+}
+
+fn init_colour_shifts() -> ColourShifts {
+    let mut red_shifts = [[0; 768]; NUM_RED_SHIFTS];
+    let mut white_shifts = [[0; 768]; NUM_WHITE_SHIFTS];
+
+    for i in 0..NUM_RED_SHIFTS {
+        let mut ix = 0;
+        for _ in 0..256 {
+            let delta = 64 - GAMEPAL[ix] as i32;
+            red_shifts[i][ix] = (GAMEPAL[ix] as i32 + delta * i as i32 / RED_STEPS) as u8;
+            ix += 1;
+
+            let delta = -(GAMEPAL[ix] as i32);
+            red_shifts[i][ix] = (GAMEPAL[ix] as i32 + delta * i as i32 / RED_STEPS) as u8;
+            ix += 1;
+
+            let delta = -(GAMEPAL[ix] as i32);
+            red_shifts[i][ix] = (GAMEPAL[ix] as i32 + delta * i as i32 / RED_STEPS) as u8;
+            ix += 1;
+        }
+    }
+
+    for i in 0..NUM_WHITE_SHIFTS {
+        let mut ix = 0;
+        for _ in 0..256 {
+            let delta = 64 - GAMEPAL[ix] as i32;
+            white_shifts[i][ix] = (GAMEPAL[ix] as i32 + delta * i as i32 / WHITE_STEPS) as u8;
+            ix += 1;
+
+            let delta = 62 - GAMEPAL[ix] as i32;
+            white_shifts[i][ix] = (GAMEPAL[ix] as i32 + delta * i as i32 / WHITE_STEPS) as u8;
+            ix += 1;
+
+            let delta = -(GAMEPAL[ix] as i32);
+            white_shifts[i][ix] =(GAMEPAL[ix] as i32 + delta * i as i32 / WHITE_STEPS) as u8;
+            ix += 1;
+        }
+    }
+
+    ColourShifts { red_shifts,  white_shifts}
+}
+
+fn clear_palette_shifts(game_state: &mut GameState) {
+    game_state.bonus_count = 0;
+    game_state.damage_count = 0;
+}
+
+fn update_palette_shifts(game_state: &mut GameState, vga: &vgaemu::VGA, shifts: &ColourShifts, tics: u64) {
+    let mut white;
+    if game_state.bonus_count != 0 {
+        white = game_state.bonus_count / WHITE_TICS + 1;
+        if white > NUM_WHITE_SHIFTS as i32 {
+            white = NUM_WHITE_SHIFTS as i32;
+        }
+        game_state.bonus_count -= tics as i32;
+        if game_state.bonus_count < 0 {
+            game_state.bonus_count = 0;
+        }
+    } else {
+        white = 0;
+    }
+
+    let mut red;
+    if game_state.damage_count != 0 {
+        red = game_state.damage_count/10 + 1;
+        if red > NUM_RED_SHIFTS as i32 {
+            red = NUM_RED_SHIFTS as i32;
+        }
+
+        game_state.damage_count -= tics as i32;
+        if game_state.damage_count < 0 {
+            game_state.damage_count = 0;
+        }
+    } else {
+        red = 0;
+    }
+
+    if red != 0 {
+        wait_vsync(vga);
+        set_palette(vga, &shifts.red_shifts[red as usize - 1]);
+        game_state.pal_shifted = true;
+    } else if white != 0 {
+        wait_vsync(vga);
+        set_palette(vga, &shifts.white_shifts[white as usize - 1]);
+        game_state.pal_shifted = true;
+    } else if game_state.pal_shifted {
+        wait_vsync(vga);
+        set_palette(vga, &GAMEPAL); // back to normal
+        game_state.pal_shifted = false;
+    }
+}
 

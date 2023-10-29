@@ -31,7 +31,7 @@ fn fill_palette(vga: &vgaemu::VGA, red: u8, green: u8, blue: u8) {
     }
 }
 
-fn wait_vsync(vga: &vgaemu::VGA) {
+pub fn wait_vsync(vga: &vgaemu::VGA) {
     loop {
         let in1 = vga.get_general_reg(GeneralReg::InputStatus1);
         if in1 & VSYNC_MASK != 0 {

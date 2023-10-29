@@ -40,12 +40,14 @@ fn main() -> Result<(), String> {
     let input_monitoring = vgaemu::input::new_input_monitoring();
 
     let vga_screen = Arc::new(vga);
+    let vga_loop = vga_screen.clone();
+    // TODO get rid of the Renderer abstraction and directly used VGA!
     let render = vga_render::init(vga_screen.clone(), graphics);
     let ticker = time::new_ticker();
     let input = input::init(ticker.time_count.clone(), input_monitoring.clone());
 
 	thread::spawn(move || { 
-        demo_loop(ticker, &render, &input, &prj, &assets);
+        demo_loop(ticker, &vga_loop, &render, &input, &prj, &assets);
     });
 
 	let options: screen::Options = vgaemu::screen::Options {
@@ -62,7 +64,7 @@ fn init_game(vga: &vgaemu::VGA) {
     signon_screen(vga);
 }
 
-fn demo_loop(ticker: time::Ticker, rdr: &dyn Renderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets) {
+fn demo_loop(ticker: time::Ticker, vga: &vgaemu::VGA, rdr: &dyn Renderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets) {
     if !assets.iw_config.no_wait {
         pg_13(rdr, input);
     }
@@ -87,7 +89,7 @@ fn demo_loop(ticker: time::Ticker, rdr: &dyn Renderer, input: &input::Input, prj
             //TODO PlayDemo() here
         }
 
-        play::game_loop(&ticker, rdr, input, prj, assets);
+        play::game_loop(&ticker, vga, rdr, input, prj, assets);
         rdr.fade_out();
     }
 }

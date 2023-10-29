@@ -226,12 +226,17 @@ pub struct GameState {
     pub victory_flag : bool,
     pub play_state: PlayState,
     pub killer_obj: Option<ObjKey>,
-    //cheats
+    // cheats
     pub god_mode : bool,
 
     pub face_count : u64,
 
     pub made_noise: bool,
+
+    // palette state
+    pub bonus_count : i32,
+    pub damage_count : i32,
+    pub pal_shifted : bool,
 }
 
 pub enum PlayState {
