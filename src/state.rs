@@ -150,7 +150,7 @@ fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
                     }
                     door_num = door;
                 }
-                level_state.update_obj(k, |obj|obj.tiley += 1); 
+                level_state.update_obj(k, |obj|obj.tilex += 1); 
             },
             DirType::SouthEast => {
                 if !check_diag(level_state, obj.tilex+1, obj.tiley+1) {
