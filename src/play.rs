@@ -3,7 +3,8 @@
 mod play_test;
 
 use libiw::assets::GAMEPAL;
-use vgaemu::input::NumCode;
+use vga::input::NumCode;
+use vga::VGA;
 
 use crate::act1::move_doors;
 use crate::agent::{draw_health, draw_level, draw_face, draw_lives, draw_ammo, draw_keys, draw_weapon, draw_score};
@@ -203,7 +204,7 @@ fn calc_sines() -> Vec<Fixed> {
     sines
 }
 
-pub fn game_loop(ticker: &time::Ticker, vga: &vgaemu::VGA, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+pub fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let mut game_state = new_game_state();
     let mut control_state : ControlState = new_control_state();
     
@@ -225,7 +226,7 @@ pub fn game_loop(ticker: &time::Ticker, vga: &vgaemu::VGA, rdr: &dyn Renderer, i
 	input.wait_user_input(time::TICK_BASE*1000);
 }
 
-fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState, vga: &vgaemu::VGA, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState, vga: &VGA, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let mut rc = init_ray_cast(prj.view_width);
     let shifts = init_colour_shifts();
 
@@ -519,7 +520,7 @@ fn clear_palette_shifts(game_state: &mut GameState) {
     game_state.damage_count = 0;
 }
 
-fn update_palette_shifts(game_state: &mut GameState, vga: &vgaemu::VGA, shifts: &ColourShifts, tics: u64) {
+fn update_palette_shifts(game_state: &mut GameState, vga: &VGA, shifts: &ColourShifts, tics: u64) {
     let mut white;
     if game_state.bonus_count != 0 {
         white = game_state.bonus_count / WHITE_TICS + 1;

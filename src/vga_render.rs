@@ -3,8 +3,8 @@ use std::cell::Cell;
 use std::thread;
 use std::time::Duration;
 
-use vgaemu::{CRTReg, SCReg, GeneralReg};
-use libiw::assets::{GAMEPAL};
+use vga::{CRTReg, SCReg, GeneralReg, VGA};
+use libiw::assets::GAMEPAL;
 
 use super::assets::{Graphic, GraphicNum};
 use super::vl;
@@ -45,13 +45,13 @@ pub trait Renderer {
 }
 
 pub struct VGARenderer {
-	vga: Arc<vgaemu::VGA>,
+	vga: Arc<VGA>,
 	linewidth: usize,
 	bufferofs: Cell<usize>,
 	graphics: Vec<Graphic>,
 }
 
-pub fn init(vga: Arc<vgaemu::VGA>, graphics: Vec<Graphic>) -> VGARenderer {
+pub fn init(vga: Arc<VGA>, graphics: Vec<Graphic>) -> VGARenderer {
 	VGARenderer {
 		vga,
 		linewidth: 80,
@@ -222,7 +222,7 @@ impl Renderer for VGARenderer {
 	}
 }
 
-fn wait_display_enable(vga: &Arc<vgaemu::VGA>) {
+fn wait_display_enable(vga: &Arc<VGA>) {
     loop {
         let in1 = vga.get_general_reg(GeneralReg::InputStatus1);
         if in1 & DE_MASK == 0 {
@@ -232,7 +232,7 @@ fn wait_display_enable(vga: &Arc<vgaemu::VGA>) {
     }
 }
 
-fn wait_vsync(vga: &Arc<vgaemu::VGA>) {
+fn wait_vsync(vga: &Arc<VGA>) {
     loop {
         let in1 = vga.get_general_reg(GeneralReg::InputStatus1);
         if in1 & VSYNC_MASK != 0 {

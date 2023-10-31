@@ -5,8 +5,7 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::thread;
 
-use vgaemu::screen;
-use vgaemu::SCReg;
+use vga::SCReg;
 use libiw::assets::GAMEPAL;
 
 use iw::def::Assets;
@@ -24,8 +23,8 @@ fn main() -> Result<(), String> {
     let iw_config = config::load_iw_config();
     let config = config::load_wolf_config(&iw_config);
 
-    let vga = vgaemu::new(0x13);
-	//enable Mode X
+    let vga = vga::new(0x13);
+	//enable Mode Y
 	let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
 	vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
@@ -37,7 +36,7 @@ fn main() -> Result<(), String> {
     // TODO calc_projection and setup_scaling have to be re-done if view size changes in config
     let prj = play::calc_projection(config.viewsize as usize);
 
-    let input_monitoring = vgaemu::input::new_input_monitoring();
+    let input_monitoring = vga::input::new_input_monitoring();
 
     let vga_screen = Arc::new(vga);
     let vga_loop = vga_screen.clone();
@@ -50,21 +49,21 @@ fn main() -> Result<(), String> {
         demo_loop(ticker, &vga_loop, &render, &input, &prj, &assets);
     });
 
-	let options: screen::Options = vgaemu::screen::Options {
+	let options: vga::Options = vga::Options {
 		show_frame_rate: true,
         input_monitoring: Some(input_monitoring),
 		..Default::default()
 	};
-	screen::start(vga_screen, options).unwrap();
+    vga_screen.start(options).unwrap();
     Ok(())
 }
 
-fn init_game(vga: &vgaemu::VGA) {
+fn init_game(vga: &vga::VGA) {
     vl::set_palette(vga, GAMEPAL);
     signon_screen(vga);
 }
 
-fn demo_loop(ticker: time::Ticker, vga: &vgaemu::VGA, rdr: &dyn Renderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets) {
+fn demo_loop(ticker: time::Ticker, vga: &vga::VGA, rdr: &dyn Renderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets) {
     if !assets.iw_config.no_wait {
         pg_13(rdr, input);
     }
@@ -94,7 +93,7 @@ fn demo_loop(ticker: time::Ticker, vga: &vgaemu::VGA, rdr: &dyn Renderer, input:
     }
 }
 
-fn signon_screen(vga: &vgaemu::VGA) {
+fn signon_screen(vga: &vga::VGA) {
     let mut f_signon = File::open("assets/signon.bin").unwrap();
     let mut signon_data = Vec::new();
     f_signon.read_to_end(&mut signon_data).unwrap();

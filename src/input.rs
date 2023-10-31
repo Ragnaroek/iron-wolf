@@ -1,5 +1,5 @@
 use super::time::{TimeCount, get_count};
-use vgaemu::input::{self, NumCode};
+use vga::input::{self, NumCode};
 
 pub struct Input {
 	time: TimeCount,

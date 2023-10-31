@@ -29,7 +29,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
     let prj = play::calc_projection(19);
     let graphics = assets::load_all_graphics(&assets.iw_config)?;
 
-    let vga = vgaemu::new(0x13);
+    let vga = vga::new(0x13);
     let vga_screen = Arc::new(vga);
     let render = vga_render::init(vga_screen.clone(), graphics);
 

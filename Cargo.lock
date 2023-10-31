@@ -194,9 +194,9 @@ checksum = "579a42fc0b8e0c63b76519a339be31bed574929511fa53c1a3acae26eb258f29"
 
 [[package]]
 name = "vga-emu"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b386f55be5baeae66b97afe7032c93aeeffb3a07d262149253713a042aeb7e40"
+checksum = "159ff00c48478e86dbc1f142ea5ef7fcb0ed6cf1fe9e7befe9608a201aa18ef4"
 dependencies = [
  "sdl2",
 ]

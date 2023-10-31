@@ -3,7 +3,7 @@ use super::user;
 use super::def::IWConfig;
 use super::util;
 
-use vgaemu::input::{NumCode, to_numcode};
+use vga::input::{NumCode, to_numcode};
 use libiw::util as iwutil;
 
 pub static CONFIG_DATA: &'static str = "CONFIG.WL6";

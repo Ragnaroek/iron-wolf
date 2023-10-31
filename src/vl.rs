@@ -1,11 +1,11 @@
 use std::thread;
 use std::time;
-use vgaemu::{ColorReg, GeneralReg};
+use vga::{ColorReg, GeneralReg, VGA};
 
 const VSYNC_MASK: u8 = 0x08;
 const POLL_WAIT_MICROS : u64 = 500;
 
-pub fn set_palette(vga: &vgaemu::VGA, palette: &[u8]) {
+pub fn set_palette(vga: &VGA, palette: &[u8]) {
 	debug_assert_eq!(palette.len(), 768);
     vga.set_color_reg(ColorReg::AddressWriteMode, 0);
     for i in 0..768 {
@@ -13,7 +13,7 @@ pub fn set_palette(vga: &vgaemu::VGA, palette: &[u8]) {
     }
 }
 
-pub fn get_palette(vga: &vgaemu::VGA) -> Vec<u8> {
+pub fn get_palette(vga: &VGA) -> Vec<u8> {
     let mut palette = Vec::with_capacity(768);
     vga.set_color_reg(ColorReg::AddressReadMode, 0);
     for _ in 0..768 {
@@ -22,7 +22,7 @@ pub fn get_palette(vga: &vgaemu::VGA) -> Vec<u8> {
     palette
 }
 
-fn fill_palette(vga: &vgaemu::VGA, red: u8, green: u8, blue: u8) {
+fn fill_palette(vga: &VGA, red: u8, green: u8, blue: u8) {
     vga.set_color_reg(ColorReg::AddressWriteMode, 0);
     for _ in 0..256 {
         vga.set_color_reg(ColorReg::Data, red);
@@ -31,7 +31,7 @@ fn fill_palette(vga: &vgaemu::VGA, red: u8, green: u8, blue: u8) {
     }
 }
 
-pub fn wait_vsync(vga: &vgaemu::VGA) {
+pub fn wait_vsync(vga: &VGA) {
     loop {
         let in1 = vga.get_general_reg(GeneralReg::InputStatus1);
         if in1 & VSYNC_MASK != 0 {
@@ -41,7 +41,7 @@ pub fn wait_vsync(vga: &vgaemu::VGA) {
     }
 }
 
-pub fn fade_out(vga: &vgaemu::VGA, start: usize, end: usize, red: u8, green: u8, blue: u8, steps: usize) {
+pub fn fade_out(vga: &VGA, start: usize, end: usize, red: u8, green: u8, blue: u8, steps: usize) {
     wait_vsync(vga);
     let palette_orig = get_palette(vga);
     let mut palette_new = palette_orig.clone();
@@ -72,7 +72,7 @@ pub fn fade_out(vga: &vgaemu::VGA, start: usize, end: usize, red: u8, green: u8,
     fill_palette(vga, red, green, blue);
 }
 
-pub fn fade_in(vga: &vgaemu::VGA, start: usize, end: usize, palette: &[u8], steps: usize) {
+pub fn fade_in(vga: &VGA, start: usize, end: usize, palette: &[u8], steps: usize) {
     wait_vsync(vga);
     let palette1 = get_palette(vga);
     let mut palette2 = palette1.clone();
