@@ -397,11 +397,11 @@ pub struct IWConfig {
 
 // All assets that need to be accessed in the game loop
 pub struct Assets {
-	pub iw_config: IWConfig, // put here for convenience (mabye only put assets path here?)
 	pub map_headers: Vec<MapType>,
 	pub map_offsets: MapFileType,
     pub textures: Vec<TextureData>,
     pub sprites: Vec<SpriteData>,
+    pub game_maps: Vec<u8>,
 }
 
 type Think = fn(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig); 

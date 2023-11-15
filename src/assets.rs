@@ -1,10 +1,20 @@
-use std::fs::File;
+use std::io::Cursor;
 
 use libiw::map::{load_map, load_map_headers, load_map_offsets, MapType, MapFileType, MapData};
-use libiw::gamedata::GamedataHeaders;
 
-use super::def::{WeaponType, Assets, IWConfig};
-use super::util;
+use crate::loader::Loader;
+
+use super::def::{WeaponType, Assets };
+
+pub enum WolfFile {
+	GraphicDict,
+	GraphicHead,
+	GraphicData,
+	MapHead,
+	GameMaps,
+	GameData,
+	ConfigData,
+}
 
 pub static GRAPHIC_DICT: &'static str = "VGADICT.WL6";
 pub static GRAPHIC_HEAD: &'static str = "VGAHEAD.WL6";
@@ -12,6 +22,19 @@ pub static GRAPHIC_DATA: &'static str = "VGAGRAPH.WL6";
 pub static MAP_HEAD: &'static str = "MAPHEAD.WL6";
 pub static GAME_MAPS: &'static str = "GAMEMAPS.WL6";
 pub static GAMEDATA: &'static str = "VSWAP.WL6";
+pub static CONFIG_DATA: &'static str = "CONFIG.WL6";
+
+pub fn file_name(file: WolfFile) -> &'static str {
+	match file {
+		WolfFile::GraphicDict => GRAPHIC_DICT,
+		WolfFile::GraphicHead => GRAPHIC_HEAD,
+		WolfFile::GraphicData => GRAPHIC_DATA,
+		WolfFile::MapHead => MAP_HEAD,
+		WolfFile::GameMaps => GAME_MAPS,
+		WolfFile::GameData => GAMEDATA,
+		WolfFile::ConfigData => CONFIG_DATA,
+	}
+}
 
 #[derive(Copy, Clone)]
 pub enum GraphicNum {
@@ -139,12 +162,12 @@ pub struct Huffnode {
 	bit1: u16,
 }
 
-pub fn load_all_graphics(config: &IWConfig) -> Result<Vec<Graphic>, String> {
-	let grhuffman_bytes = util::load_file(&config.wolf3d_data.join(GRAPHIC_DICT));
+pub fn load_all_graphics(loader: &dyn Loader) -> Result<Vec<Graphic>, String> {
+	let grhuffman_bytes = loader.load_file(WolfFile::GraphicDict); 
 	let grhuffman = to_huffnodes(grhuffman_bytes);
 
-	let grstarts = util::load_file(&config.wolf3d_data.join(GRAPHIC_HEAD));
-	let grdata = util::load_file(&config.wolf3d_data.join(GRAPHIC_DATA));
+	let grstarts = loader.load_file(WolfFile::GraphicHead);
+	let grdata = loader.load_file(WolfFile::GraphicData);
 
 	let picsizes = extract_picsizes(&grdata, &grstarts, &grhuffman);
 
@@ -306,40 +329,38 @@ fn huff_expand(data: &[u8], len: usize, grhuffman: &Vec<Huffnode>) -> Vec<u8> {
 
 // load map and uncompress it
 pub fn load_map_from_assets(assets: &Assets, mapnum: usize) -> Result<MapData, String> {
-	let mut file = File::open(&assets.iw_config.wolf3d_data.join(GAME_MAPS)).expect("opening map file failed");
-	load_map(&mut file, &assets.map_headers, &assets.map_offsets, mapnum)
+	let mut cursor = Cursor::new(&assets.game_maps);
+	load_map(&mut cursor, &assets.map_headers, &assets.map_offsets, mapnum)
 }
 
-pub fn load_map_headers_from_config(config: &IWConfig) -> Result<(MapFileType, Vec<MapType>), String> {
-	let offset_bytes = util::load_file(&config.wolf3d_data.join(MAP_HEAD));
-	let map_bytes = util::load_file(&config.wolf3d_data.join(GAME_MAPS));
+pub fn load_map_headers_from_config(loader: &dyn Loader) -> Result<(MapFileType, Vec<MapType>), String> {
+	let offset_bytes = loader.load_file(WolfFile::MapHead); 
+	let map_bytes = loader.load_file(WolfFile::GameMaps); 
 	let offsets = load_map_offsets(&offset_bytes)?;
 	load_map_headers(&map_bytes, offsets)
 }
 
 // gamedata stuff
 
-pub fn load_gamedata(config: &IWConfig) -> Result<(Vec<u8>, GamedataHeaders), String> {
-    let header_bytes = util::load_file(&config.wolf3d_data.join(GAMEDATA));
-    let headers = libiw::gamedata::load_gamedata_headers(&header_bytes)?;
-    Ok((header_bytes, headers))
-}
-
 // loads all assets for the game into memory
-pub fn load_assets(iw_config: IWConfig) -> Result<Assets, String> {
-    let (map_offsets, map_headers) = load_map_headers_from_config(&iw_config)?;
+pub fn load_assets(loader: &dyn Loader) -> Result<Assets, String> {
+    let (map_offsets, map_headers) = load_map_headers_from_config(loader)?;
 
-    let (_, headers) = load_gamedata(&iw_config)?;
+	let gamedata_bytes = loader.load_file(WolfFile::GameData);
+	let headers = libiw::gamedata::load_gamedata_headers(&gamedata_bytes)?; 
 
-	let mut gamedata_file: File = File::open(&iw_config.wolf3d_data.join(GAMEDATA)).expect("opening gamedata file failed");
-    let textures = libiw::gamedata::load_all_textures(&mut gamedata_file, &headers)?;
-	let sprites = libiw::gamedata::load_all_sprites(&mut gamedata_file, &headers)?;
-    
+	//let mut gamedata_file: File = File::open(&iw_config.wolf3d_data.join(GAMEDATA)).expect("opening gamedata file failed");
+	let mut gamedata_cursor = Cursor::new(gamedata_bytes);
+	let textures = libiw::gamedata::load_all_textures(&mut gamedata_cursor, &headers)?;
+	let sprites = libiw::gamedata::load_all_sprites(&mut gamedata_cursor, &headers)?;
+	
+	let game_maps = loader.load_file(WolfFile::GameMaps);
+
 	Ok(Assets {
         map_headers,
         map_offsets,
-        iw_config,
         textures,
 		sprites,
+		game_maps,
     })
 }

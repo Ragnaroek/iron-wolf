@@ -1,7 +1,8 @@
 use std::path::PathBuf;
+use crate::{loader::Loader, assets::WolfFile};
+
 use super::user;
 use super::def::IWConfig;
-use super::util;
 
 use vga::input::{NumCode, to_numcode};
 use libiw::util as iwutil;
@@ -9,7 +10,7 @@ use libiw::util as iwutil;
 pub static CONFIG_DATA: &'static str = "CONFIG.WL6";
 pub const MAX_SCORES : usize = 7;
 
-pub fn load_iw_config() -> IWConfig {
+pub fn default_iw_config() -> IWConfig {
     //TODO load from a toml file
     let mut path = PathBuf::new();
     path.push("/Users/michaelbohn/_w3d/w3d_data");
@@ -62,8 +63,8 @@ pub struct WolfConfig {
 
 // TODO write a test with load/write roundtrip (once write is there) 
 
-pub fn load_wolf_config(config: &IWConfig) -> WolfConfig {
-    let data = util::load_file(&config.wolf3d_data.join(CONFIG_DATA));
+pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
+    let data = loader.load_file(WolfFile::ConfigData);
     let mut reader = iwutil::new_data_reader(&data);
 
     let mut high_scores = Vec::with_capacity(MAX_SCORES);
