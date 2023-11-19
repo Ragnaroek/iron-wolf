@@ -7,7 +7,7 @@ description = "Iron-Wolf a Wolfenstein 3D source port"
 
 [features]
 sdl = ["vga-emu/sdl"]
-web = ["vga-emu/web", "dep:wasm-bindgen", "dep:console_error_panic_hook"]
+web = ["vga-emu/web", "dep:wasm-bindgen", "dep:console_error_panic_hook", "dep:web-sys", "dep:js-sys", "dep:wasm-timer"]
 
 [lib]
 name = "iw"
@@ -18,12 +18,28 @@ name = "iw"
 path = "src/main.rs"
 
 [dependencies]
+cfg-if = { version = "1.0" }
 async-std = { version = "1.12.0", features = ["unstable"] }
-vga-emu = {path="../vga-emu/"} #{version = "0.4.0", features = ["sdl"]} 
+vga-emu = { path="../vga-emu/" } 
 libiw = "0.3.0" #{path="../iw-lib"}
 # feature web
 wasm-bindgen = { version = "0.2.87", optional = true}
 console_error_panic_hook = { version = "0.1.7", optional = true }
+js-sys = { version = "0.3.65", optional = true }
+web-sys = { version = "0.3.65", optional = true, features = [
+  'Document',
+  'Window',
+  'HtmlInputElement',
+  'MouseEvent',
+  'File',
+  'FileList',
+  'FileReader',
+  'Blob',
+  'Performance',
+  'console'
+]}
+wasm-timer = {version = "0.2.5", optional = true }
+
 
 [profile.bench]
 debug = true

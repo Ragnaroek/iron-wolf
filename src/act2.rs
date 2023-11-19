@@ -4,7 +4,7 @@ use crate::def::{ObjType, StateType, Sprite, DirType, EnemyType, SPD_PATROL, Obj
 use crate::state::{spawn_new_obj, new_state, sight_player, check_line, select_dodge_dir, select_chase_dir, move_obj};
 use crate::play::ProjectionConfig;
 use crate::user::rnd_t;
-use crate::vga_render::Renderer;
+use crate::vga_render::VGARenderer;
 
 static START_HITPOINTS : [[i32; NUM_ENEMIES]; 4] = [
      [ // BABY MODE	
@@ -294,11 +294,11 @@ pub static S_SSSTAND : StateType = StateType {
     next: Some(&S_SSSTAND),   
 };
 
-fn t_stand(k: ObjKey, tics: u64, level_state: &mut LevelState, _: &mut GameState, _: &dyn Renderer, _: &mut ControlState, _: &ProjectionConfig) {
+fn t_stand(k: ObjKey, tics: u64, level_state: &mut LevelState, _: &mut GameState, _: &VGARenderer, _: &mut ControlState, _: &ProjectionConfig) {
     sight_player(k, level_state, tics);
 }
 
-fn t_chase(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, _: &mut ControlState, _: &ProjectionConfig) {
+fn t_chase(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, _: &mut ControlState, _: &ProjectionConfig) {
     let (player_tile_x, player_tile_y) = {
         let player = level_state.player();
         (player.tilex, player.tiley)
@@ -441,7 +441,7 @@ fn dir_from_tile(tile_dir: u16) -> DirType {
 */
 
 /// Try to damage the player, based on skill level and player's speed
-fn t_shoot(k: ObjKey, _: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, _: &mut ControlState, _: &ProjectionConfig) {
+fn t_shoot(k: ObjKey, _: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, _: &mut ControlState, _: &ProjectionConfig) {
     
     // TODO areabyplayer check!
 

@@ -7,8 +7,8 @@ use crate::user::rnd_t;
 use crate::act2::{S_GRDCHASE1, S_GRDPAIN, S_GRDPAIN1, S_GRDDIE1};
 use crate::agent::{take_damage, give_points};
 use crate::act1::{open_door, place_item_type};
-use crate::vga_render::Renderer;
 use crate::def::{ObjType, TILESHIFT, TILEGLOBAL, StateType, DirType, ClassType, FL_ATTACKMODE, FL_AMBUSH, LevelState, ObjKey, UNSIGNEDSHIFT, FL_FIRSTATTACK, MIN_ACTOR_DIST, At, FL_SHOOTABLE, GameState, FL_NONMARK, StaticKind};
+use crate::vga_render::VGARenderer;
 
 static OPPOSITE: [DirType; 9] = [DirType::West, DirType::SouthWest, DirType::South, DirType::SouthEast, DirType::East, DirType::NorthEast, DirType::North, DirType::NorthWest, DirType::NoDir];
 
@@ -456,7 +456,7 @@ pub fn select_chase_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: 
 ///
 /// ob->x			= adjusted for new position
 /// ob->y
-pub fn move_obj(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, player_x: i32, player_y: i32, mov: i32, tics: u64) {
+pub fn move_obj(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, player_x: i32, player_y: i32, mov: i32, tics: u64) {
     level_state.update_obj(k, |obj| {
         match obj.dir {
             DirType::North => {
@@ -795,7 +795,7 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
     true
 }
 
-pub fn damage_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, damage_param: usize) {
+pub fn damage_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, damage_param: usize) {
     game_state.made_noise = true;    
 
     let mut damage = damage_param;
@@ -835,7 +835,7 @@ pub fn damage_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut Ga
     }
 }
 
-fn kill_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer) {
+fn kill_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer) {
     {
         let obj = level_state.mut_obj(k);
         let tile_x = (obj.x >> TILESHIFT) as usize;

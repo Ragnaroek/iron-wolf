@@ -5,7 +5,7 @@ use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, D
 use crate::fixed::{new_fixed_i32, fixed_by_frac};
 use crate::state::{check_line, damage_actor};
 use crate::user::rnd_t;
-use crate::vga_render::Renderer;
+use crate::vga_render::VGARenderer;
 
 const ANGLE_SCALE : i32 = 20;
 const MOVE_SCALE : i32 = 150;
@@ -42,7 +42,7 @@ static ATTACK_INFO : [[AttackInfo; 4]; 4] = [
     [AttackInfo{tics: 6, attack: 0, frame: 1}, AttackInfo{tics: 6, attack: 1, frame: 2}, AttackInfo{tics: 6, attack: 4, frame: 3} ,AttackInfo{tics: 6, attack: -1, frame: 4}],
 ];
 
-fn t_attack(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn t_attack(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
     
     update_face(tics, game_state, rdr);
     
@@ -115,7 +115,7 @@ fn t_attack(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
     }
 }
 
-fn gun_attack(level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
+fn gun_attack(level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {
 
     //TODO play weapon sound!
 
@@ -171,7 +171,7 @@ fn gun_attack(level_state: &mut LevelState, game_state: &mut GameState, rdr: &dy
     damage_actor(k, level_state, game_state, rdr, damage as usize);
 }
 
-fn t_player(k: ObjKey, _: u64, level_state: &mut LevelState, game_state: &mut GameState, _: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn t_player(k: ObjKey, _: u64, level_state: &mut LevelState, game_state: &mut GameState, _: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
     if control_state.button_state[Button::Use as usize] {
         cmd_use(level_state, control_state);
     }
@@ -265,7 +265,7 @@ pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
     r
 }
 
-pub fn take_damage(attacker: ObjKey, points_param: i32, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer) {
+pub fn take_damage(attacker: ObjKey, points_param: i32, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer) {
     let mut points = points_param;
 
     level_state.last_attacker = Some(attacker);
@@ -355,7 +355,7 @@ pub fn thrust(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig, a
     obj.tiley = obj.y as usize >> TILESHIFT;    
 }
 
-pub fn give_points(game_state: &mut GameState, rdr: &dyn Renderer, points: i32) {
+pub fn give_points(game_state: &mut GameState, rdr: &VGARenderer, points: i32) {
     game_state.score += points;
     while game_state.score >= game_state.next_extra {
         game_state.next_extra += EXTRA_POINTS;
@@ -364,7 +364,7 @@ pub fn give_points(game_state: &mut GameState, rdr: &dyn Renderer, points: i32) 
     draw_score(&game_state, rdr)
 }
 
-pub fn give_extra_man(game_state: &mut GameState, rdr: &dyn Renderer) {
+pub fn give_extra_man(game_state: &mut GameState, rdr: &VGARenderer) {
     if game_state.lives < 9 {
         game_state.lives += 1;
     }
@@ -372,7 +372,7 @@ pub fn give_extra_man(game_state: &mut GameState, rdr: &dyn Renderer) {
     // TODO PlaySound(BONUS1UPSND);
 }
 
-pub fn get_bonus(game_state: &mut GameState, rdr: &dyn Renderer, check: &mut StaticType) {
+pub fn get_bonus(game_state: &mut GameState, rdr: &VGARenderer, check: &mut StaticType) {
     match check.item_number {
         StaticKind::BoFirstaid => {
             panic!("get first aid");
@@ -427,7 +427,7 @@ pub fn get_bonus(game_state: &mut GameState, rdr: &dyn Renderer, check: &mut Sta
     check.sprite = Sprite::None; // remove from list
 }
 
-fn give_ammo(game_state: &mut GameState, rdr: &dyn Renderer, ammo: i32) {
+fn give_ammo(game_state: &mut GameState, rdr: &VGARenderer, ammo: i32) {
     if game_state.ammo <= 0 { // knife was out
         if game_state.attack_frame <= 0 {
             game_state.weapon = game_state.chosen_weapon;
@@ -500,23 +500,23 @@ fn set_move(k: ObjKey, level_state: &mut LevelState, dx: i32, dy: i32) {
     obj.y = dy;
 }
 
-pub fn draw_health(state: &GameState, rdr: &dyn Renderer) {
+pub fn draw_health(state: &GameState, rdr: &VGARenderer) {
 	latch_number(rdr, 21, 16, 3, state.health);
 }
 
-pub fn draw_lives(state: &GameState, rdr: &dyn Renderer) {
+pub fn draw_lives(state: &GameState, rdr: &VGARenderer) {
 	latch_number(rdr, 14, 16, 1, state.lives);
 }
 
-pub fn draw_level(state: &GameState, rdr: &dyn Renderer) {
+pub fn draw_level(state: &GameState, rdr: &VGARenderer) {
 	latch_number(rdr, 2, 16, 2, state.map_on as i32 + 1);
 }
 
-pub fn draw_ammo(state: &GameState, rdr: &dyn Renderer) {
+pub fn draw_ammo(state: &GameState, rdr: &VGARenderer) {
 	latch_number(rdr, 27, 16, 2, state.ammo);
 }
 
-pub fn draw_face(state: &GameState, rdr: &dyn Renderer) {
+pub fn draw_face(state: &GameState, rdr: &VGARenderer) {
 	if state.health > 0 {
 		status_draw_pic(rdr, 17, 4, face_pic(3*((100-state.health as usize)/16)+state.face_frame));
 	} else {
@@ -526,7 +526,7 @@ pub fn draw_face(state: &GameState, rdr: &dyn Renderer) {
 }
 
 /// Calls draw face if time to change
-fn update_face(tics: u64, state: &mut GameState, rdr: &dyn Renderer) {
+fn update_face(tics: u64, state: &mut GameState, rdr: &VGARenderer) {
     // TODO Check if GETGATLINGSND is playing
 
     state.face_count += tics;
@@ -540,7 +540,7 @@ fn update_face(tics: u64, state: &mut GameState, rdr: &dyn Renderer) {
     }
 }
 
-pub fn draw_keys(state: &GameState, rdr: &dyn Renderer) {
+pub fn draw_keys(state: &GameState, rdr: &VGARenderer) {
 	if state.keys & 1 != 0 {
 		status_draw_pic(rdr, 30, 4, GraphicNum::GOLDKEYPIC);
 	} else {
@@ -554,15 +554,15 @@ pub fn draw_keys(state: &GameState, rdr: &dyn Renderer) {
 	}
 }
 
-pub fn draw_weapon(state: &GameState, rdr: &dyn Renderer) {
+pub fn draw_weapon(state: &GameState, rdr: &VGARenderer) {
 	status_draw_pic(rdr, 32, 8, weapon_pic(state.weapon))
 }
 
-pub fn draw_score(state: &GameState, rdr: &dyn Renderer) {
+pub fn draw_score(state: &GameState, rdr: &VGARenderer) {
 	latch_number(rdr, 6, 16, 6, state.score);
 }
 
-fn latch_number(rdr: &dyn Renderer, x_start: usize, y: usize, width: usize, num: i32) {
+fn latch_number(rdr: &VGARenderer, x_start: usize, y: usize, width: usize, num: i32) {
 	let str = num.to_string();
 	let mut w_cnt = width;
 	let mut x = x_start;
@@ -583,7 +583,7 @@ fn latch_number(rdr: &dyn Renderer, x_start: usize, y: usize, width: usize, num:
 }
 
 // x in bytes
-fn status_draw_pic(rdr: &dyn Renderer, x: usize, y: usize, pic: GraphicNum) {
+fn status_draw_pic(rdr: &VGARenderer, x: usize, y: usize, pic: GraphicNum) {
     let offset_prev = rdr.buffer_offset();
     for i in 0..3 {
         rdr.set_buffer_offset(SCREENLOC[i]);

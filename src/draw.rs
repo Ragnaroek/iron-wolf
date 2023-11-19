@@ -6,8 +6,7 @@ use crate::agent::get_bonus;
 use crate::play::ProjectionConfig;
 use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS, FL_VISABLE, ClassType, DIR_ANGLE };
 use crate::scale::{simple_scale_shape, scale_shape, MAP_MASKS_1};
-use crate::vga_render::Renderer;
-use crate::vga_render;
+use crate::vga_render::{self, VGARenderer};
 use crate::fixed::{Fixed, fixed_by_frac, new_fixed_i32};
 
 const DEG90 : usize = 900;
@@ -434,7 +433,7 @@ impl RayCast {
     }
 }
 
-pub fn wall_refresh(level_state: &mut LevelState, rc: &mut RayCast, consts: &RayCastConsts, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+pub fn wall_refresh(level_state: &mut LevelState, rc: &mut RayCast, consts: &RayCastConsts, rdr: &VGARenderer, prj: &ProjectionConfig, assets: &Assets) {
     // TODO Is there a faster way to do this? 
     for x in 0..MAP_SIZE {
         for y in 0..MAP_SIZE {
@@ -458,7 +457,7 @@ pub fn wall_refresh(level_state: &mut LevelState, rc: &mut RayCast, consts: &Ray
     }
 }
 
-pub fn three_d_refresh(game_state: &mut GameState, level_state: &mut LevelState, rc: &mut RayCast, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+pub async fn three_d_refresh(game_state: &mut GameState, level_state: &mut LevelState, rc: &mut RayCast, rdr: &VGARenderer, prj: &ProjectionConfig, assets: &Assets) {
     rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
 
     let player = level_state.player();
@@ -471,7 +470,7 @@ pub fn three_d_refresh(game_state: &mut GameState, level_state: &mut LevelState,
     draw_player_weapon(game_state, rdr, prj, assets);
 
 	rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
-    rdr.activate_buffer(rdr.buffer_offset());
+    rdr.activate_buffer(rdr.buffer_offset()).await;
 
     //set offset to buffer for next frame
     let mut next_offset = rdr.buffer_offset() + vga_render::SCREEN_SIZE;
@@ -482,7 +481,7 @@ pub fn three_d_refresh(game_state: &mut GameState, level_state: &mut LevelState,
 }
 
 // Clears the screen and already draws the bottom and ceiling
-fn clear_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
+fn clear_screen(state: &GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {
 	let ceil_color = VGA_CEILING[state.episode*10+state.map_on];
 
 	let half = prj.view_height/2;
@@ -508,7 +507,7 @@ pub fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, co
     height_numerator/(nx >> 8)
 }
 
-pub fn scale_post(scaler_state: &ScalerState, height: i32, prj: &ProjectionConfig, rdr: &dyn Renderer, assets: &Assets) {
+pub fn scale_post(scaler_state: &ScalerState, height: i32, prj: &ProjectionConfig, rdr: &VGARenderer, assets: &Assets) {
     let texture = &assets.textures[scaler_state.texture_ix];
     
     //shr additionally by 2, the original offset is a offset into a DWORD pointer array.
@@ -533,7 +532,7 @@ pub fn scale_post(scaler_state: &ScalerState, height: i32, prj: &ProjectionConfi
     }
 }
 
-pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &dyn Renderer, level: &Level, assets: &Assets) {
+pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &VGARenderer, level: &Level, assets: &Assets) {
     let mut post_source = 0xFC0 - ((rc.y_intercept>>4) & 0xFC0);
     if rc.x_tilestep == -1 {
         post_source = 0xFC0-post_source;
@@ -567,7 +566,7 @@ pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts:
     scaler_state.texture_ix = texture_ix;
 }
 
-pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &dyn Renderer, level: &Level, assets: &Assets) {
+pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &VGARenderer, level: &Level, assets: &Assets) {
     let mut post_source = 0xFC0 - ((rc.x_intercept>>4) & 0xFC0);
     if rc.y_tilestep == -1 {
         rc.y_intercept += TILEGLOBAL;
@@ -602,7 +601,7 @@ pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts
     scaler_state.texture_ix = texture_ix;
 }
 
-pub fn hit_horiz_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &dyn Renderer, level_state: &LevelState, assets: &Assets) {
+pub fn hit_horiz_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &VGARenderer, level_state: &LevelState, assets: &Assets) {
     let doornum = rc.tile_hit & 0x7F;
     let doorpos = level_state.doors[doornum as usize].position as i32;
     let post_source = (rc.x_intercept - doorpos ) >> 4 & 0xFC0;
@@ -619,7 +618,7 @@ pub fn hit_horiz_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts
     scaler_state.texture_ix = 98; //TODO take texture based on lock state of door 
 }
 
-pub fn hit_vert_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &dyn Renderer, level_state: &LevelState, assets: &Assets) {
+pub fn hit_vert_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &VGARenderer, level_state: &LevelState, assets: &Assets) {
     let doornum = rc.tile_hit & 0x7F;
     let doorpos = level_state.doors[doornum as usize].position as i32;
     let post_source = (rc.y_intercept - doorpos ) >> 4 & 0xFC0;
@@ -650,7 +649,7 @@ fn vert_wall(i: usize) -> usize {
     if i == 0 { 0 } else { (i-1)*2+1 }
 }
 
-fn draw_player_weapon(game_state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+fn draw_player_weapon(game_state: &GameState, rdr: &VGARenderer, prj: &ProjectionConfig, assets: &Assets) {
     // TODO Handle victoryflag here (for non SPEAR)
 
     let shape_num = WEAPON_SCALE[game_state.weapon as usize] as usize + game_state.weapon_frame;
@@ -660,7 +659,7 @@ fn draw_player_weapon(game_state: &GameState, rdr: &dyn Renderer, prj: &Projecti
     // TODO handle demorecord || demoplayback
 }
 
-fn draw_scaleds(level_state: &mut LevelState, game_state: &mut GameState, wall_height: &Vec<i32>, consts: &RayCastConsts, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+fn draw_scaleds(level_state: &mut LevelState, game_state: &mut GameState, wall_height: &Vec<i32>, consts: &RayCastConsts, rdr: &VGARenderer, prj: &ProjectionConfig, assets: &Assets) {
     let mut visptr = 0;
     // place static objects
     for stat in &mut level_state.statics {

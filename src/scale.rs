@@ -5,7 +5,7 @@ mod scale_test;
 use libiw::gamedata::{SpriteData, SpritePost};
 
 use crate::play::ProjectionConfig;
-use crate::vga_render::{Renderer, SCREENBWIDE};
+use crate::vga_render::{SCREENBWIDE, VGARenderer};
 
 pub static MAP_MASKS_1 : [u8; 4*8] = [
     1 ,3 ,7 ,15,15,15,15,15,
@@ -132,7 +132,7 @@ fn build_comp_scale(scaler_height: usize, view_height: usize) -> Scaler {
     scaler
 }
 
-pub fn scale_shape(rdr: &dyn Renderer, wall_height: &Vec<i32>, prj: &ProjectionConfig, x_center: usize, sprite: &SpriteData, height: usize) {
+pub fn scale_shape(rdr: &VGARenderer, wall_height: &Vec<i32>, prj: &ProjectionConfig, x_center: usize, sprite: &SpriteData, height: usize) {
     let scale = height >> 3;
     if scale == 0 || scale > prj.scaler.max_scale {
         return;
@@ -272,7 +272,7 @@ pub fn scale_shape(rdr: &dyn Renderer, wall_height: &Vec<i32>, prj: &ProjectionC
 }
 
 // simple = no clipping
-pub fn simple_scale_shape(rdr: &dyn Renderer, prj: &ProjectionConfig, x_center: usize, sprite: &SpriteData, height: usize) {
+pub fn simple_scale_shape(rdr: &VGARenderer, prj: &ProjectionConfig, x_center: usize, sprite: &SpriteData, height: usize) {
     let scaler = &prj.scaler.scalers[prj.scaler.scale_call[height >> 1]];
 
     // scale to the left (from pixel 31 to sprite.left_pix)
@@ -318,7 +318,7 @@ pub fn simple_scale_shape(rdr: &dyn Renderer, prj: &ProjectionConfig, x_center: 
     }
 }
 
-fn scale_line(rdr: &dyn Renderer, scaler: &Scaler, sprite: &SpriteData, posts: &Vec<SpritePost>, line_x: usize, slinewidth: usize) {
+fn scale_line(rdr: &VGARenderer, scaler: &Scaler, sprite: &SpriteData, posts: &Vec<SpritePost>, line_x: usize, slinewidth: usize) {
     let mut mem_offset = (line_x >> 2) + rdr.buffer_offset();
     let mask_ix = (((line_x & 3) << 3) + slinewidth)-1;
 
@@ -340,7 +340,7 @@ fn scale_line(rdr: &dyn Renderer, scaler: &Scaler, sprite: &SpriteData, posts: &
     }
 }
 
-fn scale(rdr: &dyn Renderer, scaler: &Scaler, sprite: &SpriteData, posts: &Vec<SpritePost>, mem_offset: usize, mask: u8) {
+fn scale(rdr: &VGARenderer, scaler: &Scaler, sprite: &SpriteData, posts: &Vec<SpritePost>, mem_offset: usize, mask: u8) {
     rdr.set_mask(mask);
     for post in posts {
         let mut of = post.pixel_offset;

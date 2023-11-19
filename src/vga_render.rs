@@ -1,9 +1,8 @@
 use std::sync::Arc;
-use std::cell::Cell;
-use std::thread;
-use std::time::Duration;
+use std::sync::atomic::AtomicUsize;
 
-use vga::{CRTReg, SCReg, GeneralReg, VGA};
+use vga::{CRTReg, SCReg, VGA};
+use vga::util;
 use libiw::assets::GAMEPAL;
 
 use super::assets::{Graphic, GraphicNum};
@@ -20,34 +19,10 @@ static PIXMASKS: [u8; 4] = [1, 2, 4, 8];
 static LEFTMASKS: [u8; 4]	= [15, 14, 12, 8];
 static RIGHTMASKS: [u8; 4] = [1, 3, 7, 15];
 
-const DE_MASK: u8 = 0x01;
-const VSYNC_MASK: u8 = 0x08;
-const POLL_WAIT_MICROS : u64 = 500;
-
-pub trait Renderer {
-	fn set_buffer_offset(&self, offset: usize);
-	fn buffer_offset(&self) -> usize;
-    fn activate_buffer(&self, offset: usize);
-
-	// writes straight into the vga memory (you have to take of the buffer_offset yourself)
-    fn write_mem(&self, offset: usize, v_in: u8); //TODO replace with direct VGA access
-	fn set_mask(&self, m: u8); //TOOD repace with direct VGA access
-
-	fn bar(&self, x: usize, y: usize, width: usize, height: usize, color: u8);
-	fn pic(&self, x: usize, y: usize, picnum: GraphicNum);
-	fn hlin(&self, x: usize, y: usize, width: usize, color: u8);
-	fn vlin(&self, x: usize, y: usize, height: usize, color: u8);
-	fn plot(&self, x: usize, y: usize, color: u8);
-	fn fade_out(&self);
-	fn fade_in(&self);
-
-    fn debug_pic(&self, data: &Vec<u8>);
-}
-
 pub struct VGARenderer {
 	vga: Arc<VGA>,
 	linewidth: usize,
-	bufferofs: Cell<usize>,
+	bufferofs: AtomicUsize,
 	graphics: Vec<Graphic>,
 }
 
@@ -55,13 +30,13 @@ pub fn init(vga: Arc<VGA>, graphics: Vec<Graphic>) -> VGARenderer {
 	VGARenderer {
 		vga,
 		linewidth: 80,
-		bufferofs: Cell::new(PAGE_1_START),
+		bufferofs: AtomicUsize::new(PAGE_1_START),
 		graphics,
 	}
 }
 
 impl VGARenderer {
-	fn mem_to_screen(&self, data: &Vec<u8>, width: usize, height: usize, x: usize, y: usize) {
+	pub fn mem_to_screen(&self, data: &Vec<u8>, width: usize, height: usize, x: usize, y: usize) {
 		let width_bytes = width >> 2;
 		let mut mask = 1 << (x & 3);
 		let mut src_ix = 0;
@@ -82,40 +57,37 @@ impl VGARenderer {
 		}
 	}
 
-	fn y_offset(&self, y: usize) -> usize {
-		self.bufferofs.get() + y * self.linewidth
-	}
-}
-
-impl Renderer for VGARenderer {
-
-	fn set_buffer_offset(&self, offset: usize) {
-		self.bufferofs.set(offset);
+	pub fn y_offset(&self, y: usize) -> usize {
+		self.bufferofs.load(std::sync::atomic::Ordering::Relaxed) + y * self.linewidth
 	}
 
-	fn buffer_offset(&self) -> usize {
-		self.bufferofs.get()
+	pub fn set_buffer_offset(&self, offset: usize) {
+		self.bufferofs.store(offset, std::sync::atomic::Ordering::Relaxed);
 	}
 
-    fn activate_buffer(&self, offset: usize) {
-        wait_display_enable(&self.vga);
+	pub fn buffer_offset(&self) -> usize {
+		self.bufferofs.load(std::sync::atomic::Ordering::Relaxed)
+	}
+
+    pub async fn activate_buffer(&self, offset: usize) {
+        util::display_enable(&self.vga).await;
 
         let addr_parts = offset.to_le_bytes();
         self.vga.set_crt_data(CRTReg::StartAdressLow, addr_parts[0]);
         self.vga.set_crt_data(CRTReg::StartAdressHigh, addr_parts[1]);
 
-        wait_vsync(&self.vga);
+        util::vsync(&self.vga).await;
     }
 
-    fn write_mem(&self, offset: usize, v_in: u8) {
+    pub fn write_mem(&self, offset: usize, v_in: u8) {
         self.vga.write_mem(offset, v_in)
     }
 
-	fn set_mask(&self, m: u8) {
+	pub fn set_mask(&self, m: u8) {
 		self.vga.set_sc_data(SCReg::MapMask, m)
 	}
 
-	fn bar(&self, x: usize, y: usize, width: usize, height: usize, color: u8) {
+	pub fn bar(&self, x: usize, y: usize, width: usize, height: usize, color: u8) {
 		let leftmask = LEFTMASKS[x & 3];
 		let rightmask = RIGHTMASKS[(x + width - 1) & 3];
 		let midbytes = ((x as i32 + (width as i32) + 3) >> 2) - (x as i32 >> 2) - 2;
@@ -150,7 +122,7 @@ impl Renderer for VGARenderer {
 		self.vga.set_sc_data(SCReg::MapMask, 0xFF);
 	}
 
-	fn hlin(&self, x: usize, y: usize, width: usize, color: u8) {
+	pub fn hlin(&self, x: usize, y: usize, width: usize, color: u8) {
 		let xbyte = x >> 2;
 		let leftmask = LEFTMASKS[x&3];
 		let rightmask = RIGHTMASKS[(x+width-1)&3];
@@ -178,7 +150,7 @@ impl Renderer for VGARenderer {
 		self.vga.set_sc_data(SCReg::MapMask, 0xFF);
 	}
 
-	fn vlin(&self, x: usize, y: usize, height: usize, color: u8) {
+	pub fn vlin(&self, x: usize, y: usize, height: usize, color: u8) {
 		let mask = PIXMASKS[x&3];
 		self.vga.set_sc_data(SCReg::MapMask, mask);
 
@@ -193,19 +165,19 @@ impl Renderer for VGARenderer {
 		self.vga.set_sc_data(SCReg::MapMask, 0xFF);
 	}
 
-	fn plot(&self, x: usize, y: usize, color: u8) {
+	pub fn plot(&self, x: usize, y: usize, color: u8) {
 		let mask = PIXMASKS[x&3];
 		self.vga.set_sc_data(SCReg::MapMask, mask);
 		let dest = self.y_offset(y) + (x >> 2);
 		self.vga.write_mem(dest, color);	
 	}
 
-	fn pic(&self, x: usize, y: usize, picnum: GraphicNum) {
+	pub fn pic(&self, x: usize, y: usize, picnum: GraphicNum) {
 		let graphic = &self.graphics[picnum as usize];
 		self.mem_to_screen(&graphic.data, graphic.width, graphic.height, x & !7, y);
 	}
 
-    fn debug_pic(&self, data: &Vec<u8>) {
+    pub fn debug_pic(&self, data: &Vec<u8>) {
         for tex_y in 0..64 {
             for tex_x in 0..64 {
                 self.plot(tex_x, tex_y, data[tex_x * 64+tex_y]);
@@ -213,34 +185,11 @@ impl Renderer for VGARenderer {
         }
     }
 
-	fn fade_out(&self) {
-		vl::fade_out(&self.vga, 0, 255, 0, 0, 0, 30)
+	pub async fn fade_out(&self) {
+		vl::fade_out(&self.vga, 0, 255, 0, 0, 0, 30).await;
 	}
 
-	fn fade_in(&self) {
-		vl::fade_in(&self.vga,0, 255, GAMEPAL, 30);
+	pub async fn fade_in(&self) {
+		vl::fade_in(&self.vga,0, 255, GAMEPAL, 30).await;
 	}
 }
-
-fn wait_display_enable(vga: &Arc<VGA>) {
-    loop {
-        let in1 = vga.get_general_reg(GeneralReg::InputStatus1);
-        if in1 & DE_MASK == 0 {
-            break;
-        }
-        thread::sleep(Duration::from_micros(POLL_WAIT_MICROS));
-    }
-}
-
-fn wait_vsync(vga: &Arc<VGA>) {
-    loop {
-        let in1 = vga.get_general_reg(GeneralReg::InputStatus1);
-        if in1 & VSYNC_MASK != 0 {
-            break;
-        }
-        thread::sleep(Duration::from_micros(POLL_WAIT_MICROS));
-    }
-}
-
-
-
