@@ -1,11 +1,10 @@
-
 use std::sync::Arc;
+
 use vga::SCReg;
 use vga::util::spawn_task;
-use libiw::assets::GAMEPAL;
 
 use crate::def::Assets;
-use crate::assets::{GraphicNum, SIGNON};
+use crate::assets::{GraphicNum, SIGNON, GAMEPAL};
 use crate::assets;
 use crate::def::IWConfig;
 use crate::loader::Loader;

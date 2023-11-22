@@ -2,8 +2,7 @@
 #[path = "./scale_test.rs"]
 mod scale_test;
 
-use libiw::gamedata::{SpriteData, SpritePost};
-
+use crate::gamedata::{SpriteData, SpritePost};
 use crate::play::ProjectionConfig;
 use crate::vga_render::{SCREENBWIDE, VGARenderer};
 

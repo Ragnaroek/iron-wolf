@@ -2,7 +2,6 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
-use libiw::assets::GAMEPAL;
 use vga::input::NumCode;
 use vga::util;
 use vga::VGA;
@@ -12,7 +11,7 @@ use crate::agent::{draw_health, draw_level, draw_face, draw_lives, draw_ammo, dr
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::{three_d_refresh, init_ray_cast};
 use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC, EXTRA_POINTS};
-use crate::assets::GraphicNum;
+use crate::assets::{GraphicNum, GAMEPAL};
 use crate::input;
 use crate::time;
 use crate::game::setup_game_level;

@@ -1,12 +1,22 @@
 use std::io::Cursor;
 
-use libiw::map::{load_map, load_map_headers, load_map_offsets, MapType, MapFileType, MapData};
+use serde::{Serialize, Deserialize};
 
+use crate::map::{load_map, load_map_headers, load_map_offsets, MapType, MapFileType, MapData};
 use crate::loader::Loader;
+use crate::def::{WeaponType, Assets};
+use crate::gamedata;
 
-use super::def::{WeaponType, Assets };
-
+pub static GAMEPAL: &'static [u8] = include_bytes!("../assets/gamepal.bin");
 pub static SIGNON: &'static [u8] = include_bytes!("../assets/signon.bin");
+
+pub const GRAPHIC_DICT: &'static str = "VGADICT.WL6";
+pub const GRAPHIC_HEAD: &'static str = "VGAHEAD.WL6";
+pub const GRAPHIC_DATA: &'static str = "VGAGRAPH.WL6";
+pub const MAP_HEAD: &'static str = "MAPHEAD.WL6";
+pub const GAME_MAPS: &'static str = "GAMEMAPS.WL6";
+pub const GAMEDATA: &'static str = "VSWAP.WL6";
+pub const CONFIG_DATA: &'static str = "CONFIG.WL6";
 
 #[derive(Clone, Copy)]
 pub enum WolfFile {
@@ -19,13 +29,21 @@ pub enum WolfFile {
 	ConfigData,
 }
 
-pub const GRAPHIC_DICT: &'static str = "VGADICT.WL6";
-pub const GRAPHIC_HEAD: &'static str = "VGAHEAD.WL6";
-pub const GRAPHIC_DATA: &'static str = "VGAGRAPH.WL6";
-pub const MAP_HEAD: &'static str = "MAPHEAD.WL6";
-pub const GAME_MAPS: &'static str = "GAMEMAPS.WL6";
-pub const GAMEDATA: &'static str = "VSWAP.WL6";
-pub const CONFIG_DATA: &'static str = "CONFIG.WL6";
+#[derive(Serialize, Deserialize)]
+pub struct RGB {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+}
+
+pub fn gamepal_color(ix: usize) -> RGB {
+    let offset = ix * 3;
+    RGB {
+        r: GAMEPAL[offset] << 2,
+        g: GAMEPAL[offset+1] << 2,
+        b: GAMEPAL[offset+2] << 2,
+    }
+}
 
 pub fn file_name(file: WolfFile) -> &'static str {
 	match file {
@@ -350,12 +368,12 @@ pub fn load_assets(loader: &dyn Loader) -> Result<Assets, String> {
     let (map_offsets, map_headers) = load_map_headers_from_config(loader)?;
 
 	let gamedata_bytes = loader.load_file(WolfFile::GameData);
-	let headers = libiw::gamedata::load_gamedata_headers(&gamedata_bytes)?; 
+	let headers = gamedata::load_gamedata_headers(&gamedata_bytes)?; 
 
 	//let mut gamedata_file: File = File::open(&iw_config.wolf3d_data.join(GAMEDATA)).expect("opening gamedata file failed");
 	let mut gamedata_cursor = Cursor::new(gamedata_bytes);
-	let textures = libiw::gamedata::load_all_textures(&mut gamedata_cursor, &headers)?;
-	let sprites = libiw::gamedata::load_all_sprites(&mut gamedata_cursor, &headers)?;
+	let textures = gamedata::load_all_textures(&mut gamedata_cursor, &headers)?;
+	let sprites = gamedata::load_all_sprites(&mut gamedata_cursor, &headers)?;
 	
 	let game_maps = loader.load_file(WolfFile::GameMaps);
 

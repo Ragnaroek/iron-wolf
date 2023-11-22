@@ -1,16 +1,19 @@
 extern crate web_sys;
 
-use wasm_bindgen::prelude::*;
-
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
+use std::io::Cursor;
+
+use wasm_bindgen::prelude::*;
 
 use super::start::iw_start;
 use super::assets;
 use super::assets::{WolfFile, file_name};
 use super::loader::Loader;
 use super::config;
+use super::map;
+use super::gamedata;
 
 #[wasm_bindgen]
 pub fn iw_init(upload_id: &str) {
@@ -117,4 +120,81 @@ impl Loader for WebLoader {
         let buffer = self.files.get(file_name(file)).expect(&format!("file {} not found", file_name(file)));
         buffer.clone()
     }
+}
+
+// Assets
+
+#[wasm_bindgen]
+pub fn gamepal_color(ix: usize) -> JsValue {
+	let result = assets::gamepal_color(ix);
+    JsValue::from_serde(&result).unwrap()
+}
+
+// Gamedata
+
+#[wasm_bindgen]
+pub fn load_gamedata_headers(buffer: &Buffer) -> JsValue {
+    let bytes: Vec<u8> = js_sys::Uint8Array::new_with_byte_offset_and_length(
+        &buffer.buffer(),
+        buffer.byte_offset(),
+        buffer.length(),
+    ).to_vec();
+
+	let result = gamedata::load_gamedata_headers(&bytes).unwrap();
+	JsValue::from_serde(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn load_texture(gamedata_js: &Buffer, header_js: &JsValue) -> JsValue {
+    let gamedata: Vec<u8> = js_sys::Uint8Array::new_with_byte_offset_and_length(
+        &gamedata_js.buffer(),
+        gamedata_js.byte_offset(),
+        gamedata_js.length(),
+    ).to_vec();
+
+	let header : gamedata::GamedataHeader = header_js.into_serde().unwrap();
+	let result = gamedata::load_texture(&mut Cursor::new(gamedata), &header).unwrap();
+	JsValue::from_serde(&result).unwrap()
+}
+
+
+// Map
+
+#[wasm_bindgen]
+pub fn load_map(map_data_js: &Buffer, map_headers_js: &JsValue, map_offsets_js: &JsValue, mapnum: usize) -> JsValue {
+    let map_data: Vec<u8> = js_sys::Uint8Array::new_with_byte_offset_and_length(
+        &map_data_js.buffer(),
+        map_data_js.byte_offset(),
+        map_data_js.length(),
+    ).to_vec();
+
+	let map_headers : Vec<map::MapType> = map_headers_js.into_serde().unwrap();
+	let map_offsets : map::MapFileType = map_offsets_js.into_serde().unwrap();
+	let result = map::load_map(&mut Cursor::new(map_data), &map_headers, &map_offsets, mapnum).unwrap();
+	JsValue::from_serde(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn load_map_offsets(buffer: &Buffer) -> JsValue {
+    let bytes: Vec<u8> = js_sys::Uint8Array::new_with_byte_offset_and_length(
+        &buffer.buffer(),
+        buffer.byte_offset(),
+        buffer.length(),
+    ).to_vec();
+
+	let result = map::load_map_offsets(&bytes).unwrap();
+	JsValue::from_serde(&result).unwrap()
+}
+
+#[wasm_bindgen]
+pub fn load_map_headers(buffer: &Buffer, offsets_js: &JsValue) -> JsValue {
+	let bytes: Vec<u8> = js_sys::Uint8Array::new_with_byte_offset_and_length(
+        &buffer.buffer(),
+        buffer.byte_offset(),
+        buffer.length(),
+    ).to_vec();
+
+	let offsets: map::MapFileType = offsets_js.into_serde().unwrap();
+	let (_, result) = map::load_map_headers(&bytes, offsets).unwrap();
+	JsValue::from_serde(&result).unwrap()
 }

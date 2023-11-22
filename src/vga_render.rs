@@ -3,9 +3,8 @@ use std::sync::atomic::AtomicUsize;
 
 use vga::{CRTReg, SCReg, VGA};
 use vga::util;
-use libiw::assets::GAMEPAL;
 
-use super::assets::{Graphic, GraphicNum};
+use super::assets::{Graphic, GraphicNum, GAMEPAL};
 use super::vl;
 
 pub const SCREENBWIDE: usize = 80;
