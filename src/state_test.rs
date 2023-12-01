@@ -1,7 +1,11 @@
-use crate::{def::{ObjType, ClassType, FL_NEVERMARK, DirType, Dir, LevelState, MAP_SIZE, Level, Difficulty}, fixed::new_fixed_i32, agent::S_PLAYER, act2::stand};
+use crate::def::{ObjType, ClassType, FL_NEVERMARK, DirType, LevelState, MAP_SIZE, Level, Difficulty, At, ObjKey, EnemyType, FL_SHOOTABLE};
+use crate::fixed::new_fixed_i32;
+use crate::agent::S_PLAYER;
+use crate::act2::stand;
+use crate::game::spawn;
+use crate::state::check_side;
 
-use super::check_line;
-
+use super::{check_line, check_diag};
 
 #[test]
 fn test_check_line_1() {
@@ -29,7 +33,69 @@ fn test_check_line_2() {
     assert!(check_line(&level_state, obj));
 }
 
+#[test]
+fn test_check_diag() {
+    let mut level_state = mock_level_state_with_actor_at();
+    //level state contains a completely empty map without any walls or objects
+    spawn(&mut level_state.actors, &mut level_state.actor_at, stand(EnemyType::Guard, 4, 3, 1, Difficulty::Baby)); 
+    // spawn uses wrong ObjKey since player already in the actors vec. Fix it up:
+    level_state.actor_at[4][3] = At::Obj(ObjKey(1));
+
+    assert!(check_diag(&level_state, 5, 10));
+
+    level_state.actor_at[1][2] = At::Wall(42);
+    assert!(!check_diag(&level_state, 1, 2));
+
+    level_state.actor_at[1][3] = At::Blocked;
+    assert!(!check_diag(&level_state, 1, 3)); 
+
+    level_state.update_obj(ObjKey(1), |obj| obj.flags = 0);
+    assert!(check_diag(&level_state, 4, 3));
+    
+    let obj = level_state.mut_obj(ObjKey(1));
+    obj.flags = FL_SHOOTABLE;
+    assert!(!check_diag(&level_state, 4, 3));
+}
+
+#[test]
+fn test_check_side() {
+    let mut level_state = mock_level_state_with_actor_at();
+    spawn(&mut level_state.actors, &mut level_state.actor_at, stand(EnemyType::Guard, 4, 3, 1, Difficulty::Baby)); 
+    // spawn uses wrong ObjKey since player already in the actors vec. Fix it up:
+    level_state.actor_at[4][3] = At::Obj(ObjKey(1));
+
+    let (free, door) = check_side(&level_state, 5, 10);
+    assert!(free);
+    assert_eq!(door, -1);
+
+    level_state.actor_at[1][2] = At::Wall(42);
+    let (free, door) = check_side(&level_state, 1, 2);
+    assert!(!free);
+    assert_eq!(door, -1);
+
+    level_state.actor_at[1][2] = At::Wall(255); // door
+    let (free, door) = check_side(&level_state, 1, 2);
+    assert!(free);
+    assert_eq!(door, 255 & 63);
+
+    level_state.actor_at[1][3] = At::Blocked;
+    let (free, door) = check_side(&level_state, 1, 3);
+    assert!(!free);
+    assert_eq!(door, -1);
+
+    level_state.update_obj(ObjKey(1), |obj| obj.flags = 0);
+    let (free, door) = check_side(&level_state, 4, 3);
+    assert!(free);
+    assert_eq!(door, -1); 
+}
+
 // helper
+
+fn mock_level_state_with_actor_at() -> LevelState {
+    let mut state = mock_level_state(test_player());
+    state.actor_at = vec![vec![At::Nothing; MAP_SIZE]; MAP_SIZE];
+    state
+}
 
 fn mock_level_state(player: ObjType) -> LevelState {
     let tile_map = vec![vec![0; MAP_SIZE]; MAP_SIZE];     

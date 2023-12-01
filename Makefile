@@ -9,3 +9,6 @@ run-sdl:
 
 build-web:
 	wasm-pack build --debug --target web --features web
+
+coverage-sdl:
+	cargo tarpaulin --features sdl --ignore-tests --out Lcov

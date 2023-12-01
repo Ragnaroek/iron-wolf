@@ -203,7 +203,7 @@ fn scan_info_plane(map_data: &map::MapData, actor_at : &mut Vec<Vec<At>>, diffic
 }
 
 // spawns the obj into the map
-fn spawn(actors: &mut Vec<ObjType>, actor_at: &mut Vec<Vec<At>>, obj: ObjType) {
+pub fn spawn(actors: &mut Vec<ObjType>, actor_at: &mut Vec<Vec<At>>, obj: ObjType) {
 	actors.push(obj);
 	let key = ObjKey(actors.len()); // +1 offset (not len()-1), since player will be later at position 0 and positions will shift
 	actor_at[obj.tilex][obj.tiley] = At::Obj(key)
