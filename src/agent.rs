@@ -413,7 +413,11 @@ pub fn get_bonus(game_state: &mut GameState, rdr: &VGARenderer, check: &mut Stat
             panic!("get full heal");
         },
         StaticKind::BoFood => {
-            panic!("get food");
+            if game_state.health == 100 {
+                return;
+            }
+            // TODO PlaySound(HEALTH1SND)
+            heal_self(game_state, rdr, 10);
         },
         StaticKind::BoGibs => {
             panic!("get gibs");
@@ -425,6 +429,16 @@ pub fn get_bonus(game_state: &mut GameState, rdr: &VGARenderer, check: &mut Stat
     }
     start_bonus_flash(game_state);
     check.sprite = Sprite::None; // remove from list
+}
+
+fn heal_self(game_state: &mut GameState, rdr: &VGARenderer, points: i32) {
+    game_state.health += points;
+    if game_state.health > 100 {
+        game_state.health = 100;
+    }
+    draw_health(&game_state, rdr);
+    // TODO set gotgatgun to 0 
+    draw_face(&game_state, rdr);
 }
 
 fn give_ammo(game_state: &mut GameState, rdr: &VGARenderer, ammo: i32) {
