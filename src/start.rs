@@ -14,6 +14,7 @@ use crate::vl;
 use crate::vga_render::{self, VGARenderer};
 use crate::time;
 use crate::input;
+use crate::game::game_loop;
 
 pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> {
     let config = config::load_wolf_config(loader);
@@ -82,7 +83,7 @@ async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr:
             //TODO PlayDemo() here
         }
 
-        play::game_loop(&ticker, vga, rdr, input, prj, assets).await;
+        game_loop(&ticker, vga, rdr, input, prj, assets).await;
         rdr.fade_out().await;
     }
 }

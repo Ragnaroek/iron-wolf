@@ -238,6 +238,7 @@ pub struct GameState {
     pub pal_shifted : bool,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum PlayState {
     StillPlaying,
     Completed,

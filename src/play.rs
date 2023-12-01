@@ -14,7 +14,6 @@ use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, Lev
 use crate::assets::{GraphicNum, GAMEPAL};
 use crate::input;
 use crate::time;
-use crate::game::setup_game_level;
 use crate::scale::{CompiledScaler, setup_scaling};
 use crate::vga_render::VGARenderer;
 use crate::vl::set_palette;
@@ -204,29 +203,7 @@ fn calc_sines() -> Vec<Fixed> {
     sines
 }
 
-pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
-    let mut game_state = new_game_state();
-    let mut control_state : ControlState = new_control_state();
-    
-    draw_play_screen(&game_state, rdr, prj).await;
-
-	let mut level_state = setup_game_level(prj, &game_state, assets).unwrap();
-
-	//TODO StartMusic
-	//TODO PreloadGraphics
-    
-	draw_level(&game_state, rdr);
-    
-    rdr.fade_in().await;
-
-	play_loop(ticker, &mut level_state, &mut game_state, &mut control_state, vga, rdr, input, prj, assets).await;
-
-	//TODO Go to next level (gamestate.map_on+=1)
-
-	input.wait_user_input(time::TICK_BASE*1000);
-}
-
-async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState, vga: &VGA, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState, vga: &VGA, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let mut rc = init_ray_cast(prj.view_width);
     let shifts = init_colour_shifts();
 
@@ -240,7 +217,7 @@ async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_sta
     }*/
 
     //TODO A lot to do here (clear palette, poll controls, prepare world)
-    loop {
+    while game_state.play_state == PlayState::StillPlaying {
         // TODO replace this very inefficient calc_tic function. It waits
         // for a tic to happen which burns a lot of cycles on fast CPU.
         // Completely get rid of the tick thread and compute ticks through
@@ -272,6 +249,8 @@ async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_sta
         } 
         rdr.set_buffer_offset(offset_prev);
     }
+
+    // TODO FinishPaletteShifts if not died!
 }
 
 fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
@@ -353,7 +332,7 @@ fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
     level_state.actor_at[tilex][tiley] = At::Obj(k);
 }
 
-async fn draw_play_screen(state: &GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {
+pub async fn draw_play_screen(state: &GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {
 	rdr.fade_out().await;
 
 	let offset_prev = rdr.buffer_offset();

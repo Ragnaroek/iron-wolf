@@ -1,10 +1,19 @@
-use crate::def::{Sprite, StaticType, VisObj, ObjKey, Assets, ObjType, Level, LevelState, At, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, EnemyType, GameState, Difficulty, };
+use vga::input;
+use vga::VGA;
+
+use crate::agent::draw_level;
+use crate::def::PlayState;
+use crate::def::{Sprite, StaticType, VisObj, ObjKey, Assets, ObjType, Level, LevelState, At, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, EnemyType, GameState, Difficulty, ControlState};
 use crate::assets::load_map_from_assets;
 use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{dead_guard, stand};
 use crate::agent::{spawn_player, thrust};
-use crate::play::ProjectionConfig;
-use crate::map;
+use crate::play::draw_play_screen;
+use crate::play::play_loop;
+use crate::play::{ProjectionConfig, new_game_state, new_control_state};
+use crate::{map, time};
+use crate::vga_render::VGARenderer;
+use crate::input::Input;
 
 pub const AREATILE : u16 = 107;
 
@@ -17,6 +26,33 @@ pub const ANGLE_45 : u32 = 0x20000000;
 pub const ANGLE_90 : u32 = ANGLE_45*2;
 pub const ANGLE_180 : u32 = ANGLE_45*4;
 pub const ANGLE_1 : u32 = ANGLE_45/45;
+
+pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, input: &Input, prj: &ProjectionConfig, assets: &Assets) {
+    let mut game_state = new_game_state();
+    let mut control_state : ControlState = new_control_state();
+    
+    draw_play_screen(&game_state, rdr, prj).await;
+
+	let mut level_state = setup_game_level(prj, &game_state, assets).unwrap();
+
+	//TODO StartMusic
+	//TODO PreloadGraphics
+    
+	draw_level(&game_state, rdr);
+    
+    rdr.fade_in().await;
+
+	play_loop(ticker, &mut level_state, &mut game_state, &mut control_state, vga, rdr, input, prj, assets).await;
+
+	match game_state.play_state {
+		PlayState::Died => panic!("Died!"),
+		_ => panic!("not implemented end with state {:?}", game_state.play_state)
+	}
+
+	//TODO Go to next level (gamestate.map_on+=1)
+
+	input.wait_user_input(time::TICK_BASE*1000);
+}
 
 pub fn setup_game_level(prj: &ProjectionConfig, game_state: &GameState, assets: &Assets) -> Result<LevelState, String> {
 	let map = &assets.map_headers[game_state.map_on];
