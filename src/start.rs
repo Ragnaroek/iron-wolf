@@ -67,14 +67,14 @@ async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr:
         while !config.no_wait { // title screen & demo loop
             rdr.pic(0, 0, GraphicNum::TITLEPIC);
             rdr.fade_in().await;
-            if input.wait_user_input(time::TICK_BASE*15) {
+            if input.wait_user_input(time::TICK_BASE*15).await {
                 break;
             }
             rdr.fade_out().await;
 
             rdr.pic(0,0, GraphicNum::CREDITSPIC);
             rdr.fade_in().await;
-            if input.wait_user_input(time::TICK_BASE*10) {
+            if input.wait_user_input(time::TICK_BASE*10).await {
                 break;
             }
             rdr.fade_out().await;
@@ -115,6 +115,6 @@ async fn pg_13(rdr: &VGARenderer, input: &input::Input) {
     rdr.pic(216, 110, GraphicNum::PG13PIC);
     
     rdr.fade_in().await;
-    input.wait_user_input(time::TICK_BASE*7);
+    input.wait_user_input(time::TICK_BASE*7).await;
     rdr.fade_out().await;
 }

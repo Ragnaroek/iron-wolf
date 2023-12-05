@@ -4,6 +4,8 @@ use std::sync::atomic::AtomicUsize;
 use vga::{CRTReg, SCReg, VGA};
 use vga::util;
 
+use crate::time;
+
 use super::assets::{Graphic, GraphicNum, GAMEPAL};
 use super::vl;
 
@@ -19,7 +21,7 @@ static LEFTMASKS: [u8; 4]	= [15, 14, 12, 8];
 static RIGHTMASKS: [u8; 4] = [1, 3, 7, 15];
 
 pub struct VGARenderer {
-	vga: Arc<VGA>,
+	pub vga: Arc<VGA>,
 	linewidth: usize,
 	bufferofs: AtomicUsize,
 	graphics: Vec<Graphic>,
@@ -190,5 +192,51 @@ impl VGARenderer {
 
 	pub async fn fade_in(&self) {
 		vl::fade_in(&self.vga,0, 255, GAMEPAL, 30).await;
+	}
+
+	pub async fn fizzle_fade(&self, ticker: &time::Ticker, width: usize, height: usize, frames: usize, abortable: bool) -> bool {
+		let mut rnd_val : u32 = 1;
+		let pix_per_frame = 64000 / frames;
+
+		// TODO init StartAck() for abortable fizzle_fade
+
+		ticker.clear_count();
+		let mut frame = 0;
+		loop {
+			for _ in 0..pix_per_frame {
+				let mut ax : u32 = rnd_val & 0xFFFF;
+				let mut dx: u32 = (rnd_val >> 16) & 0xFFFF;
+
+				let (bx, _) = ax.overflowing_sub(1);
+				let y = bx & 0xFF; // low 8 bits - 1 = y coordinate
+				let x = ((ax & 0xFF00) >> 8) | (dx << 8); // next 9 bits = x coordinate
+
+				// advance to next random element
+				let carry_dx = dx & 0x01;
+				dx >>= 1;
+				let carry_ax = ax & 0x1;
+				ax = (ax >> 1) | (carry_dx << 15); // rcr on ax 
+				if carry_ax == 1 {
+					dx ^= 0x0001;
+					ax ^= 0x2000; 
+				}
+
+				rnd_val = ax | (dx << 16);
+
+				if x as usize > width || y as usize > height {
+					continue;
+				}
+
+				self.plot(x as usize, y as usize, 4);
+
+				if rnd_val == 1 {
+					return false;
+				}
+			}
+
+			frame += 1;
+			// TODO don't do busy wait. wait for next count
+			while ticker.get_count() < frame {}; // don't go too fast
+		}
 	}
 }

@@ -1,16 +1,13 @@
-use vga::input;
 use vga::VGA;
 
-use crate::agent::draw_level;
-use crate::def::PlayState;
-use crate::def::{Sprite, StaticType, VisObj, ObjKey, Assets, ObjType, Level, LevelState, At, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, EnemyType, GameState, Difficulty, ControlState};
+use crate::agent::{draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_weapon};
+use crate::def::{ANGLES, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, PlayState, WeaponType, Sprite, StaticType, VisObj, ObjKey, Assets, ObjType, Level, LevelState, At, EnemyType, GameState, Difficulty, ControlState};
 use crate::assets::load_map_from_assets;
 use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{dead_guard, stand};
 use crate::agent::{spawn_player, thrust};
-use crate::play::draw_play_screen;
-use crate::play::play_loop;
-use crate::play::{ProjectionConfig, new_game_state, new_control_state};
+use crate::draw::{RayCast, init_ray_cast, three_d_refresh};
+use crate::play::{draw_play_screen, finish_palette_shifts, play_loop, ProjectionConfig, new_game_state, new_control_state};
 use crate::{map, time};
 use crate::vga_render::VGARenderer;
 use crate::input::Input;
@@ -27,6 +24,8 @@ pub const ANGLE_90 : u32 = ANGLE_45*2;
 pub const ANGLE_180 : u32 = ANGLE_45*4;
 pub const ANGLE_1 : u32 = ANGLE_45/45;
 
+pub const DEATH_ROTATE : u64 = 2;
+
 pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, input: &Input, prj: &ProjectionConfig, assets: &Assets) {
     let mut game_state = new_game_state();
     let mut control_state : ControlState = new_control_state();
@@ -34,6 +33,7 @@ pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, inpu
     draw_play_screen(&game_state, rdr, prj).await;
 
 	let mut level_state = setup_game_level(prj, &game_state, assets).unwrap();
+	let mut rc = init_ray_cast(prj.view_width);
 
 	//TODO StartMusic
 	//TODO PreloadGraphics
@@ -42,16 +42,128 @@ pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, inpu
     
     rdr.fade_in().await;
 
-	play_loop(ticker, &mut level_state, &mut game_state, &mut control_state, vga, rdr, input, prj, assets).await;
+	play_loop(ticker, &mut level_state, &mut game_state, &mut control_state, vga, &mut rc, rdr, input, prj, assets).await;
 
 	match game_state.play_state {
-		PlayState::Died => panic!("Died!"),
+		PlayState::Died => died(ticker, &mut level_state, &mut game_state, &mut rc, rdr, prj, input, assets).await,
 		_ => panic!("not implemented end with state {:?}", game_state.play_state)
 	}
 
 	//TODO Go to next level (gamestate.map_on+=1)
 
-	input.wait_user_input(time::TICK_BASE*1000);
+	//input.wait_user_input(time::TICK_BASE*1000).await;
+}
+
+async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, rc: &mut RayCast, rdr: &VGARenderer, prj: &ProjectionConfig, input: &Input, assets: &Assets) {
+	game_state.weapon = WeaponType::None; // take away weapon
+	//TODO SD_PlaySound(PLAYERDEATHSND)
+
+	let player = level_state.player();
+	let killer_obj = level_state.obj(game_state.killer_obj.expect("killer obj key be present"));
+
+	// swing around to face attacker
+	let dx = killer_obj.x - player.x;
+	let dy = player.y - killer_obj.y; 
+
+	let mut fangle = (dy as f64).atan2(dx as f64);
+	if fangle < 0.0 {
+		fangle = std::f64::consts::PI * 2.0 + fangle;
+	}
+	let iangle = (fangle/(std::f64::consts::PI * 2.0)) as i32 * ANGLES as i32;
+
+	let counter;
+	let clockwise;
+	if player.angle > iangle {
+		counter = player.angle - iangle;
+		clockwise = ANGLES as i32 - player.angle + iangle;
+	} else {
+		clockwise = iangle - player.angle;
+		counter = player.angle + ANGLES as i32 - iangle;
+	}
+
+	let mut curangle = player.angle;
+
+	if clockwise < counter {
+		// rotate clockwise
+
+		if curangle > iangle {
+			curangle -= ANGLES as i32;
+		}
+		loop {
+			if curangle == iangle {
+				break;
+			}
+
+			let tics = ticker.calc_tics();
+			let mut change = (tics*DEATH_ROTATE) as i32;
+			if curangle + change > iangle {
+				change = iangle - curangle;
+			}
+			curangle += change;
+
+			let player = level_state.mut_player();
+			player.angle += change;
+			if player.angle >= ANGLES as i32 {
+				player.angle -= ANGLES as i32;
+			}
+			three_d_refresh(game_state, level_state, rc, rdr, prj, assets).await;
+		}
+	} else {
+		// rotate counterclockwise
+		if curangle < iangle {
+			curangle += ANGLES as i32;
+		}
+		loop {
+			if curangle == iangle {
+				break;
+			}
+
+			let tics = ticker.calc_tics();
+			let mut change = -((tics * DEATH_ROTATE) as i32);
+			if curangle + change < iangle {
+				change = iangle - curangle;
+			}
+
+			curangle += change;
+			let player = level_state.mut_player();
+			player.angle += change;
+			if player.angle < 0 {
+				player.angle += ANGLES as i32;
+			}
+			three_d_refresh(game_state, level_state, rc, rdr, prj, assets).await;
+		}
+	}
+
+	// fade to red
+	finish_palette_shifts(game_state, &rdr.vga).await;
+
+	rdr.set_buffer_offset(rdr.buffer_offset()+prj.screenofs);
+	rdr.activate_buffer(rdr.buffer_offset()-prj.screenofs).await;
+	input.clear_keys_down();
+	rdr.fizzle_fade(ticker, prj.view_width, prj.view_height, 70, false).await;
+	input.wait_user_input(100).await;
+	//TODO SD_WaitSoundDone
+
+	// TODO editor support here (tedlevel)
+	game_state.lives -= 1;
+
+	if game_state.lives > -1 {
+		game_state.health = 100;
+		game_state.weapon = WeaponType::Pistol;
+		//TODO set bestweapon to Pistol
+		game_state.chosen_weapon = WeaponType::Pistol;
+		game_state.keys = 0;
+		game_state.attack_frame = 0;
+		game_state.attack_count = 0;
+		game_state.weapon_frame = 0;
+
+		draw_keys(game_state, rdr);
+		draw_weapon(game_state, rdr);
+		draw_ammo(game_state, rdr);
+		draw_health(game_state, rdr);
+		draw_face(game_state, rdr);
+		draw_lives(game_state, rdr);
+	}
 }
 
 pub fn setup_game_level(prj: &ProjectionConfig, game_state: &GameState, assets: &Assets) -> Result<LevelState, String> {

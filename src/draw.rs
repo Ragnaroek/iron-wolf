@@ -4,7 +4,7 @@ mod draw_test;
 
 use crate::agent::get_bonus;
 use crate::play::ProjectionConfig;
-use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS, FL_VISABLE, ClassType, DIR_ANGLE };
+use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS, FL_VISABLE, ClassType, DIR_ANGLE, WeaponType };
 use crate::scale::{simple_scale_shape, scale_shape, MAP_MASKS_1};
 use crate::vga_render::{self, VGARenderer};
 use crate::fixed::{Fixed, fixed_by_frac, new_fixed_i32};
@@ -652,10 +652,12 @@ fn vert_wall(i: usize) -> usize {
 fn draw_player_weapon(game_state: &GameState, rdr: &VGARenderer, prj: &ProjectionConfig, assets: &Assets) {
     // TODO Handle victoryflag here (for non SPEAR)
 
-    let shape_num = WEAPON_SCALE[game_state.weapon as usize] as usize + game_state.weapon_frame;
-    let sprite = &assets.sprites[shape_num]; 
-    simple_scale_shape(rdr, prj, prj.view_width/2, sprite, prj.view_height+1);
-    
+    if game_state.weapon != WeaponType::None {
+        let shape_num = WEAPON_SCALE[game_state.weapon as usize] as usize + game_state.weapon_frame;
+        let sprite = &assets.sprites[shape_num]; 
+        simple_scale_shape(rdr, prj, prj.view_width/2, sprite, prj.view_height+1);
+    }
+
     // TODO handle demorecord || demoplayback
 }
 
