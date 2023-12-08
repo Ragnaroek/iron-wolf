@@ -40,6 +40,7 @@ pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, inpu
 		//TODO StartMusic
 		//TODO PreloadGraphics
 		
+		game_state.fizzle_in = true;
 		draw_level(&game_state, rdr);
 		
 		rdr.fade_in().await;
@@ -117,7 +118,7 @@ async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &
 			if player.angle >= ANGLES as i32 {
 				player.angle -= ANGLES as i32;
 			}
-			three_d_refresh(game_state, level_state, rc, rdr, prj, assets).await;
+			three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
 		}
 	} else {
 		// rotate counterclockwise
@@ -141,7 +142,7 @@ async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &
 			if player.angle < 0 {
 				player.angle += ANGLES as i32;
 			}
-			three_d_refresh(game_state, level_state, rc, rdr, prj, assets).await;
+			three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
 		}
 	}
 

@@ -232,10 +232,11 @@ pub struct GameState {
 
     pub made_noise: bool,
 
-    // palette state
     pub bonus_count : i32,
     pub damage_count : i32,
+
     pub pal_shifted : bool,
+    pub fizzle_in : bool,
 }
 
 #[derive(Debug, PartialEq)]

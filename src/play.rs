@@ -105,6 +105,7 @@ pub fn new_game_state() -> GameState {
         damage_count: 0,
         bonus_count: 0,
         pal_shifted: false,
+        fizzle_in: false,
 	}
 }
 
@@ -250,7 +251,7 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
 
         update_palette_shifts(game_state, vga, &shifts, tics).await;
         
-	    three_d_refresh(game_state, level_state, rc, rdr, prj, assets).await;
+	    three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
 
         let offset_prev = rdr.buffer_offset();
         for i in 0..3 {
