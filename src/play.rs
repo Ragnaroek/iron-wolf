@@ -206,6 +206,16 @@ fn calc_sines() -> Vec<Fixed> {
 pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState, vga: &VGA, rc: &mut RayCast, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let shifts = init_colour_shifts();
 
+
+    game_state.play_state = PlayState::StillPlaying;
+    // TODO frameon = 0??
+    // TODO running = false?
+    // TODO anglefrac = 0?
+    game_state.face_count = 0;
+    // TODO funnyticcount = 0?
+    // TODO lasttimeout = 0??
+    ticker.clear_count();
+    input.clear_keys_down();
     clear_palette_shifts(game_state);
 
     /*{

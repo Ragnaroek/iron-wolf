@@ -32,26 +32,37 @@ pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, inpu
     
     draw_play_screen(&game_state, rdr, prj).await;
 
-	let mut level_state = setup_game_level(prj, &game_state, assets).unwrap();
-	let mut rc = init_ray_cast(prj.view_width);
+	'game_loop:
+	loop {
+		let mut level_state = setup_game_level(prj, &game_state, assets).unwrap();
+		let mut rc = init_ray_cast(prj.view_width);
 
-	//TODO StartMusic
-	//TODO PreloadGraphics
-    
-	draw_level(&game_state, rdr);
-    
-    rdr.fade_in().await;
+		//TODO StartMusic
+		//TODO PreloadGraphics
+		
+		draw_level(&game_state, rdr);
+		
+		rdr.fade_in().await;
 
-	play_loop(ticker, &mut level_state, &mut game_state, &mut control_state, vga, &mut rc, rdr, input, prj, assets).await;
+		play_loop(ticker, &mut level_state, &mut game_state, &mut control_state, vga, &mut rc, rdr, input, prj, assets).await;
 
-	match game_state.play_state {
-		PlayState::Died => died(ticker, &mut level_state, &mut game_state, &mut rc, rdr, prj, input, assets).await,
-		_ => panic!("not implemented end with state {:?}", game_state.play_state)
+		match game_state.play_state {
+			PlayState::Died => {
+				died(ticker, &mut level_state, &mut game_state, &mut rc, rdr, prj, input, assets).await;
+				if game_state.lives > -1 {
+					continue 'game_loop;
+				}
+
+				rdr.fade_out().await;
+
+				// TODO show high score
+
+				return;
+			},
+			_ => panic!("not implemented end with state {:?}", game_state.play_state)
+		}
 	}
-
 	//TODO Go to next level (gamestate.map_on+=1)
-
-	//input.wait_user_input(time::TICK_BASE*1000).await;
 }
 
 async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, rc: &mut RayCast, rdr: &VGARenderer, prj: &ProjectionConfig, input: &Input, assets: &Assets) {
@@ -141,6 +152,7 @@ async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &
 	rdr.activate_buffer(rdr.buffer_offset()-prj.screenofs).await;
 	input.clear_keys_down();
 	rdr.fizzle_fade(ticker, prj.view_width, prj.view_height, 70, false).await;
+	rdr.set_buffer_offset(rdr.buffer_offset()-prj.screenofs);
 	input.wait_user_input(100).await;
 	//TODO SD_WaitSoundDone
 
