@@ -16,7 +16,7 @@ pub fn default_iw_config() -> IWConfig {
     path.push("/Users/michaelbohn/_w3d/w3d_data");
     IWConfig {
         wolf3d_data: path,
-        no_wait: true,
+        no_wait: false,
     }
 }
 
