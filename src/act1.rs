@@ -231,7 +231,7 @@ fn door_closing(door: &mut DoorType, tics: u64) {
 */
 
 pub fn push_wall(level_state: &mut LevelState, game_state: &mut GameState, check_x: usize, check_y: usize, dir: Dir) {
-    if game_state.push_wall_state {
+    if game_state.push_wall_state != 0 {
         return;
     }
 
@@ -279,9 +279,75 @@ pub fn push_wall(level_state: &mut LevelState, game_state: &mut GameState, check
     game_state.push_wall_x = check_x;
     game_state.push_wall_y = check_y;
     game_state.push_wall_dir = dir;
-    game_state.push_wall_state = true;
+    game_state.push_wall_state = 1;
     game_state.push_wall_pos = 0;
     level_state.level.tile_map[check_x][check_y] |= 0xC0;
     level_state.level.info_map[check_x][check_y] = 0; // remove P tile info
     //TODO SD_PlaySound(PUSHWALLSND)
+}
+
+pub fn move_push_walls(level_state: &mut LevelState, game_state: &mut GameState, tics: u64) {
+    if game_state.push_wall_state == 0 {
+        return;
+    }
+
+    let old_block = game_state.push_wall_state/128;
+    game_state.push_wall_state += tics;
+
+    if game_state.push_wall_state/128 != old_block {
+        // block crossed into a new block
+        let old_tile = level_state.level.tile_map[game_state.push_wall_x][game_state.push_wall_y] & 63;
+        // the tile can now be walked into
+        level_state.level.tile_map[game_state.push_wall_x][game_state.push_wall_y] = 0;
+        level_state.actor_at[game_state.push_wall_x][game_state.push_wall_y] = At::Nothing;
+        // TODO mapsegs[0] is manipulated here with player->areanumber+AREATILE why??
+
+        // see if it should be pushed farther
+        if game_state.push_wall_state > 256 {
+            // the block has been pushed two tiles
+            game_state.push_wall_state = 0;
+            return;
+        } else {
+            match game_state.push_wall_dir {
+                Dir::North => {
+                    game_state.push_wall_y -= 1;
+                    if level_state.actor_at[game_state.push_wall_x][game_state.push_wall_y-1] != At::Nothing {
+                        game_state.push_wall_state = 0;
+                        return;
+                    }
+                    level_state.actor_at[game_state.push_wall_x][game_state.push_wall_y-1] = At::Wall(old_tile);
+                    level_state.level.tile_map[game_state.push_wall_x][game_state.push_wall_y-1] = old_tile;
+                },
+                Dir::East => {
+                    game_state.push_wall_x += 1;
+                    if level_state.actor_at[game_state.push_wall_x+1][game_state.push_wall_y] != At::Nothing {
+                        game_state.push_wall_state = 0;
+                        return;
+                    }
+                    level_state.actor_at[game_state.push_wall_x+1][game_state.push_wall_y] = At::Wall(old_tile);
+                    level_state.level.tile_map[game_state.push_wall_x+1][game_state.push_wall_y] = old_tile;
+                },
+                Dir::South => {
+                    game_state.push_wall_y += 1;
+                    if level_state.actor_at[game_state.push_wall_x][game_state.push_wall_y+1] != At::Nothing {
+                        game_state.push_wall_state = 0;
+                        return;
+                    }
+                    level_state.actor_at[game_state.push_wall_x][game_state.push_wall_y+1] = At::Wall(old_tile);
+                    level_state.level.tile_map[game_state.push_wall_x][game_state.push_wall_y+1] = old_tile;
+                },
+                Dir::West => {
+                    game_state.push_wall_x -= 1;
+                    if level_state.actor_at[game_state.push_wall_x-1][game_state.push_wall_y] != At::Nothing {
+                        game_state.push_wall_state = 0;
+                        return;
+                    }
+                    level_state.actor_at[game_state.push_wall_x-1][game_state.push_wall_y] = At::Wall(old_tile);
+                    level_state.level.tile_map[game_state.push_wall_x-1][game_state.push_wall_y] = old_tile;
+                },
+            }
+            level_state.level.tile_map[game_state.push_wall_x][game_state.push_wall_y] = old_tile | 0xC0;
+        }
+    }
+    game_state.push_wall_pos = ((game_state.push_wall_state/2)&63) as i32;
 }

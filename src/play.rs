@@ -6,7 +6,7 @@ use vga::input::NumCode;
 use vga::util;
 use vga::VGA;
 
-use crate::act1::move_doors;
+use crate::act1::{move_doors, move_push_walls};
 use crate::agent::{draw_health, draw_level, draw_face, draw_lives, draw_ammo, draw_keys, draw_weapon, draw_score};
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::{RayCast, three_d_refresh};
@@ -107,7 +107,7 @@ pub fn new_game_state() -> GameState {
         bonus_count: 0,
         pal_shifted: false,
         fizzle_in: false,
-        push_wall_state: false,
+        push_wall_state: 0,
         push_wall_pos: 0,
         push_wall_x: 0,
         push_wall_y: 0,
@@ -250,6 +250,7 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
         }
 
         move_doors(level_state, tics);
+        move_push_walls(level_state, game_state, tics);
 
         for i in 0..level_state.actors.len() {
             do_actor(ObjKey(i), tics, level_state, game_state, rdr, control_state, prj);
