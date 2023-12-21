@@ -1,4 +1,4 @@
-use crate::def::{ObjType, LevelState, Level, MAP_SIZE, DoorType, DoorAction, FL_NEVERMARK, DirType, ClassType, ObjKey};
+use crate::def::{ObjType, LevelState, Level, MAP_SIZE, DoorType, DoorAction, FL_NEVERMARK, DirType, ClassType};
 use crate::draw::{Op, Hit, init_ray_cast, init_ray_cast_consts, calc_height};
 use crate::fixed::new_fixed_i32;
 use crate::play;
@@ -342,6 +342,7 @@ fn mock_level_state() -> LevelState {
     
     LevelState {
         level: Level {
+            info_map: Vec::with_capacity(0),
             tile_map,
         },
         actors: vec![player],

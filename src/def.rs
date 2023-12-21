@@ -6,6 +6,14 @@ use crate::fixed::Fixed;
 use crate::play::ProjectionConfig;
 use crate::vga_render::{PAGE_1_START, PAGE_2_START, PAGE_3_START, VGARenderer};
 
+pub const MAX_STATS	: usize = 400;	
+pub const MAX_DOORS : usize = 64;
+
+// tile constants
+
+pub const PUSHABLE_TILE : u16 = 98;
+
+
 pub const GLOBAL1 : i32	= 1<<16;
 pub const MAP_SIZE : usize = 64;
 pub const MIN_DIST : i32 = 0x5800;
@@ -27,8 +35,7 @@ pub const UNSIGNEDSHIFT : i32 =	8;
 pub const FOCAL_LENGTH : i32 = 0x5700;
 pub const FINE_ANGLES : usize = 3600;
 
-pub const MAX_STATS	: usize = 400;	
-pub const MAX_DOORS : usize = 64;
+
 
 pub const NUM_BUTTONS : usize = 8;
 pub const NUM_WEAPONS : usize = 5;
@@ -83,7 +90,8 @@ pub enum WeaponType {
 
 /// static level data (map and actors)
 pub struct Level {
-	pub tile_map: Vec<Vec<u16>>
+    pub info_map: Vec<Vec<u16>>, // info plane (will be manipulated during play)
+	pub tile_map: Vec<Vec<u16>>  // map plan (will be manipulated during play) 
 }
 
 #[derive(Debug)]
@@ -221,6 +229,7 @@ pub struct GameState {
     pub weapon_frame: usize,
 
 	pub episode : usize,
+    pub secret_count: usize,
     pub kill_count: i32,
     pub victory_flag : bool,
     pub play_state: PlayState,
@@ -237,6 +246,12 @@ pub struct GameState {
 
     pub pal_shifted : bool,
     pub fizzle_in : bool,
+    // push wall states
+    pub push_wall_state : bool, // push wall animation going on
+    pub push_wall_pos: u8, // amount a pushable wall has been moved (0-63)
+    pub push_wall_x: usize,
+    pub push_wall_y: usize,
+    pub push_wall_dir: Dir,
 }
 
 #[derive(Debug, PartialEq)]

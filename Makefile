@@ -12,3 +12,7 @@ build-web:
 
 coverage-sdl:
 	cargo tarpaulin --features sdl --ignore-tests --out Lcov
+
+test:
+	cargo test --features sdl
+	cargo test --features web

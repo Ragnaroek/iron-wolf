@@ -1,8 +1,15 @@
-use crate::def::{DoorType, StaticType, StaticKind, StaticInfo, Sprite, DoorAction, LevelState, At, FL_BONUS, MAX_STATS};
+use crate::def::{DoorType, StaticType, StaticKind, StaticInfo, Sprite, DoorAction, LevelState, At, FL_BONUS, MAX_STATS, GameState, Dir};
 
 const OPENTICS : u32 = 300;
-
 const NUM_STAT_INFO : usize = 49;
+
+/*
+=============================================================================
+
+							STATICS
+
+=============================================================================
+*/
 
 static STAT_INFO : [StaticInfo; NUM_STAT_INFO] = [
     StaticInfo{sprite: Sprite::Stat0, kind: StaticKind::None},     // puddle          spr1v
@@ -113,6 +120,14 @@ pub fn place_item_type(level_state: &mut LevelState, item_type: StaticKind, tile
     }
 }
 
+/*
+=============================================================================
+
+						DOORS
+
+=============================================================================
+*/
+
 pub fn spawn_door(tile_map: &mut Vec<Vec<u16>>, doornum: u16, tile_x: usize, tile_y: usize, vertical: bool, lock: u16) -> DoorType {
     if doornum == 64 {
         panic!("64+ doors on level!") //TODO replace with Quit
@@ -122,7 +137,7 @@ pub fn spawn_door(tile_map: &mut Vec<Vec<u16>>, doornum: u16, tile_x: usize, til
     if vertical {
         tile_map[tile_x][tile_y-1] |= 0x40;
         tile_map[tile_x][tile_y+1] |= 0x40;
-    }    else {
+    } else {
         tile_map[tile_x-1][tile_y] |= 0x40;
         tile_map[tile_x+1][tile_y] |= 0x40;
     }
@@ -205,4 +220,68 @@ fn door_closing(door: &mut DoorType, tics: u64) {
         door.action = DoorAction::Closed;
     }
     door.position = position as u16;
+}
+
+/*
+=============================================================================
+
+						PUSHABLE WALLS
+
+=============================================================================
+*/
+
+pub fn push_wall(level_state: &mut LevelState, game_state: &mut GameState, check_x: usize, check_y: usize, dir: Dir) {
+    if game_state.push_wall_state {
+        return;
+    }
+
+    let old_tile = level_state.level.tile_map[check_x][check_y];
+    if old_tile == 0 {
+        return;
+    }
+
+    match dir {
+        Dir::North => {
+            if level_state.actor_at[check_x][check_y-1] != At::Nothing {
+                // TODO SD_PlaySound(NOWAYSND)
+                return;
+            }
+            level_state.actor_at[check_x][check_y-1] = At::Wall(old_tile);
+            level_state.level.tile_map[check_x][check_y-1] = old_tile;
+        },
+        Dir::East => {
+            if level_state.actor_at[check_x+1][check_y] != At::Nothing {
+                // TODO SD_PlaySound(NOWAYSND)
+                return;
+            }
+            level_state.actor_at[check_x+1][check_y] = At::Wall(old_tile);
+            level_state.level.tile_map[check_x+1][check_y] = old_tile;
+        },
+        Dir::South => {
+            if level_state.actor_at[check_x][check_y+1] != At::Nothing {
+                // TODO SD_PlaySound(NOWAYSND)
+                return;
+            }
+            level_state.actor_at[check_x][check_y+1] = At::Wall(old_tile);
+            level_state.level.tile_map[check_x][check_y+1] = old_tile;
+        },
+        Dir::West => {
+            if level_state.actor_at[check_x-1][check_y] != At::Nothing {
+                // TODO SD_PlaySound(NOWAYSND)
+                return;
+            }
+            level_state.actor_at[check_x-1][check_y] = At::Wall(old_tile);
+            level_state.level.tile_map[check_x-1][check_y] = old_tile;
+        }
+    }
+
+    game_state.secret_count += 1;
+    game_state.push_wall_x = check_x;
+    game_state.push_wall_y = check_y;
+    game_state.push_wall_dir = dir;
+    game_state.push_wall_state = true;
+    game_state.push_wall_pos = 0;
+    level_state.level.tile_map[check_x][check_y] |= 0xC0;
+    level_state.level.info_map[check_x][check_y] = 0; // remove P tile info
+    //TODO SD_PlaySound(PUSHWALLSND)
 }

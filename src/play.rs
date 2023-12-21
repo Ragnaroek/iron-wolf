@@ -93,6 +93,7 @@ pub fn new_game_state() -> GameState {
         weapon_frame: 0,
 		face_frame: 0,
 		episode: 0,
+        secret_count: 0,
         kill_count: 0,
         victory_flag: false,
         god_mode: false,
@@ -106,6 +107,11 @@ pub fn new_game_state() -> GameState {
         bonus_count: 0,
         pal_shifted: false,
         fizzle_in: false,
+        push_wall_state: false,
+        push_wall_pos: 0,
+        push_wall_x: 0,
+        push_wall_y: 0,
+        push_wall_dir: crate::def::Dir::North,
 	}
 }
 
@@ -219,12 +225,12 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
     input.clear_keys_down();
     clear_palette_shifts(game_state);
 
-    /*{
+    {
         let player = level_state.mut_player();
-        player.x = 1859846;
-        player.y = 3768320;
-        player.angle = 0;
-    }*/
+        player.x = 2227029;
+        player.y = 1466660;
+        player.angle = 180;
+    }
 
     //TODO A lot to do here (clear palette, poll controls, prepare world)
     while game_state.play_state == PlayState::StillPlaying {

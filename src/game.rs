@@ -226,9 +226,10 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &GameState, assets: 
 		}
 	}
 
-	let (actors, statics) = scan_info_plane(&map_data, &mut actor_at, game_state.difficulty);
+	let (actors, statics, info_map) = scan_info_plane(&map_data, &mut actor_at, game_state.difficulty);
     let mut level_state = LevelState{
         level: Level {
+			info_map,
 		    tile_map,
         },
         actors,
@@ -248,17 +249,20 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &GameState, assets: 
 }
 
 // By convention the first element in the returned actors vec is the player
-fn scan_info_plane(map_data: &map::MapData, actor_at : &mut Vec<Vec<At>>, difficulty: Difficulty) -> (Vec<ObjType>, Vec<StaticType>) {
+fn scan_info_plane(map_data: &map::MapData, actor_at : &mut Vec<Vec<At>>, difficulty: Difficulty) -> (Vec<ObjType>, Vec<StaticType>, Vec<Vec<u16>>) {
 	let mut player = None;
 	let mut statics = Vec::new();
 	let mut actors = Vec::new();
+	let mut info_plane = vec![vec![0; MAP_SIZE]; MAP_SIZE];
 
 	let mut map_ptr = 0;
 	for y in 0..MAP_SIZE {
 		for x in 0..MAP_SIZE {
 			let tile = map_data.segs[1][map_ptr];
 			map_ptr += 1;
-			
+
+			info_plane[x][y] = tile;
+
 			match tile {
 				19..=22 => { // player start position
 					player = Some(spawn_player(x, y, NORTH+(tile-19)as i32))
@@ -364,7 +368,7 @@ fn scan_info_plane(map_data: &map::MapData, actor_at : &mut Vec<Vec<At>>, diffic
 
 	actors.insert(0, player.unwrap());
 
-	(actors, statics)
+	(actors, statics, info_plane)
 }
 
 // spawns the obj into the map
