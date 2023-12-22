@@ -12,7 +12,7 @@ pub const MAX_DOORS : usize = 64;
 // tile constants
 
 pub const PUSHABLE_TILE : u16 = 98;
-
+pub const AMBUSH_TILE : u16 = 106;
 
 pub const GLOBAL1 : i32	= 1<<16;
 pub const MAP_SIZE : usize = 64;
