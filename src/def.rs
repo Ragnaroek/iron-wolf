@@ -232,6 +232,7 @@ pub struct GameState {
 
 	pub episode : usize,
     pub secret_count: usize,
+    pub treasure_count: usize,
     pub kill_count: i32,
     pub victory_flag : bool,
     pub play_state: PlayState,
