@@ -6,6 +6,7 @@ use crate::map::{load_map, load_map_headers, load_map_offsets, MapType, MapFileT
 use crate::loader::Loader;
 use crate::def::{WeaponType, Assets};
 use crate::gamedata;
+use crate::util::new_data_reader;
 
 pub static GAMEPAL: &'static [u8] = include_bytes!("../assets/gamepal.bin");
 pub static SIGNON: &'static [u8] = include_bytes!("../assets/signon.bin");
@@ -57,6 +58,8 @@ pub fn file_name(file: WolfFile) -> &'static str {
 	}
 }
 
+// num values are chunk offsets. They need to be translated to
+// picture offset in the graphics array with GraphicNum::PG13PIC - STARTPICS.
 #[derive(Copy, Clone)]
 pub enum GraphicNum {
 	CLEVELPIC = 38,
@@ -171,10 +174,12 @@ pub fn weapon_pic(w: WeaponType) -> GraphicNum {
 	}
 }
 
+const STARTFONT: usize = 1;
 const STRUCTPIC: usize = 0;
-const STARTPICS: usize = 3;
+pub const STARTPICS: usize = 3;
 const STARTTILE8: usize = 150;
 const STARTEXTERNS: usize = 136;
+const NUM_FONT: usize = 2;
 const NUM_PICS: usize = 132;
 
 pub struct Graphic {
@@ -183,12 +188,20 @@ pub struct Graphic {
 	pub height: usize,
 }
 
+#[derive(Debug)]
+pub struct Font {
+	pub height: u16,
+	pub location: [u16; 256],
+	pub width: [u8; 256],
+	pub data: Vec<Vec<u8>>,
+}
+
 pub struct Huffnode {
 	bit0: u16,
 	bit1: u16,
 }
 
-pub fn load_all_graphics(loader: &dyn Loader) -> Result<Vec<Graphic>, String> {
+pub fn load_all_graphics(loader: &dyn Loader) -> Result<(Vec<Graphic>, Vec<Font>), String> {
 	let grhuffman_bytes = loader.load_file(WolfFile::GraphicDict); 
 	let grhuffman = to_huffnodes(grhuffman_bytes);
 
@@ -197,11 +210,14 @@ pub fn load_all_graphics(loader: &dyn Loader) -> Result<Vec<Graphic>, String> {
 
 	let picsizes = extract_picsizes(&grdata, &grstarts, &grhuffman);
 
-	let mut graphics = Vec::with_capacity(NUM_PICS);
-	for _ in 0..10 {
-		graphics.push(Graphic{data: Vec::with_capacity(0), width: 0, height: 0});
+	let mut fonts = Vec::with_capacity(NUM_FONT);
+	for i in STARTFONT..(STARTFONT+NUM_FONT) {
+		let font = load_font(i, &grstarts, &grdata, &grhuffman)?;
+		fonts.push(font);
 	}
-	for i in 10..NUM_PICS {
+	
+	let mut graphics = Vec::with_capacity(NUM_PICS);
+	for i in STARTPICS..(STARTPICS+NUM_PICS) {
 		let g = load_graphic(
 			i,
 			&grstarts,
@@ -212,11 +228,10 @@ pub fn load_all_graphics(loader: &dyn Loader) -> Result<Vec<Graphic>, String> {
 		graphics.push(g);
 	}
 
-	Ok(graphics)
+	Ok((graphics, fonts))
 }
 
 fn extract_picsizes(grdata: &Vec<u8>, grstarts: &Vec<u8>, grhuffman: &Vec<Huffnode>) -> Vec<(usize, usize)> {
-	
 	let (complen, explen) = gr_chunk_length(STRUCTPIC, grdata, grstarts);
 	let f_offset = (grfilepos(STRUCTPIC, grstarts) + 4) as usize;
 	let expanded = huff_expand(&grdata[f_offset..(f_offset+complen)], explen, grhuffman);
@@ -262,6 +277,40 @@ fn to_huffnodes(bytes: Vec<u8>) -> Vec<Huffnode> {
 	nodes
 }
 
+fn load_font(chunk: usize,
+	grstarts: &Vec<u8>,
+	grdata: &Vec<u8>,
+	grhuffman: &Vec<Huffnode>,) -> Result<Font, String> {
+	let (pos, compressed) = data_sizes(chunk, grstarts, grdata)?;
+	let source = &grdata[pos..(pos + compressed)];
+	Ok(expand_font(chunk, source, grhuffman))
+}
+
+fn expand_font(chunk: usize, compressed: &[u8], grhuffman: &Vec<Huffnode>) -> Font {
+	let expanded = expand_chunk(chunk, compressed, grhuffman);
+	println!("chunk size = {}", expanded.len());
+
+	let mut reader = new_data_reader(&expanded);
+	let height = reader.read_u16();
+	
+	let mut location = [0; 256];
+	for i in 0..256 {
+		location[i] = reader.read_u16();
+	}
+
+	let mut width = [0; 256];
+	for i in 0..256 {
+		width[i] = reader.read_u8();
+	}
+	let mut font_data: Vec<Vec<u8>> = Vec::with_capacity(256);
+	for i in 0..256 {
+		let bytes = height as usize * width[i] as usize;
+		let start = location[i] as usize;
+		font_data.push(expanded[start..(start+bytes)].to_vec());
+	}
+	return Font { height, location, width, data: font_data }	
+}
+
 fn load_graphic(
 	chunk: usize,
 	grstarts: &Vec<u8>,
@@ -269,6 +318,12 @@ fn load_graphic(
 	grhuffman: &Vec<Huffnode>,
 	picsizes: &Vec<(usize, usize)>,
 ) -> Result<Graphic, String> {
+	let (pos, compressed) = data_sizes(chunk, grstarts, grdata)?;
+	let source = &grdata[pos..(pos + compressed)];
+	Ok(expand_graphic(chunk, source, grhuffman, picsizes))
+}
+
+fn data_sizes(chunk: usize, grstarts: &Vec<u8>, grdata: &Vec<u8>) -> Result<(usize, usize), String> {
 	let pos_int = grfilepos(chunk, grstarts);
 	if pos_int < 0 {
 		return Err(format!("could not load chunk {}", pos_int));
@@ -280,9 +335,7 @@ fn load_graphic(
 	}
 
 	let compressed = (grfilepos(next, grstarts) - pos_int) as usize;
-	let source = &grdata[pos..(pos + compressed)];
-
-	Ok(expand_graphic(chunk, source, grhuffman, picsizes))
+	Ok((pos, compressed))
 }
 
 fn grfilepos(chunk: usize, grstarts: &Vec<u8>) -> i32 {
@@ -296,13 +349,17 @@ fn grfilepos(chunk: usize, grstarts: &Vec<u8>) -> i32 {
 	}
 }
 
-fn expand_graphic(chunk: usize, data: &[u8], grhuffman: &Vec<Huffnode>, picsizes: &Vec<(usize, usize)>) -> Graphic {
+fn expand_chunk(chunk: usize, data: &[u8], grhuffman: &Vec<Huffnode>) -> Vec<u8> {
 	if chunk >= STARTTILE8 && chunk < STARTEXTERNS {
 		panic!("TILE Expand not yet implemented");
 	}
 
 	let len = i32::from_le_bytes(data[0..4].try_into().unwrap()) as usize;
-	let expanded = huff_expand(&data[4..], len, grhuffman);
+	huff_expand(&data[4..], len, grhuffman)
+}
+
+fn expand_graphic(chunk: usize, data: &[u8], grhuffman: &Vec<Huffnode>, picsizes: &Vec<(usize, usize)>) -> Graphic {
+	let expanded = expand_chunk(chunk, data, grhuffman);
 	let size = picsizes[chunk-STARTPICS];
 	return Graphic {
 		data: expanded,

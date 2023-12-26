@@ -27,6 +27,10 @@ impl Input {
 		false
 	}
 
+	pub async fn check_ack(&self) -> bool {
+		self.wait_user_input(u64::MAX).await
+	}
+
     pub fn key_pressed(&self, code: NumCode) -> bool {
         self.input_monitoring.key_pressed(code)
     }

@@ -8,13 +8,18 @@ use vga::VGA;
 
 use crate::act1::{move_doors, move_push_walls};
 use crate::agent::{draw_health, draw_level, draw_face, draw_lives, draw_ammo, draw_keys, draw_weapon, draw_score};
+use crate::def::UserState;
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::{RayCast, three_d_refresh};
 use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC, EXTRA_POINTS};
 use crate::assets::{GraphicNum, GAMEPAL};
 use crate::input;
+use crate::inter::clear_split_vwb;
+use crate::menu::draw_window;
+use crate::menu::message;
 use crate::time;
 use crate::scale::{CompiledScaler, setup_scaling};
+use crate::util::check_param;
 use crate::vga_render::VGARenderer;
 use crate::vl::set_palette;
 
@@ -212,9 +217,8 @@ fn calc_sines() -> Vec<Fixed> {
     sines
 }
 
-pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState, vga: &VGA, rc: &mut RayCast, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, user_state: &mut UserState, control_state: &mut ControlState, vga: &VGA, rc: &mut RayCast, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let shifts = init_colour_shifts();
-
 
     game_state.play_state = PlayState::StillPlaying;
     // TODO frameon = 0??
@@ -262,6 +266,8 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
         update_palette_shifts(game_state, vga, &shifts, tics).await;
         
 	    three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
+
+        check_keys(rdr, user_state, input).await;
 
         let offset_prev = rdr.buffer_offset();
         for i in 0..3 {
@@ -396,6 +402,20 @@ fn hlin(rdr: &VGARenderer, x: usize, z: usize, y: usize, c: u8) {
 
 fn vlin(rdr: &VGARenderer, y: usize, z: usize, x: usize, c: u8) {
 	rdr.vlin(x, y, (z-y)+1, c)
+}
+
+async fn check_keys(rdr: &VGARenderer, user_state: &mut UserState, input: &input::Input) {
+    if input.key_pressed(NumCode::BackSpace) && 
+    input.key_pressed(NumCode::LShift) && 
+    input.key_pressed(NumCode::Alt) &&
+    check_param("goobers")
+    {
+        clear_split_vwb(user_state);
+
+        message(rdr, user_state, "Debugging keys are\nnow available!");
+        input.clear_keys_down();
+        input.check_ack().await;
+    }
 }
 
 // reads input delta since last tic and manipulates the player state

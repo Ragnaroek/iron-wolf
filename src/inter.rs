@@ -1,6 +1,12 @@
-use crate::{menu::{draw_stripes, clear_ms_screen}, vga_render::VGARenderer, input::Input, assets::GraphicNum};
+use crate::{menu::{draw_stripes, clear_ms_screen}, vga_render::VGARenderer, input::Input, assets::GraphicNum, def::UserState};
 
-
+pub fn clear_split_vwb(user_state: &mut UserState) {
+    // TODO clear 'update' global variable?
+    user_state.window_x = 0;
+    user_state.window_y = 0;
+    user_state.window_w = 320;
+    user_state.window_h = 160;
+}
 
 pub async fn check_highscore(rdr: &VGARenderer, input: &Input, score: i32, map: usize) {
 
@@ -22,5 +28,4 @@ fn draw_high_scores(rdr: &VGARenderer) {
     rdr.pic(4*8, 68, GraphicNum::CNAMEPIC);
     rdr.pic(20*8, 68, GraphicNum::CLEVELPIC);
     rdr.pic(28*8, 68, GraphicNum::CSCOREPIC);
-
 }
