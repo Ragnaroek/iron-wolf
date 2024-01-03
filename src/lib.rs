@@ -9,6 +9,7 @@ pub mod act2;
 pub mod agent;
 pub mod assets;
 pub mod config;
+pub mod debug;
 pub mod def;
 pub mod draw;
 pub mod fixed;

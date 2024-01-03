@@ -8,6 +8,7 @@ use vga::VGA;
 
 use crate::act1::{move_doors, move_push_walls};
 use crate::agent::{draw_health, draw_level, draw_face, draw_lives, draw_ammo, draw_keys, draw_weapon, draw_score};
+use crate::debug::debug_keys;
 use crate::def::UserState;
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::{RayCast, three_d_refresh};
@@ -15,10 +16,10 @@ use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, Lev
 use crate::assets::{GraphicNum, GAMEPAL};
 use crate::input;
 use crate::inter::clear_split_vwb;
-use crate::menu::draw_window;
 use crate::menu::message;
 use crate::time;
 use crate::scale::{CompiledScaler, setup_scaling};
+use crate::us1::draw_window;
 use crate::util::check_param;
 use crate::vga_render::VGARenderer;
 use crate::vl::set_palette;
@@ -267,7 +268,7 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
         
 	    three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
 
-        check_keys(rdr, user_state, input).await;
+        check_keys(rdr, user_state, game_state, input).await;
 
         let offset_prev = rdr.buffer_offset();
         for i in 0..3 {
@@ -404,7 +405,13 @@ fn vlin(rdr: &VGARenderer, y: usize, z: usize, x: usize, c: u8) {
 	rdr.vlin(x, y, (z-y)+1, c)
 }
 
-async fn check_keys(rdr: &VGARenderer, user_state: &mut UserState, input: &input::Input) {
+///	Generates a window of a given width & height in the
+/// middle of the screen
+pub fn center_window(rdr: &VGARenderer, user_state: &mut UserState, width: usize, height: usize) {
+    draw_window(rdr, user_state, ((320/8)-width) / 2, ((160/8)-height)/2, width, height);
+}
+
+async fn check_keys(rdr: &VGARenderer, user_state: &mut UserState, game_state: &mut GameState, input: &input::Input) {
     if input.key_pressed(NumCode::BackSpace) && 
     input.key_pressed(NumCode::LShift) && 
     input.key_pressed(NumCode::Alt) &&
@@ -415,6 +422,14 @@ async fn check_keys(rdr: &VGARenderer, user_state: &mut UserState, input: &input
         message(rdr, user_state, "Debugging keys are\nnow available!");
         input.clear_keys_down();
         input.check_ack().await;
+        user_state.debug_ok = true;
+    }
+
+    if input.key_pressed(NumCode::Tab) && user_state.debug_ok {
+        let prev_buffer = rdr.buffer_offset();
+        rdr.set_buffer_offset(rdr.active_buffer());
+        debug_keys(rdr, user_state, game_state, input).await;
+        rdr.set_buffer_offset(prev_buffer);
     }
 }
 

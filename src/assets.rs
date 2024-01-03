@@ -19,6 +19,9 @@ pub const GAME_MAPS: &'static str = "GAMEMAPS.WL6";
 pub const GAMEDATA: &'static str = "VSWAP.WL6";
 pub const CONFIG_DATA: &'static str = "CONFIG.WL6";
 
+const BLOCK : usize = 64;
+const MASKBLOCK : usize = 128;
+
 #[derive(Clone, Copy)]
 pub enum WolfFile {
 	GraphicDict,
@@ -116,7 +119,7 @@ pub enum GraphicNum {
 	GOTGATLINGPIC = 131,
 	MUTANTBJPIC   = 132,
 	PAUSEDPIC     = 133,
-	GETPSYCHEDPIC = 134,     
+	GETPSYCHEDPIC = 134,
 }
 
 pub fn face_pic(n: usize) -> GraphicNum {
@@ -174,10 +177,13 @@ pub fn weapon_pic(w: WeaponType) -> GraphicNum {
 	}
 }
 
+const NUMTILE8 : usize = 72;
+
 const STARTFONT: usize = 1;
 const STRUCTPIC: usize = 0;
 pub const STARTPICS: usize = 3;
-const STARTTILE8: usize = 150;
+const STARTTILE8: usize = 135;
+const STARTTILE8M: usize = 136;
 const STARTEXTERNS: usize = 136;
 const NUM_FONT: usize = 2;
 const NUM_PICS: usize = 132;
@@ -196,12 +202,16 @@ pub struct Font {
 	pub data: Vec<Vec<u8>>,
 }
 
+pub struct TileData {
+	pub tile8: Vec<Vec<u8>> 
+}
+
 pub struct Huffnode {
 	bit0: u16,
 	bit1: u16,
 }
 
-pub fn load_all_graphics(loader: &dyn Loader) -> Result<(Vec<Graphic>, Vec<Font>), String> {
+pub fn load_all_graphics(loader: &dyn Loader) -> Result<(Vec<Graphic>, Vec<Font>, TileData), String> {
 	let grhuffman_bytes = loader.load_file(WolfFile::GraphicDict); 
 	let grhuffman = to_huffnodes(grhuffman_bytes);
 
@@ -228,7 +238,9 @@ pub fn load_all_graphics(loader: &dyn Loader) -> Result<(Vec<Graphic>, Vec<Font>
 		graphics.push(g);
 	}
 
-	Ok((graphics, fonts))
+	let tile8 = load_tile8(&grstarts, &grdata, &grhuffman)?;
+
+	Ok((graphics, fonts, TileData{tile8}))
 }
 
 fn extract_picsizes(grdata: &Vec<u8>, grstarts: &Vec<u8>, grhuffman: &Vec<Huffnode>) -> Vec<(usize, usize)> {
@@ -281,14 +293,13 @@ fn load_font(chunk: usize,
 	grstarts: &Vec<u8>,
 	grdata: &Vec<u8>,
 	grhuffman: &Vec<Huffnode>,) -> Result<Font, String> {
-	let (pos, compressed) = data_sizes(chunk, grstarts, grdata)?;
+	let (pos, compressed) = data_sizes(chunk, grstarts)?;
 	let source = &grdata[pos..(pos + compressed)];
 	Ok(expand_font(chunk, source, grhuffman))
 }
 
 fn expand_font(chunk: usize, compressed: &[u8], grhuffman: &Vec<Huffnode>) -> Font {
 	let expanded = expand_chunk(chunk, compressed, grhuffman);
-	println!("chunk size = {}", expanded.len());
 
 	let mut reader = new_data_reader(&expanded);
 	let height = reader.read_u16();
@@ -318,12 +329,24 @@ fn load_graphic(
 	grhuffman: &Vec<Huffnode>,
 	picsizes: &Vec<(usize, usize)>,
 ) -> Result<Graphic, String> {
-	let (pos, compressed) = data_sizes(chunk, grstarts, grdata)?;
+	let (pos, compressed) = data_sizes(chunk, grstarts)?;
 	let source = &grdata[pos..(pos + compressed)];
 	Ok(expand_graphic(chunk, source, grhuffman, picsizes))
 }
 
-fn data_sizes(chunk: usize, grstarts: &Vec<u8>, grdata: &Vec<u8>) -> Result<(usize, usize), String> {
+fn load_tile8(grstarts: &Vec<u8>, grdata: &Vec<u8>, grhuffman: &Vec<Huffnode>) -> Result<Vec<Vec<u8>>, String> {
+	let (pos, compressed) = data_sizes(STARTTILE8, grstarts)?;
+	let source = &grdata[pos..(pos + compressed)];
+	let expanded = expand_chunk(STARTTILE8, source, grhuffman);
+	
+	let mut result  = Vec::with_capacity(NUMTILE8);
+	for i in 0..NUMTILE8 {
+		result.push(expanded[(i*BLOCK)..(i*BLOCK+BLOCK)].to_vec())
+	}
+	Ok(result)
+}
+
+fn data_sizes(chunk: usize, grstarts: &Vec<u8>) -> Result<(usize, usize), String> {
 	let pos_int = grfilepos(chunk, grstarts);
 	if pos_int < 0 {
 		return Err(format!("could not load chunk {}", pos_int));
@@ -349,13 +372,26 @@ fn grfilepos(chunk: usize, grstarts: &Vec<u8>) -> i32 {
 	}
 }
 
-fn expand_chunk(chunk: usize, data: &[u8], grhuffman: &Vec<Huffnode>) -> Vec<u8> {
+fn expand_chunk(chunk: usize, data_in: &[u8], grhuffman: &Vec<Huffnode>) -> Vec<u8> {
+	let expanded;
+	let data;
 	if chunk >= STARTTILE8 && chunk < STARTEXTERNS {
-		panic!("TILE Expand not yet implemented");
+		if chunk < STARTTILE8M {
+			expanded = BLOCK * NUMTILE8;
+		} else {
+			panic!("TILE Expand not yet implemented");
+		}
+		data = data_in;
+	} else {
+		expanded = i32::from_le_bytes(data_in[0..4].try_into().unwrap()) as usize;
+		data = &data_in[4..]; // skip over length
 	}
 
-	let len = i32::from_le_bytes(data[0..4].try_into().unwrap()) as usize;
-	huff_expand(&data[4..], len, grhuffman)
+	if chunk == STARTTILE8 {
+		println!("expanded = {}", expanded);
+	}
+
+	huff_expand(data, expanded, grhuffman)
 }
 
 fn expand_graphic(chunk: usize, data: &[u8], grhuffman: &Vec<Huffnode>, picsizes: &Vec<(usize, usize)>) -> Graphic {
@@ -368,16 +404,17 @@ fn expand_graphic(chunk: usize, data: &[u8], grhuffman: &Vec<Huffnode>, picsizes
 	};
 }
 
-fn huff_expand(data: &[u8], len: usize, grhuffman: &Vec<Huffnode>) -> Vec<u8> {
-	let mut expanded = Vec::with_capacity(len);
+fn huff_expand(data: &[u8], expanded_len: usize, grhuffman: &Vec<Huffnode>) -> Vec<u8> {
+	let mut expanded = vec![0; expanded_len];
 	let head = &grhuffman[254];
-	if len < 0xfff0 {
+	let mut written = 0;
+	if expanded_len < 0xfff0 {
 		let mut node = head;
 		let mut read = 0;
 		let mut input = data[read];
 		read += 1;
 		let mut mask: u8 = 0x01;
-		while expanded.len() < len {
+		while written < expanded_len {
 			let node_value = if (input & mask) == 0 {
 				// bit not set
 				node.bit0
@@ -386,6 +423,9 @@ fn huff_expand(data: &[u8], len: usize, grhuffman: &Vec<Huffnode>) -> Vec<u8> {
 			};
 
 			if mask == 0x80 {
+				if read >= data.len() {
+					break;
+				}
 				input = data[read];
 				read += 1;
 				mask = 1;
@@ -395,7 +435,8 @@ fn huff_expand(data: &[u8], len: usize, grhuffman: &Vec<Huffnode>) -> Vec<u8> {
 
 			if node_value < 256 {
 				// leaf node, dx is the uncompressed byte!
-				expanded.push(node_value as u8);
+				expanded[written] = node_value as u8;
+				written += 1;
 				node = head;
 			} else {
 				// -256 here, since the huffman optimisation is not done

@@ -262,6 +262,11 @@ pub struct UserState {
     pub window_y : usize,
     pub window_w : usize,
     pub window_h : usize,
+
+    pub font_number: usize,
+    pub font_color: u8,
+
+    pub debug_ok : bool,
 }
 
 #[derive(Debug, PartialEq)]

@@ -22,8 +22,9 @@ pub fn clear_ms_screen(rdr: &VGARenderer) {
 /// The supplied message should only contain ASCII characters.
 /// All other characters are not supported and ignored.
 pub fn message(rdr: &VGARenderer, user_state: &mut UserState, str: &str) {
-    let font = &rdr.fonts[1];
-
+    user_state.font_number = 1;
+    user_state.font_color = 0;
+    let font = &rdr.fonts[user_state.font_number];
     let mut h = font.height as usize;
     let mut w : usize = 0;
     let mut mw : usize = 0;
@@ -52,7 +53,7 @@ pub fn message(rdr: &VGARenderer, user_state: &mut UserState, str: &str) {
     rdr.set_buffer_offset(rdr.active_buffer());
     draw_window(rdr, user_state.window_x-5, print_y-5, mw+10, h+10, TEXT_COLOR);
     draw_outline(rdr, user_state.window_x-5, print_y-5, mw+10, h+10, 0, HIGHLIGHT);
-    print(rdr, font, user_state, str, user_state.window_x, print_y, 0);
+    print(rdr, user_state, str, user_state.window_x, print_y);
     rdr.set_buffer_offset(prev_buffer);
 }
 
