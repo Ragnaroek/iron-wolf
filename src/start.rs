@@ -3,7 +3,7 @@ use std::sync::Arc;
 use vga::SCReg;
 use vga::util::spawn_task;
 
-use crate::def::{Assets, UserState};
+use crate::def::{Assets, WindowState};
 use crate::assets::{GraphicNum, SIGNON, GAMEPAL};
 use crate::assets;
 use crate::def::IWConfig;
@@ -62,7 +62,7 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
     Ok(())
 }
 
-fn init_game(vga: &vga::VGA) -> UserState {
+fn init_game(vga: &vga::VGA) -> WindowState {
     vl::set_palette(vga, GAMEPAL);
     signon_screen(vga);
 
@@ -70,19 +70,21 @@ fn init_game(vga: &vga::VGA) -> UserState {
     finish_signon()
 }
 
-fn finish_signon() -> UserState {
-    UserState {
+fn finish_signon() -> WindowState {
+    WindowState {
         window_x: 0,
         window_y: 0,
         window_w: 320,
         window_h: 160,
+        print_x: 0,
+        print_y: 0,
         font_color: 0,
         font_number: 0,
         debug_ok: false,
     }
 }
 
-async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr: &VGARenderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets, user_state: &mut UserState) {
+async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr: &VGARenderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets, win_state: &mut WindowState) {
     if !config.no_wait {
         pg_13(rdr, input).await;
     }
@@ -107,7 +109,7 @@ async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr:
             //TODO PlayDemo() here
         }
 
-        game_loop(&ticker, vga, rdr, input, prj, assets, user_state).await;
+        game_loop(&ticker, vga, rdr, input, prj, assets, win_state).await;
         rdr.fade_out().await;
     }
 }

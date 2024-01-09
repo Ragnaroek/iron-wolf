@@ -12,7 +12,9 @@ pub const MAX_DOORS : usize = 64;
 // tile constants
 
 pub const PUSHABLE_TILE : u16 = 98;
+pub const ELEVATOR_TILE : u16 = 21;
 pub const AMBUSH_TILE : u16 = 106;
+pub const ALT_ELEVATOR_TILE : u16 = 107;
 
 pub const GLOBAL1 : i32	= 1<<16;
 pub const MAP_SIZE : usize = 64;
@@ -185,6 +187,20 @@ pub struct ControlState {
     pub button_state : [bool; NUM_BUTTONS],
 }
 
+impl ControlState {
+    pub fn set_button_held(&mut self, button: Button, held: bool) {
+        self.button_held[button as usize] = held;
+    }
+
+    pub fn button_held(&self, button: Button) -> bool {
+        self.button_held[button as usize]
+    }
+
+    pub fn button_state(&self, button: Button) -> bool {
+        self.button_state[button as usize]
+    }
+}
+
 // nums here are an index into ControlState::button_state
 #[repr(usize)]
 pub enum Button {
@@ -259,11 +275,14 @@ pub struct GameState {
     pub push_wall_dir: Dir,
 }
 
-pub struct UserState {
+pub struct WindowState {
     pub window_x : usize,
     pub window_y : usize,
     pub window_w : usize,
     pub window_h : usize,
+
+    pub print_x: usize,
+    pub print_y: usize,
 
     pub font_number: usize,
     pub font_color: u8,

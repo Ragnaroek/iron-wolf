@@ -9,7 +9,8 @@ use vga::VGA;
 use crate::act1::{move_doors, move_push_walls};
 use crate::agent::{draw_health, draw_level, draw_face, draw_lives, draw_ammo, draw_keys, draw_weapon, draw_score};
 use crate::debug::debug_keys;
-use crate::def::UserState;
+use crate::def::ObjType;
+use crate::def::WindowState;
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::{RayCast, three_d_refresh};
 use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC, EXTRA_POINTS};
@@ -221,7 +222,7 @@ fn calc_sines() -> Vec<Fixed> {
     sines
 }
 
-pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, user_state: &mut UserState, control_state: &mut ControlState, vga: &VGA, rc: &mut RayCast, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, win_state: &mut WindowState, control_state: &mut ControlState, vga: &VGA, rc: &mut RayCast, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let shifts = init_colour_shifts();
 
     game_state.play_state = PlayState::StillPlaying;
@@ -255,11 +256,6 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
 
         poll_controls(control_state, tics, input);
 
-        if input.key_pressed(NumCode::P) {
-            let player = level_state.player();
-            println!("x={},y={},angle={}", player.x, player.y, player.angle); 
-        }
-
         move_doors(level_state, tics);
         move_push_walls(level_state, game_state, tics);
 
@@ -271,7 +267,7 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
         
 	    three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
 
-        check_keys(rdr, user_state, game_state, input).await;
+        check_keys(rdr, win_state, game_state, level_state.player(), input).await;
 
         let offset_prev = rdr.buffer_offset();
         for i in 0..3 {
@@ -410,28 +406,28 @@ fn vlin(rdr: &VGARenderer, y: usize, z: usize, x: usize, c: u8) {
 
 ///	Generates a window of a given width & height in the
 /// middle of the screen
-pub fn center_window(rdr: &VGARenderer, user_state: &mut UserState, width: usize, height: usize) {
-    draw_window(rdr, user_state, ((320/8)-width) / 2, ((160/8)-height)/2, width, height);
+pub fn center_window(rdr: &VGARenderer, win_state: &mut WindowState, width: usize, height: usize) {
+    draw_window(rdr, win_state, ((320/8)-width) / 2, ((160/8)-height)/2, width, height);
 }
 
-async fn check_keys(rdr: &VGARenderer, user_state: &mut UserState, game_state: &mut GameState, input: &input::Input) {
+async fn check_keys(rdr: &VGARenderer, win_state: &mut WindowState, game_state: &mut GameState, player: &ObjType, input: &input::Input) {
     if input.key_pressed(NumCode::BackSpace) && 
     input.key_pressed(NumCode::LShift) && 
     input.key_pressed(NumCode::Alt) &&
     check_param("goobers")
     {
-        clear_split_vwb(user_state);
+        clear_split_vwb(win_state);
 
-        message(rdr, user_state, "Debugging keys are\nnow available!");
+        message(rdr, win_state, "Debugging keys are\nnow available!");
         input.clear_keys_down();
         input.check_ack().await;
-        user_state.debug_ok = true;
+        win_state.debug_ok = true;
     }
 
-    if input.key_pressed(NumCode::Tab) && user_state.debug_ok {
+    if input.key_pressed(NumCode::Tab) && win_state.debug_ok {
         let prev_buffer = rdr.buffer_offset();
         rdr.set_buffer_offset(rdr.active_buffer());
-        debug_keys(rdr, user_state, game_state, input).await;
+        debug_keys(rdr, win_state, game_state, player, input).await;
         rdr.set_buffer_offset(prev_buffer);
     }
 }

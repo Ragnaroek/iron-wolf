@@ -1,7 +1,7 @@
 use vga::VGA;
 
 use crate::agent::{draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_weapon};
-use crate::def::{ANGLES, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, PlayState, WeaponType, Sprite, StaticType, VisObj, ObjKey, Assets, ObjType, Level, LevelState, At, EnemyType, GameState, Difficulty, ControlState, AMBUSH_TILE, UserState};
+use crate::def::{ANGLES, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, PlayState, WeaponType, Sprite, StaticType, VisObj, ObjKey, Assets, ObjType, Level, LevelState, At, EnemyType, GameState, Difficulty, ControlState, AMBUSH_TILE, WindowState};
 use crate::assets::load_map_from_assets;
 use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{dead_guard, stand};
@@ -27,7 +27,7 @@ pub const ANGLE_1 : u32 = ANGLE_45/45;
 
 pub const DEATH_ROTATE : u64 = 2;
 
-pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, input: &Input, prj: &ProjectionConfig, assets: &Assets, user_state: &mut UserState) {
+pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, input: &Input, prj: &ProjectionConfig, assets: &Assets, win_state: &mut WindowState) {
     let mut game_state = new_game_state();
     let mut control_state : ControlState = new_control_state();
     
@@ -46,7 +46,7 @@ pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, inpu
 		
 		rdr.fade_in().await;
 
-		play_loop(ticker, &mut level_state, &mut game_state, user_state, &mut control_state, vga, &mut rc, rdr, input, prj, assets).await;
+		play_loop(ticker, &mut level_state, &mut game_state, win_state, &mut control_state, vga, &mut rc, rdr, input, prj, assets).await;
 
 		match game_state.play_state {
 			PlayState::Died => {

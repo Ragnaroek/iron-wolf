@@ -1,11 +1,11 @@
-use crate::{menu::{draw_stripes, clear_ms_screen}, vga_render::VGARenderer, input::Input, assets::GraphicNum, def::UserState};
+use crate::{menu::{draw_stripes, clear_ms_screen}, vga_render::VGARenderer, input::Input, assets::GraphicNum, def::WindowState};
 
-pub fn clear_split_vwb(user_state: &mut UserState) {
+pub fn clear_split_vwb(win_state: &mut WindowState) {
     // TODO clear 'update' global variable?
-    user_state.window_x = 0;
-    user_state.window_y = 0;
-    user_state.window_w = 320;
-    user_state.window_h = 160;
+    win_state.window_x = 0;
+    win_state.window_y = 0;
+    win_state.window_w = 320;
+    win_state.window_h = 160;
 }
 
 pub async fn check_highscore(rdr: &VGARenderer, input: &Input, score: i32, map: usize) {
