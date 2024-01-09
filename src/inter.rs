@@ -1,4 +1,6 @@
-use crate::{menu::{draw_stripes, clear_ms_screen}, vga_render::VGARenderer, input::Input, assets::GraphicNum, def::WindowState};
+use vga::VGA;
+
+use crate::{menu::{draw_stripes, clear_ms_screen}, vga_render::VGARenderer, input::Input, assets::GraphicNum, def::{WindowState, STATUS_LINES}, vl::fade_in, vh::vw_fade_in};
 
 pub fn clear_split_vwb(win_state: &mut WindowState) {
     // TODO clear 'update' global variable?
@@ -28,4 +30,27 @@ fn draw_high_scores(rdr: &VGARenderer) {
     rdr.pic(4*8, 68, GraphicNum::CNAMEPIC);
     rdr.pic(20*8, 68, GraphicNum::CLEVELPIC);
     rdr.pic(28*8, 68, GraphicNum::CSCOREPIC);
+}
+/// LevelCompleted
+///
+/// Entered with the screen faded out
+/// Still in split screen mode with the status bar
+///
+/// Exit with the screen faded out
+pub async fn level_completed(vga: &VGA, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState) {
+    rdr.set_buffer_offset(rdr.active_buffer());
+
+    clear_split_vwb(win_state);
+    rdr.bar(0, 0, 320, 200-STATUS_LINES, 127);
+    // TODO StartCPMusic(ENDLEVEL_MUS)
+
+    // do the intermission
+    rdr.set_buffer_offset(rdr.active_buffer());
+    rdr.pic(0, 16, GraphicNum::LGUYPIC);
+
+    // TODO write level complete data into screen
+
+    vw_fade_in(vga).await;
+    
+    input.ack().await;
 }

@@ -69,6 +69,8 @@ pub enum GraphicNum {
 	CNAMEPIC = 39,
 	CSCOREPIC = 40,
 
+	LGUYPIC = 43,
+
 	STATUSBARPIC = 86,
 	TITLEPIC = 87,
 	PG13PIC = 88,

@@ -13,7 +13,7 @@ pub async fn debug_keys(rdr: &VGARenderer, win_state: &mut WindowState, game_sta
     if input.key_pressed(NumCode::F) {
         center_window(rdr, win_state, 14, 4);
         print(rdr, win_state, &format!("X:{}\nY:{}\nA:{}", player.x, player.y, player.angle));
-        input.check_ack().await;
+        input.ack().await;
         return;
     }
     if input.key_pressed(NumCode::G) {
@@ -23,7 +23,7 @@ pub async fn debug_keys(rdr: &VGARenderer, win_state: &mut WindowState, game_sta
         } else {
             print_centered(rdr, win_state, "God mode ON");
         }
-        input.check_ack().await;
+        input.ack().await;
         game_state.god_mode = !game_state.god_mode;
         return;
     }

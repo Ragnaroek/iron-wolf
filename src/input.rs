@@ -27,7 +27,7 @@ impl Input {
 		false
 	}
 
-	pub async fn check_ack(&self) -> bool {
+	pub async fn ack(&self) -> bool {
 		self.wait_user_input(u64::MAX).await
 	}
 
