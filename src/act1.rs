@@ -1,4 +1,4 @@
-use crate::def::{DoorType, StaticType, StaticKind, StaticInfo, Sprite, DoorAction, LevelState, At, FL_BONUS, MAX_STATS, GameState, Dir};
+use crate::{def::{DoorType, StaticType, StaticKind, StaticInfo, Sprite, DoorAction, LevelState, At, FL_BONUS, MAX_STATS, GameState, Dir}, game};
 
 const OPENTICS : u32 = 300;
 const NUM_STAT_INFO : usize = 49;
@@ -12,32 +12,32 @@ const NUM_STAT_INFO : usize = 49;
 */
 
 static STAT_INFO : [StaticInfo; NUM_STAT_INFO] = [
-    StaticInfo{sprite: Sprite::Stat0, kind: StaticKind::None},     // puddle          spr1v
+    StaticInfo{sprite: Sprite::Stat0, kind: StaticKind::Dressing}, // puddle          spr1v
     StaticInfo{sprite: Sprite::Stat1, kind: StaticKind::Block},    // Green Barrel    "
     StaticInfo{sprite: Sprite::Stat2, kind: StaticKind::Block},    // Table/chairs    "
     StaticInfo{sprite: Sprite::Stat3, kind: StaticKind::Block},    // Floor lamp      "
-    StaticInfo{sprite: Sprite::Stat4, kind: StaticKind::None},     // Chandelier      "
+    StaticInfo{sprite: Sprite::Stat4, kind: StaticKind::Dressing}, // Chandelier      "
     StaticInfo{sprite: Sprite::Stat5, kind: StaticKind::Block},    // Hanged man      "
     StaticInfo{sprite: Sprite::Stat6, kind: StaticKind::BoAlpo},   // Bad food        "
     StaticInfo{sprite: Sprite::Stat7, kind: StaticKind::Block},    // Red pillar      "
     
     StaticInfo{sprite: Sprite::Stat8, kind: StaticKind::Block},    // Tree            spr2v
-    StaticInfo{sprite: Sprite::Stat9, kind: StaticKind::None},     // Skeleton flat   "
+    StaticInfo{sprite: Sprite::Stat9, kind: StaticKind::Dressing}, // Skeleton flat   "
     StaticInfo{sprite: Sprite::Stat10, kind: StaticKind::Block},   // Sink            " (SOD:gibs)
     StaticInfo{sprite: Sprite::Stat11, kind: StaticKind::Block},   // Potted plant    "
     StaticInfo{sprite: Sprite::Stat12, kind: StaticKind::Block},   // Urn             "
     StaticInfo{sprite: Sprite::Stat13, kind: StaticKind::Block},   // Bare table      "
-    StaticInfo{sprite: Sprite::Stat14, kind: StaticKind::None},    // Ceiling light   "
-    StaticInfo{sprite: Sprite::Stat15, kind: StaticKind::None},    // Kitchen stuff   "
+    StaticInfo{sprite: Sprite::Stat14, kind: StaticKind::Dressing},// Ceiling light   "
+    StaticInfo{sprite: Sprite::Stat15, kind: StaticKind::Dressing},// Kitchen stuff   "
 
     StaticInfo{sprite: Sprite::Stat16, kind: StaticKind::Block},   // suit of armor   spr3v
     StaticInfo{sprite: Sprite::Stat17, kind: StaticKind::Block},   // Hanging cage    "
     StaticInfo{sprite: Sprite::Stat18, kind: StaticKind::Block},   // SkeletoninCage  "
-    StaticInfo{sprite: Sprite::Stat19, kind: StaticKind::None},    // Skeleton relax  "
+    StaticInfo{sprite: Sprite::Stat19, kind: StaticKind::Dressing},// Skeleton relax  "
     StaticInfo{sprite: Sprite::Stat20, kind: StaticKind::BoKey1},  // Key 1           "
     StaticInfo{sprite: Sprite::Stat21, kind: StaticKind::BoKey2},  // Key 2           "
     StaticInfo{sprite: Sprite::Stat22, kind: StaticKind::Block},   // stuff				(SOD:gibs)
-    StaticInfo{sprite: Sprite::Stat23, kind: StaticKind::None},    // stuff
+    StaticInfo{sprite: Sprite::Stat23, kind: StaticKind::Dressing},// stuff
 
     StaticInfo{sprite: Sprite::Stat24, kind: StaticKind::BoFood},          // Good food       spr4v
     StaticInfo{sprite: Sprite::Stat25, kind: StaticKind::BoFirstaid},      // First aid       "
@@ -58,29 +58,30 @@ static STAT_INFO : [StaticInfo; NUM_STAT_INFO] = [
     StaticInfo{sprite: Sprite::Stat39, kind: StaticKind::Block},           // flag				"
 
     StaticInfo{sprite: Sprite::Stat40, kind: StaticKind::Block},           // Call Apogee		spr7v
-    StaticInfo{sprite: Sprite::Stat41, kind: StaticKind::None},            // junk            "		"
-    StaticInfo{sprite: Sprite::Stat42, kind: StaticKind::None},            // junk            "
-    StaticInfo{sprite: Sprite::Stat43, kind: StaticKind::None},            // junk            "
+    StaticInfo{sprite: Sprite::Stat41, kind: StaticKind::Dressing},        // junk            "		"
+    StaticInfo{sprite: Sprite::Stat42, kind: StaticKind::Dressing},        // junk            "
+    StaticInfo{sprite: Sprite::Stat43, kind: StaticKind::Dressing},        // junk            "
     StaticInfo{sprite: Sprite::Stat44, kind: StaticKind::Block},           // pots            "
     StaticInfo{sprite: Sprite::Stat45, kind: StaticKind::Block},           // stove           " (SOD:gibs)
     StaticInfo{sprite: Sprite::Stat46, kind: StaticKind::Block},           // spears          " (SOD:gibs)
-    StaticInfo{sprite: Sprite::Stat47, kind: StaticKind::None},            // vines			"
+    StaticInfo{sprite: Sprite::Stat47, kind: StaticKind::Dressing},        // vines			"
     StaticInfo{sprite: Sprite::Stat26, kind: StaticKind::BoClip2},         // Clip            "
 ]; 
 
-pub fn spawn_static(actor_at: &mut Vec<Vec<At>>, tile_x: usize, tile_y: usize, stat_type: usize) -> StaticType {
+pub fn spawn_static(actor_at: &mut Vec<Vec<At>>, game_state: &mut GameState, tile_x: usize, tile_y: usize, stat_type: usize) -> StaticType {
     let info = &STAT_INFO[stat_type];
 
     let mut flags = 0;
-
     if info.kind == StaticKind::Block {
-        actor_at[tile_x][tile_y] = At::Blocked;
+        actor_at[tile_x][tile_y] = At::Blocked 
+    } else if info.kind == StaticKind::Dressing {
+        flags = 0;
     } else {
         if info.kind == StaticKind::BoCross || info.kind == StaticKind::BoChalice || info.kind == StaticKind::BoBible || info.kind == StaticKind::BoCrown || info.kind == StaticKind::BoFullheal {
-            // TODO inc gamestate.treasuretotal!
+            // TODO check loaded game from iw-ed?
+            game_state.treasure_total += 1;
         }
         flags = FL_BONUS;
-
     }
     StaticType{
         tile_x,
