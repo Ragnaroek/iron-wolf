@@ -7,6 +7,7 @@ use crate::def::{Assets, WindowState};
 use crate::assets::{GraphicNum, SIGNON, GAMEPAL};
 use crate::assets;
 use crate::def::IWConfig;
+use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::config;
 use crate::play;
@@ -121,16 +122,27 @@ async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr:
             }
             rdr.fade_out().await;
 
+            // credits page
             rdr.pic(0,0, GraphicNum::CREDITSPIC);
             rdr.fade_in().await;
             if input.wait_user_input(time::TICK_BASE*10).await {
                 break;
             }
             rdr.fade_out().await;
-         
-            //TODO DrawHighScore() here
+        
+            // high scores
+            draw_high_scores(rdr);
+            rdr.fade_in().await;
+            if input.wait_user_input(time::TICK_BASE*10).await {
+                break;
+            }
+
             //TODO PlayDemo() here
         }
+
+        rdr.fade_out().await;
+
+        // TODO RecordDemo()
 
         game_loop(&ticker, vga, rdr, input, prj, assets, win_state).await;
         rdr.fade_out().await;
