@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use vga::SCReg;
+use vga::input::NumCode;
 use vga::util::spawn_task;
 
 use crate::def::{Assets, WindowState};
@@ -10,6 +11,7 @@ use crate::def::IWConfig;
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::config;
+use crate::menu::control_panel;
 use crate::play;
 use crate::us1::c_print;
 use crate::vl;
@@ -143,6 +145,7 @@ async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr:
         rdr.fade_out().await;
 
         // TODO RecordDemo()
+        control_panel(&ticker, rdr, input, win_state, NumCode::None).await;
 
         game_loop(&ticker, vga, rdr, input, prj, assets, win_state).await;
         rdr.fade_out().await;

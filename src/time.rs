@@ -6,7 +6,7 @@ use async_std::task;
 use vga::util;
 
 pub const TICK_BASE : u64 = 70; //Hz
-const TARGET_NANOS : u128 = 1_000_000_000 / TICK_BASE as u128;
+const TARGET_NANOS : u128 = 1_000_000_000 / TICK_BASE as u128; //duration of one tick in nanos
 const MAX_TICS: u64 = 10;
 
 pub type TimeCount = Arc<AtomicU64>;
@@ -78,6 +78,11 @@ impl Ticker {
             tics = MAX_TICS
         }
         tics
+    }
+
+    // waits for 'count' tics in a non-busy way
+    pub async fn tics(&self, count: u64) {
+        task::sleep(std::time::Duration::from_nanos((TARGET_NANOS * count as u128) as u64)).await
     }
 }
 
