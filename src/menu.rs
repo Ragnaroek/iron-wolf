@@ -2,8 +2,9 @@
 use std::ascii;
 use vga::input::NumCode;
 
-use crate::{vga_render::VGARenderer, def::WindowState, vh::{vw_hlin, vw_vlin}, us1::print, input::{Input, ControlInfo, read_control, ControlDirection}, assets::GraphicNum};
+use crate::{assets::GraphicNum, input::{Input, ControlInfo, read_control, ControlDirection}, start::quit, us1::print, user::rnd_t, vga_render::VGARenderer, vh::{vw_hlin, vw_vlin}, vl::fade_in};
 use crate::time::Ticker;
+use crate::def::WindowState;
 
 const STRIPE : u8 = 0x2c;
 const BORDER_COLOR : u8 = 0x29;
@@ -24,27 +25,70 @@ const MENU_H : usize = 13*10+6;
 struct ItemInfo {
     pub x: usize,
     pub y: usize,
-    pub cur_pos: usize,
+    pub cur_pos: MenuItem,
     pub indent: usize,
 }
 
 struct ItemType {
     pub active: bool,
     pub string: &'static str,
+    pub item: MenuItem,
     // TODO action pointer func
 }
 
-static MAIN_MENU : [ItemType; 9] = [
-    ItemType{active: true, string: "New Game"},
-    ItemType{active: true, string: "Sound"},
-    ItemType{active: true, string: "Control"},
-    ItemType{active: true, string: "Load Game"},
-    ItemType{active: true, string: "Save Game"},
-    ItemType{active: true, string: "Change View"},
-    ItemType{active: true, string: "View Scores"},
-    ItemType{active: true, string: "Back to Demo"},
-    ItemType{active: true, string: "Quit"},
+// usize = position in the main menu of the entry
+#[derive(Copy, Clone, Debug)]
+#[repr(usize)]
+enum MenuItem {
+    NewGame = 0,
+    Sound = 1,
+    Control = 2,
+    LoadGame = 3,
+    SaveGame = 4,
+    ChangeView = 5,
+    ViewScores = 6,
+    BackToDemo = 7,
+    Quit = 8,
+}
+
+impl MenuItem {
+    fn pos(self) -> usize {
+        self as usize
+    }
+}
+
+static END_STRINGS : [&'static str; 9] = [
+    "Dost thou wish to\nleave with such hasty\nabandon?",
+	"Chickening out...\nalready?",
+	"Press N for more carnage.\nPress Y to be a weenie.",
+	"So, you think you can\nquit this easily, huh?",
+	"Press N to save the world.\nPress Y to abandon it in\nits hour of need.",
+	"Press N if you are brave.\nPress Y to cower in shame.",
+	"Heroes, press N.\nWimps, press Y.",
+	"You are at an intersection.\nA sign says, 'Press Y to quit.'\n>",
+	"For guns and glory, press N.\nFor work and worry, press Y."
 ];
+
+static MAIN_MENU : [ItemType; 9] = [
+    ItemType{item: MenuItem::NewGame, active: true, string: "New Game"},
+    ItemType{item: MenuItem::Sound, active: true, string: "Sound"},
+    ItemType{item: MenuItem::Control, active: true, string: "Control"},
+    ItemType{item: MenuItem::LoadGame, active: true, string: "Load Game"},
+    ItemType{item: MenuItem::SaveGame, active: true, string: "Save Game"},
+    ItemType{item: MenuItem::ChangeView, active: true, string: "Change View"},
+    ItemType{item: MenuItem::ViewScores, active: true, string: "View Scores"},
+    ItemType{item: MenuItem::BackToDemo, active: true, string: "Back to Demo"},
+    ItemType{item: MenuItem::Quit, active: true, string: "Quit"},
+];
+
+fn menu_item_pos(which_pos: usize) -> Option<MenuItem> {
+    for t in &MAIN_MENU {
+        if t.item.pos() == which_pos {
+            return Some(t.item)
+        }
+    }
+    None
+}
 
 static COLOR_HLITE : [u8; 4] = [
     DEACTIVE,
@@ -60,8 +104,7 @@ static COLOR_NORML : [u8; 4] = [
     0x6b,
 ];
 
-static MAIN_ITEMS : ItemInfo = ItemInfo{x: MENU_X, y: MENU_Y, cur_pos: 0, indent: 24}; // TODO define START_ITEM
-
+static MAIN_ITEMS : ItemInfo = ItemInfo{x: MENU_X, y: MENU_Y, cur_pos: MenuItem::NewGame, indent: 24}; // TODO define START_ITEM
 
 /// Wolfenstein Control Panel!  Ta Da!
 pub async fn control_panel(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, scan: NumCode) {
@@ -75,23 +118,89 @@ pub async fn control_panel(ticker: &Ticker, rdr: &VGARenderer, input: &Input, wi
 
     // MAIN MENU LOOP
     loop {
-       handle_menu(ticker, rdr, input, win_state, &MAIN_ITEMS, &MAIN_MENU).await;
+       let which = handle_menu(ticker, rdr, input, win_state, &MAIN_ITEMS, &MAIN_MENU).await;
+       println!("which = {:?}", which);
+       match which {
+        Some(MenuItem::ViewScores) => {
+
+        },
+        Some(MenuItem::BackToDemo) => {
+            break;
+        },
+        None|Some(MenuItem::Quit) => {
+            menu_quit(ticker, rdr, input, win_state).await;
+        },
+        _ => {
+            draw_main_menu(rdr, win_state);
+            rdr.fade_in().await; 
+        }
+       }
     }
 
-    input.ack().await; //tmp. until menu handling implemented
+    // RETURN/START GAME EXECUTION
 }
 
-async fn handle_menu(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, item_info: &ItemInfo, items: &[ItemType]) -> isize {
-    let mut which = item_info.cur_pos;
+async fn menu_quit(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState) {
+    let text = END_STRINGS[((rnd_t()&0x07)+(rnd_t()&1)) as usize];
+    if confirm(ticker, rdr, input, win_state, text).await {
+        //TODO stop music
+        rdr.fade_in().await;
+        quit(None)
+    }
+
+    draw_main_menu(rdr, win_state)
+}
+
+async fn confirm(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, str: &str) -> bool {
+    message(rdr, win_state, str);
+    input.clear_keys_down();
+
+    // BLINK CURSOR
+    let x = win_state.print_x;
+    let y = win_state.print_y;
+    let mut tick = false;
+    let mut time_count = 0;
+    while !input.key_pressed(NumCode::Y) && !input.key_pressed(NumCode::N) && !input.key_pressed(NumCode::Escape) {
+        if time_count >= 10 {
+            if tick {
+                rdr.bar(x, y, 8, 13, TEXT_COLOR);
+            } else {
+                win_state.print_x = x;
+                win_state.print_y = y;
+                print(rdr, win_state, "_")
+            }
+            tick = !tick;
+            time_count = 0;
+        }
+        
+        ticker.tics(1).await;
+        time_count += 1;
+    }
+
+    let exit = if input.key_pressed(NumCode::Y) {
+        // TODO ShootSnd
+        true
+    } else {
+        false
+    };
+
+    input.clear_keys_down();
+    // TODO SDPLaySound(whichsnd[exit])
+
+    exit
+}
+
+async fn handle_menu(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, item_info: &ItemInfo, items: &[ItemType]) -> Option<MenuItem> {
+    let mut which_pos = item_info.cur_pos.pos();
     let x = item_info.x & 8_usize.wrapping_neg();
     let base_y = item_info.y - 2;
-    let mut y = base_y + which * 13;
+    let mut y = base_y + which_pos * 13;
 
     rdr.pic(x, y, GraphicNum::CCURSOR1PIC);
 
     input.clear_keys_down();
 
-    let mut exit = 0;
+    let exit;
     loop {
         // TODO Animate gun
 
@@ -103,49 +212,49 @@ async fn handle_menu(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_stat
         
         match ci.dir {
             ControlDirection::North => {
-                erase_gun(rdr, win_state, item_info, items, x, y, which);
+                erase_gun(rdr, win_state, item_info, items, x, y, which_pos);
 
-                if which > 0 && items[which-1].active {
+                if which_pos > 0 && items[which_pos-1].active {
                     y -= 6;
                     draw_half_step(ticker, rdr, x, y).await;
                 }
 
                 loop {
-                    if which == 0 {
-                        which = items.len()-1;
+                    if which_pos == 0 {
+                        which_pos = items.len()-1;
                     } else {
-                        which -= 1;
+                        which_pos -= 1;
                     }
 
-                    if items[which].active {
+                    if items[which_pos].active {
                         break;
                     }  
                 }
-                y = draw_gun(rdr, win_state, item_info, items, x, y, which, base_y);
+                y = draw_gun(rdr, win_state, item_info, items, x, y, which_pos, base_y);
 
                 // WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
                 tic_delay(ticker, input, 20).await;
             },
             ControlDirection::South => {
-                erase_gun(rdr, win_state, item_info, items, x, y, which);
+                erase_gun(rdr, win_state, item_info, items, x, y, which_pos);
 
-                if which != items.len()-1 && items[which+1].active {
+                if which_pos != items.len()-1 && items[which_pos+1].active {
                     y += 6;
                     draw_half_step(ticker, rdr, x, y).await;
                 }
 
                 loop {
-                    if which == items.len() - 1 {
-                        which = 0;
+                    if which_pos == items.len() - 1 {
+                        which_pos = 0;
                     } else {
-                        which += 1;
+                        which_pos += 1;
                     }
 
-                    if items[which].active {
+                    if items[which_pos].active {
                         break;
                     }
                 }
-                y = draw_gun(rdr, win_state, item_info, items, x, y, which, base_y);
+                y = draw_gun(rdr, win_state, item_info, items, x, y, which_pos, base_y);
 
                 // WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
                 tic_delay(ticker, input, 20).await;
@@ -160,22 +269,23 @@ async fn handle_menu(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_stat
         if input.key_pressed(NumCode::Escape) {
             exit = 2;
             break;
-        }        
+        }
     }
 
     input.clear_keys_down();
 
     if exit == 1 {
-        return which as isize;
+        return menu_item_pos(which_pos);
     }
     if exit == 2 { //ESC
-        return -1;
+        return None
     }
 
-    return 0;
+    return Some(MenuItem::NewGame);
 }
 
 async fn tic_delay(ticker: &Ticker, input: &Input, count: u64) {
+    input.clear_keys_down();
     for _ in 0..count {
         let ci = read_any_control(input);
         if ci.dir != ControlDirection::None {
@@ -192,24 +302,24 @@ async fn draw_half_step(ticker: &Ticker, rdr: &VGARenderer, x: usize, y: usize) 
     ticker.tics(8).await;
 }
 
-fn erase_gun(rdr: &VGARenderer, win_state: &mut WindowState, item_info: &ItemInfo, items: &[ItemType], x: usize, y: usize, which: usize) {
+fn erase_gun(rdr: &VGARenderer, win_state: &mut WindowState, item_info: &ItemInfo, items: &[ItemType], x: usize, y: usize, which_pos: usize) {
     rdr.bar(x-1, y, 25, 16, BKGD_COLOR);
-    set_text_color(win_state, &items[which], false);
+    set_text_color(win_state, &items[which_pos], false);
 
     win_state.print_x = item_info.x + item_info.indent;
-    win_state.print_y = item_info.y + which * 13;
-    print(rdr, win_state, items[which].string); 
+    win_state.print_y = item_info.y + which_pos * 13;
+    print(rdr, win_state, items[which_pos].string); 
 }
 
-fn draw_gun(rdr: &VGARenderer, win_state: &mut WindowState, item_info: &ItemInfo, items: &[ItemType], x: usize, y: usize, which: usize, base_y: usize) -> usize {
+fn draw_gun(rdr: &VGARenderer, win_state: &mut WindowState, item_info: &ItemInfo, items: &[ItemType], x: usize, y: usize, which_pos: usize, base_y: usize) -> usize {
     rdr.bar(x-1, y, 25, 16, BKGD_COLOR);
-    let new_y = base_y + which * 13;
+    let new_y = base_y + which_pos * 13;
     rdr.pic(x, new_y, GraphicNum::CCURSOR1PIC);
-    set_text_color(win_state, &items[which], true);
+    set_text_color(win_state, &items[which_pos], true);
 
     win_state.print_x = item_info.x + item_info.indent;
-    win_state.print_y = item_info.y + which * 13;
-    print(rdr, win_state, items[which].string);
+    win_state.print_y = item_info.y + which_pos * 13;
+    print(rdr, win_state, items[which_pos].string);
 
     // TODO call custom routine?
     // TODO PlaySound(MOVEGUN2SND)
@@ -252,7 +362,7 @@ fn draw_menu(rdr: &VGARenderer, win_state: &mut WindowState, item_info: &ItemInf
 
     for i in 0..items.len() {
         let item = &items[i];
-        set_text_color(win_state, item, which == i);
+        set_text_color(win_state, item, which.pos() == i);
 
         win_state.print_y = item_info.y + i * 13;
         if item.active {

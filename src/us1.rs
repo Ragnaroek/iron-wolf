@@ -2,14 +2,18 @@ use crate::{assets::Font, def::WindowState, vga_render::VGARenderer, vh::{WHITE,
 
 pub fn print(rdr: &VGARenderer, win_state: &mut WindowState, str: &str) {
     let font = &rdr.fonts[win_state.font_number];
-    let lines = str.split("\n");
-    let mut px = win_state.print_x;
-    let mut py = win_state.print_y;
-    for line in lines {
-        let (_, h) = measure_string(font, line);
-        draw_string(rdr, font, line, px, py, win_state.font_color);
-        px = win_state.window_x;
-        py += h;
+    let lines: Vec<&str> = str.split("\n").collect();
+    for i in 0..lines.len() {
+        let line = lines[i];
+        let (w, h) = measure_string(font, line);
+        draw_string(rdr, font, line, win_state.print_x, win_state.print_y, win_state.font_color);
+        
+        if i == lines.len()-1 {
+            win_state.print_x += w;
+        } else {
+            win_state.print_x = win_state.window_x;
+            win_state.print_y += h;
+        }
     }
 }
 
