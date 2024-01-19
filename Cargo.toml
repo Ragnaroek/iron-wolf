@@ -21,12 +21,12 @@ path = "src/main.rs"
 serde = { version = "1.0.195", features = ["derive"] }
 cfg-if = { version = "1.0" }
 async-std = { version = "1.12.0", features = ["unstable"] }
-vga-emu = { version = "0.5.1" } # path="../vga-emu/"
+vga-emu = { version = "0.5.3" } # path="../vga-emu/"
 # feature web
-wasm-bindgen = { version = "0.2.89", optional = true, features = ["serde-serialize"]}
+wasm-bindgen = { version = "0.2.90", optional = true, features = ["serde-serialize"]}
 console_error_panic_hook = { version = "0.1.7", optional = true }
-js-sys = { version = "0.3.66", optional = true }
-web-sys = { version = "0.3.66", optional = true, features = [
+js-sys = { version = "0.3.67", optional = true }
+web-sys = { version = "0.3.67", optional = true, features = [
   'Document',
   'Window',
   'HtmlInputElement',
