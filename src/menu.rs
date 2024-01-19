@@ -150,15 +150,30 @@ async fn handle_menu(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_stat
 
     rdr.pic(x, y, GraphicNum::CCURSOR1PIC);
 
+    let mut shape = GraphicNum::CCURSOR1PIC;
+    let mut timer = 8;
+
     input.clear_keys_down();
 
     let exit;
     loop {
-        // TODO Animate gun
+        // CHANGE GUN SHAPE
+        if ticker.get_count() > timer {
+            ticker.clear_count();
+            if shape == GraphicNum::CCURSOR1PIC {
+                shape = GraphicNum::CCURSOR2PIC;
+                timer = 8;
+            } else {
+                shape = GraphicNum::CCURSOR1PIC;
+                timer = 70;
+            }
+            rdr.pic(x, y, shape);
+            // TODO call routine?
+        }
 
         // TODO CheckPause
 
-        // TODO check key press
+        // TODO check key presses
 
         let ci = read_any_control(input);
         
