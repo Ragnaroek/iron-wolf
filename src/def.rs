@@ -276,6 +276,41 @@ pub struct GameState {
     pub push_wall_dir: Dir,
 }
 
+pub struct ItemInfo {
+    pub x: usize,
+    pub y: usize,
+    pub cur_pos: MenuItem,
+    pub indent: usize,
+}
+
+pub struct ItemType {
+    pub active: bool,
+    pub string: &'static str,
+    pub item: MenuItem,
+    // TODO action pointer func
+}
+
+// usize = position in the main menu of the entry
+#[derive(Copy, Clone, Debug)]
+#[repr(usize)]
+pub enum MenuItem {
+    NewGame = 0,
+    Sound = 1,
+    Control = 2,
+    LoadGame = 3,
+    SaveGame = 4,
+    ChangeView = 5,
+    ViewScores = 6,
+    BackToDemo = 7,
+    Quit = 8,
+}
+
+impl MenuItem {
+    pub fn pos(self) -> usize {
+        self as usize
+    }
+}
+
 pub struct WindowState {
     pub window_x : usize,
     pub window_y : usize,
@@ -290,6 +325,9 @@ pub struct WindowState {
     pub back_color: u8,
 
     pub debug_ok : bool,
+
+    pub main_menu: [ItemType; 9],
+    pub main_state: ItemInfo,
 }
 
 impl WindowState {

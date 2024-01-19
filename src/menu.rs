@@ -2,9 +2,10 @@
 use std::ascii;
 use vga::input::NumCode;
 
-use crate::{assets::GraphicNum, input::{Input, ControlInfo, read_control, ControlDirection}, start::quit, us1::print, user::rnd_t, vga_render::VGARenderer, vh::{vw_hlin, vw_vlin}, vl::fade_in};
+use crate::{input::{Input, ControlInfo, read_control, ControlDirection}, start::quit, us1::print, user::rnd_t, vga_render::VGARenderer, vh::{vw_hlin, vw_vlin}, vl::fade_in};
 use crate::time::Ticker;
-use crate::def::WindowState;
+use crate::def::{WindowState, ItemType, MenuItem};
+use crate::assets::GraphicNum;
 
 const STRIPE : u8 = 0x2c;
 const BORDER_COLOR : u8 = 0x29;
@@ -17,45 +18,10 @@ const READ_HCOLOR : u8 = 0x47;
 const TEXT_COLOR : u8 = 0x17;
 const HIGHLIGHT : u8 = 0x13;
 
-const MENU_X : usize = 76;
-const MENU_Y : usize = 55;
+pub const MENU_X : usize = 76;
+pub const MENU_Y : usize = 55;
 const MENU_W : usize = 178;
 const MENU_H : usize = 13*10+6;
-
-struct ItemInfo {
-    pub x: usize,
-    pub y: usize,
-    pub cur_pos: MenuItem,
-    pub indent: usize,
-}
-
-struct ItemType {
-    pub active: bool,
-    pub string: &'static str,
-    pub item: MenuItem,
-    // TODO action pointer func
-}
-
-// usize = position in the main menu of the entry
-#[derive(Copy, Clone, Debug)]
-#[repr(usize)]
-enum MenuItem {
-    NewGame = 0,
-    Sound = 1,
-    Control = 2,
-    LoadGame = 3,
-    SaveGame = 4,
-    ChangeView = 5,
-    ViewScores = 6,
-    BackToDemo = 7,
-    Quit = 8,
-}
-
-impl MenuItem {
-    fn pos(self) -> usize {
-        self as usize
-    }
-}
 
 static END_STRINGS : [&'static str; 9] = [
     "Dost thou wish to\nleave with such hasty\nabandon?",
@@ -69,20 +35,8 @@ static END_STRINGS : [&'static str; 9] = [
 	"For guns and glory, press N.\nFor work and worry, press Y."
 ];
 
-static MAIN_MENU : [ItemType; 9] = [
-    ItemType{item: MenuItem::NewGame, active: true, string: "New Game"},
-    ItemType{item: MenuItem::Sound, active: true, string: "Sound"},
-    ItemType{item: MenuItem::Control, active: true, string: "Control"},
-    ItemType{item: MenuItem::LoadGame, active: true, string: "Load Game"},
-    ItemType{item: MenuItem::SaveGame, active: true, string: "Save Game"},
-    ItemType{item: MenuItem::ChangeView, active: true, string: "Change View"},
-    ItemType{item: MenuItem::ViewScores, active: true, string: "View Scores"},
-    ItemType{item: MenuItem::BackToDemo, active: true, string: "Back to Demo"},
-    ItemType{item: MenuItem::Quit, active: true, string: "Quit"},
-];
-
-fn menu_item_pos(which_pos: usize) -> Option<MenuItem> {
-    for t in &MAIN_MENU {
+fn menu_item_pos(win_state: &WindowState, which_pos: usize) -> Option<MenuItem> {
+    for t in &win_state.main_menu {
         if t.item.pos() == which_pos {
             return Some(t.item)
         }
@@ -104,8 +58,6 @@ static COLOR_NORML : [u8; 4] = [
     0x6b,
 ];
 
-static MAIN_ITEMS : ItemInfo = ItemInfo{x: MENU_X, y: MENU_Y, cur_pos: MenuItem::NewGame, indent: 24}; // TODO define START_ITEM
-
 /// Wolfenstein Control Panel!  Ta Da!
 pub async fn control_panel(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, scan: NumCode) {
     // TODO scan code handling
@@ -118,7 +70,7 @@ pub async fn control_panel(ticker: &Ticker, rdr: &VGARenderer, input: &Input, wi
 
     // MAIN MENU LOOP
     loop {
-       let which = handle_menu(ticker, rdr, input, win_state, &MAIN_ITEMS, &MAIN_MENU).await;
+       let which = handle_menu(ticker, rdr, input, win_state).await;
        println!("which = {:?}", which);
        match which {
         Some(MenuItem::ViewScores) => {
@@ -190,10 +142,10 @@ async fn confirm(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &
     exit
 }
 
-async fn handle_menu(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, item_info: &ItemInfo, items: &[ItemType]) -> Option<MenuItem> {
-    let mut which_pos = item_info.cur_pos.pos();
-    let x = item_info.x & 8_usize.wrapping_neg();
-    let base_y = item_info.y - 2;
+async fn handle_menu(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState) -> Option<MenuItem> {
+    let mut which_pos = win_state.main_state.cur_pos.pos();
+    let x = win_state.main_state.x & 8_usize.wrapping_neg();
+    let base_y = win_state.main_state.y - 2;
     let mut y = base_y + which_pos * 13;
 
     rdr.pic(x, y, GraphicNum::CCURSOR1PIC);
@@ -212,49 +164,49 @@ async fn handle_menu(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_stat
         
         match ci.dir {
             ControlDirection::North => {
-                erase_gun(rdr, win_state, item_info, items, x, y, which_pos);
+                erase_gun(rdr, win_state, x, y, which_pos);
 
-                if which_pos > 0 && items[which_pos-1].active {
+                if which_pos > 0 && win_state.main_menu[which_pos-1].active {
                     y -= 6;
                     draw_half_step(ticker, rdr, x, y).await;
                 }
 
                 loop {
                     if which_pos == 0 {
-                        which_pos = items.len()-1;
+                        which_pos = win_state.main_menu.len()-1;
                     } else {
                         which_pos -= 1;
                     }
 
-                    if items[which_pos].active {
+                    if win_state.main_menu[which_pos].active {
                         break;
                     }  
                 }
-                y = draw_gun(rdr, win_state, item_info, items, x, y, which_pos, base_y);
+                y = draw_gun(rdr, win_state, x, y, which_pos, base_y);
 
                 // WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
                 tic_delay(ticker, input, 20).await;
             },
             ControlDirection::South => {
-                erase_gun(rdr, win_state, item_info, items, x, y, which_pos);
+                erase_gun(rdr, win_state, x, y, which_pos);
 
-                if which_pos != items.len()-1 && items[which_pos+1].active {
+                if which_pos != win_state.main_menu.len()-1 && win_state.main_menu[which_pos+1].active {
                     y += 6;
                     draw_half_step(ticker, rdr, x, y).await;
                 }
 
                 loop {
-                    if which_pos == items.len() - 1 {
+                    if which_pos == win_state.main_menu.len() - 1 {
                         which_pos = 0;
                     } else {
                         which_pos += 1;
                     }
 
-                    if items[which_pos].active {
+                    if win_state.main_menu[which_pos].active {
                         break;
                     }
                 }
-                y = draw_gun(rdr, win_state, item_info, items, x, y, which_pos, base_y);
+                y = draw_gun(rdr, win_state, x, y, which_pos, base_y);
 
                 // WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
                 tic_delay(ticker, input, 20).await;
@@ -274,8 +226,10 @@ async fn handle_menu(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_stat
 
     input.clear_keys_down();
 
+    win_state.main_state.cur_pos = menu_item_pos(win_state, which_pos).unwrap_or(MenuItem::NewGame);
+
     if exit == 1 {
-        return menu_item_pos(which_pos);
+        return menu_item_pos(win_state, which_pos);
     }
     if exit == 2 { //ESC
         return None
@@ -302,24 +256,24 @@ async fn draw_half_step(ticker: &Ticker, rdr: &VGARenderer, x: usize, y: usize) 
     ticker.tics(8).await;
 }
 
-fn erase_gun(rdr: &VGARenderer, win_state: &mut WindowState, item_info: &ItemInfo, items: &[ItemType], x: usize, y: usize, which_pos: usize) {
+fn erase_gun(rdr: &VGARenderer, win_state: &mut WindowState, x: usize, y: usize, which_pos: usize) {
     rdr.bar(x-1, y, 25, 16, BKGD_COLOR);
-    set_text_color(win_state, &items[which_pos], false);
+    set_text_color(win_state, which_pos, false);
 
-    win_state.print_x = item_info.x + item_info.indent;
-    win_state.print_y = item_info.y + which_pos * 13;
-    print(rdr, win_state, items[which_pos].string); 
+    win_state.print_x = win_state.main_state.x + win_state.main_state.indent;
+    win_state.print_y = win_state.main_state.y + which_pos * 13;
+    print(rdr, win_state, win_state.main_menu[which_pos].string); 
 }
 
-fn draw_gun(rdr: &VGARenderer, win_state: &mut WindowState, item_info: &ItemInfo, items: &[ItemType], x: usize, y: usize, which_pos: usize, base_y: usize) -> usize {
+fn draw_gun(rdr: &VGARenderer, win_state: &mut WindowState, x: usize, y: usize, which_pos: usize, base_y: usize) -> usize {
     rdr.bar(x-1, y, 25, 16, BKGD_COLOR);
     let new_y = base_y + which_pos * 13;
     rdr.pic(x, new_y, GraphicNum::CCURSOR1PIC);
-    set_text_color(win_state, &items[which_pos], true);
+    set_text_color(win_state, which_pos, true);
 
-    win_state.print_x = item_info.x + item_info.indent;
-    win_state.print_y = item_info.y + which_pos * 13;
-    print(rdr, win_state, items[which_pos].string);
+    win_state.print_x = win_state.main_state.x + win_state.main_state.indent;
+    win_state.print_y = win_state.main_state.y + which_pos * 13;
+    print(rdr, win_state, win_state.main_menu[which_pos].string);
 
     // TODO call custom routine?
     // TODO PlaySound(MOVEGUN2SND)
@@ -346,30 +300,29 @@ fn draw_main_menu(rdr: &VGARenderer, win_state: &mut WindowState) {
 
     // TODO handle ingame menue here
 
-    draw_menu(rdr, win_state, &MAIN_ITEMS, &MAIN_MENU);
+    draw_menu(rdr, win_state);
 }
 
-fn draw_menu(rdr: &VGARenderer, win_state: &mut WindowState, item_info: &ItemInfo, items: &[ItemType]) {
-    let which = item_info.cur_pos;
+fn draw_menu(rdr: &VGARenderer, win_state: &mut WindowState) {
+    let which = win_state.main_state.cur_pos;
 
-    let x = item_info.x + item_info.indent;
+    let x = win_state.main_state.x + win_state.main_state.indent;
     win_state.window_x = x;
     win_state.print_x = x;
-    win_state.window_y = item_info.y;
-    win_state.print_y = item_info.y;
+    win_state.window_y = win_state.main_state.y;
+    win_state.print_y = win_state.main_state.y;
     win_state.window_w = 320;
     win_state.window_h = 200;
 
-    for i in 0..items.len() {
-        let item = &items[i];
-        set_text_color(win_state, item, which.pos() == i);
+    for i in 0..win_state.main_menu.len() {
+        set_text_color(win_state, i, which.pos() == i);
 
-        win_state.print_y = item_info.y + i * 13;
-        if item.active {
-            print(rdr, win_state, item.string);
+        win_state.print_y = win_state.main_state.y + i * 13;
+        if win_state.main_menu[i].active {
+            print(rdr, win_state, win_state.main_menu[i].string);
         } else {
             win_state.set_font_color(DEACTIVE, BKGD_COLOR);
-            print(rdr, win_state, item.string); 
+            print(rdr, win_state, win_state.main_menu[i].string); 
             win_state.set_font_color(TEXT_COLOR, BKGD_COLOR);
         }
 
@@ -377,11 +330,11 @@ fn draw_menu(rdr: &VGARenderer, win_state: &mut WindowState, item_info: &ItemInf
     }
 }
 
-fn set_text_color(win_state: &mut WindowState, item: &ItemType, hlight: bool) {
+fn set_text_color(win_state: &mut WindowState, which: usize, hlight: bool) {
     if hlight {
-        win_state.set_font_color(COLOR_HLITE[if item.active {1} else {0}], BKGD_COLOR)
+        win_state.set_font_color(COLOR_HLITE[if win_state.main_menu[which].active {1} else {0}], BKGD_COLOR)
     } else {
-        win_state.set_font_color(COLOR_NORML[if item.active {1} else {0}], BKGD_COLOR)
+        win_state.set_font_color(COLOR_NORML[if win_state.main_menu[which].active {1} else {0}], BKGD_COLOR)
     }
 }
 
