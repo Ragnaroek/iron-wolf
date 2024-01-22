@@ -3,6 +3,7 @@
 
 #![feature(ascii_char)]
 #![feature(ascii_char_variants)]
+#![feature(type_alias_impl_trait)]
 
 pub mod act1;
 pub mod act2;

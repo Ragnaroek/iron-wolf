@@ -5,14 +5,14 @@ use vga::SCReg;
 use vga::input::NumCode;
 use vga::util::spawn_task;
 
-use crate::def::{Assets, ItemInfo, ItemType, MenuItem, WindowState};
+use crate::def::{Assets, WindowState};
 use crate::assets::{GraphicNum, SIGNON, GAMEPAL};
 use crate::assets;
 use crate::def::IWConfig;
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::config;
-use crate::menu::{control_panel, MENU_X, MENU_Y};
+use crate::menu::{check_for_episodes, control_panel, initial_menu_state, MenuState };
 use crate::play;
 use crate::us1::c_print;
 use crate::vl;
@@ -40,6 +40,9 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
     let input = input::init(ticker.time_count.clone(), input_monitoring.clone());
 
     let mut win_state = initial_window_state();
+    let mut menu_state = initial_menu_state();
+
+    check_for_episodes(&mut menu_state);
 
     let vga_screen = Arc::new(vga);
     let vga_loop = vga_screen.clone();
@@ -47,7 +50,7 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
 
 	spawn_task(async move {
         init_game(&vga_loop, &rdr, &input, &mut win_state).await;
-        demo_loop(&iw_config, ticker, &vga_loop, &rdr, &input, &prj, &assets, &mut win_state).await;
+        demo_loop(&iw_config, ticker, &vga_loop, &rdr, &input, &prj, &assets, &mut win_state, &mut menu_state).await;
     });
 
 	let options: vga::Options = vga::Options {
@@ -79,19 +82,6 @@ fn initial_window_state() -> WindowState {
         font_number: 0,
         back_color: 0,
         debug_ok: false,
-
-        main_menu: [
-            ItemType{item: MenuItem::NewGame, active: true, string: "New Game"},
-            ItemType{item: MenuItem::Sound, active: true, string: "Sound"},
-            ItemType{item: MenuItem::Control, active: true, string: "Control"},
-            ItemType{item: MenuItem::LoadGame, active: true, string: "Load Game"},
-            ItemType{item: MenuItem::SaveGame, active: true, string: "Save Game"},
-            ItemType{item: MenuItem::ChangeView, active: true, string: "Change View"},
-            ItemType{item: MenuItem::ViewScores, active: true, string: "View Scores"},
-            ItemType{item: MenuItem::BackToDemo, active: true, string: "Back to Demo"},
-            ItemType{item: MenuItem::Quit, active: true, string: "Quit"},
-        ],
-        main_state: ItemInfo{x: MENU_X, y: MENU_Y, cur_pos: MenuItem::NewGame, indent: 24},
     }
 }
 
@@ -124,7 +114,7 @@ async fn finish_signon(vga: &vga::VGA, rdr: &VGARenderer, input: &Input, win_sta
     win_state.set_font_color(0, 15);
 }
 
-async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr: &VGARenderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets, win_state: &mut WindowState) {
+async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr: &VGARenderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets, win_state: &mut WindowState, menu_state: &mut MenuState) {
     if !config.no_wait {
         pg_13(rdr, input).await;
     }
@@ -159,7 +149,7 @@ async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr:
         rdr.fade_out().await;
 
         // TODO RecordDemo()
-        control_panel(&ticker, rdr, input, win_state, NumCode::None).await;
+        control_panel(&ticker, rdr, input, win_state, menu_state, NumCode::None).await;
 
         game_loop(&ticker, vga, rdr, input, prj, assets, win_state).await;
         rdr.fade_out().await;

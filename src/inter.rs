@@ -1,6 +1,6 @@
 use vga::VGA;
 
-use crate::{menu::{draw_stripes, clear_ms_screen}, vga_render::VGARenderer, input::Input, assets::GraphicNum, def::{WindowState, STATUS_LINES}, vl::fade_in, vh::vw_fade_in};
+use crate::{menu::{draw_stripes, clear_ms_screen}, vga_render::VGARenderer, input::Input, assets::GraphicNum, def::{WindowState, STATUS_LINES}, vh::vw_fade_in};
 
 pub fn clear_split_vwb(win_state: &mut WindowState) {
     // TODO clear 'update' global variable?
