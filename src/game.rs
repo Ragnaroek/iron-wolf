@@ -8,7 +8,7 @@ use crate::act2::{dead_guard, stand};
 use crate::agent::{spawn_player, thrust};
 use crate::draw::{RayCast, init_ray_cast, three_d_refresh};
 use crate::inter::{check_highscore, level_completed};
-use crate::play::{draw_play_screen, finish_palette_shifts, play_loop, ProjectionConfig, new_game_state, new_control_state};
+use crate::play::{draw_play_screen, finish_palette_shifts, play_loop, ProjectionConfig, new_control_state};
 use crate::vh::vw_fade_out;
 use crate::{map, time};
 use crate::vga_render::VGARenderer;
@@ -30,15 +30,14 @@ pub const DEATH_ROTATE : u64 = 2;
 
 static ELEVATOR_BACK_TO : [usize; 6]= [1, 1, 7, 3, 5, 3];
 
-pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, input: &Input, prj: &ProjectionConfig, assets: &Assets, win_state: &mut WindowState) {
-    let mut game_state = new_game_state();
+pub async fn game_loop(ticker: &time::Ticker, game_state: &mut GameState, vga: &VGA, rdr: &VGARenderer, input: &Input, prj: &ProjectionConfig, assets: &Assets, win_state: &mut WindowState) {
     let mut control_state : ControlState = new_control_state();
     
     draw_play_screen(&game_state, rdr, prj).await;
 
 	'game_loop:
 	loop {
-		let mut level_state = setup_game_level(prj, &mut game_state, assets).unwrap();
+		let mut level_state = setup_game_level(prj, game_state, assets).unwrap();
 		let mut rc = init_ray_cast(prj.view_width);
 
 		//TODO StartMusic
@@ -49,7 +48,7 @@ pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, inpu
 		
 		rdr.fade_in().await;
 
-		play_loop(ticker, &mut level_state, &mut game_state, win_state, &mut control_state, vga, &mut rc, rdr, input, prj, assets).await;
+		play_loop(ticker, &mut level_state, game_state, win_state, &mut control_state, vga, &mut rc, rdr, input, prj, assets).await;
 
 		match game_state.play_state {
 			PlayState::Completed|PlayState::SecretLevel => {
@@ -74,7 +73,7 @@ pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, inpu
 				}
 			},
 			PlayState::Died => {
-				died(ticker, &mut level_state, &mut game_state, &mut rc, rdr, prj, input, assets).await;
+				died(ticker, &mut level_state, game_state, &mut rc, rdr, prj, input, assets).await;
 				if game_state.lives > -1 {
 					continue 'game_loop;
 				}
@@ -208,12 +207,14 @@ async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &
 }
 
 pub fn setup_game_level(prj: &ProjectionConfig, game_state: &mut GameState, assets: &Assets) -> Result<LevelState, String> {
-	let map = &assets.map_headers[game_state.map_on];
+	let mapnum = game_state.map_on+game_state.episode*10;
+	
+	let map = &assets.map_headers[mapnum];
 	if map.width != MAP_SIZE as u16 || map.height != MAP_SIZE as u16 {
 		panic!("Map not 64*64!");
 	}
 
-	let map_data = load_map_from_assets(assets, game_state.map_on)?;
+	let map_data = load_map_from_assets(assets, mapnum)?;
 
     let mut tile_map = vec![vec![0; MAP_SIZE]; MAP_SIZE];
     let mut actor_at = vec![vec![At::Nothing; MAP_SIZE]; MAP_SIZE];

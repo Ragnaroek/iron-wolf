@@ -7,13 +7,13 @@ use vga::util::spawn_task;
 
 use crate::def::{Assets, WindowState};
 use crate::assets::{GraphicNum, SIGNON, GAMEPAL};
-use crate::assets;
+use crate::{assets, game};
 use crate::def::IWConfig;
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::config;
 use crate::menu::{check_for_episodes, control_panel, initial_menu_state, MenuState };
-use crate::play;
+use crate::play::{self, new_game_state};
 use crate::us1::c_print;
 use crate::vl;
 use crate::vga_render::{self, VGARenderer};
@@ -148,10 +148,12 @@ async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr:
 
         rdr.fade_out().await;
 
-        // TODO RecordDemo()
-        control_panel(&ticker, rdr, input, win_state, menu_state, NumCode::None).await;
+        let mut game_state = new_game_state();
 
-        game_loop(&ticker, vga, rdr, input, prj, assets, win_state).await;
+        // TODO RecordDemo()
+        control_panel(&ticker, &mut game_state, rdr, input, win_state, menu_state, NumCode::None).await;
+
+        game_loop(&ticker, &mut game_state, vga, rdr, input, prj, assets, win_state).await;
         rdr.fade_out().await;
     }
 }
