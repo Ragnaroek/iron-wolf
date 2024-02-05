@@ -13,7 +13,7 @@ use crate::def::ObjType;
 use crate::def::WindowState;
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::{RayCast, three_d_refresh};
-use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC, EXTRA_POINTS};
+use crate::def::{GameState, ControlState, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC, EXTRA_POINTS};
 use crate::assets::{GraphicNum, GAMEPAL};
 use crate::input;
 use crate::inter::clear_split_vwb;
@@ -83,49 +83,6 @@ impl ProjectionConfig {
     pub fn cos(&self, ix: usize) -> Fixed {
         self.sines[ix+ANGLE_QUAD as usize]
     }
-}
-
-pub fn new_game_state() -> GameState {
-	GameState {
-		map_on: 0,
-        difficulty: Difficulty::Hard,
-        old_score: 0,
-		score: 0,
-        next_extra: EXTRA_POINTS,
-		lives: 3,
-		health: 100,
-		ammo: 8,
-		keys: 0,
-        best_weapon: WeaponType::Pistol,
-		weapon: WeaponType::Pistol,
-        chosen_weapon: WeaponType::Pistol,
-        weapon_frame: 0,
-		face_frame: 0,
-		episode: 0,
-        secret_count: 0,
-        treasure_count: 0,
-        kill_count: 0,
-        secret_total: 0,
-        treasure_total: 0,
-        kill_total: 0,
-        victory_flag: false,
-        god_mode: false,
-        play_state: PlayState::StillPlaying,
-        killer_obj: None,
-        attack_frame: 0,
-        attack_count: 0,
-        face_count: 0,
-        made_noise: false,
-        damage_count: 0,
-        bonus_count: 0,
-        pal_shifted: false,
-        fizzle_in: false,
-        push_wall_state: 0,
-        push_wall_pos: 0,
-        push_wall_x: 0,
-        push_wall_y: 0,
-        push_wall_dir: crate::def::Dir::North,
-	}
 }
 
 pub fn new_control_state() -> ControlState {

@@ -5,15 +5,15 @@ use vga::SCReg;
 use vga::input::NumCode;
 use vga::util::spawn_task;
 
-use crate::def::{Assets, WindowState};
+use crate::def::{new_game_state, Assets, WindowState};
 use crate::assets::{GraphicNum, SIGNON, GAMEPAL};
-use crate::{assets, game};
+use crate::assets;
 use crate::def::IWConfig;
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::config;
 use crate::menu::{check_for_episodes, control_panel, initial_menu_state, MenuState };
-use crate::play::{self, new_game_state};
+use crate::play;
 use crate::us1::c_print;
 use crate::vl;
 use crate::vga_render::{self, VGARenderer};

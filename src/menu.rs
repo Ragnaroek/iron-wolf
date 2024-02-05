@@ -313,7 +313,7 @@ async fn cp_main_menu(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_sta
 
 async fn cp_new_game(ticker: &Ticker, game_state: &mut GameState, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState) -> MenuHandle {
     loop {
-        draw_new_episode(ticker, rdr, input, win_state, menu_state).await;
+        draw_new_episode(rdr, win_state, menu_state).await;
 
         let episode_handle = handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
         if let MenuHandle::Selected(episode_selected) = episode_handle {
@@ -330,18 +330,17 @@ async fn cp_new_game(ticker: &Ticker, game_state: &mut GameState, rdr: &VGARende
 }
 
 fn draw_new_game_diff(rdr: &VGARenderer, which: usize) {
-   rdr.pic(NM_X+185, NM_Y+7, diffculty_pic(which)); 
+   rdr.pic(NM_X+185, NM_Y+7, difficulty_pic(which)); 
 }
 
 async fn cp_difficulty_select(ticker: &Ticker, game_state: &mut GameState, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState) -> MenuHandle {
-    draw_difficulty_select(ticker, rdr, input, win_state, menu_state).await;
+    draw_difficulty_select(rdr, win_state, menu_state).await;
     let handle = handle_menu(ticker, rdr, input, win_state, menu_state, draw_new_game_diff).await;
 
     if let MenuHandle::Selected(diff_selected) = handle {
         // TODO SD_PlaySound(SHOOTSND)
-        game_state.difficulty = diffculty(diff_selected);
-
-        // TODO reset other games states (health, ammo)
+        game_state.prepare_episode_select();
+        game_state.difficulty = difficulty(diff_selected);
 
         rdr.fade_out().await;
         return MenuHandle::BackToGameLoop;
@@ -350,7 +349,7 @@ async fn cp_difficulty_select(ticker: &Ticker, game_state: &mut GameState, rdr: 
     handle
 }
 
-async fn draw_difficulty_select(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState) {
+async fn draw_difficulty_select(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState) {
     clear_ms_screen(rdr);
     rdr.pic(112, 184, GraphicNum::CMOUSELBACKPIC);
 
@@ -364,11 +363,11 @@ async fn draw_difficulty_select(ticker: &Ticker, rdr: &VGARenderer, input: &Inpu
     draw_menu(rdr, win_state, menu_state);
 
     menu_state.selected_state().state.cur_pos;
-    rdr.pic(NM_X+185, NM_Y+7, diffculty_pic(menu_state.selected_state().state.cur_pos));
+    rdr.pic(NM_X+185, NM_Y+7, difficulty_pic(menu_state.selected_state().state.cur_pos));
     rdr.fade_in().await;
 }
 
-fn diffculty_pic(i: usize) -> GraphicNum {
+fn difficulty_pic(i: usize) -> GraphicNum {
     match i {
         0 => GraphicNum::CBABYMODEPIC,
         1 => GraphicNum::CEASYPIC,
@@ -378,7 +377,7 @@ fn diffculty_pic(i: usize) -> GraphicNum {
     }
 }
 
-fn diffculty(i: usize) -> Difficulty {
+fn difficulty(i: usize) -> Difficulty {
     match i {
         0 => Difficulty::Baby,
         1 => Difficulty::Easy,
@@ -388,7 +387,7 @@ fn diffculty(i: usize) -> Difficulty {
     } 
 }
 
-async fn draw_new_episode(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState) {
+async fn draw_new_episode(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState) {
     clear_ms_screen(rdr);
     rdr.pic(112, 184, GraphicNum::CMOUSELBACKPIC);
 

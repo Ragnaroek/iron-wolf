@@ -275,6 +275,62 @@ pub struct GameState {
     pub push_wall_dir: Dir,
 }
 
+pub fn new_game_state() -> GameState {
+	GameState {
+		map_on: 0,
+        difficulty: Difficulty::Hard,
+        old_score: 0,
+		score: 0,
+        next_extra: EXTRA_POINTS,
+		lives: 3,
+		health: 100,
+		ammo: 8,
+		keys: 0,
+        best_weapon: WeaponType::Pistol,
+		weapon: WeaponType::Pistol,
+        chosen_weapon: WeaponType::Pistol,
+        weapon_frame: 0,
+		face_frame: 0,
+		episode: 0,
+        secret_count: 0,
+        treasure_count: 0,
+        kill_count: 0,
+        secret_total: 0,
+        treasure_total: 0,
+        kill_total: 0,
+        victory_flag: false,
+        god_mode: false,
+        play_state: PlayState::StillPlaying,
+        killer_obj: None,
+        attack_frame: 0,
+        attack_count: 0,
+        face_count: 0,
+        made_noise: false,
+        damage_count: 0,
+        bonus_count: 0,
+        pal_shifted: false,
+        fizzle_in: false,
+        push_wall_state: 0,
+        push_wall_pos: 0,
+        push_wall_x: 0,
+        push_wall_y: 0,
+        push_wall_dir: crate::def::Dir::North,
+	}
+}
+
+impl GameState {
+    /// Set up new game to start from the beginning
+    /// Keeps the difficulty and episode setting
+    pub fn prepare_episode_select(&mut self) {
+        let difficulty = self.difficulty;
+        let episode = self.episode;
+        *self = new_game_state();
+        self.difficulty = difficulty;
+        self.episode = episode;
+    }
+}
+
+
 pub struct WindowState {
     pub window_x : usize,
     pub window_y : usize,
