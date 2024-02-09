@@ -2,7 +2,7 @@ use vga::input::NumCode;
 
 use crate::input;
 use crate::play::center_window;
-use crate::def::{WindowState, GameState, ObjType};
+use crate::def::{At, GameState, LevelState, ObjKey, ObjType, WindowState};
 use crate::us1::{print_centered, print};
 use crate::vga_render::VGARenderer;
 
@@ -26,5 +26,28 @@ pub async fn debug_keys(rdr: &VGARenderer, win_state: &mut WindowState, game_sta
         input.ack().await;
         game_state.god_mode = !game_state.god_mode;
         return;
+    }
+}
+
+pub fn debug_actor_at(level_state: &LevelState, x: usize, y: usize, width: usize, height: usize) {
+    print!("   |");
+    for w in 0..width {
+        print!("{:>3}|", x+w);
+    }
+    println!();
+    
+    for h in 0..height {
+        print!("{:>3}|", y+h);
+        for w in 0..width {
+            let at = level_state.actor_at[x+w][y+h];
+            match at {
+                At::Wall(_) => print!("###|"),
+                At::Blocked => print!("bbb|"),
+                At::Nothing => print!("   |"),
+                At::Obj(ObjKey(k)) => print!("{:>3}|", k),
+
+            }
+        }
+        println!();
     }
 }

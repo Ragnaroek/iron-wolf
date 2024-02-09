@@ -1,10 +1,10 @@
 use vga::VGA;
 
 use crate::agent::{draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_weapon};
-use crate::def::{ANGLES, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, PlayState, WeaponType, Sprite, StaticType, VisObj, ObjKey, Assets, ObjType, Level, LevelState, At, EnemyType, GameState, Difficulty, ControlState, AMBUSH_TILE, WindowState};
+use crate::def::{ANGLES, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, PlayState, WeaponType, Sprite, StaticType, VisObj, Assets, ObjType, Level, LevelState, At, EnemyType, GameState, Difficulty, ControlState, AMBUSH_TILE, WindowState};
 use crate::assets::load_map_from_assets;
 use crate::act1::{spawn_door, spawn_static};
-use crate::act2::{dead_guard, stand};
+use crate::act2::{spawn_dead_guard, spawn_patrol, spawn_stand};
 use crate::agent::{spawn_player, thrust};
 use crate::draw::{RayCast, init_ray_cast, three_d_refresh};
 use crate::inter::{check_highscore, level_completed};
@@ -323,7 +323,7 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 					// TODO push wall
 				},
 				108..=111 => { // guard stand: normal mode
-					spawn(&mut actors, actor_at, stand(EnemyType::Guard, x, y, tile-108, difficulty));
+					spawn_stand(EnemyType::Guard, &mut actors, actor_at, x, y, tile-108, difficulty);
 				},
 				112..=115 => { // guard patrol: normal mode
 				
@@ -335,7 +335,7 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 
 				},
 				124 => { // guard: dead
-					spawn(&mut actors, actor_at, dead_guard(x, y));
+					spawn_dead_guard(&mut actors, actor_at, x, y);
 				},
 				126..=129 => { // ss stand: normal mode
 
@@ -344,14 +344,15 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 
 				},
 				134..=137 => { // dogs stand: normal mode
-
+					spawn_stand(EnemyType::Dog, &mut actors, actor_at, x, y, tile-134, difficulty);
 				},
 				138..=141 => { // dogs patrol: normal mode
-
+					spawn_patrol(EnemyType::Dog, &mut actors, actor_at, x, y, tile-138, difficulty);
 				},
+				// 142+143 = ???
 				144..=147 => { // guard stand: medium mode
 					if difficulty >= Difficulty::Medium {
-						spawn(&mut actors, actor_at, stand(EnemyType::Guard, x, y, tile-144, difficulty));
+						spawn_stand(EnemyType::Guard, &mut actors, actor_at, x, y, tile-144, difficulty);
 					}
 				},
 				148..=151 => { // guard patrol: medium mode
@@ -363,6 +364,7 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 				156..=159 => { // officer patrol: medium mode
 
 				},
+				// 160+161 = ???
 				162..=165 => { // ss stand: medium mode
 
 				},
@@ -370,14 +372,19 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 
 				},
 				170..=173 => { // dogs stand: medium mode
-
+					if difficulty >= Difficulty::Medium {
+						todo!("spawn dog medium");
+					}
 				},
 				174..=177 => { // dogs patrol: medium mode
-
+					if difficulty >= Difficulty::Medium {
+						todo!("spawn dog patrol medium");
+					}
 				},
+				// 178+179 = ???
 				180..=183 => { // guard stand: hard mode
 					if difficulty >= Difficulty::Hard {
-						spawn(&mut actors, actor_at, stand(EnemyType::Guard, x, y, tile-180, difficulty));
+						spawn_stand(EnemyType::Guard, &mut actors, actor_at, x, y, tile-180, difficulty);
 					}
 				},
 				184..=187 => { // guard patrol: hard mode
@@ -389,17 +396,22 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 				192..=195 => { // officer patrol: hard mode
 
 				},
+				// 196+197 = ???
 				198..=201 => { // ss stand: hard mode
 
 				},
 				202..=205 => { // ss patrol: hard mode
-
+					
 				},
 				206..=209 => { // dogs stand: hard mode
-
+					if difficulty >= Difficulty::Hard {
+						todo!("spawn dog hard");
+					}
 				},
 				210..=213 => { // dogs patrol: hard mode
-
+					if difficulty >= Difficulty::Hard {
+						todo!("spawn dog patrol hard");
+					}
 				}
 				// TODO scan bosses, mutants and ghosts
 				_ => {},
@@ -414,11 +426,4 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 	actors.insert(0, player.unwrap());
 
 	(actors, statics, info_plane)
-}
-
-// spawns the obj into the map
-pub fn spawn(actors: &mut Vec<ObjType>, actor_at: &mut Vec<Vec<At>>, obj: ObjType) {
-	actors.push(obj);
-	let key = ObjKey(actors.len()); // +1 offset (not len()-1), since player will be later at position 0 and positions will shift
-	actor_at[obj.tilex][obj.tiley] = At::Obj(key)
 }

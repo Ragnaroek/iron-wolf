@@ -10,6 +10,7 @@ pub const MAX_DOORS : usize = 64;
 
 // tile constants
 
+pub const ICON_ARROWS : u16 = 90;
 pub const PUSHABLE_TILE : u16 = 98;
 pub const ELEVATOR_TILE : u16 = 21;
 pub const AMBUSH_TILE : u16 = 106;
@@ -49,6 +50,7 @@ pub const FL_AMBUSH: u8 = 64;
 pub const FL_NONMARK: u8 = 128;
 
 pub const SPD_PATROL : i32 = 512;
+pub const SPD_DOG : i32 = 1500;
 
 pub const STATUS_LINES : usize = 40;
 pub static SCREENLOC : [usize; 3] = [PAGE_1_START, PAGE_2_START, PAGE_3_START];
@@ -578,7 +580,20 @@ derive_from!{
         GuardShoot1 = 96, GuardShoot2 = 97, GuardShoot3 = 98,
 
         // dogs
-        // TODO
+        DogW11 = 99, DogW12 = 100, DogW13 = 101, DogW14 = 102,
+        DogW15 = 103, DogW16 = 104, DogW17 = 105, DogW18 = 106,
+
+        DogW21 = 107, DogW22 = 108, DogW23 = 109, DogW24 = 110,
+        DogW25 = 111, DogW26 = 112, DogW27 = 113, DogW28 = 114,
+
+        DogW31 = 115, DogW32 = 116, DogW33 = 117, DogW34 = 118,
+        DogW35 = 119, DogW36 = 120, DogW37 = 121, DogW38 = 122,
+
+        DogW41 = 123, DogW42 = 124, DogW43 = 125, DogW44 = 126,
+        DogW45 = 127, DogW46 = 128, DogW47 = 129, DogW48 = 130,
+
+        DogDie1 = 131, DogDie2 = 132, DogDie3 = 133, DogDead = 134,
+        DogJump1 = 135, DogJump2 = 136, DogJump3 = 137,
 
         // SS
         SSS1 = 140, SSS2 = 141, SSS3 = 142, SSS4 = 143,
