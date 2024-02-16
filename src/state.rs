@@ -141,7 +141,6 @@ pub fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
             DirType::East => {
                 if obj.class == ClassType::Dog || obj.class == ClassType::Fake {
                     if !check_diag(level_state, obj.tilex+1, obj.tiley) {
-                        println!("check diag dog = false, actor_at = {:?}", level_state.actor_at[obj.tilex+1][obj.tiley]);
                         return false;
                     } 
                 } else {
