@@ -320,28 +320,32 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 
 				},
 				98 => { // P wall
-					// TODO push wall
+					// TODO check for loadedgame?
+					game_state.secret_total += 1;
 				},
 				108..=111 => { // guard stand: normal mode
 					spawn_stand(EnemyType::Guard, &mut actors, actor_at, x, y, tile-108, difficulty);
 				},
 				112..=115 => { // guard patrol: normal mode
-				
+					todo!("guard normal");
 				},
 				116..=119 => { // officer stand: normal mode
-
+					todo!("officer stand");
 				},
 				120..=123 => { // officer patrol: normal mode
-
+					todo!("office patrol");
 				},
 				124 => { // guard: dead
 					spawn_dead_guard(&mut actors, actor_at, x, y);
 				},
+				125 => {
+					todo!("trans");
+				},
 				126..=129 => { // ss stand: normal mode
-
+					todo!("ss stand");
 				},
 				130..=133 => { // ss patrol: normal mode
-
+					todo!("ss patrol");
 				},
 				134..=137 => { // dogs stand: normal mode
 					spawn_stand(EnemyType::Dog, &mut actors, actor_at, x, y, tile-134, difficulty);
@@ -349,27 +353,37 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 				138..=141 => { // dogs patrol: normal mode
 					spawn_patrol(EnemyType::Dog, &mut actors, actor_at, x, y, tile-138, difficulty);
 				},
-				// 142+143 = ???
+				142 => {
+					todo!("uber");
+				},
+				143 => {
+					todo!("will");
+				},
 				144..=147 => { // guard stand: medium mode
 					if difficulty >= Difficulty::Medium {
 						spawn_stand(EnemyType::Guard, &mut actors, actor_at, x, y, tile-144, difficulty);
 					}
 				},
 				148..=151 => { // guard patrol: medium mode
-				
+					todo!("guard patrol");
 				},
 				152..=155 => { // officer stand: medium mode
-
+					todo!("officer stand");
 				},
 				156..=159 => { // officer patrol: medium mode
-
+					todo!("officer patrol");
 				},
-				// 160+161 = ???
+				160 => {
+					todo!("fake hitler");
+				},
+				161 => {
+					todo!("death");
+				},
 				162..=165 => { // ss stand: medium mode
-
+					todo!("ss stand");
 				},
 				166..=169 => { // ss patrol: medium mode
-
+					todo!("ss patrol");
 				},
 				170..=173 => { // dogs stand: medium mode
 					if difficulty >= Difficulty::Medium {
@@ -381,27 +395,37 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 						todo!("spawn dog patrol medium");
 					}
 				},
-				// 178+179 = ???
+				178 => {
+					todo!("hitler");
+				},
+				179 => {
+					todo!("fat");
+				},
 				180..=183 => { // guard stand: hard mode
 					if difficulty >= Difficulty::Hard {
 						spawn_stand(EnemyType::Guard, &mut actors, actor_at, x, y, tile-180, difficulty);
 					}
 				},
 				184..=187 => { // guard patrol: hard mode
-	
+					todo!("guard patrol");
 				},
 				188..=191 => { // officer stand: hard mode
-
+					todo!("officer stand");
 				},
 				192..=195 => { // officer patrol: hard mode
-
+					todo!("officer patrol");
 				},
-				// 196+197 = ???
+				196 => {
+					todo!("schabbs");
+				},
+				197 => {
+					todo!("gretel");
+				},
 				198..=201 => { // ss stand: hard mode
-
+					todo!("ss stand");
 				},
 				202..=205 => { // ss patrol: hard mode
-					
+					todo!("ss patrol");
 				},
 				206..=209 => { // dogs stand: hard mode
 					if difficulty >= Difficulty::Hard {
@@ -413,8 +437,47 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 						todo!("spawn dog patrol hard");
 					}
 				}
-				// TODO scan bosses, mutants and ghosts
-				_ => {},
+				214 => {
+					todo!("boss");
+				},
+				215 => {
+					todo!("gift");
+				},
+				216..=219 => {
+					todo!("stand mutant");
+				}
+				220..=223 => {
+					todo!("patrol mutant");
+				},
+				224 => {
+					todo!("ghost blinky");
+				},
+				225 => {
+					todo!("ghost clyde");
+				},
+				226 => {
+					todo!("ghost pinky");
+				},
+				227 => {
+					todo!("ghost inky");
+				},
+				// nothing on 228 to 233
+				234..=237 => {
+					todo!("mutant");
+				},
+				238..=241 => {
+					todo!("mutant");
+				},
+				//nothing on 242 to 251
+				252..=255 => {
+					todo!("mutant");
+				},
+				256..=259 => {
+					todo!("mutant");
+				}
+				_ => {
+					// nothing to do here
+				},
 			}
 		}
 	}
