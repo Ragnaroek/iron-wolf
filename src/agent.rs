@@ -250,7 +250,7 @@ fn cmd_use(level_state: &mut LevelState, game_state: &mut GameState, control_sta
 
     if !control_state.button_held(Button::Use) && doornum & 0x80 != 0 {
         control_state.set_button_held(Button::Use, true);
-        operate_door(doornum & !0x80, level_state);
+        operate_door((doornum & !0x80) as usize, level_state);
     } else {
         // TODO SD_PlaySound(DONOTHINGSND)
     }

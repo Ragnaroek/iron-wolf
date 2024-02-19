@@ -488,7 +488,7 @@ pub enum DoorAction {
     Closing
 }
 pub struct DoorType {
-    pub num: u16,
+    pub num: usize,
     pub tile_x: usize,
 	pub tile_y: usize,
     pub vertical: bool,

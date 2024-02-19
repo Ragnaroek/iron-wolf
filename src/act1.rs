@@ -1,4 +1,4 @@
-use crate::def::{DoorType, StaticType, StaticKind, StaticInfo, Sprite, DoorAction, LevelState, At, FL_BONUS, MAX_STATS, GameState, Dir};
+use crate::def::{At, Dir, DoorAction, DoorType, GameState, LevelState, Sprite, StaticInfo, StaticKind, StaticType, FL_BONUS, MAX_STATS, MIN_DIST, TILESHIFT};
 
 const OPENTICS : u32 = 300;
 const NUM_STAT_INFO : usize = 49;
@@ -129,12 +129,12 @@ pub fn place_item_type(level_state: &mut LevelState, item_type: StaticKind, tile
 =============================================================================
 */
 
-pub fn spawn_door(tile_map: &mut Vec<Vec<u16>>, doornum: u16, tile_x: usize, tile_y: usize, vertical: bool, lock: u16) -> DoorType {
+pub fn spawn_door(tile_map: &mut Vec<Vec<u16>>, doornum: usize, tile_x: usize, tile_y: usize, vertical: bool, lock: u16) -> DoorType {
     if doornum == 64 {
         panic!("64+ doors on level!") //TODO replace with Quit
     }
 
-    tile_map[tile_x][tile_y] = doornum | 0x80;
+    tile_map[tile_x][tile_y] = (doornum | 0x80) as u16;
     if vertical {
         tile_map[tile_x][tile_y-1] |= 0x40;
         tile_map[tile_x][tile_y+1] |= 0x40;
@@ -146,14 +146,15 @@ pub fn spawn_door(tile_map: &mut Vec<Vec<u16>>, doornum: u16, tile_x: usize, til
     DoorType { num: doornum, tile_x, tile_y, vertical, lock, action: DoorAction::Closed, tic_count: 0, position: 0 /* start out fully closed */ }
 }
 
-pub fn operate_door(doornum: u16, level_state: &mut LevelState) {
+pub fn operate_door(doornum: usize, level_state: &mut LevelState) {
     
     // TODO handle locked door here (check for keys, play sound)
-
-    let door = &mut level_state.doors[doornum as usize];
+    let door = &mut level_state.doors[doornum];
     match door.action {
-        DoorAction::Closed | DoorAction::Closing => open_door(door),
-        DoorAction::Open | DoorAction::Opening => close_door(door, &mut level_state.actor_at),
+        DoorAction::Closed | DoorAction::Closing => {
+            open_door(door)
+        },
+        DoorAction::Open | DoorAction::Opening => close_door(doornum, level_state),
     }
 }
 
@@ -165,35 +166,100 @@ pub fn open_door(door: &mut DoorType) {
     }
 }
 
-fn close_door(door: &mut DoorType, actor_at: &mut Vec<Vec<At>>) {
-    // TODO check if anything solid (player, actorat) gets stuck in door (again?)
+fn close_door(doornum: usize, level_state: &mut LevelState) {
+    // don't close on anything solid
+    let (tile_x, tile_y) = {
+        let door = &level_state.doors[doornum as usize];
+        (door.tile_x, door.tile_y)
+    };
+
+    if level_state.actor_at[tile_x][tile_y] != At::Nothing {
+        return;        
+    }
+
+    let p_tile_x = level_state.player().tilex;
+    let p_tile_y = level_state.player().tiley;
+    let p_x = level_state.player().x;
+    let p_y = level_state.player().y;
+
+    if p_tile_x == tile_x && p_tile_y == tile_y {
+        return;
+    }
+
+    let door = &level_state.doors[doornum];
+    if door.vertical {
+        if p_tile_y == tile_y {
+            if (p_x + MIN_DIST >> TILESHIFT) as usize == tile_x {
+                return;
+            }
+            if (p_y - MIN_DIST >> TILESHIFT) as usize == tile_x {
+                return;
+            }
+        }
+        let check = level_state.actor_at[tile_x-1][tile_y];
+        if let At::Obj(k) = check {
+            if (level_state.obj(k).x + MIN_DIST >> TILESHIFT) as usize == tile_x {
+                return;
+            }
+        }
+        let check = level_state.actor_at[tile_x+1][tile_y];
+        if let At::Obj(k) = check {
+            if (level_state.obj(k).x - MIN_DIST >> TILESHIFT) as usize == tile_x {
+                return;
+            }
+        }
+    } else {
+        if p_tile_x == tile_x {
+            if (p_y + MIN_DIST >> TILESHIFT) as usize == tile_y {
+                return;
+            }
+            if (p_y - MIN_DIST >> TILESHIFT) as usize == tile_y {
+                return;
+            }
+        }
+        let check = level_state.actor_at[tile_x][tile_y-1];
+        if let At::Obj(k) = check {
+            if (level_state.obj(k).y + MIN_DIST >> TILESHIFT) as usize == tile_y {
+                return;
+            }
+        }
+        let check = level_state.actor_at[tile_x][tile_y+1];
+        if let At::Obj(k) = check {
+            if (level_state.obj(k).y - MIN_DIST >> TILESHIFT) as usize == tile_y {
+                return;
+            }
+        }
+    }
+
     // TODO play door sound
 
+    let door = &mut level_state.doors[doornum];
     door.action = DoorAction::Closing;
-    actor_at[door.tile_x][door.tile_y] = At::Wall(door.num | 0x80);
+    level_state.actor_at[tile_x][tile_y] = At::Wall((door.num | 0x80) as u16);
 }
 
 // called from play_loop
 pub fn move_doors(level_state: &mut LevelState, tics: u64) {
-    for door in &mut level_state.doors {
-        match door.action {
-            DoorAction::Open => door_open(door, &mut level_state.actor_at, tics),
-            DoorAction::Opening => door_opening(door, &mut level_state.actor_at, tics),
-            DoorAction::Closing => door_closing(door, tics),
+    for doornum in 0..level_state.doors.len() {
+        match level_state.doors[doornum].action {
+            DoorAction::Open => door_open(doornum, level_state, tics),
+            DoorAction::Opening => door_opening(doornum, level_state, tics),
+            DoorAction::Closing => door_closing(doornum, level_state, tics),
             DoorAction::Closed => {/* do nothing here */},
         }       
     } 
 }
 
-fn door_open(door: &mut DoorType, actor_at: &mut Vec<Vec<At>>, tics: u64) {
-    door.tic_count += tics as u32; //TODO XXX where to get tics from?
+fn door_open(doornum: usize, level_state: &mut LevelState, tics: u64) {
+    level_state.doors[doornum as usize].tic_count += tics as u32;
 
-    if door.tic_count >= OPENTICS {
-        close_door(door, actor_at);
+    if level_state.doors[doornum as usize].tic_count >= OPENTICS {
+        close_door(doornum, level_state);
     }
 }
 
-fn door_opening(door: &mut DoorType, actor_at: &mut Vec<Vec<At>>, tics: u64) {
+fn door_opening(doornum: usize, level_state: &mut LevelState, tics: u64) {
+    let door = &mut level_state.doors[doornum as usize];
     let mut position = door.position as u64;
     
     if position == 0 {
@@ -206,18 +272,37 @@ fn door_opening(door: &mut DoorType, actor_at: &mut Vec<Vec<At>>, tics: u64) {
         position = 0xFFFF;
         door.tic_count = 0;
         door.action = DoorAction::Open;
-        actor_at[door.tile_x][door.tile_y] = At::Nothing;
+        level_state.actor_at[door.tile_x][door.tile_y] = At::Nothing;
     }
 
     door.position = position as u16;
 }
 
-fn door_closing(door: &mut DoorType, tics: u64) {
-    // TODO check if something gets stuck in the door
+fn door_closing(doornum: usize, level_state: &mut LevelState, tics: u64) {
+
+    let p_tile_x = level_state.player().tilex;
+    let p_tile_y = level_state.player().tiley; 
+    
+    let door = &mut level_state.doors[doornum as usize];
+
+    if let At::Obj(_) = level_state.actor_at[door.tile_x][door.tile_y] {
+        // something got inside the door
+        open_door(door);
+        return;   
+    }
+
+    if p_tile_x == door.tile_x && p_tile_y == door.tile_y {
+        // player got inside the door
+        open_door(door);
+        return;
+    }
+
     let mut position = door.position as u64;
+    let door = &mut level_state.doors[doornum as usize];
+    // slide the door by an adaptive amount
     position = position.saturating_sub(tics << 10);
     if position == 0 {
-        // TODO disconnect areas
+        // TODO disconnect areas (// door is closed all the way, so disconnect the areas)
         door.action = DoorAction::Closed;
     }
     door.position = position as u16;
