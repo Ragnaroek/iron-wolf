@@ -59,12 +59,13 @@ pub fn load_gamedata_headers(data: &Vec<u8>) -> Result<GamedataHeaders, String> 
 
 pub fn load_texture<M: Read+Seek>(data: &mut M, header: &GamedataHeader) -> Result<TextureData, String>{
         data.seek(SeekFrom::Start(header.offset as u64)).expect("seek failed");
+        assert!(header.length == 4096); // textures should always be 64 x 64 pixels
         let mut buffer : Vec<u8> = vec![0; header.length as usize];
         let n = data.read(&mut buffer).expect("reading texture data failed");
         if n != header.length as usize {
             return Err("not enough bytes for texture in file".to_string());
         }
-        return Ok(TextureData{bytes: buffer});
+        Ok(TextureData{bytes: buffer})
 }
 
 pub fn load_all_textures<M: Read+Seek>(data: &mut M, headers: &GamedataHeaders) -> Result<Vec<TextureData>, String> {
