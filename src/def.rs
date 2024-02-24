@@ -247,12 +247,14 @@ pub struct GameState {
     pub weapon_frame: usize,
 
 	pub episode : usize,
-    pub secret_count: usize,
-    pub treasure_count: usize,
+    pub secret_count: i32,
+    pub treasure_count: i32,
     pub kill_count: i32,
-    pub secret_total: usize,
-    pub treasure_total: usize,
-    pub kill_total: usize,
+    pub secret_total: i32,
+    pub treasure_total: i32,
+    pub kill_total: i32,
+
+    pub time_count: u64,
 
     pub victory_flag : bool,
     pub play_state: PlayState,
@@ -300,6 +302,7 @@ pub fn new_game_state() -> GameState {
         secret_total: 0,
         treasure_total: 0,
         kill_total: 0,
+        time_count: 0,
         victory_flag: false,
         god_mode: false,
         play_state: PlayState::StillPlaying,

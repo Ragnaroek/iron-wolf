@@ -56,7 +56,7 @@ pub async fn game_loop(ticker: &time::Ticker, game_state: &mut GameState, vga: &
 				draw_keys(&game_state, rdr);
 				vw_fade_out(vga).await;
 
-				level_completed(vga, rdr, input, game_state, win_state).await;
+				level_completed(ticker, vga, rdr, input, game_state, win_state).await;
 
 				game_state.old_score = game_state.score;
 
@@ -207,6 +207,17 @@ async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &
 }
 
 pub fn setup_game_level(prj: &ProjectionConfig, game_state: &mut GameState, assets: &Assets) -> Result<LevelState, String> {
+	
+	// TODO check loadedgame
+	game_state.time_count = 0;
+	game_state.secret_total = 0;
+	game_state.kill_total = 0;
+	game_state.treasure_total = 0;
+	game_state.secret_count = 0;
+	game_state.kill_count = 0;
+	game_state.treasure_count = 0;
+	
+	
 	let mapnum = game_state.map_on+game_state.episode*10;
 	
 	let map = &assets.map_headers[mapnum];

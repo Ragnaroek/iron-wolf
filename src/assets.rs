@@ -83,11 +83,11 @@ pub enum GraphicNum {
 	CEPISODE5PIC = 34,
 	CEPISODE6PIC = 35,
 
-	CLEVELPIC = 38,
+	CLEVELPIC = 38, 
 	CNAMEPIC = 39,
 	CSCOREPIC = 40,
 
-	LGUYPIC = 43,
+	LGUYPIC = 43, 
 	COLONPIC = 44,
 	NUM0PIC = 45,
 	NUM1PIC = 46,
@@ -128,7 +128,8 @@ pub enum GraphicNum {
 	ZPIC = 81,
 	EXPOINTPIC = 82,
 	APOSTROPHEPIC = 83,
-	
+	LGUY2PIC = 84,
+	LBJWINSPIC = 85,
 	STATUSBARPIC = 86,
 	TITLEPIC = 87,
 	PG13PIC = 88,
@@ -185,33 +186,35 @@ pub enum GraphicNum {
 pub fn face_pic(n: usize) -> GraphicNum {
 	let offset = GraphicNum::FACE1APIC as usize + n;
 	match offset {
-		109 => return GraphicNum::FACE1APIC,
-		110 => return GraphicNum::FACE1BPIC,
-		111 => return GraphicNum::FACE1CPIC,
-		112 => return GraphicNum::FACE2APIC,
-		113 => return GraphicNum::FACE2BPIC,
-		114 => return GraphicNum::FACE2CPIC,
-		115 => return GraphicNum::FACE3APIC,
-		116 => return GraphicNum::FACE3BPIC,
-		117 => return GraphicNum::FACE3CPIC,
-		118 => return GraphicNum::FACE4APIC,
-		119 => return GraphicNum::FACE4BPIC,
-		120 => return GraphicNum::FACE4CPIC,
-		121 => return GraphicNum::FACE5APIC,
-		122 => return GraphicNum::FACE5BPIC,
-		123 => return GraphicNum::FACE5CPIC,
-		124 => return GraphicNum::FACE6APIC,
-		125 => return GraphicNum::FACE6BPIC,
-		126 => return GraphicNum::FACE6CPIC,
-		127 => return GraphicNum::FACE7APIC,
-		128 => return GraphicNum::FACE7BPIC,
-		129 => return GraphicNum::FACE7CPIC,
-		130 => return GraphicNum::FACE8APIC,
-		_ => return GraphicNum::FACE1APIC,
+		109 => GraphicNum::FACE1APIC,
+		110 => GraphicNum::FACE1BPIC,
+		111 => GraphicNum::FACE1CPIC,
+		112 => GraphicNum::FACE2APIC,
+		113 => GraphicNum::FACE2BPIC,
+		114 => GraphicNum::FACE2CPIC,
+		115 => GraphicNum::FACE3APIC,
+		116 => GraphicNum::FACE3BPIC,
+		117 => GraphicNum::FACE3CPIC,
+		118 => GraphicNum::FACE4APIC,
+		119 => GraphicNum::FACE4BPIC,
+		120 => GraphicNum::FACE4CPIC,
+		121 => GraphicNum::FACE5APIC,
+		122 => GraphicNum::FACE5BPIC,
+		123 => GraphicNum::FACE5CPIC,
+		124 => GraphicNum::FACE6APIC,
+		125 => GraphicNum::FACE6BPIC,
+		126 => GraphicNum::FACE6CPIC,
+		127 => GraphicNum::FACE7APIC,
+		128 => GraphicNum::FACE7BPIC,
+		129 => GraphicNum::FACE7CPIC,
+		130 => GraphicNum::FACE8APIC,
+		_ => GraphicNum::FACE1APIC,
 	}
 }
 
-pub fn num_pic(n: usize) -> GraphicNum {
+// GraphicNum::N0PIC to GraphicNum N9PIC conversion (number for the HUD). 
+// If n > 9 GraphicNum::NBLANKPIC is returned.
+pub fn n_pic(n: usize) -> GraphicNum {
 	match n {
 		0 => GraphicNum::N0PIC,
 		1 => GraphicNum::N1PIC,
@@ -223,6 +226,23 @@ pub fn num_pic(n: usize) -> GraphicNum {
 		7 => GraphicNum::N7PIC,
 		8 => GraphicNum::N8PIC,
 		9 => GraphicNum::N9PIC,
+		_ => GraphicNum::NBLANKPIC,
+	}
+}
+
+// GraphicNum::NUM0PIC to GraphicNum NUM9PIC conversion (number for the info screens). 
+// If n > 9 GraphicNum::NBLANKPIC is returned.
+pub fn num_pic(n: usize) -> GraphicNum {
+	match n {
+		0 => GraphicNum::NUM0PIC,
+		1 => GraphicNum::NUM1PIC,
+		2 => GraphicNum::NUM2PIC,
+		3 => GraphicNum::NUM3PIC,
+		4 => GraphicNum::NUM4PIC,
+		5 => GraphicNum::NUM5PIC,
+		6 => GraphicNum::NUM6PIC,
+		8 => GraphicNum::NUM7PIC,
+		9 => GraphicNum::NUM8PIC,
 		_ => GraphicNum::NBLANKPIC,
 	}
 }

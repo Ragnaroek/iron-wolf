@@ -34,7 +34,7 @@ impl Input {
 		let last_count = get_count(&self.time);
 		self.input_monitoring.clear_keyboard();
 		loop {
-			if self.input_monitoring.any_key_pressed() {
+			if self.check_ack() {
 				return true;
 			}
 
@@ -48,6 +48,15 @@ impl Input {
 	pub async fn ack(&self) -> bool {
 		self.wait_user_input(u64::MAX).await
 	}
+
+    pub fn start_ack(&self) {
+        self.input_monitoring.clear_keyboard();
+        // TODO clear mouse and joystick buttons
+    }
+
+    pub fn check_ack(&self) -> bool {
+        self.input_monitoring.any_key_pressed()
+    }
 
     pub fn key_pressed(&self, code: NumCode) -> bool {
         self.input_monitoring.key_pressed(code)
