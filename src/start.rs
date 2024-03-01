@@ -22,15 +22,19 @@ use crate::input::{self, Input};
 use crate::game::game_loop;
 
 pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> {
-    let config = config::load_wolf_config(loader);
+    let variant = &assets::W3D; // TODO determine this with conditional compilation
+
+    let config = config::load_wolf_config(loader, variant);
 
     let vga = vga::new(0x13);
 	//enable Mode Y
 	let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
 	vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
-    let (graphics, fonts, tiles) = assets::load_all_graphics(loader)?;
-    let assets = assets::load_assets(loader)?;
+    let patch_config = &loader.load_patch_config_file();
+
+    let (graphics, fonts, tiles) = assets::load_all_graphics(loader, variant, patch_config)?;
+    let assets = assets::load_assets(loader, variant)?;
 
     // TODO calc_projection and setup_scaling have to be re-done if view size changes in config
     let prj = play::calc_projection(config.viewsize as usize);
@@ -46,7 +50,7 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
 
     let vga_screen = Arc::new(vga);
     let vga_loop = vga_screen.clone();
-    let rdr = vga_render::init(vga_screen.clone(), graphics, fonts, tiles);
+    let rdr = vga_render::init(vga_screen.clone(), graphics, fonts, tiles, variant);
 
 	spawn_task(async move {
         init_game(&vga_loop, &rdr, &input, &mut win_state).await;

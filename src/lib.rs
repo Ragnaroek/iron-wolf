@@ -21,6 +21,7 @@ pub mod inter;
 pub mod loader;
 pub mod map;
 pub mod menu;
+pub mod patch;
 pub mod play;
 pub mod time;
 pub mod scale;
