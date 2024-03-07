@@ -203,6 +203,13 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
             player.y = 3112211;
             player.angle = 0;
         }
+        /*
+        if game_state.episode == 0 && game_state.map_on == 1 {
+            let player = level_state.mut_player();
+            player.x = 3019722;
+            player.y = 224653;
+            player.angle = 0;
+        }*/
     }
 
     //TODO A lot to do here (clear palette, poll controls, prepare world)
@@ -343,7 +350,14 @@ pub async fn draw_play_screen(state: &GameState, rdr: &VGARenderer, prj: &Projec
 	draw_score(state, rdr);
 }
 
-fn draw_play_border(rdr: &VGARenderer, prj: &ProjectionConfig) {
+pub fn draw_all_play_border(rdr: &VGARenderer, prj: &ProjectionConfig) {
+	for i in 0..3 {
+		rdr.set_buffer_offset(SCREENLOC[i]); 
+		draw_play_border(rdr, prj);
+	}
+}
+
+pub fn draw_play_border(rdr: &VGARenderer, prj: &ProjectionConfig) {
 	//clear the background:
 	rdr.bar(0, 0, 320, 200-STATUS_LINES, 127);
 

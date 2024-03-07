@@ -149,7 +149,7 @@ pub fn spawn_door(tile_map: &mut Vec<Vec<u16>>, doornum: usize, tile_x: usize, t
 pub fn operate_door(doornum: usize, level_state: &mut LevelState) {
     
     // TODO handle locked door here (check for keys, play sound)
-    let door = &mut level_state.doors[doornum];
+    let door: &mut DoorType = &mut level_state.doors[doornum];
     match door.action {
         DoorAction::Closed | DoorAction::Closing => {
             open_door(door)
@@ -279,7 +279,6 @@ fn door_opening(doornum: usize, level_state: &mut LevelState, tics: u64) {
 }
 
 fn door_closing(doornum: usize, level_state: &mut LevelState, tics: u64) {
-
     let p_tile_x = level_state.player().tilex;
     let p_tile_y = level_state.player().tiley; 
     

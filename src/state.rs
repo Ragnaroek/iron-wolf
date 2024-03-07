@@ -4,10 +4,10 @@ mod state_test;
 
 use crate::fixed::new_fixed_i32;
 use crate::user::rnd_t;
-use crate::act2::{S_DOGCHASE1, S_DOGDIE1, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1};
+use crate::act2::{S_DOGCHASE1, S_DOGDIE1, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1};
 use crate::agent::{take_damage, give_points};
 use crate::act1::{open_door, place_item_type};
-use crate::def::{ObjType, TILESHIFT, TILEGLOBAL, StateType, DirType, ClassType, FL_ATTACKMODE, FL_AMBUSH, LevelState, ObjKey, UNSIGNEDSHIFT, FL_FIRSTATTACK, MIN_ACTOR_DIST, At, FL_SHOOTABLE, GameState, FL_NONMARK, StaticKind};
+use crate::def::{At, ClassType, DirType, GameState, LevelState, ObjKey, ObjType, StateType, StaticKind, WeaponType, FL_AMBUSH, FL_ATTACKMODE, FL_FIRSTATTACK, FL_NONMARK, FL_SHOOTABLE, MIN_ACTOR_DIST, TILEGLOBAL, TILESHIFT, UNSIGNEDSHIFT};
 use crate::vga_render::VGARenderer;
 
 static OPPOSITE: [DirType; 9] = [DirType::West, DirType::SouthWest, DirType::South, DirType::SouthEast, DirType::East, DirType::NorthEast, DirType::North, DirType::NorthWest, DirType::NoDir];
@@ -619,12 +619,19 @@ pub fn first_sighting(k: ObjKey, level_state: &mut LevelState) {
     let obj = level_state.mut_obj(k);
     match obj.class {
         ClassType::Guard => {
+            // TODO PlaySoundLocActor(HALTSND,ob);
             new_state(obj, &S_GRDCHASE1);
             obj.speed *= 3; // go faster when chasing player
         },
         ClassType::Dog => {
+            // TODO PlaySoundLocActor(SPIONSND,ob);
             new_state(obj, &S_DOGCHASE1);
             obj.speed *= 2; // go faster when chasing player 
+        },
+        ClassType::SS => {
+            // TODO PlaySoundLocActor(SCHUTZADSND,ob);
+            new_state(obj, &S_SSCHASE1);
+            obj.speed *= 4;
         },
         _ => panic!("first sight for class type not implemented: {:?}", obj.class)
     }
@@ -837,7 +844,11 @@ pub fn damage_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut Ga
                 panic!("damage mutant");
             },
             ClassType::SS => {
-                panic!("damage SS");
+                if obj.hitpoints & 1 != 0 {
+                    new_state(obj, &S_SSPAIN);
+                } else {
+                    new_state(obj, &S_SSPAIN1);
+                }
             },
             _ => {/* do nothing */}
         }
@@ -865,7 +876,13 @@ fn kill_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameStat
                 panic!("kill mutant");
             },
             ClassType::SS => {
-                panic!("kill SS");
+                give_points(game_state, rdr, 500);
+                new_state(obj, &S_SSDIE1);
+                if game_state.best_weapon < WeaponType::MachineGun {
+                    place_item_type(level_state, StaticKind::BoMachinegun, tile_x, tile_y);
+                } else {
+                    place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
+                }
             },
             ClassType::Dog => {
                 give_points(game_state, rdr, 200);

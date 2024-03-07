@@ -1,6 +1,6 @@
 use std::ascii::Char;
 
-use crate::{agent::{draw_score, give_points}, assets::{num_pic, GraphicNum}, def::{GameState, WindowState, STATUS_LINES}, input::Input, menu::{clear_ms_screen, draw_stripes}, vga_render::VGARenderer};
+use crate::{agent::{draw_score, give_points}, assets::{num_pic, GraphicNum}, def::{GameState, WindowState, STATUS_LINES}, input::Input, menu::{clear_ms_screen, draw_stripes}, play::{draw_all_play_border, ProjectionConfig}, vga_render::VGARenderer};
 use crate::time;
 
 static ALPHA : [GraphicNum; 43] = [
@@ -125,7 +125,7 @@ pub fn draw_high_scores(rdr: &VGARenderer) {
 /// Still in split screen mode with the status bar
 ///
 /// Exit with the screen faded out
-pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &Input, game_state: &mut GameState, win_state: &mut WindowState) {
+pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &Input, game_state: &mut GameState, prj: &ProjectionConfig, win_state: &mut WindowState) {
     rdr.set_buffer_offset(rdr.active_buffer());
 
     clear_split_vwb(win_state);
@@ -211,7 +211,7 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
               }
 
              if input.check_ack() {
-                return done_normal_level_complete(ticker, rdr, input, game_state, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
+                return done_normal_level_complete(ticker, rdr, input, game_state, prj, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
              }
             }
 
@@ -229,7 +229,7 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
             }
 
             if input.check_ack() {
-                return done_normal_level_complete(ticker, rdr, input, game_state, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
+                return done_normal_level_complete(ticker, rdr, input, game_state, prj, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
             }
         } 
         if kill_ratio == 100 {
@@ -255,7 +255,7 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
                 fake_sound_breathe(ticker, rdr, &mut bj_breather);
             }
             if input.check_ack() {
-                return done_normal_level_complete(ticker, rdr, input, game_state, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
+                return done_normal_level_complete(ticker, rdr, input, game_state, prj, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
             }
         }
         if secret_ratio == 100 {
@@ -280,7 +280,7 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
                 fake_sound_breathe(ticker, rdr, &mut bj_breather);
             }
             if input.check_ack() {
-                return done_normal_level_complete(ticker, rdr, input, game_state, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
+                return done_normal_level_complete(ticker, rdr, input, game_state, prj, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
             }
         }
         if treasure_ratio == 100 {
@@ -293,7 +293,7 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
             // TODO SD_StopSound()
             // TODO SD_PlaySound(NOBONUSSND) 
         } 
-        return done_normal_level_complete(ticker, rdr, input, game_state, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
+        return done_normal_level_complete(ticker, rdr, input, game_state, prj, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
     }
 
     // secret floor completed
@@ -303,7 +303,7 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
 
     give_points(game_state, rdr, 15000);
 
-    return finish_level_complete(ticker, rdr, input, game_state, &mut bj_breather).await;
+    return finish_level_complete(ticker, rdr, input, game_state, prj,&mut bj_breather).await;
         
 }
 
@@ -316,7 +316,7 @@ fn fake_sound_breathe(ticker: &time::Ticker, rdr: &VGARenderer, bj_breather: &mu
     }
 }
 
-async fn done_normal_level_complete(ticker: &time::Ticker, rdr: &VGARenderer, input: &Input, game_state: &mut GameState, time_left: i32, kill_ratio: i32, secret_ratio: i32, treasure_ratio: i32, bj_breather: &mut BjBreather) {
+async fn done_normal_level_complete(ticker: &time::Ticker, rdr: &VGARenderer, input: &Input, game_state: &mut GameState, prj: &ProjectionConfig, time_left: i32, kill_ratio: i32, secret_ratio: i32, treasure_ratio: i32, bj_breather: &mut BjBreather) {
     let str = kill_ratio.to_string();
     let x = RATIO_XX - str.len() * 2;
     write(rdr, x, 14, &str);
@@ -352,16 +352,20 @@ async fn done_normal_level_complete(ticker: &time::Ticker, rdr: &VGARenderer, in
     game_state.level_ratios[game_state.map_on].treasure = treasure_ratio;
     game_state.level_ratios[game_state.map_on].time = (game_state.time_count/70) as i32;
 
-    finish_level_complete(ticker, rdr, input, game_state, bj_breather).await;
+    finish_level_complete(ticker, rdr, input, game_state, prj, bj_breather).await;
 }
 
-async fn finish_level_complete(ticker: &time::Ticker, rdr: &VGARenderer, input: &Input, game_state: &mut GameState, bj_breather: &mut BjBreather) {
+async fn finish_level_complete(ticker: &time::Ticker, rdr: &VGARenderer, input: &Input, game_state: &mut GameState, prj: &ProjectionConfig, bj_breather: &mut BjBreather) {
     draw_score(game_state, rdr);
 
     input.start_ack();
     while !input.check_ack() {
         bj_breather.poll_breathe(ticker, rdr);
     }
+
+    rdr.fade_out().await;
+
+    draw_all_play_border(rdr, prj);
 }
 
 fn write(rdr: &VGARenderer, x: usize, y: usize, str: &str) {
