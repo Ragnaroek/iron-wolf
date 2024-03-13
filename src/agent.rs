@@ -408,17 +408,19 @@ pub fn get_bonus(game_state: &mut GameState, rdr: &VGARenderer, check: &mut Stat
             panic!("get key");
         },
         StaticKind::BoCross => {
-            // TODO SD_PLaySound(BONUS1SND)
+            // TODO SD_PlaySound(BONUS1SND)
             give_points(game_state, rdr, 100);
             game_state.treasure_count += 1;
         },
         StaticKind::BoChalice => {
-            // TODO SD_PLaySound(BONUS2SND)
+            // TODO SD_PlaySound(BONUS2SND)
             give_points(game_state, rdr, 500);
             game_state.treasure_count += 1;
         },
         StaticKind::BoBible => {
-            panic!("get bible");
+            // TODO SD_PlaySound(BONUS2SND)
+            give_points(game_state, rdr, 1000);
+            game_state.treasure_count += 1;
         },
         StaticKind::BoClip => {
             if game_state.ammo == 99 {
