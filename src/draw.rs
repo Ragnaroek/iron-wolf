@@ -671,7 +671,7 @@ pub fn hit_vert_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts:
 }
 
 pub fn hit_horiz_push_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &VGARenderer, level_state: &LevelState, assets: &Assets) {
-    let mut post_source = 0xFC0 - ((rc.x_intercept>>4) & 0xFC0);
+    let mut post_source = (rc.x_intercept >> 4) & 0xFC0;
     let offset = consts.push_wall_pos << 10;
     if rc.y_tilestep == -1 {
         rc.y_intercept += TILEGLOBAL-offset;
@@ -683,6 +683,10 @@ pub fn hit_horiz_push_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, c
     let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, consts);
     rc.wall_height[pixx] = height;
 
+    if scaler_state.last_side {
+        scale_post(scaler_state, height, prj, rdr, assets);
+    }
+
     let texture_ix = horiz_wall(rc.tile_hit as usize & 63);
     scaler_state.last_side = true;
     scaler_state.post_x = pixx;
@@ -692,7 +696,7 @@ pub fn hit_horiz_push_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, c
 }
 
 pub fn hit_vert_push_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &VGARenderer, level_state: &LevelState, assets: &Assets) {
-    let mut post_source = 0xFC0 - ((rc.y_intercept>>4) & 0xFC0);
+    let mut post_source = (rc.y_intercept >> 4) & 0xFC0;
     let offset = consts.push_wall_pos << 10;
     if rc.x_tilestep == -1 {
         post_source = 0xFC0-post_source;
