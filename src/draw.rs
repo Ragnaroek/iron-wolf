@@ -568,7 +568,7 @@ pub fn scale_post(scaler_state: &ScalerState, height: i32, prj: &ProjectionConfi
 }
 
 pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &VGARenderer, level: &Level, assets: &Assets) {
-    let mut post_source = 0xFC0 - ((rc.y_intercept>>4) & 0xFC0);
+    let mut post_source = (rc.y_intercept >> 4 ) & 0xFC0;
     if rc.x_tilestep == -1 {
         post_source = 0xFC0-post_source;
         rc.x_intercept += TILEGLOBAL;
@@ -602,7 +602,7 @@ pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts:
 }
 
 pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &VGARenderer, level: &Level, assets: &Assets) {
-    let mut post_source = 0xFC0 - ((rc.x_intercept>>4) & 0xFC0);
+    let mut post_source = (rc.x_intercept >> 4) & 0xFC0;
     if rc.y_tilestep == -1 {
         rc.y_intercept += TILEGLOBAL;
     } else {
