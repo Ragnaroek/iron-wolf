@@ -444,7 +444,11 @@ pub fn get_bonus(game_state: &mut GameState, rdr: &VGARenderer, check: &mut Stat
             panic!("get chaingun");
         },
         StaticKind::BoFullheal => {
-            panic!("get full heal");
+            // TODO SD_PlaySound (BONUS1UPSND);
+            heal_self(game_state, rdr, 99);
+            give_ammo(game_state, rdr, 25);
+            give_extra_man(game_state, rdr);
+            game_state.treasure_count += 1;
         },
         StaticKind::BoFood => {
             if game_state.health == 100 {
