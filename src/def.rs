@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use crate::map::{MapType, MapFileType};
-use crate::gamedata::{TextureData, SpriteData};
+use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::fixed::Fixed;
 use crate::play::ProjectionConfig;
 use crate::vga_render::{PAGE_1_START, PAGE_2_START, PAGE_3_START, VGARenderer};
@@ -504,12 +504,23 @@ pub enum DoorAction {
     Opening,
     Closing
 }
+
+#[derive(Eq, PartialEq)]
+pub enum DoorLock {
+    Normal,
+    Lock1,
+    Lock2,
+    Lock3,
+    Lock4,
+    Elevator,
+}
+
 pub struct DoorType {
     pub num: usize,
     pub tile_x: usize,
 	pub tile_y: usize,
     pub vertical: bool,
-    pub lock: u16,
+    pub lock: DoorLock,
     pub action: DoorAction,
     pub tic_count: u32,
     pub position: u16,
@@ -537,6 +548,7 @@ pub struct Assets {
 	pub map_offsets: MapFileType,
     pub textures: Vec<TextureData>,
     pub sprites: Vec<SpriteData>,
+    pub gamedata_headers: GamedataHeaders,
     pub game_maps: Vec<u8>,
 }
 

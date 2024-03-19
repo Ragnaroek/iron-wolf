@@ -1,4 +1,4 @@
-use crate::def::{At, Dir, DoorAction, DoorType, GameState, LevelState, Sprite, StaticInfo, StaticKind, StaticType, FL_BONUS, MAX_STATS, MIN_DIST, TILESHIFT};
+use crate::def::{At, Dir, DoorAction, DoorLock, DoorType, GameState, LevelState, Sprite, StaticInfo, StaticKind, StaticType, FL_BONUS, MAX_STATS, MIN_DIST, TILESHIFT};
 
 const OPENTICS : u32 = 300;
 const NUM_STAT_INFO : usize = 49;
@@ -129,7 +129,7 @@ pub fn place_item_type(level_state: &mut LevelState, item_type: StaticKind, tile
 =============================================================================
 */
 
-pub fn spawn_door(tile_map: &mut Vec<Vec<u16>>, doornum: usize, tile_x: usize, tile_y: usize, vertical: bool, lock: u16) -> DoorType {
+pub fn spawn_door(tile_map: &mut Vec<Vec<u16>>, doornum: usize, tile_x: usize, tile_y: usize, vertical: bool, lock: DoorLock) -> DoorType {
     if doornum == 64 {
         panic!("64+ doors on level!") //TODO replace with Quit
     }

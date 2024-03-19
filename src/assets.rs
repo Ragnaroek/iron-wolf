@@ -581,12 +581,12 @@ pub fn load_assets(loader: &dyn Loader, variant: &WolfVariant) -> Result<Assets,
     let (map_offsets, map_headers) = load_map_headers_from_config(loader, variant)?;
 
 	let gamedata_bytes = loader.load_wolf_file(WolfFile::GameData, variant);
-	let headers = gamedata::load_gamedata_headers(&gamedata_bytes)?; 
+	let gamedata_headers = gamedata::load_gamedata_headers(&gamedata_bytes)?; 
 
 	//let mut gamedata_file: File = File::open(&iw_config.wolf3d_data.join(GAMEDATA)).expect("opening gamedata file failed");
 	let mut gamedata_cursor = Cursor::new(gamedata_bytes);
-	let textures = gamedata::load_all_textures(&mut gamedata_cursor, &headers)?;
-	let sprites = gamedata::load_all_sprites(&mut gamedata_cursor, &headers)?;
+	let textures = gamedata::load_all_textures(&mut gamedata_cursor, &gamedata_headers)?;
+	let sprites = gamedata::load_all_sprites(&mut gamedata_cursor, &gamedata_headers)?;
 	
 	let game_maps = loader.load_wolf_file(WolfFile::GameMaps, variant);
 
@@ -596,5 +596,6 @@ pub fn load_assets(loader: &dyn Loader, variant: &WolfVariant) -> Result<Assets,
         textures,
 		sprites,
 		game_maps,
+		gamedata_headers,
     })
 }

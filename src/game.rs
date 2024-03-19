@@ -1,7 +1,7 @@
 use vga::VGA;
 
 use crate::agent::{draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_weapon};
-use crate::def::{ANGLES, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, PlayState, WeaponType, Sprite, StaticType, VisObj, Assets, ObjType, Level, LevelState, At, EnemyType, GameState, Difficulty, ControlState, AMBUSH_TILE, WindowState};
+use crate::def::{Assets, At, ControlState, Difficulty, DoorLock, EnemyType, GameState, Level, LevelState, ObjType, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState, AMBUSH_TILE, ANGLES, MAP_SIZE, MAX_DOORS, MAX_STATS, PLAYER_KEY};
 use crate::assets::load_map_from_assets;
 use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{spawn_dead_guard, spawn_patrol, spawn_stand};
@@ -251,8 +251,8 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &mut GameState, asse
 			map_ptr += 1;
 			if tile >= 90 && tile <= 101 {
 				let door = match tile {
-					90 | 92 | 94 | 96 | 98 | 100 => spawn_door(&mut tile_map, doornum, x, y, true, (tile-90)/2),
-					91 | 93 | 95 | 97 | 99 | 101 => spawn_door(&mut tile_map, doornum, x, y, false, (tile-91)/2),
+					90 | 92 | 94 | 96 | 98 | 100 => spawn_door(&mut tile_map, doornum, x, y, true, door_lock((tile-90)/2)),
+					91 | 93 | 95 | 97 | 99 | 101 => spawn_door(&mut tile_map, doornum, x, y, false, door_lock((tile-91)/2)),
 					_ => unreachable!("tile guaranteed to be in range through the if check")
 				};
 				doors.push(door);
@@ -301,6 +301,18 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &mut GameState, asse
     thrust(PLAYER_KEY, &mut level_state, prj, 0, 0); // set some variables
 
 	Ok(level_state)
+}
+
+fn door_lock(tile: u16) -> DoorLock {
+	match tile {
+		0 => DoorLock::Normal,
+		1 => DoorLock::Lock1,
+		2 => DoorLock::Lock2,
+		3 => DoorLock::Lock3,
+		4 => DoorLock::Lock4,
+		5 => DoorLock::Elevator,
+		_ => panic!("illegal door lock: {}", tile),
+	}
 }
 
 // By convention the first element in the returned actors vec is the player
