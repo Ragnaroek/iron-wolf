@@ -271,13 +271,13 @@ pub fn num_pic(n: usize) -> GraphicNum {
 	}
 }
 
-pub fn weapon_pic(w: WeaponType) -> GraphicNum {
+pub fn weapon_pic(w: Option<WeaponType>) -> GraphicNum {
 	match w {
-		WeaponType::None => GraphicNum::N0PIC,
-		WeaponType::Knife => GraphicNum::KNIFEPIC,
-		WeaponType::Pistol => GraphicNum::GUNPIC,
-		WeaponType::MachineGun => GraphicNum::MACHINEGUNPIC,
-		WeaponType::ChainGun => GraphicNum::GATLINGGUNPIC,
+		Option::None => GraphicNum::N0PIC,
+		Option::Some(WeaponType::Knife) => GraphicNum::KNIFEPIC,
+		Option::Some(WeaponType::Pistol) => GraphicNum::GUNPIC,
+		Option::Some(WeaponType::MachineGun) => GraphicNum::MACHINEGUNPIC,
+		Option::Some(WeaponType::ChainGun) => GraphicNum::GATLINGGUNPIC,
 	}
 }
 

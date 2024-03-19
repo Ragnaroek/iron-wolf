@@ -27,7 +27,7 @@ static VGA_CEILING : [u8; 60] = [
 	0x1d,0x1d,0x1d,0x1d,0xdd,0xdd,0x7d,0xdd,0xdd,0xdd
 ];
 
-static WEAPON_SCALE : [Sprite; NUM_WEAPONS] = [Sprite::None, Sprite::KnifeReady, Sprite::PistolReady, Sprite::MachinegunReady, Sprite::ChainReady];
+static WEAPON_SCALE : [Sprite; NUM_WEAPONS] = [Sprite::KnifeReady, Sprite::PistolReady, Sprite::MachinegunReady, Sprite::ChainReady];
 
 pub struct ScalerState {
     last_side: bool,
@@ -731,8 +731,8 @@ fn vert_wall(i: usize) -> usize {
 fn draw_player_weapon(game_state: &GameState, rdr: &VGARenderer, prj: &ProjectionConfig, assets: &Assets) {
     // TODO Handle victoryflag here (for non SPEAR)
 
-    if game_state.weapon != WeaponType::None {
-        let shape_num = WEAPON_SCALE[game_state.weapon as usize] as usize + game_state.weapon_frame;
+    if let Some(weapon) = game_state.weapon {
+        let shape_num = WEAPON_SCALE[weapon as usize] as usize + game_state.weapon_frame;
         let sprite = &assets.sprites[shape_num]; 
         simple_scale_shape(rdr, prj, prj.view_width/2, sprite, prj.view_height+1);
     }

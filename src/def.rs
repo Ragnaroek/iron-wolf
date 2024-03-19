@@ -38,7 +38,7 @@ pub const FOCAL_LENGTH : i32 = 0x5700;
 pub const FINE_ANGLES : usize = 3600;
 
 pub const NUM_BUTTONS : usize = 8;
-pub const NUM_WEAPONS : usize = 5;
+pub const NUM_WEAPONS : usize = 4;
 
 pub const FL_SHOOTABLE: u8 = 1;
 pub const FL_BONUS: u8 = 2;
@@ -79,14 +79,13 @@ macro_rules! derive_from {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
 #[repr(usize)]
 pub enum WeaponType {
-    None,
-	Knife,
-	Pistol,
-	MachineGun,
-	ChainGun,
+	Knife = 0,
+	Pistol = 1,
+	MachineGun = 2,
+	ChainGun = 3,    
 }
 
 /// static level data (map and actors)
@@ -245,7 +244,7 @@ pub struct GameState {
 	pub keys: i32,
 
     pub best_weapon: WeaponType,
-	pub weapon: WeaponType,
+	pub weapon: Option<WeaponType>,
     pub chosen_weapon: WeaponType,
 
 	pub face_frame: usize,
@@ -305,7 +304,7 @@ pub fn new_game_state() -> GameState {
 		ammo: 8,
 		keys: 0,
         best_weapon: WeaponType::Pistol,
-		weapon: WeaponType::Pistol,
+		weapon: Some(WeaponType::Pistol),
         chosen_weapon: WeaponType::Pistol,
         weapon_frame: 0,
 		face_frame: 0,
