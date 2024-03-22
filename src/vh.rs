@@ -3,6 +3,7 @@ use vga::VGA;
 use crate::{vga_render::VGARenderer, vl::{fade_out, fade_in}, assets::GAMEPAL};
 
 pub const WHITE : u8 = 15;
+pub const BLACK : u8 = 0;
 
 pub fn vw_hlin(rdr: &VGARenderer, x: usize, z: usize, y: usize, color: u8) {
     rdr.hlin(x, y, z-x+1, color);
