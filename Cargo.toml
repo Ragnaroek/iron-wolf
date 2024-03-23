@@ -18,17 +18,17 @@ name = "iw"
 path = "src/main.rs"
 
 [dependencies]
-serde = { version = "1.0.195", features = ["derive"] }
+serde = { version = "1.0.197", features = ["derive"] }
 cfg-if = { version = "1.0" }
 async-std = { version = "1.12.0", features = ["unstable"] }
 futures = "0.3.30"
 vga-emu = { version = "0.5.3" } # path="../vga-emu/"
-toml = "0.8.10"
+toml = "0.8.12"
 # feature web
-wasm-bindgen = { version = "0.2.90", optional = true, features = ["serde-serialize"]}
+wasm-bindgen = { version = "0.2.92", optional = true, features = ["serde-serialize"]}
 console_error_panic_hook = { version = "0.1.7", optional = true }
-js-sys = { version = "0.3.67", optional = true }
-web-sys = { version = "0.3.67", optional = true, features = [
+js-sys = { version = "0.3.69", optional = true }
+web-sys = { version = "0.3.69", optional = true, features = [
   'Document',
   'Window',
   'HtmlInputElement',
