@@ -58,7 +58,7 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
     });
 
 	let options: vga::Options = vga::Options {
-		show_frame_rate: true,
+		show_frame_rate: false,
         input_monitoring: Some(input_monitoring),
 		..Default::default()
 	};
@@ -118,13 +118,13 @@ async fn finish_signon(vga: &vga::VGA, rdr: &VGARenderer, input: &Input, win_sta
     win_state.set_font_color(0, 15);
 }
 
-async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr: &VGARenderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets, win_state: &mut WindowState, menu_state: &mut MenuState) {
-    if !config.no_wait {
+async fn demo_loop(iw_config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr: &VGARenderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets, win_state: &mut WindowState, menu_state: &mut MenuState) {
+    if !iw_config.options.no_wait {
         pg_13(rdr, input).await;
     }
 
     loop {
-        while !config.no_wait { // title screen & demo loop
+        while !iw_config.options.no_wait { // title screen & demo loop
             rdr.pic(0, 0, GraphicNum::TITLEPIC);
             rdr.fade_in().await;
             if input.wait_user_input(time::TICK_BASE*15).await {
@@ -157,7 +157,7 @@ async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr:
         // TODO RecordDemo()
         control_panel(&ticker, &mut game_state, rdr, input, win_state, menu_state, NumCode::None).await;
 
-        game_loop(&ticker, &mut game_state, vga, rdr, input, prj, assets, win_state).await;
+        game_loop(&ticker, iw_config, &mut game_state, vga, rdr, input, prj, assets, win_state).await;
         rdr.fade_out().await;
     }
 }

@@ -2,3 +2,4 @@
 .vscode/
 flamegraph.svg
 lcov.info
+iw_config.toml

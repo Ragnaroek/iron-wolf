@@ -22,3 +22,6 @@ coverage-sdl:
 test:
 	cargo test --features sdl
 	cargo test --features web
+
+bench:
+	cargo bench --features sdl

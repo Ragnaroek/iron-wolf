@@ -6,10 +6,11 @@ extern crate iw;
 use std::path::PathBuf;
 use std::env;
 use std::sync::Arc;
+use iw::config::default_iw_config;
 use iw::loader::DiskLoader;
 use test::Bencher;
 
-use iw::def::{new_game_state, IWConfig};
+use iw::def::new_game_state;
 use iw::draw::{wall_refresh, init_ray_cast_consts, init_ray_cast};
 use iw::game::setup_game_level;
 use iw::assets;
@@ -22,14 +23,12 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
     let mut path = PathBuf::new();
     path.push(&w3d_path);
 
-    let iw_config = IWConfig {
-        wolf3d_data: path,
-        patch_data: None,
-        no_wait: true,
-    };
+    let mut iw_config = default_iw_config()?;
+    iw_config.data.wolf3d_data = path;
+
     let loader = DiskLoader{
-        data_path: iw_config.wolf3d_data.clone(),
-        patch_path: iw_config.patch_data,
+        data_path: iw_config.data.wolf3d_data.clone(),
+        patch_path: iw_config.data.patch_data,
     };
     let assets = assets::load_assets(&loader, &assets::W3D)?;
     let prj = play::calc_projection(19);
