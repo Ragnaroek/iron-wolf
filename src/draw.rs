@@ -5,7 +5,7 @@ mod draw_test;
 use crate::agent::get_bonus;
 use crate::time;
 use crate::play::ProjectionConfig;
-use crate::def::{Assets, ClassType, DoorLock, DoorType, GameState, Level, LevelState, ObjType, Sprite, StaticType, VisObj, WeaponType, ANGLES, DIR_ANGLE, FINE_ANGLES, FL_BONUS, FL_VISABLE, FOCAL_LENGTH, MAP_SIZE, MIN_DIST, NUM_WEAPONS, TILEGLOBAL, TILESHIFT };
+use crate::def::{Assets, ClassType, DoorLock, DoorType, GameState, Level, LevelState, ObjType, Sprite, StaticType, VisObj, ANGLES, DIR_ANGLE, FINE_ANGLES, FL_BONUS, FL_VISABLE, FOCAL_LENGTH, MAP_SIZE, MIN_DIST, NUM_WEAPONS, TILEGLOBAL, TILESHIFT};
 use crate::scale::{simple_scale_shape, scale_shape, MAP_MASKS_1};
 use crate::vga_render::{self, VGARenderer};
 use crate::fixed::{Fixed, fixed_by_frac, new_fixed_i32};
@@ -620,7 +620,6 @@ pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts
     let texture_ix = if rc.tile_hit & 0x040 != 0 {
         rc.x_tile = rc.x_intercept >> TILESHIFT;
         if level.tile_map[rc.x_tile as usize][(rc.y_tile-rc.y_tilestep) as usize] & 0x80 != 0 {
-            // TODO replace 106 constant with value loaded from assets/level
             door_wall(assets)+2
         } else {
             horiz_wall(rc.tile_hit as usize & !0x40)

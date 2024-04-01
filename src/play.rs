@@ -13,7 +13,7 @@ use crate::def::ObjType;
 use crate::def::WindowState;
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::{RayCast, three_d_refresh};
-use crate::def::{GameState, ControlState, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC, EXTRA_POINTS};
+use crate::def::{GameState, ControlState, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC};
 use crate::assets::{GraphicNum, GAMEPAL};
 use crate::input;
 use crate::inter::clear_split_vwb;
@@ -197,14 +197,13 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
     
     { // TODO Debug!
         game_state.god_mode = true;
+        /*
         if game_state.episode == 0 && game_state.map_on == 0 {
             let player = level_state.mut_player();
-            /*
             player.x = 1465555;
             player.y = 3112211;
             player.angle = 0;
-            */ 
-        }
+        }*/
         /*
         if game_state.episode == 0 && game_state.map_on == 1 {
             let player = level_state.mut_player();

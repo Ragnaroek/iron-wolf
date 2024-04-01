@@ -2,6 +2,7 @@ use crate::act2::spawn_stand;
 use crate::def::{ObjType, ClassType, FL_NEVERMARK, DirType, LevelState, MAP_SIZE, Level, Difficulty, At, ObjKey, EnemyType, FL_SHOOTABLE};
 use crate::fixed::new_fixed_i32;
 use crate::agent::S_PLAYER;
+use crate::map::MapSegs;
 use crate::state::check_side;
 
 use super::{check_line, check_diag};
@@ -100,12 +101,16 @@ fn mock_level_state(player: ObjType) -> LevelState {
     let tile_map = vec![vec![0; MAP_SIZE]; MAP_SIZE];     
     LevelState {
         level: Level {
+            map_segs: MapSegs{segs: [Vec::with_capacity(0), Vec::with_capacity(0)]},
             info_map: Vec::with_capacity(0),
             tile_map,
         },
+        map_width: MAP_SIZE as usize,
         actors: vec![player],
         actor_at: vec![vec![At::Nothing; MAP_SIZE]; MAP_SIZE],
         doors: Vec::with_capacity(0),
+        area_connect: Vec::with_capacity(0),
+        area_by_player: Vec::with_capacity(0),
         statics: Vec::with_capacity(0),
         spotvis: vec![vec![false; MAP_SIZE]; MAP_SIZE],
         vislist: Vec::with_capacity(0),

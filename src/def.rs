@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use crate::map::{MapType, MapFileType};
+use crate::map::{MapSegs, MapFileType, MapType};
 use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::fixed::Fixed;
 use crate::play::ProjectionConfig;
@@ -14,6 +14,7 @@ pub const MAX_DOORS : usize = 64;
 
 pub const ICON_ARROWS : u16 = 90;
 pub const PUSHABLE_TILE : u16 = 98;
+pub const NUM_AREAS : usize = 37;
 pub const ELEVATOR_TILE : u16 = 21;
 pub const AMBUSH_TILE : u16 = 106;
 pub const ALT_ELEVATOR_TILE : u16 = 107;
@@ -92,8 +93,9 @@ pub enum WeaponType {
 
 /// static level data (map and actors)
 pub struct Level {
-    pub info_map: Vec<Vec<u16>>, // info plane (will be manipulated during play)
-	pub tile_map: Vec<Vec<u16>>  // map plan (will be manipulated during play) 
+    pub map_segs : MapSegs,      // contains the unmodified loaded map data from the asset file
+    pub tile_map: Vec<Vec<u16>>, // map plan, plane 0 (will be manipulated during play and on level load) 
+    pub info_map: Vec<Vec<u16>>, // info plane, plane 1 (will be manipulated during play and on leve load)
 }
 
 #[derive(Debug)]
@@ -120,17 +122,21 @@ pub struct VisObj {
 /// State for one level
 pub struct LevelState {
     pub level: Level,
+    pub map_width: usize,
     /// Player stuff
     pub actor_at: Vec<Vec<At>>,
     pub actors: Vec<ObjType>,
     /// Door stuff
-    pub doors: Vec<DoorType>, 
+    pub doors: Vec<DoorType>,
+    pub area_connect: Vec<Vec<u8>>, // len() is NUM_AREAS
+    pub area_by_player: Vec<bool>, // len() is NUM_AREAS
     pub statics: Vec<StaticType>,
     pub spotvis: Vec<Vec<bool>>,
     pub vislist: Vec<VisObj>, // allocate this once and re-use
     //misc
     pub thrustspeed: i32,
     pub last_attacker: Option<ObjKey>,
+
 }
 
 // This is the key of the actor in the LevelState actors[] array
