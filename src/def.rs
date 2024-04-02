@@ -489,7 +489,7 @@ pub struct ObjType {
 	pub y: i32,
 	pub tilex: usize,
 	pub tiley: usize,
-    pub area_number: u16,
+    pub area_number: usize,
     
     pub view_x: i32,
     pub view_height: i32,
