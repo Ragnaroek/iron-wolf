@@ -286,6 +286,7 @@ pub struct GameState {
 
     pub pal_shifted : bool,
     pub fizzle_in : bool,
+    pub in_game: bool,
     // push wall states
     pub push_wall_state : u64, // push wall animation going on
     pub push_wall_pos: i32, // amount a pushable wall has been moved (0-63)
@@ -338,6 +339,7 @@ pub fn new_game_state() -> GameState {
         bonus_count: 0,
         pal_shifted: false,
         fizzle_in: false,
+        in_game: false,
         push_wall_state: 0,
         push_wall_pos: 0,
         push_wall_x: 0,

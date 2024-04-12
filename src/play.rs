@@ -17,7 +17,10 @@ use crate::def::{GameState, ControlState, Button, Assets,ObjKey, LevelState, Con
 use crate::assets::{GraphicNum, GAMEPAL};
 use crate::input;
 use crate::inter::clear_split_vwb;
+use crate::menu::control_panel;
 use crate::menu::message;
+use crate::menu::Menu;
+use crate::menu::MenuState;
 use crate::time;
 use crate::scale::{CompiledScaler, setup_scaling};
 use crate::us1::draw_window;
@@ -180,7 +183,7 @@ fn calc_sines() -> Vec<Fixed> {
     sines
 }
 
-pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, win_state: &mut WindowState, control_state: &mut ControlState, vga: &VGA, rc: &mut RayCast, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, win_state: &mut WindowState, menu_state: &mut MenuState, control_state: &mut ControlState, vga: &VGA, rc: &mut RayCast, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let shifts = init_colour_shifts();
 
     game_state.play_state = PlayState::StillPlaying;
@@ -236,7 +239,7 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
         
 	    three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
 
-        check_keys(rdr, win_state, game_state, level_state.player(), input).await;
+        check_keys(ticker, rdr, win_state, menu_state, game_state, level_state.player(), input, prj).await;
 
         game_state.time_count += tics;
 
@@ -352,6 +355,25 @@ pub async fn draw_play_screen(state: &GameState, rdr: &VGARenderer, prj: &Projec
 	draw_score(state, rdr);
 }
 
+fn draw_all_play_border_sides(rdr: &VGARenderer, prj: &ProjectionConfig) {
+	for i in 0..3 {
+		rdr.set_buffer_offset(SCREENLOC[i]); 
+		draw_play_border_side(rdr, prj);
+	}
+}
+
+/// To fix window overwrites
+fn draw_play_border_side(rdr: &VGARenderer, prj: &ProjectionConfig) {
+    let xl = 160 - prj.view_width / 2;
+    let yl = (200-STATUS_LINES-prj.view_height) / 2;
+
+    rdr.bar(0, 0, xl-1, 200-STATUS_LINES, 127);
+    rdr.bar(xl + prj.view_width+1, 0, xl-2, 200-STATUS_LINES, 127);
+
+    vw_vlin(rdr, yl-1, yl+prj.view_height, xl-1, 0);
+    vw_vlin(rdr, yl-1, yl+prj.view_height, xl + prj.view_width, 125);
+}
+
 pub fn draw_all_play_border(rdr: &VGARenderer, prj: &ProjectionConfig) {
 	for i in 0..3 {
 		rdr.set_buffer_offset(SCREENLOC[i]); 
@@ -370,19 +392,19 @@ pub fn draw_play_border(rdr: &VGARenderer, prj: &ProjectionConfig) {
 	rdr.bar(xl, yl, prj.view_width, prj.view_height, 127);
 
 	//border around the view area
-	hlin(rdr, xl-1, xl+prj.view_width, yl-1, 0);
-	hlin(rdr, xl-1, xl+prj.view_width, yl+prj.view_height, 125);
-	vlin(rdr, yl-1, yl+prj.view_height, xl-1, 0);
-	vlin(rdr, yl-1, yl+prj.view_height, xl+prj.view_width, 125);
+	vw_hlin(rdr, xl-1, xl+prj.view_width, yl-1, 0);
+	vw_hlin(rdr, xl-1, xl+prj.view_width, yl+prj.view_height, 125);
+	vw_vlin(rdr, yl-1, yl+prj.view_height, xl-1, 0);
+	vw_vlin(rdr, yl-1, yl+prj.view_height, xl+prj.view_width, 125);
 
 	rdr.plot(xl-1, yl+prj.view_height, 124);
 }
 
-fn hlin(rdr: &VGARenderer, x: usize, z: usize, y: usize, c: u8) {
+fn vw_hlin(rdr: &VGARenderer, x: usize, z: usize, y: usize, c: u8) {
 	rdr.hlin(x, y, (z-x)+1, c)
 }
 
-fn vlin(rdr: &VGARenderer, y: usize, z: usize, x: usize, c: u8) {
+fn vw_vlin(rdr: &VGARenderer, y: usize, z: usize, x: usize, c: u8) {
 	rdr.vlin(x, y, (z-y)+1, c)
 }
 
@@ -392,7 +414,7 @@ pub fn center_window(rdr: &VGARenderer, win_state: &mut WindowState, width: usiz
     draw_window(rdr, win_state, ((320/8)-width) / 2, ((160/8)-height)/2, width, height);
 }
 
-async fn check_keys(rdr: &VGARenderer, win_state: &mut WindowState, game_state: &mut GameState, player: &ObjType, input: &input::Input) {
+async fn check_keys(ticker: &time::Ticker, rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState, game_state: &mut GameState, player: &ObjType, input: &input::Input, prj: &ProjectionConfig) {
     if input.key_pressed(NumCode::BackSpace) && 
     input.key_pressed(NumCode::LShift) && 
     input.key_pressed(NumCode::Alt) &&
@@ -404,6 +426,24 @@ async fn check_keys(rdr: &VGARenderer, win_state: &mut WindowState, game_state: 
         input.clear_keys_down();
         input.ack().await;
         win_state.debug_ok = true;
+    }
+
+    let scan = input.last_scan();
+
+    // TODO Check for FX keys pressed (let scan = input.one_of_key_pressed())
+    if scan == NumCode::Escape {
+        rdr.fade_out().await;
+        menu_state.select_menu(Menu::Top);
+        let prev_buffer = rdr.buffer_offset();
+        rdr.set_buffer_offset(rdr.active_buffer());
+        control_panel(ticker, game_state, rdr, input, win_state, menu_state, scan).await;
+        rdr.set_buffer_offset(prev_buffer);
+
+        win_state.set_font_color(0, 15);
+        input.clear_keys_down();
+        draw_play_screen(game_state, rdr, prj).await;
+        //TODO stargame and loadedgame handling
+        rdr.fade_in().await;
     }
 
     if input.key_pressed(NumCode::Tab) && win_state.debug_ok {

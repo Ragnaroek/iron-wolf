@@ -1,5 +1,5 @@
 use std::process::exit;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use vga::SCReg;
 use vga::input::NumCode;
@@ -40,7 +40,7 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
     let prj = play::calc_projection(config.viewsize as usize);
 
     let ticker = time::new_ticker();
-    let input_monitoring = vga::input::new_input_monitoring();
+    let input_monitoring = Arc::new(Mutex::new(vga::input::new_input_monitoring()));
     let input = input::init(ticker.time_count.clone(), input_monitoring.clone());
 
     let mut win_state = initial_window_state();
@@ -157,7 +157,7 @@ async fn demo_loop(iw_config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, r
         // TODO RecordDemo()
         control_panel(&ticker, &mut game_state, rdr, input, win_state, menu_state, NumCode::None).await;
 
-        game_loop(&ticker, iw_config, &mut game_state, vga, rdr, input, prj, assets, win_state).await;
+        game_loop(&ticker, iw_config, &mut game_state, vga, rdr, input, prj, assets, win_state, menu_state).await;
         rdr.fade_out().await;
     }
 }
