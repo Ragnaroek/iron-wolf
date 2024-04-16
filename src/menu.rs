@@ -243,7 +243,7 @@ fn initial_difficulty_menu() -> MenuStateEntry {
             ItemType{item: DifficultyItem::Death.pos(), active: ItemActivity::Active, string: "I am Death incarnate!"},
 
         ],
-        state: ItemInfo{x: NM_X, y: NM_Y, cur_pos: DifficultyItem::Daddy.pos(), indent: 24},
+        state: ItemInfo{x: NM_X, y: NM_Y, cur_pos: DifficultyItem::BringEmOn.pos(), indent: 24},
     }
 }
 
@@ -328,7 +328,6 @@ async fn cp_new_game(ticker: &Ticker, game_state: &mut GameState, rdr: &VGARende
             //TODO confirm dialog if already in a game
             game_state.episode = episode_selected / 2;
             return MenuHandle::OpenMenu(Menu::DifficultySelect);
-
         } else {
             rdr.fade_out().await;
             return episode_handle;
