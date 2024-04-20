@@ -208,6 +208,14 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
             player.angle = 0;
         }*/
         /*
+        if game_state.episode == 0 && game_state.map_on == 0 {
+            let player = level_state.mut_player();
+            player.x = 2013924;
+            player.y = 2163760;
+            player.angle = 50; 
+        }*/
+
+        /*
         if game_state.episode == 0 && game_state.map_on == 1 {
             let player = level_state.mut_player();
             player.x = 3019722;

@@ -382,7 +382,7 @@ impl RayCast {
                                         self.dx = (self.y_intercept >> 16) & 0xFFFF;
                                         do_break = false //continue with passhoriz
                                     } else { //draw the door
-                                        self.x_intercept = (self.x_intercept & (0xFFFF << 16)) | ax as i32; 
+                                        self.x_intercept = (self.cx << 16) | ax as i32; 
                                         self.y_intercept = (self.bp & 0xFFFF as i32) << 16 | 0x8000;
                                         do_break = true;
                                         self.hit = Hit::HorizontalDoor
@@ -470,6 +470,7 @@ pub fn wall_refresh(level_state: &mut LevelState, rc: &mut RayCast, consts: &Ray
         }
     }
     let mut scaler_state = init_scaler_state();
+
 
     //asm_refresh / ray casting core loop
     for pixx in 0..prj.view_width {
