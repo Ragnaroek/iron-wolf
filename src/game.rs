@@ -10,6 +10,7 @@ use crate::act2::{spawn_dead_guard, spawn_patrol, spawn_stand};
 use crate::agent::{spawn_player, thrust};
 use crate::draw::{RayCast, init_ray_cast, three_d_refresh};
 use crate::inter::{check_highscore, level_completed, preload_graphics};
+use crate::loader::Loader;
 use crate::menu::MenuState;
 use crate::play::{draw_play_screen, finish_palette_shifts, play_loop, ProjectionConfig, new_control_state};
 use crate::vh::vw_fade_out;
@@ -33,7 +34,18 @@ pub const DEATH_ROTATE : u64 = 2;
 
 static ELEVATOR_BACK_TO : [usize; 6]= [1, 1, 7, 3, 5, 3];
 
-pub async fn game_loop(ticker: &time::Ticker, iw_config: &IWConfig, game_state: &mut GameState, vga: &VGA, rdr: &VGARenderer, input: &Input, prj: &ProjectionConfig, assets: &Assets, win_state: &mut WindowState, menu_state: &mut MenuState) {
+pub async fn game_loop(
+	ticker: &time::Ticker,
+	iw_config: &IWConfig,
+	game_state: &mut GameState,
+	vga: &VGA,
+	rdr: &VGARenderer,
+	input: &Input,
+	prj: &ProjectionConfig,
+	assets: &Assets,
+	win_state: &mut WindowState,
+	menu_state: &mut MenuState,
+	loader: &dyn Loader) {
     let mut control_state : ControlState = new_control_state();
     
     draw_play_screen(&game_state, rdr, prj).await;
@@ -59,7 +71,7 @@ pub async fn game_loop(ticker: &time::Ticker, iw_config: &IWConfig, game_state: 
 		
 		rdr.fade_in().await;
 
-		play_loop(ticker, &mut level_state, game_state, win_state, menu_state, &mut control_state, vga, &mut rc, rdr, input, prj, assets).await;
+		play_loop(ticker, &mut level_state, game_state, win_state, menu_state, &mut control_state, vga, &mut rc, rdr, input, prj, assets, loader).await;
 
 		game_state.in_game = false;
 

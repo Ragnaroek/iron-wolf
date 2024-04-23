@@ -21,10 +21,8 @@ use crate::time;
 use crate::input::{self, Input};
 use crate::game::game_loop;
 
-pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> {
-    let variant = &assets::W3D; // TODO determine this with conditional compilation
-
-    let config = config::load_wolf_config(loader, variant);
+pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<(), String> {
+    let config = config::load_wolf_config(&loader);
 
     let vga = vga::new(0x13);
 	//enable Mode Y
@@ -33,8 +31,8 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
 
     let patch_config = &loader.load_patch_config_file();
 
-    let (graphics, fonts, tiles) = assets::load_all_graphics(loader, variant, patch_config)?;
-    let assets = assets::load_assets(loader, variant)?;
+    let (graphics, fonts, tiles) = assets::load_all_graphics(&loader, patch_config)?;
+    let assets = assets::load_assets(&loader)?;
 
     // TODO calc_projection and setup_scaling have to be re-done if view size changes in config
     let prj = play::calc_projection(config.viewsize as usize);
@@ -50,11 +48,11 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
 
     let vga_screen = Arc::new(vga);
     let vga_loop = vga_screen.clone();
-    let rdr = vga_render::init(vga_screen.clone(), graphics, fonts, tiles, variant);
+    let rdr = vga_render::init(vga_screen.clone(), graphics, fonts, tiles, loader.variant());
 
 	spawn_task(async move {
         init_game(&vga_loop, &rdr, &input, &mut win_state).await;
-        demo_loop(&iw_config, ticker, &vga_loop, &rdr, &input, &prj, &assets, &mut win_state, &mut menu_state).await;
+        demo_loop(&iw_config, ticker, &vga_loop, &rdr, &input, &prj, &assets, &mut win_state, &mut menu_state, &loader).await;
     });
 
 	let options: vga::Options = vga::Options {
@@ -118,7 +116,17 @@ async fn finish_signon(vga: &vga::VGA, rdr: &VGARenderer, input: &Input, win_sta
     win_state.set_font_color(0, 15);
 }
 
-async fn demo_loop(iw_config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr: &VGARenderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets, win_state: &mut WindowState, menu_state: &mut MenuState) {
+async fn demo_loop(
+    iw_config: &IWConfig,
+    ticker: time::Ticker,
+    vga: &vga::VGA,
+    rdr: &VGARenderer,
+    input: &input::Input,
+    prj: &play::ProjectionConfig,
+    assets: &Assets,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+    loader: &dyn Loader) {
     if !iw_config.options.no_wait {
         pg_13(rdr, input).await;
     }
@@ -155,9 +163,9 @@ async fn demo_loop(iw_config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, r
         let mut game_state = new_game_state();
 
         // TODO RecordDemo()
-        control_panel(&ticker, &mut game_state, rdr, input, win_state, menu_state, NumCode::None).await;
+        control_panel(&ticker, &mut game_state, rdr, input, win_state, menu_state, loader, NumCode::None).await;
 
-        game_loop(&ticker, iw_config, &mut game_state, vga, rdr, input, prj, assets, win_state, menu_state).await;
+        game_loop(&ticker, iw_config, &mut game_state, vga, rdr, input, prj, assets, win_state, menu_state, loader).await;
         rdr.fade_out().await;
     }
 }

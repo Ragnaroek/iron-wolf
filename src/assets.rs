@@ -35,6 +35,7 @@ pub enum WolfFile {
 }
 
 // Contains everything from the generated header from the original.
+#[derive(Debug)]
 pub struct WolfVariant {
 	pub file_ending: &'static str,	
 	pub num_pics: usize,
@@ -100,6 +101,8 @@ pub enum GraphicNum {
 	CNORMALPIC = 21,
 	CHARDPIC = 22, 
 
+	CLOADGAMEPIC = 28,
+	CSAVEGAMEPIC = 29,
 	CEPISODE1PIC = 30,
 	CEPISODE2PIC = 31,
 	CEPISODE3PIC = 32,
@@ -313,21 +316,21 @@ pub struct Huffnode {
 	bit1: u16,
 }
 
-pub fn load_all_graphics(loader: &dyn Loader, variant: &WolfVariant, patch_config: &Option<PatchConfig>) -> Result<(Vec<Graphic>, Vec<Font>, TileData), String> {
-	let grhuffman_bytes = loader.load_wolf_file(WolfFile::GraphicDict, variant); 
+pub fn load_all_graphics(loader: &dyn Loader, patch_config: &Option<PatchConfig>) -> Result<(Vec<Graphic>, Vec<Font>, TileData), String> {
+	let grhuffman_bytes = loader.load_wolf_file(WolfFile::GraphicDict); 
 	let grhuffman = to_huffnodes(grhuffman_bytes);
 
-	let grstarts = loader.load_wolf_file(WolfFile::GraphicHead, variant);
-	let grdata = loader.load_wolf_file(WolfFile::GraphicData, variant);
+	let grstarts = loader.load_wolf_file(WolfFile::GraphicHead);
+	let grdata = loader.load_wolf_file(WolfFile::GraphicData);
 
-	let picsizes = extract_picsizes(&grdata, &grstarts, &grhuffman, variant);
+	let picsizes = extract_picsizes(&grdata, &grstarts, &grhuffman, loader.variant());
 
 	let mut fonts = Vec::with_capacity(NUM_FONT);
 	for i in STARTFONT..(STARTFONT+NUM_FONT) {
 		let font = load_font(i, &grstarts, &grdata, &grhuffman)?;
 		fonts.push(font);
 	}
-	
+	let variant = loader.variant();
 	let mut graphics = Vec::with_capacity(variant.num_pics);
 	for i in variant.start_pics..(variant.start_pics+variant.num_pics) {
 		let g = if let Some(patch_file) = graphic_patch(patch_config, i) {
@@ -567,9 +570,9 @@ pub fn load_map_from_assets(assets: &Assets, mapnum: usize) -> Result<MapSegs, S
 	load_map(&mut cursor, &assets.map_headers, &assets.map_offsets, mapnum)
 }
 
-pub fn load_map_headers_from_config(loader: &dyn Loader, variant: &WolfVariant) -> Result<(MapFileType, Vec<MapType>), String> {
-	let offset_bytes = loader.load_wolf_file(WolfFile::MapHead, variant); 
-	let map_bytes = loader.load_wolf_file(WolfFile::GameMaps, variant); 
+pub fn load_map_headers_from_config(loader: &dyn Loader) -> Result<(MapFileType, Vec<MapType>), String> {
+	let offset_bytes = loader.load_wolf_file(WolfFile::MapHead); 
+	let map_bytes = loader.load_wolf_file(WolfFile::GameMaps); 
 	let offsets = load_map_offsets(&offset_bytes)?;
 	load_map_headers(&map_bytes, offsets)
 }
@@ -577,10 +580,10 @@ pub fn load_map_headers_from_config(loader: &dyn Loader, variant: &WolfVariant) 
 // gamedata stuff
 
 // loads all assets for the game into memory
-pub fn load_assets(loader: &dyn Loader, variant: &WolfVariant) -> Result<Assets, String> {
-    let (map_offsets, map_headers) = load_map_headers_from_config(loader, variant)?;
+pub fn load_assets(loader: &dyn Loader) -> Result<Assets, String> {
+    let (map_offsets, map_headers) = load_map_headers_from_config(loader)?;
 
-	let gamedata_bytes = loader.load_wolf_file(WolfFile::GameData, variant);
+	let gamedata_bytes = loader.load_wolf_file(WolfFile::GameData);
 	let gamedata_headers = gamedata::load_gamedata_headers(&gamedata_bytes)?; 
 
 	//let mut gamedata_file: File = File::open(&iw_config.wolf3d_data.join(GAMEDATA)).expect("opening gamedata file failed");
@@ -588,7 +591,7 @@ pub fn load_assets(loader: &dyn Loader, variant: &WolfVariant) -> Result<Assets,
 	let textures = gamedata::load_all_textures(&mut gamedata_cursor, &gamedata_headers)?;
 	let sprites = gamedata::load_all_sprites(&mut gamedata_cursor, &gamedata_headers)?;
 	
-	let game_maps = loader.load_wolf_file(WolfFile::GameMaps, variant);
+	let game_maps = loader.load_wolf_file(WolfFile::GameMaps);
 
 	Ok(Assets {
         map_headers,
