@@ -22,6 +22,10 @@ use crate::menu::control_panel;
 use crate::menu::message;
 use crate::menu::Menu;
 use crate::menu::MenuState;
+use crate::menu::SaveLoadGame;
+use crate::menu::LSA_X;
+use crate::menu::LSA_Y;
+use crate::start::load_the_game;
 use crate::time;
 use crate::scale::{CompiledScaler, setup_scaling};
 use crate::us1::draw_window;
@@ -196,7 +200,9 @@ pub async fn play_loop(
     input: &input::Input, 
     prj: &ProjectionConfig,
     assets: &Assets,
-    loader: &dyn Loader) {
+    loader: &dyn Loader,
+    save_load_param: Option<SaveLoadGame>) {
+    let mut save_load = save_load_param;
     let shifts = init_colour_shifts();
 
     game_state.play_state = PlayState::StillPlaying;
@@ -210,6 +216,7 @@ pub async fn play_loop(
     input.clear_keys_down();
     clear_palette_shifts(game_state);
 
+    handle_save_load(level_state, game_state, rdr, prj, assets, loader, save_load);
     
     { // TODO Debug!
         game_state.god_mode = true;
@@ -260,7 +267,8 @@ pub async fn play_loop(
         
 	    three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
 
-        check_keys(ticker, rdr, win_state, menu_state, game_state, level_state.player(), input, prj, loader).await;
+        save_load = check_keys(ticker, rdr, win_state, menu_state, game_state, level_state.player(), input, prj, loader).await;
+        handle_save_load(level_state, game_state, rdr, prj, assets, loader, save_load);
 
         game_state.time_count += tics;
 
@@ -273,6 +281,19 @@ pub async fn play_loop(
         } 
         rdr.set_buffer_offset(offset_prev);
     }
+}
+
+fn handle_save_load(level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, prj: &ProjectionConfig, assets: &Assets, loader: &dyn Loader, save_load: Option<SaveLoadGame>) {
+    println!("handle = {:?}", save_load);
+    if let Some(what) = save_load {
+        match what {
+            SaveLoadGame::Load(which) => {
+                game_state.loaded_game = true;
+                load_the_game(level_state, game_state, rdr, prj, assets, loader, which, LSA_X+8, LSA_Y+5)
+            },
+            SaveLoadGame::Save(which) => todo!("impl save game writting {}", which),
+        }
+    }    
 }
 
 fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
@@ -444,11 +465,12 @@ async fn check_keys(
     player: &ObjType,
     input: &input::Input,
     prj: &ProjectionConfig,
-    loader: &dyn Loader) {
+    loader: &dyn Loader) -> Option<SaveLoadGame> {
+    
     if input.key_pressed(NumCode::BackSpace) && 
     input.key_pressed(NumCode::LShift) && 
     input.key_pressed(NumCode::Alt) &&
-    check_param("goobers")
+    check_param("goobers") 
     {
         clear_split_vwb(win_state);
 
@@ -456,6 +478,7 @@ async fn check_keys(
         input.clear_keys_down();
         input.ack().await;
         win_state.debug_ok = true;
+        return None;
     }
 
     let scan = input.last_scan();
@@ -466,7 +489,7 @@ async fn check_keys(
         menu_state.select_menu(Menu::Top);
         let prev_buffer = rdr.buffer_offset();
         rdr.set_buffer_offset(rdr.active_buffer());
-        control_panel(ticker, game_state, rdr, input, win_state, menu_state, loader, scan).await;
+        let save_load = control_panel(ticker, game_state, rdr, input, win_state, menu_state, loader, scan).await;
         rdr.set_buffer_offset(prev_buffer);
 
         win_state.set_font_color(0, 15);
@@ -474,6 +497,7 @@ async fn check_keys(
         draw_play_screen(game_state, rdr, prj).await;
         //TODO stargame and loadedgame handling
         rdr.fade_in().await;
+        return save_load;
     }
 
     if input.key_pressed(NumCode::Tab) && win_state.debug_ok {
@@ -481,7 +505,9 @@ async fn check_keys(
         rdr.set_buffer_offset(rdr.active_buffer());
         debug_keys(rdr, win_state, game_state, player, input).await;
         rdr.set_buffer_offset(prev_buffer);
+        return None;
     }
+    return None;
 }
 
 // reads input delta since last tic and manipulates the player state

@@ -6,7 +6,7 @@ use iw::config::read_iw_config;
 use iw::loader::DiskLoader;
 
 fn main() -> Result<(), String> {
-    let variant = &assets::W3D; // TODO determine this with conditional compilation
+    let variant = &assets::W3D6; // TODO determine this with conditional compilation
     let iw_config = read_iw_config()?;
     let loader = DiskLoader{
         variant,

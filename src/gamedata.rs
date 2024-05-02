@@ -37,6 +37,15 @@ pub struct SpriteData {
     pub posts: Vec<Vec<SpritePost>>, // Vec of posts per column
 }
 
+fn empty_sprite_data() -> SpriteData {
+    SpriteData{
+        left_pix: 0,
+        right_pix: 0,
+        pixel_pool: Vec::new(),
+        posts: Vec::new(),
+    }
+}
+
 pub fn load_gamedata_headers(data: &Vec<u8>) -> Result<GamedataHeaders, String> {
     let mut reader = util::new_data_reader(&data);
     let num_chunks = reader.read_u16();
@@ -59,7 +68,7 @@ pub fn load_gamedata_headers(data: &Vec<u8>) -> Result<GamedataHeaders, String> 
 
 pub fn load_texture<M: Read+Seek>(data: &mut M, header: &GamedataHeader) -> Result<TextureData, String>{
         data.seek(SeekFrom::Start(header.offset as u64)).expect("seek failed");
-        assert!(header.length == 4096); // textures should always be 64 x 64 pixels
+        assert!(header.length == 4096 || header.length == 0); // textures should always be 64 x 64 pixels (or 0 for demo data)
         let mut buffer : Vec<u8> = vec![0; header.length as usize];
         let n = data.read(&mut buffer).expect("reading texture data failed");
         if n != header.length as usize {
@@ -80,6 +89,10 @@ pub fn load_all_textures<M: Read+Seek>(data: &mut M, headers: &GamedataHeaders) 
 }
 
 pub fn load_sprite<M: Read+Seek>(data: &mut M, header: &GamedataHeader) -> Result<SpriteData, String>{
+    if header.offset == 0 || header.length == 0 {
+        return Ok(empty_sprite_data());
+    }
+    
     data.seek(SeekFrom::Start(header.offset as u64)).expect("seek failed");
     let mut buffer : Vec<u8> = vec![0; header.length as usize];
     let n = data.read(&mut buffer).expect("reading sprite data failed");

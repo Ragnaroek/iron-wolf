@@ -41,6 +41,12 @@ impl DataReader<'_> {
 		u
 	}
 
+	pub fn read_i16(&mut self) -> i16 {
+		let i = i16::from_le_bytes(self.data[self.offset..(self.offset+2)].try_into().unwrap());
+		self.offset += 2;
+		i
+	}
+
 	pub fn read_u8(&mut self) -> u8 {
 		let u = self.data[self.offset];
 		self.offset += 1;
@@ -52,9 +58,13 @@ impl DataReader<'_> {
 		u != 0
 	}
 
-	// returns a slice over the bytes there were not read so far
+	// returns a slice over the bytes that were not read so far
 	pub fn unread_bytes(&self) -> &[u8] {
 		&self.data[self.offset..]
+	}
+
+	pub fn offset(&self) -> usize {
+		return self.offset
 	}
 }
 
