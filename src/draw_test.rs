@@ -389,7 +389,7 @@ fn test_player() -> ObjType {
         view_x: 0,
         trans_x: new_fixed_i32(0),
         trans_y: new_fixed_i32(0),
-        active: true,
+        active: crate::def::ActiveType::Yes,
         angle: 0,
         pitch: 0,
         x: 1933312,

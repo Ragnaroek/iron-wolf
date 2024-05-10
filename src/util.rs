@@ -63,6 +63,14 @@ impl DataReader<'_> {
 		&self.data[self.offset..]
 	}
 
+	pub fn slice(&self, start: usize, end: usize) -> &[u8] {
+		&self.data[start..end]
+	}
+
+	pub fn skip(&mut self, bytes: usize) {
+		self.offset += bytes; 
+	}
+
 	pub fn offset(&self) -> usize {
 		return self.offset
 	}

@@ -37,7 +37,7 @@ pub fn spawn_new_obj(tile_x: usize, tile_y: usize, state: &'static StateType, cl
 
     ObjType { 
         class,
-        active: true,
+        active: crate::def::ActiveType::Yes,
         tic_count,
         distance: 0,
         area_number: 0,
@@ -256,7 +256,6 @@ fn check_diag(level_state: &LevelState, x: usize, y: usize) -> bool {
     let actor = level_state.actor_at[x][y];
     match actor {
         At::Obj(k) => level_state.obj(k).flags & FL_SHOOTABLE == 0,
-        At::Blocked => false,
         At::Wall(_) => false,
         At::Nothing => true,
     }
@@ -266,7 +265,6 @@ fn check_side(level_state: &LevelState, x: usize, y: usize) -> (bool, i32) {
     let actor = level_state.actor_at[x][y];
     match actor {
         At::Obj(k) => (level_state.obj(k).flags & FL_SHOOTABLE == 0, -1),
-        At::Blocked => (false, -1),
         At::Wall(tile) => {
             if tile >= 128 && tile < 256 {
                 return (true, (tile & 63) as i32);

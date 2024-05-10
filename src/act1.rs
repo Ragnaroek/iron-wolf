@@ -73,7 +73,7 @@ pub fn spawn_static(actor_at: &mut Vec<Vec<At>>, game_state: &mut GameState, til
 
     let mut flags = 0;
     if info.kind == StaticKind::Block {
-        actor_at[tile_x][tile_y] = At::Blocked 
+        actor_at[tile_x][tile_y] = At::Wall(1); // Blocked
     } else if info.kind == StaticKind::Dressing {
         flags = 0;
     } else {

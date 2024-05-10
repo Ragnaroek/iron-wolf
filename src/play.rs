@@ -9,6 +9,7 @@ use vga::VGA;
 use crate::act1::{move_doors, move_push_walls};
 use crate::agent::{draw_health, draw_level, draw_face, draw_lives, draw_ammo, draw_keys, draw_weapon, draw_score};
 use crate::debug::debug_keys;
+use crate::def::ActiveType;
 use crate::def::ObjType;
 use crate::def::WindowState;
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
@@ -16,6 +17,7 @@ use crate::draw::{RayCast, three_d_refresh};
 use crate::def::{GameState, ControlState, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC};
 use crate::assets::{GraphicNum, GAMEPAL};
 use crate::input;
+use crate::input::Input;
 use crate::inter::clear_split_vwb;
 use crate::loader::Loader;
 use crate::menu::control_panel;
@@ -216,7 +218,7 @@ pub async fn play_loop(
     input.clear_keys_down();
     clear_palette_shifts(game_state);
 
-    handle_save_load(level_state, game_state, rdr, prj, assets, loader, save_load);
+    handle_save_load(level_state, game_state, win_state, rdr, input, prj, assets, loader, save_load).await;
     
     { // TODO Debug!
         game_state.god_mode = true;
@@ -268,7 +270,7 @@ pub async fn play_loop(
 	    three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
 
         save_load = check_keys(ticker, rdr, win_state, menu_state, game_state, level_state.player(), input, prj, loader).await;
-        handle_save_load(level_state, game_state, rdr, prj, assets, loader, save_load);
+        handle_save_load(level_state, game_state, win_state, rdr, input, prj, assets, loader, save_load).await;
 
         game_state.time_count += tics;
 
@@ -283,13 +285,12 @@ pub async fn play_loop(
     }
 }
 
-fn handle_save_load(level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, prj: &ProjectionConfig, assets: &Assets, loader: &dyn Loader, save_load: Option<SaveLoadGame>) {
-    println!("handle = {:?}", save_load);
+async fn handle_save_load(level_state: &mut LevelState, game_state: &mut GameState, win_state: &mut WindowState, rdr: &VGARenderer, input: &Input, prj: &ProjectionConfig, assets: &Assets, loader: &dyn Loader, save_load: Option<SaveLoadGame>) {
     if let Some(what) = save_load {
         match what {
             SaveLoadGame::Load(which) => {
                 game_state.loaded_game = true;
-                load_the_game(level_state, game_state, rdr, prj, assets, loader, which, LSA_X+8, LSA_Y+5)
+                load_the_game(level_state, game_state, win_state, rdr, input, prj, assets, loader, which, LSA_X+8, LSA_Y+5).await;
             },
             SaveLoadGame::Save(which) => todo!("impl save game writting {}", which),
         }
@@ -297,7 +298,7 @@ fn handle_save_load(level_state: &mut LevelState, game_state: &mut GameState, rd
 }
 
 fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
-    if !level_state.obj(k).active && !level_state.area_by_player[level_state.obj(k).area_number] {
+    if level_state.obj(k).active == ActiveType::No && !level_state.area_by_player[level_state.obj(k).area_number] {
         return;
     }
 

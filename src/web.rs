@@ -19,7 +19,7 @@ use crate::patch::PatchConfig;
 pub fn iw_init(upload_id: &str) {
     console_error_panic_hook::set_once(); 
 
-    let variant = &assets::W3D;
+    let variant = &assets::W3D6;
 
     let loader = WebLoader{
         variant,
@@ -152,6 +152,9 @@ impl Loader for WebLoader {
         todo!("patch file data loading not implemented for web");
     }
     fn load_save_game_head(&self, which: usize) -> Result<Vec<u8>, String> {
+        todo!("save game loading not implemented yet for web");
+    }
+    fn load_save_game(&self, which: usize) -> Result<Vec<u8>, String> {
         todo!("save game loading not implemented yet for web");
     }
 }

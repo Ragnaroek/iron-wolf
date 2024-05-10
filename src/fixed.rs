@@ -4,7 +4,7 @@ mod fixed_test;
 
 use std::fmt;
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Eq, PartialEq, Clone, Copy)]
 pub struct Fixed(i32); //16:16 fixed point
 
 pub fn new_fixed_u16(int_part: u16, frac_part: u16) -> Fixed {

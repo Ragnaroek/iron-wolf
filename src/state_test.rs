@@ -46,7 +46,7 @@ fn test_check_diag() {
     level_state.actor_at[1][2] = At::Wall(42);
     assert!(!check_diag(&level_state, 1, 2));
 
-    level_state.actor_at[1][3] = At::Blocked;
+    level_state.actor_at[1][3] = At::Wall(1); // Blocked
     assert!(!check_diag(&level_state, 1, 3)); 
 
     level_state.update_obj(ObjKey(1), |obj| obj.flags = 0);
@@ -78,7 +78,7 @@ fn test_check_side() {
     assert!(free);
     assert_eq!(door, 255 & 63);
 
-    level_state.actor_at[1][3] = At::Blocked;
+    level_state.actor_at[1][3] = At::Wall(1); // Blocked
     let (free, door) = check_side(&level_state, 1, 3);
     assert!(!free);
     assert_eq!(door, -1);
@@ -130,7 +130,7 @@ fn test_player() -> ObjType {
         view_x: 0,
         trans_x: new_fixed_i32(0),
         trans_y: new_fixed_i32(0),
-        active: true,
+        active: crate::def::ActiveType::Yes,
         angle: 0,
         pitch: 0,
         x: 1933312,
