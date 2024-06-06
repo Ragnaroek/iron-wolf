@@ -1,6 +1,7 @@
 use crate::act1::open_door;
 use crate::agent::take_damage;
 use crate::def::{ActiveType, At, ClassType, ControlState, Difficulty, DirType, DoorAction, EnemyType, GameState, LevelState, ObjKey, ObjType, Sprite, StateType, FL_SHOOTABLE, FL_VISABLE, ICON_ARROWS, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, RUN_SPEED, SPD_DOG, SPD_PATROL, TILEGLOBAL, TILESHIFT};
+use crate::game;
 use crate::state::{check_line, move_obj, new_state, select_chase_dir, select_dodge_dir, sight_player, spawn_new_obj, try_walk};
 use crate::play::ProjectionConfig;
 use crate::user::rnd_t;
@@ -1081,8 +1082,9 @@ pub fn spawn_patrol(which: EnemyType, actors: &mut Vec<ObjType>, actor_at: &mut 
         EnemyType::Guard => {
             let mut obj = spawn_new_obj(x_tile, y_tile, &S_GRDPATH1, ClassType::Guard);
             obj.speed = SPD_PATROL;
-            // TODO check loadedgame
-            game_state.kill_total += 1;
+            if !game_state.loaded_game {
+                game_state.kill_total += 1;
+            }
             obj
         },
         EnemyType::Officer => {
@@ -1090,8 +1092,9 @@ pub fn spawn_patrol(which: EnemyType, actors: &mut Vec<ObjType>, actor_at: &mut 
             /*
             let obj = spawn_new_obj(x_tile, y_tile, &S_OFCPATH1, ClassType::Officer);
             obj.speed = SPD_PATROL;
-            // TODO check loadedgame
-            game_state.kill_total += 1;
+            if !game_state.loaded_game {
+                game_state.kill_total += 1;
+            }
             obj
             */
         },
@@ -1099,7 +1102,9 @@ pub fn spawn_patrol(which: EnemyType, actors: &mut Vec<ObjType>, actor_at: &mut 
             let mut obj = spawn_new_obj(x_tile, y_tile, &S_SSPATH1, ClassType::SS);
             obj.speed = SPD_PATROL;
             // TODO check loadedgame
-            game_state.kill_total += 1;
+            if !game_state.loaded_game {
+                game_state.kill_total += 1;
+            }
             obj
         },
         EnemyType::Mutant => {
@@ -1108,15 +1113,18 @@ pub fn spawn_patrol(which: EnemyType, actors: &mut Vec<ObjType>, actor_at: &mut 
             let obj = spawn_new_obj(x_tile, y_tile, &S_MUTPATH1, ClassType::Mutant);
             obj.speed = SPD_PATROL;
             // TODO check loadedgame
-            game_state.kill_total += 1;
+            if !game_state.loaded_game {
+                game_state.kill_total += 1;
+            }
             obj
             */
         },
         EnemyType::Dog => {
             let mut obj = spawn_new_obj(x_tile, y_tile, &S_DOGPATH1, ClassType::Dog);
             obj.speed = SPD_DOG;
-            // TODO check loadedgame
-            game_state.kill_total += 1;
+            if !game_state.loaded_game {
+                game_state.kill_total += 1;
+            }
             obj
         },
         _ => {

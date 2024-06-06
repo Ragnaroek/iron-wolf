@@ -191,7 +191,7 @@ impl LevelState {
 
 derive_from!{
     #[repr(usize)]
-    #[derive(Debug, Eq, PartialEq)]
+    #[derive(Debug, Eq, PartialEq, Copy, Clone)]
     pub enum Dir {
         North,
         East,
@@ -571,7 +571,7 @@ pub struct ObjType {
 
 derive_from!{
     #[repr(usize)]
-    #[derive(Debug, Eq, PartialEq)]
+    #[derive(Debug, Eq, PartialEq, Clone, Copy)]
     pub enum DoorAction {
         Open,
         Closed,
@@ -582,7 +582,7 @@ derive_from!{
 
 derive_from!{
     #[repr(usize)]
-    #[derive(Debug, Eq, PartialEq)]
+    #[derive(Debug, Eq, PartialEq, Clone, Copy)]
     pub enum DoorLock {
         Normal,
         Lock1,

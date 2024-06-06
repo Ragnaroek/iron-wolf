@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
 use crate::assets::{file_name, WolfFile, WolfVariant};
 use crate::patch::{self, PatchConfig};
 
@@ -15,6 +15,7 @@ pub trait Loader: Sync + Send {
     /// Read the first 32 bytes of a save game file
     fn load_save_game_head(&self, which: usize) -> Result<Vec<u8>, String>;
     fn load_save_game(&self, which: usize) -> Result<Vec<u8>, String>;
+    fn save_save_game(&self, which: usize, bytes: &[u8]) -> Result<(), String>;
 }
 
 pub struct DiskLoader {
@@ -57,13 +58,28 @@ impl Loader for DiskLoader {
         Ok(result)
     }
 
+    fn save_save_game(&self, which: usize, bytes: &[u8]) -> Result<(), String> {
+        let mut file = self.create_save_game_file(which)?;
+        file.write_all(bytes).map_err(|e| format!("failed to save save game {}", e.to_string()))   
+    }
+
 }
 
 impl DiskLoader {
     fn open_save_game_file(&self, which: usize) -> Result<File, String> {
-        let path = &self.data_path.join(format!("SAVEGAM{}.{}", which, self.variant.file_ending));
+        let path = &self.save_game_path(which);
         let file_result = File::open(path);
         file_result.map_err(|_|format!("savegame {:?} not found", path))
+    }
+
+    fn create_save_game_file(&self, which: usize) -> Result<File, String> {
+        let path = &self.save_game_path(which);
+        let file_result = File::create(path);
+        file_result.map_err(|_|format!("savegame {:?} cannot be created", path))
+    }
+
+    fn save_game_path(&self, which: usize) -> PathBuf {
+        self.data_path.join(format!("SAVEGAM{}.{}", which, self.variant.file_ending))
     }
 }
 

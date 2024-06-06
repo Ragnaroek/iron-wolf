@@ -30,7 +30,7 @@ impl DataReader<'_> {
 	}
 	
 	pub fn read_i32(&mut self) -> i32 {
-		let i = i32::from_le_bytes(self.data[self.offset..(self.offset + 4)].try_into().unwrap());
+		let i = i32::from_le_bytes(self.data[self.offset..(self.offset+4)].try_into().unwrap());
 		self.offset += 4;
 		i
 	}
@@ -73,6 +73,59 @@ impl DataReader<'_> {
 
 	pub fn offset(&self) -> usize {
 		return self.offset
+	}
+}
+
+pub struct DataWriter {
+	pub data: Vec<u8>,
+	offset: usize,
+}
+
+impl DataWriter {
+	pub fn write_bytes(&mut self, bytes: &[u8]) {
+		for i in 0..bytes.len() {
+			self.data[self.offset] = bytes[i];
+			self.offset += 1;
+		}
+	}
+
+	pub fn write_u8(&mut self, v: u8) {
+		self.write_bytes(&v.to_le_bytes());
+	}
+
+	pub fn write_u16(&mut self, v: u16) {
+		self.write_bytes(&v.to_le_bytes());
+	}
+
+	pub fn write_i16(&mut self, v: i16) {
+		self.write_bytes(&v.to_le_bytes());
+	}
+
+	pub fn write_u32(&mut self, v: u32) {
+		self.write_bytes(&v.to_le_bytes());
+	}
+
+	pub fn write_i32(&mut self, v: i32) {
+		self.write_bytes(&v.to_le_bytes());
+	}
+
+	pub fn skip(&mut self, bytes: usize) {
+		self.offset += bytes; 
+	}
+
+	pub fn slice(&self, start: usize, end: usize) -> &[u8] {
+		&self.data[start..end]
+	}
+
+	pub fn offset(&self) -> usize {
+		return self.offset
+	}
+}
+
+pub fn new_data_writer(size: usize) -> DataWriter {
+	DataWriter {
+		data: vec![0; size],
+		offset: 0,
 	}
 }
 

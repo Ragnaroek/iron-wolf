@@ -4,17 +4,22 @@ use vga::SCReg;
 
 use crate::assets;
 use crate::config;
+use crate::def::GameState;
+use crate::def::LevelState;
 use crate::def::{new_game_state, ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction, DoorLock, DoorType, ObjKey, ObjType, Sprite, StaticKind, StaticType, WeaponType, MAP_SIZE, NUM_AREAS};
 use crate::fixed::{new_fixed, new_fixed_i32};
 use crate::game::setup_game_level;
 use crate::loader::{DiskLoader, Loader};
 use crate::play::{self, ProjectionConfig};
+use crate::start::save_the_game;
+use crate::start::OBJ_TYPE_LEN;
+use crate::start::STAT_TYPE_LEN;
 use crate::vga_render::{self, VGARenderer};
 
 use super::{do_load, null_obj_type};
 
 #[test]
-fn test_do_load_save0() {
+fn test_do_load_and_save_save0() {
     let episode = 0;
     let map_on = 1;
     let mut data_path = PathBuf::new();
@@ -47,13 +52,25 @@ fn test_do_load_save0() {
     game_state.weapon = None;
     game_state.chosen_weapon = WeaponType::Knife;
     game_state.push_wall_state = 666;
-
     game_state.loaded_game = true;
     let checksum_passed = do_load(&mut level_state, &mut game_state, &rdr, &prj, &assets, &loader, 0, 0, 0);
-
     assert!(checksum_passed);
-
     // check game_state
+    check_loaded_save_0(&level_state, &game_state, &mut level_state_init, episode, map_on);
+
+    // save the state as save9 and check if it is the ~same as save0 (there are some differences in an iw
+    // save saved game) 
+    save_the_game(&level_state, &game_state, &rdr, &loader, 9, "e1m2", 0, 0);
+    check_written_save_0(&loader);
+   
+    // load save9 again, it should result in the same game state as the load of save0
+    let checksum_passed = do_load(&mut level_state, &mut game_state, &rdr, &prj, &assets, &loader, 9 /*only difference to load before*/, 0, 0);
+    assert!(checksum_passed);
+    // check game_state again after save9 load
+    check_loaded_save_0(&level_state, &game_state, &mut level_state_init, episode, map_on);
+}
+
+fn check_loaded_save_0(level_state: &LevelState, game_state: &GameState, level_state_init: &mut LevelState, episode: usize, map_on: usize) {
     assert_eq!(game_state.difficulty, Difficulty::Baby);
     assert_eq!(game_state.map_on, map_on);
     assert_eq!(game_state.old_score, 3700);
@@ -74,9 +91,9 @@ fn test_do_load_save0() {
     assert_eq!(game_state.secret_count, 0);
     assert_eq!(game_state.treasure_count, 0);
     assert_eq!(game_state.kill_count, 0);
-    assert_eq!(game_state.secret_total, 8);
-    assert_eq!(game_state.treasure_total, 124);
-    assert_eq!(game_state.kill_total, 51);
+    assert_eq!(game_state.secret_total, 4);
+    assert_eq!(game_state.treasure_total, 62);
+    assert_eq!(game_state.kill_total, 40);
     assert_eq!(game_state.time_count, 47);
     assert_eq!(game_state.kill_x, 0);
     assert_eq!(game_state.kill_y, 0);
@@ -158,6 +175,87 @@ fn test_do_load_save0() {
     for i in 0..level_state.doors.len() {
         assert_eq!(level_state.doors[i], w3d_doors[i]); 
     }
+}
+
+fn check_written_save_0(loader: &DiskLoader) {
+    let orig_save = loader.load_save_game(0).expect("orig save game loaded");
+    let test_save = loader.load_save_game(9).expect("test save game loaded");
+
+    assert_eq!(orig_save.len(), test_save.len());
+    for i in 0..4274 {
+        if i >= 5 && i <= 32 {
+            // header beyond the save game name contains garbage, but iw always writes 0s
+            assert_eq!(test_save[i], 0);
+        } else {
+            assert_eq!(orig_save[i], test_save[i], "bytes[{}] differ  {:x} (orig) vs {:x} (test)", i, orig_save[i], test_save[i]);
+        }
+    }
+    // at_val check
+    for i in (4274..12466).step_by(2) {
+        let got_val = u16::from_le_bytes(test_save[i..i+2].try_into().expect("le bytes"));
+        let want_val = u16::from_le_bytes(orig_save[i..i+2].try_into().expect("le bytes"));
+        if want_val > 255 {
+            assert!(got_val > 255, "at_val obj ref differ");
+        } else {
+            assert_eq!(got_val, want_val, "at_val differ")
+        } 
+    }
+
+    let obj_offset_start = 13909;
+    let obj_offset_end = 16429;
+
+    for i in 12466..obj_offset_start {
+        assert_eq!(orig_save[i], test_save[i], "bytes[{}] differ {:x} (orig) vs {:x} (test)", i, orig_save[i], test_save[i]); 
+    }
+
+    let mut next_obj_start = obj_offset_start;
+    for i in obj_offset_start..obj_offset_end {
+        if i == next_obj_start+6 || i == next_obj_start+7 { 
+            // state ptr wanted diff
+            assert_eq!(test_save[i], 0, "state pointer not nulled");
+        } else if i >= next_obj_start+OBJ_TYPE_LEN-4 && i <= next_obj_start+OBJ_TYPE_LEN-1 { 
+            //next,prev pointer wanted diff
+            assert_eq!(test_save[i], 0, "next, prev pointer not nulled")
+        } else if i >= (obj_offset_end-OBJ_TYPE_LEN)+2 && i<=obj_offset_end {
+            // the original save game contains garbage data in the nullobj. iw zeros it out.
+            // only the 'active' field is expected to be as in the original savegame
+            assert_eq!(test_save[i], 0, "zero object not nulled, offset = {}", i);
+        } else {
+            assert_eq!(orig_save[i], test_save[i], "obj_type bytes[{}] differ {:x} (orig) vs {:x} (test)", i, orig_save[i], test_save[i]);
+        }
+
+        if i == next_obj_start+(OBJ_TYPE_LEN-1) {
+            next_obj_start += OBJ_TYPE_LEN;
+        } 
+    }
+
+    assert_eq!(test_save[obj_offset_end], 0, "laststatobj pointer (1) not nulled");
+    assert_eq!(test_save[obj_offset_end+1], 0, "laststatobj pointer (1) not nulled");
+
+    let static_offset_start = obj_offset_end+2;
+    let static_offset_end = 19631;
+
+    let mut next_stat_start = static_offset_start;
+    for i in static_offset_start..static_offset_end {
+        if i == next_stat_start+2 || i == next_stat_start+3 {
+            //visspot nulled out
+            assert_eq!(test_save[i], 0, "visspot not nulled")
+        } else {
+            assert_eq!(orig_save[i], test_save[i], "statics bytes[{}] differ {:x} (orig) vs {:x} (test)", i, orig_save[i], test_save[i]); 
+        }
+
+        if i == next_stat_start+(STAT_TYPE_LEN-1) {
+            next_stat_start += STAT_TYPE_LEN;
+        }
+    }
+
+    // remaining savegame bytes should match exactly
+    for i in static_offset_end..test_save.len()-4 {
+        assert_eq!(orig_save[i], test_save[i], "bytes[{}] differ {:x} (orig) vs {:x} (test)", i, orig_save[i], test_save[i]); 
+    }
+
+    let checksum = i32::from_le_bytes(test_save[test_save.len()-4..test_save.len()].try_into().expect("checksum"));
+    assert_eq!(checksum, 129989);
 }
 
 // save game 1 is a manipulated/cheated one. Lives were edited to 99.
