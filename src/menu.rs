@@ -4,7 +4,7 @@ use vga::input::NumCode;
 use crate::input::{Input, ControlInfo, read_control, ControlDirection};
 use crate::loader::Loader;
 use crate::start::quit;
-use crate::us1::{c_print, print};
+use crate::us1::{c_print, line_input, print};
 use crate::user::rnd_t;
 use crate::vga_render::VGARenderer;
 use crate::vh::{vw_hlin, vw_vlin};
@@ -61,6 +61,7 @@ static END_STRINGS : [&'static str; 9] = [
 	"You are at an intersection.\nA sign says, 'Press Y to quit.'\n>",
 	"For guns and glory, press N.\nFor work and worry, press Y."
 ];
+static GAME_SAVED : &'static str = "There's already a game\nsaved at this position.\n      Overwrite?";
 
 static BACK_TO_DEMO : &'static str = "Back to Demo";
 static BACK_TO_GAME : &'static str = "Back to Game";
@@ -167,7 +168,7 @@ pub enum MenuHandle {
 
 #[derive(PartialEq, Debug)]
 pub enum SaveLoadGame {
-    Save(usize),
+    Save(usize, String),
     Load(usize),
 }
 
@@ -294,6 +295,7 @@ pub fn initial_menu_state() -> MenuState {
             (Menu::Top, initial_main_menu()), 
             (Menu::MainMenu(MainMenuItem::NewGame), initial_episode_menu()),
             (Menu::MainMenu(MainMenuItem::LoadGame), initial_load_save_menu()),
+            (Menu::MainMenu(MainMenuItem::SaveGame), initial_load_save_menu()),
             (Menu::DifficultySelect, initial_difficulty_menu()),
         ]),
     }
@@ -308,7 +310,7 @@ pub async fn control_panel(ticker: &Ticker, game_state: &mut GameState, rdr: &VG
     // TODO scan code handling
     // TODO StartCPMusic(MENUSONG)
 
-    setup_control_panel(win_state);
+    setup_control_panel(win_state, menu_state);
 
     let mut menu_stack: Vec<Menu> = Vec::new();
     menu_stack.push(menu_state.selected);
@@ -318,7 +320,7 @@ pub async fn control_panel(ticker: &Ticker, game_state: &mut GameState, rdr: &VG
         let menu_opt = menu_stack.last();
         if let Some(menu) = menu_opt {
             let handle = match menu {
-                Menu::Top => cp_main_menu(ticker, game_state, rdr, input, win_state, menu_state).await,
+                Menu::Top => cp_main_menu(ticker, rdr, input, win_state, menu_state).await,
                 Menu::MainMenu(item) => {
                     match item {
                         MainMenuItem::NewGame => cp_new_game(ticker, game_state, rdr, input, win_state, menu_state).await,
@@ -345,8 +347,8 @@ pub async fn control_panel(ticker: &Ticker, game_state: &mut GameState, rdr: &VG
     }
 }
 
-async fn cp_main_menu(ticker: &Ticker, game_state: &GameState, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState) -> MenuHandle {
-    draw_main_menu(game_state, rdr, win_state, menu_state);
+async fn cp_main_menu(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState) -> MenuHandle {
+    draw_main_menu(rdr, win_state, menu_state);
     rdr.fade_in().await;
     
     let handle = handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
@@ -354,12 +356,14 @@ async fn cp_main_menu(ticker: &Ticker, game_state: &GameState, rdr: &VGARenderer
         return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::NewGame));
     } else if handle == MenuHandle::Selected(MainMenuItem::LoadGame.pos()) {
         return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::LoadGame));
+    } else if handle == MenuHandle::Selected(MainMenuItem::SaveGame.pos()) {
+        return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::SaveGame));
     } else if handle == MenuHandle::Selected(MainMenuItem::ViewScores.pos()) {
         todo!("show view scores");
     } else if handle == MenuHandle::Selected(MainMenuItem::BackTo.pos()) {
         return MenuHandle::BackToGameLoop(None);
     } else if handle == MenuHandle::QuitMenu || handle == MenuHandle::Selected(MainMenuItem::Quit.pos()) {
-        menu_quit(ticker, game_state, rdr, input, win_state, menu_state).await;
+        menu_quit(ticker, rdr, input, win_state, menu_state).await;
         return MenuHandle::QuitMenu;
     } else {
         return handle;
@@ -388,29 +392,69 @@ async fn cp_new_game(ticker: &Ticker, game_state: &mut GameState, rdr: &VGARende
 async fn cp_load_game(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState, loader: &dyn Loader) -> MenuHandle {
     // TODO Handle QuickLoad
     let state = read_save_game_state(loader);
-    draw_load_save_screen(rdr, input, win_state, menu_state, &state, false).await;
-    let load_handle = handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
-    if let MenuHandle::Selected(which) = load_handle {
-        draw_ls_action(rdr, win_state, false);
-        return MenuHandle::BackToGameLoop(Some(SaveLoadGame::Load(which)));
-    } else {
-        rdr.fade_out().await;
-        return load_handle;
+    draw_load_save_screen(rdr, win_state, menu_state, &state, false).await;
+    loop {
+        let load_handle = handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
+        if let MenuHandle::Selected(which) = load_handle {
+            if state[which].available {
+                draw_ls_action(rdr, win_state, false);
+                return MenuHandle::BackToGameLoop(Some(SaveLoadGame::Load(which)));
+            } // else: loop back to handle_menu
+        } else { // ESC pressed
+            rdr.fade_out().await;
+            return load_handle;
+        }
     }
 }
 
 async fn cp_save_game(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState, loader: &dyn Loader) -> MenuHandle {
     // TODO Handle QuickSave
     let state = read_save_game_state(loader);
-    draw_load_save_screen(rdr, input, win_state, menu_state, &state, true).await;
-    let save_handle = handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
-    if let MenuHandle::Selected(which) = save_handle {
-        println!("save game {}", which);
-        draw_ls_action(rdr, win_state, true);
-        return MenuHandle::BackToGameLoop(Some(SaveLoadGame::Save(which)));
-    } else {
-        rdr.fade_out().await;
-        return save_handle;
+    draw_load_save_screen(rdr, win_state, menu_state, &state, true).await;
+    loop {
+        let save_handle = handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
+        if let MenuHandle::Selected(which) = save_handle {
+
+            // TODO Check overwrite existing game
+
+            if state[which].available {
+                if !confirm(ticker, rdr, input, win_state, GAME_SAVED).await {
+                    draw_load_save_screen(rdr, win_state, menu_state, &state, true).await;
+                    continue;
+                } else {
+                    draw_load_save_screen(rdr, win_state, menu_state, &state, true).await;
+                    print_ls_entry(rdr, win_state, menu_state, &state[which], which, HIGHLIGHT);
+                }
+            }
+
+            // TODO ShootSnd
+
+            let save_menu = &menu_state.menues[&Menu::MainMenu(MainMenuItem::SaveGame)];
+            win_state.font_number = 0;
+            let initial_input = 
+            if state[which].available {
+                state[which].name.as_ref().expect("save game name")
+            } else { // new save game
+                // clear save slot text
+                rdr.bar(LSM_X+save_menu.state.indent+1, LSM_Y+which*13+1, LSM_W-save_menu.state.indent-16, 10, BKGD_COLOR);
+                ""
+            };
+            
+            let (input, escape) = line_input(ticker, rdr, input, win_state, LSM_X+save_menu.state.indent+2, LSM_Y+which*13+1, 
+                true, 31, LSM_W-save_menu.state.indent-30, initial_input);
+            if !escape {
+                draw_ls_action(rdr, win_state, true);
+                win_state.font_number = 1;
+                return MenuHandle::BackToGameLoop(Some(SaveLoadGame::Save(which, input)));
+            } else {
+                //TODO repaint entry 
+                //TODO SD_PlaySound(ESCPRESSEDSND)
+                continue
+            }
+        } else {
+            rdr.fade_out().await;
+            return save_handle;
+        }
     }
 }
 
@@ -458,7 +502,7 @@ fn draw_ls_action(rdr: &VGARenderer, win_state: &mut WindowState, save: bool) {
     }
 }
 
-async fn draw_load_save_screen(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState, state: &Vec<SaveGameState>, save: bool) {
+async fn draw_load_save_screen(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState, state: &Vec<SaveGameState>, save: bool) {
     clear_ms_screen(rdr);
     
     win_state.font_number = 1;
@@ -493,7 +537,6 @@ fn print_ls_entry(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &m
     win_state.print_y = LSM_Y+w*13+1;
     win_state.font_number = 0;
 
-    // TODO use save game name here instead of always STR_EMPTY (need SaveGameState!)
     if save_game.available && save_game.name.is_some() {
         print(rdr, win_state, save_game.name.as_ref().unwrap());
     } else {
@@ -586,7 +629,7 @@ fn episode_pic(i: usize) -> GraphicNum {
     }
 }
 
-async fn menu_quit(ticker: &Ticker, game_state: &GameState, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState) {
+async fn menu_quit(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState) {
     let text = END_STRINGS[((rnd_t()&0x07)+(rnd_t()&1)) as usize];
     if confirm(ticker, rdr, input, win_state, text).await {
         //TODO stop music
@@ -594,7 +637,7 @@ async fn menu_quit(ticker: &Ticker, game_state: &GameState, rdr: &VGARenderer, i
         quit(None)
     }
 
-    draw_main_menu(game_state, rdr, win_state, menu_state)
+    draw_main_menu(rdr, win_state, menu_state)
 }
 
 async fn confirm(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, str: &str) -> bool {
@@ -644,9 +687,6 @@ async fn handle_menu(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_stat
 
     if let MenuHandle::Selected(which_pos) = handle {
         menu_state.update_selected(|selected| selected.state.cur_pos = which_pos);
-        //let items = &menu_state.selected_state().items;
-        //let item_type = &items[which_pos];
-        //return item_type.handle;
     }
     handle
 }
@@ -794,28 +834,24 @@ fn draw_gun(rdr: &VGARenderer, win_state: &mut WindowState, selected: &MenuState
     new_y
 }
 
-fn wait_key_up(input: &Input) {
-    loop {
-        let ci = read_any_control(input);
-        // TODO check ci button0 to button3
-        if input.key_pressed(NumCode::Space) || input.key_pressed(NumCode::Return) || input.key_pressed(NumCode::Escape) {
-            return;
-        }
-    }
-}
-
 fn read_any_control(input: &Input) -> ControlInfo {
     read_control(input)
     // TODO also read mouse and joystick input
 }
 
-fn setup_control_panel(win_state: &mut WindowState) {
+fn setup_control_panel(win_state: &mut WindowState, menu_state: &mut MenuState) {
     win_state.set_font_color(TEXT_COLOR, BKGD_COLOR);
     win_state.font_number = 1;
     win_state.window_h = 200;
+
+    if win_state.in_game {
+        menu_state.update_menu(Menu::Top, |entry| {
+            entry.items[MainMenuItem::SaveGame.pos()].active = ItemActivity::Active;
+        })
+    }
 }
 
-fn draw_main_menu(game_state: &GameState, rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState) {
+fn draw_main_menu(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState) {
     clear_ms_screen(rdr);
     rdr.pic(112, 184, GraphicNum::CMOUSELBACKPIC);
     draw_stripes(rdr, 10);
@@ -823,7 +859,7 @@ fn draw_main_menu(game_state: &GameState, rdr: &VGARenderer, win_state: &mut Win
 
     cp_draw_window(rdr, MENU_X-8, MENU_Y-3, MENU_W, MENU_H, BKGD_COLOR);
 
-    if game_state.in_game {
+    if win_state.in_game {
         let main_menu_opt = menu_state.menues.get_mut(&Menu::Top);
         if let Some(main_menu) = main_menu_opt {
             let demo_item = &mut main_menu.items[MainMenuItem::BackTo.pos()];

@@ -28,6 +28,7 @@ use crate::menu::SaveLoadGame;
 use crate::menu::LSA_X;
 use crate::menu::LSA_Y;
 use crate::start::load_the_game;
+use crate::start::save_the_game;
 use crate::time;
 use crate::scale::{CompiledScaler, setup_scaling};
 use crate::us1::draw_window;
@@ -292,7 +293,9 @@ async fn handle_save_load(level_state: &mut LevelState, game_state: &mut GameSta
                 game_state.loaded_game = true;
                 load_the_game(level_state, game_state, win_state, rdr, input, prj, assets, loader, which, LSA_X+8, LSA_Y+5).await;
             },
-            SaveLoadGame::Save(which) => todo!("impl save game writting {}", which),
+            SaveLoadGame::Save(which, name) => {
+                save_the_game(level_state, game_state, rdr, loader, which, &name, LSA_X+8, LSA_Y+5);
+            },
         }
     }    
 }

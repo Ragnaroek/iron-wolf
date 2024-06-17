@@ -16,7 +16,7 @@ use crate::assets::{self, GraphicNum, SIGNON, GAMEPAL};
 use crate::fixed::{new_fixed_u16, new_fixed_u32};
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
-use crate::config;
+use crate::{config, game};
 use crate::menu::{check_for_episodes, control_panel, initial_menu_state, message, MenuState };
 use crate::play::{self, ProjectionConfig};
 use crate::us1::c_print;
@@ -30,6 +30,7 @@ use crate::game::{game_loop, setup_game_level};
 const OBJ_TYPE_LEN : usize = 60;
 const STAT_TYPE_LEN : usize = 8;
 const DOOR_TYPE_LEN : usize = 10;
+const LEVEL_RATIO_TYPE_LEN : usize = 10;
 const SAVEGAME_NAME_LEN : usize = 32;
 
 static STR_SAVE_CHEAT : &'static str = "Your Save Game file is,\nshall we say, \"corrupted\".\nBut I'll let you go on and\nplay anyway....";
@@ -118,6 +119,7 @@ pub fn initial_window_state() -> WindowState {
         font_number: 0,
         back_color: 0,
         debug_ok: false,
+        in_game: false,
     }
 }
 
@@ -244,8 +246,8 @@ pub fn quit(err: Option<&str>) {
 pub fn save_the_game(level_state: &LevelState, game_state: &GameState, rdr: &VGARenderer, loader: &dyn Loader, which: usize, name: &str, x: usize, y: usize) {
     let mut disk_anim = new_disk_anim(x, y);
 
-    // Save bytes to a writer (need this for checkumming)
-    let writer = &mut new_data_writer(game_file_size(level_state));
+    // Save bytes to a writer (need this for checksumming)
+    let writer = &mut new_data_writer(game_file_size(level_state, game_state));
 
     let mut header = [0; SAVEGAME_NAME_LEN];
     let name_bytes = name.as_bytes();
@@ -253,6 +255,7 @@ pub fn save_the_game(level_state: &LevelState, game_state: &GameState, rdr: &VGA
         header[i] = name_bytes[i];
     }
     writer.write_bytes(&header);
+
     disk_anim.disk_flop_anim(rdr);
     write_game_state(writer, game_state);
     let (offset, checksum) = do_write_checksum(writer, SAVEGAME_NAME_LEN, 0);
@@ -320,6 +323,7 @@ pub fn save_the_game(level_state: &LevelState, game_state: &GameState, rdr: &VGA
     writer.skip((MAX_DOORS-level_state.doors.len()) * 2);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum); 
 
+
     for door in &level_state.doors {
         write_door(writer, door);
     }
@@ -343,9 +347,10 @@ pub fn save_the_game(level_state: &LevelState, game_state: &GameState, rdr: &VGA
 }
 
 // in bytes
-fn game_file_size(level_state: &LevelState) -> usize {
-    98 + // GameState
-    80 + // LevelRatios
+fn game_file_size(level_state: &LevelState,  game_state: &GameState) -> usize {
+    SAVEGAME_NAME_LEN +
+    66 + // GameState
+    game_state.level_ratios.len() * LEVEL_RATIO_TYPE_LEN + // LevelRatios
     4096 + // tile_map
     8192 + // actor_at
     1369 + // area_connect
@@ -839,7 +844,7 @@ fn do_read_checksum(reader: &DataReader, prev_offset: usize, checksum_init: i32)
 
 fn do_write_checksum(writer: &DataWriter, prev_offset: usize, checksum_init: i32) -> (usize, i32) {
     let offset = writer.offset();
-    let block = writer.slice(prev_offset, offset);    
+    let block: &[u8] = writer.slice(prev_offset, offset);    
     checksum(offset, block, prev_offset, checksum_init)
 }
 

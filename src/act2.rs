@@ -1,7 +1,6 @@
 use crate::act1::open_door;
 use crate::agent::take_damage;
 use crate::def::{ActiveType, At, ClassType, ControlState, Difficulty, DirType, DoorAction, EnemyType, GameState, LevelState, ObjKey, ObjType, Sprite, StateType, FL_SHOOTABLE, FL_VISABLE, ICON_ARROWS, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, RUN_SPEED, SPD_DOG, SPD_PATROL, TILEGLOBAL, TILESHIFT};
-use crate::game;
 use crate::state::{check_line, move_obj, new_state, select_chase_dir, select_dodge_dir, sight_player, spawn_new_obj, try_walk};
 use crate::play::ProjectionConfig;
 use crate::user::rnd_t;
