@@ -515,6 +515,7 @@ dependencies = [
  "console_error_panic_hook",
  "futures",
  "js-sys",
+ "opl-emu",
  "serde",
  "toml",
  "vga-emu",
@@ -595,6 +596,15 @@ name = "once_cell"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
+
+[[package]]
+name = "opl-emu"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7d3b47bfcacbdf0182dc17e7755ac7c160a2c4ec03ac2cd96381c230c3b59b7"
+dependencies = [
+ "sdl2",
+]
 
 [[package]]
 name = "parking"
