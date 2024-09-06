@@ -451,16 +451,18 @@ fn placeholder() -> ItemType {
 pub async fn control_panel(
     ticker: &Ticker,
     game_state: &mut GameState,
+    opl: &mut OPL,
     rdr: &VGARenderer,
     input: &Input,
+    assets: &Assets,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
     scan: NumCode,
 ) -> Option<SaveLoadGame> {
     // TODO scan code handling
-    // TODO StartCPMusic(MENUSONG)
 
+    start_cp_music(opl, Music::WONDERIN, assets, loader);
     setup_control_panel(win_state, menu_state);
 
     let mut menu_stack: Vec<Menu> = Vec::new();
@@ -1324,16 +1326,17 @@ pub fn check_for_episodes(menu_state: &mut MenuState) {
     })
 }
 
-pub fn intro_song(variant: &WolfVariant) -> usize {
+pub fn intro_song(variant: &WolfVariant) -> Music {
     if is_sod(variant) {
         todo!("select SOD intro song")
     } else {
-        Music::NAZINOR as usize
+        Music::NAZINOR
     }
 }
 
-pub fn start_cp_music(opl: &mut OPL, trackno: usize, assets: &Assets, loader: &dyn Loader) {
+pub fn start_cp_music(opl: &mut OPL, track: Music, assets: &Assets, loader: &dyn Loader) {
     let variant = loader.variant();
+    let trackno = track as usize;
     let offset = assets.audio_headers[variant.start_music + trackno];
     let len = (assets.audio_headers[variant.start_music + trackno + 1] - offset);
 
