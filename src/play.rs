@@ -382,9 +382,11 @@ pub async fn play_loop(
                 tics,
                 level_state,
                 game_state,
+                opl,
                 rdr,
                 control_state,
                 prj,
+                assets,
             );
         }
 
@@ -483,9 +485,11 @@ fn do_actor(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
+    opl: &mut OPL,
     rdr: &VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
+    assets: &Assets,
 ) {
     if level_state.obj(k).active == ActiveType::No
         && !level_state.area_by_player[level_state.obj(k).area_number]
@@ -505,7 +509,17 @@ fn do_actor(
 
     if level_state.obj(k).tic_count == 0 {
         if let Some(think) = level_state.obj(k).state.expect("state").think {
-            think(k, tics, level_state, game_state, rdr, control_state, prj);
+            think(
+                k,
+                tics,
+                level_state,
+                game_state,
+                opl,
+                rdr,
+                control_state,
+                prj,
+                assets,
+            );
             if level_state.obj(k).state.is_none() {
                 return;
             }
@@ -551,7 +565,17 @@ fn do_actor(
     }
 
     if let Some(think) = level_state.obj(k).state.expect("state").think {
-        think(k, tics, level_state, game_state, rdr, control_state, prj);
+        think(
+            k,
+            tics,
+            level_state,
+            game_state,
+            opl,
+            rdr,
+            control_state,
+            prj,
+            assets,
+        );
         if level_state.obj(k).state.is_none() {
             return;
         }

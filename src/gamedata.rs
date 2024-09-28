@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Seek, SeekFrom};
+use std::str;
 
-use crate::util;
+use opl::{AdlSound, Instrument};
+
+use crate::{assets::WolfVariant, util};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GamedataHeader {
@@ -192,4 +195,53 @@ pub fn load_audio_headers<M: Read>(data: &mut M) -> Result<Vec<u32>, String> {
     }
 
     Ok(headers)
+}
+
+pub fn load_audio_sounds<M: Read + Seek>(
+    headers: &Vec<u32>,
+    data: &mut M,
+    variant: &WolfVariant,
+) -> Result<Vec<AdlSound>, String> {
+    let mut sounds = Vec::with_capacity(variant.start_digi_sound - variant.start_adlib_sound);
+    for chunk_no in variant.start_adlib_sound..variant.start_digi_sound {
+        let offset = headers[chunk_no];
+        let size = (headers[chunk_no + 1] - offset) as usize;
+        let mut data_buf = vec![0; size];
+        data.seek(SeekFrom::Start(offset as u64))
+            .map_err(|e| e.to_string())?;
+        data.read_exact(&mut data_buf).map_err(|e| e.to_string())?;
+        sounds.push(read_sound(data_buf));
+    }
+    Ok(sounds)
+}
+
+fn read_sound(data: Vec<u8>) -> AdlSound {
+    let length = u32::from_le_bytes(data[0..4].try_into().unwrap());
+    let instrument = Instrument {
+        m_char: data[6],
+        c_char: data[7],
+        m_scale: data[8],
+        c_scale: data[9],
+        m_attack: data[10],
+        c_attack: data[11],
+        m_sus: data[12],
+        c_sus: data[13],
+        m_wave: data[14],
+        c_wave: data[15],
+        n_conn: data[16],
+        voice: data[17],
+        mode: data[18],
+        // data[19..22] are padding and omitted
+    };
+    AdlSound {
+        length,
+        priority: u16::from_le_bytes(data[4..6].try_into().unwrap()),
+        instrument,
+        block: data[22],
+        data: data[23..(23 + length as usize)].to_vec(),
+        terminator: data[23 + length as usize],
+        name: str::from_utf8(&data[(23 + length as usize) + 1..data.len() - 1])
+            .expect("sound name")
+            .to_string(),
+    }
 }

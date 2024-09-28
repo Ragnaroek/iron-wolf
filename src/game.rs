@@ -9,7 +9,7 @@ use crate::agent::{
     draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_weapon,
 };
 use crate::agent::{spawn_player, thrust};
-use crate::assets::{load_map_from_assets, Music};
+use crate::assets::load_map_from_assets;
 use crate::def::{
     Assets, At, ControlState, Difficulty, DoorLock, EnemyType, GameState, IWConfig, Level,
     LevelState, ObjType, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState,

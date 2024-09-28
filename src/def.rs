@@ -3,6 +3,7 @@ use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::map::{MapFileType, MapSegs, MapType};
 use crate::play::ProjectionConfig;
 use crate::vga_render::{VGARenderer, PAGE_1_START, PAGE_2_START, PAGE_3_START};
+use opl::{AdlSound, OPL};
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -674,6 +675,7 @@ pub struct Assets {
     pub gamedata_headers: GamedataHeaders,
     pub game_maps: Vec<u8>,
     pub audio_headers: Vec<u32>,
+    pub audio_sounds: Vec<AdlSound>,
 }
 
 type Think = fn(
@@ -681,9 +683,11 @@ type Think = fn(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
+    opl: &mut OPL,
     rdr: &VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
+    assets: &Assets,
 );
 type Action = fn(
     k: ObjKey,

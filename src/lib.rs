@@ -1,6 +1,5 @@
 #![crate_name = "iw"]
 #![crate_type = "lib"]
-
 #![feature(ascii_char)]
 #![feature(ascii_char_variants)]
 #![feature(type_alias_impl_trait)]
@@ -23,16 +22,17 @@ pub mod map;
 pub mod menu;
 pub mod patch;
 pub mod play;
-pub mod time;
 pub mod scale;
+pub mod sd;
 pub mod start;
 pub mod state;
+pub mod time;
 pub mod us1;
 pub mod user;
 pub mod util;
 pub mod vga_render;
-pub mod vl;
 pub mod vh;
+pub mod vl;
 
 #[cfg(feature = "web")]
 pub mod web;

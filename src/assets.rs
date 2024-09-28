@@ -45,6 +45,8 @@ pub struct WolfVariant {
     pub num_pics: usize,
     pub start_pics: usize,
     pub start_music: usize,
+    pub start_adlib_sound: usize,
+    pub start_digi_sound: usize,
 }
 
 static SOD_FILE_ENDING: &str = "SOD";
@@ -54,6 +56,8 @@ pub static W3D1: WolfVariant = WolfVariant {
     num_pics: 139,
     start_pics: 3,
     start_music: 207,
+    start_adlib_sound: 67,
+    start_digi_sound: 138,
 };
 
 // TODO Demo file support WL1 and WL3??
@@ -62,6 +66,8 @@ pub static W3D6: WolfVariant = WolfVariant {
     num_pics: 132,
     start_pics: 3,
     start_music: 261,
+    start_adlib_sound: 87,
+    start_digi_sound: 174,
 };
 
 // TODO Put this behind conditional compilation (once Spear of Destiny support is started)?
@@ -70,6 +76,8 @@ pub static SOD: WolfVariant = WolfVariant {
     num_pics: 147,
     start_pics: 3,
     start_music: 243,
+    start_adlib_sound: 81,
+    start_digi_sound: 162,
 };
 
 pub fn is_sod(variant: &WolfVariant) -> bool {
@@ -105,6 +113,98 @@ pub fn file_name(file: WolfFile, variant: &WolfVariant) -> String {
         WolfFile::AudioData => AUDIO_DATA,
     };
     f.to_owned() + "." + variant.file_ending
+}
+
+#[repr(usize)]
+#[derive(Clone, Copy)]
+pub enum SoundName {
+    HITWALL,       // 0
+    SELECTWPN,     // 1
+    SELECTITEM,    // 2
+    HEARTBEAT,     // 3
+    MOVEGUN2,      // 4
+    MOVEGUN1,      // 5
+    NOWAY,         // 6
+    NAZIHITPLAYER, // 7
+    SCHABBSTHROW,  // 8
+    PLAYERDEATH,   // 9
+    DOGDEATH,      // 10
+    ATKGATLING,    // 11
+    GETKEY,        // 12
+    NOITEM,        // 13
+    WALK1,         // 14
+    WALK2,         // 15
+    TAKEDAMAGE,    // 16
+    GAMEOVER,      // 17
+    OPENDOOR,      // 18
+    CLOSEDOOR,     // 19
+    DONOTHING,     // 20
+    HALT,          // 21
+    DEATHSCREAM2,  // 22
+    ATKKNIFE,      // 23
+    ATKPISTOL,     // 24
+    DEATHSCREAM3,  // 25
+    ATKMACHINEGUN, // 26
+    HITENEMY,      // 27
+    SHOOTDOOR,     // 28
+    DEATHSCREAM1,  // 29
+    GETMACHINE,    // 30
+    GETAMMO,       // 31
+    SHOOTS,        // 32
+    HEALTH1,       // 33
+    HEALTH2,       // 34
+    BONUS1,        // 35
+    BONUS2,        // 36
+    BONUS3,        // 37
+    GETGATLING,    // 38
+    ESCPRESSED,    // 39
+    LEVELDONE,     // 40
+    DOGBARK,       // 41
+    ENDBONUS1,     // 42
+    ENDBONUS2,     // 43
+    BONUS1UP,      // 44
+    BONUS4,        // 45
+    PUSHWALL,      // 46
+    NOBONUSSND,    // 47
+    PERCENT100,    // 48
+    BOSSACTIVE,    // 49
+    MUTTI,         // 50
+    SCHUTZAD,      // 51
+    AHHHG,         // 52
+    DIE,           // 53
+    EVA,           // 54
+    GUTENTAG,      // 55
+    LEBEN,         // 56
+    SCHEIST,       // 57
+    NAZIFIRE,      // 58
+    BOSSFIRE,      // 59
+    SSFIRE,        // 60
+    SLURPIE,       // 61
+    TOTHUND,       // 62
+    MEINGOTT,      // 63
+    SCHABBSHA,     // 64
+    HITLERHA,      // 65
+    SPION,         // 66
+    NEINSOVAS,     // 67
+    DOGATTACK,     // 68
+    FLAMETHROWER,  // 69
+    MECHSTEP,      // 70
+    GOOBS,         // 71
+    YEAH,          // 72
+    DEATHSCREAM4,  // 73
+    DEATHSCREAM5,  // 74
+    DEATHSCREAM6,  // 75
+    DEATHSCREAM7,  // 76
+    DEATHSCREAM8,  // 77
+    DEATHSCREAM9,  // 78
+    DONNER,        // 79
+    EINE,          // 80
+    ERLAUBEN,      // 81
+    KEIN,          // 82
+    MEIN,          // 83
+    ROSE,          // 84
+    MISSILEFIRE,   // 85
+    MISSILEHIT,    // 86
 }
 
 #[repr(usize)]
@@ -679,6 +779,10 @@ pub fn load_assets(loader: &dyn Loader) -> Result<Assets, String> {
     let mut audio_header_cursor = Cursor::new(loader.load_wolf_file(WolfFile::AudioHead));
     let audio_headers = gamedata::load_audio_headers(&mut audio_header_cursor)?;
 
+    let mut audio_cursor = Cursor::new(loader.load_wolf_file(WolfFile::AudioData));
+    let audio_sounds =
+        gamedata::load_audio_sounds(&audio_headers, &mut audio_cursor, loader.variant())?;
+
     let game_maps = loader.load_wolf_file(WolfFile::GameMaps);
 
     Ok(Assets {
@@ -689,5 +793,6 @@ pub fn load_assets(loader: &dyn Loader) -> Result<Assets, String> {
         game_maps,
         gamedata_headers,
         audio_headers,
+        audio_sounds,
     })
 }
