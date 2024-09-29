@@ -2,35 +2,33 @@ name: Rust
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  build_and_test:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        toolchain:
+          - nightly
     steps:
-    - uses: actions/checkout@v3
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        override: true
-        toolchain: nightly
-    - name: Update
-      run: sudo apt-get update
-    - name: Install SDL
-      run: sudo apt-get install libsdl2-dev libsdl2-ttf-dev
-    - name: Build SDL
-      run: cargo build --features sdl --verbose
-    - name: Run tests SDL
-      run: cargo test --features sdl --verbose
-    - name: Build Web
-      run: cargo build --features web --verbose
-    - name: Run tests Web
-      run: cargo test --features web --verbose
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - name: Update
+        run: sudo apt-get update
+      - name: Install SDL
+        run: sudo apt-get install libsdl2-dev libsdl2-ttf-dev
+      - name: Build SDL
+        run: cargo build --features sdl --verbose
+      - name: Test SDL
+        run: cargo test --features sdl --verbose
+      - name: Build Web
+        run: cargo build --features web --verbose
+      - name: Test Web
+        run: cargo test --features web --verbose
