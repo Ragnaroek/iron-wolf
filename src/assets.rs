@@ -56,8 +56,8 @@ pub static W3D1: WolfVariant = WolfVariant {
     num_pics: 139,
     start_pics: 3,
     start_music: 207,
-    start_adlib_sound: 67,
-    start_digi_sound: 138,
+    start_adlib_sound: 87,
+    start_digi_sound: 174,
 };
 
 // TODO Demo file support WL1 and WL3??
