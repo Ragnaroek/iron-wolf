@@ -2,7 +2,6 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
-use opl::OPL;
 use vga::input::NumCode;
 use vga::util;
 use vga::VGA;
@@ -36,6 +35,7 @@ use crate::menu::SaveLoadGame;
 use crate::menu::LSA_X;
 use crate::menu::LSA_Y;
 use crate::scale::{setup_scaling, CompiledScaler};
+use crate::sd::Sound;
 use crate::start::load_the_game;
 use crate::start::save_the_game;
 use crate::time;
@@ -298,7 +298,7 @@ pub async fn play_loop(
     menu_state: &mut MenuState,
     control_state: &mut ControlState,
     vga: &VGA,
-    opl: &mut OPL,
+    sound: &mut Sound,
     rc: &mut RayCast,
     rdr: &VGARenderer,
     input: &input::Input,
@@ -382,7 +382,7 @@ pub async fn play_loop(
                 tics,
                 level_state,
                 game_state,
-                opl,
+                sound,
                 rdr,
                 control_state,
                 prj,
@@ -392,11 +392,11 @@ pub async fn play_loop(
 
         update_palette_shifts(game_state, vga, &shifts, tics).await;
 
-        three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
+        three_d_refresh(ticker, game_state, level_state, rc, rdr, sound, prj, assets).await;
 
         save_load = check_keys(
             ticker,
-            opl,
+            sound,
             rdr,
             assets,
             win_state,
@@ -485,7 +485,7 @@ fn do_actor(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    opl: &mut OPL,
+    sound: &mut Sound,
     rdr: &VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
@@ -514,7 +514,7 @@ fn do_actor(
                 tics,
                 level_state,
                 game_state,
-                opl,
+                sound,
                 rdr,
                 control_state,
                 prj,
@@ -570,7 +570,7 @@ fn do_actor(
             tics,
             level_state,
             game_state,
-            opl,
+            sound,
             rdr,
             control_state,
             prj,
@@ -683,7 +683,7 @@ pub fn center_window(rdr: &VGARenderer, win_state: &mut WindowState, width: usiz
 
 async fn check_keys(
     ticker: &time::Ticker,
-    opl: &mut OPL,
+    sound: &mut Sound,
     rdr: &VGARenderer,
     assets: &Assets,
     win_state: &mut WindowState,
@@ -717,7 +717,7 @@ async fn check_keys(
         let prev_buffer = rdr.buffer_offset();
         rdr.set_buffer_offset(rdr.active_buffer());
         let save_load = control_panel(
-            ticker, game_state, opl, rdr, input, assets, win_state, menu_state, loader, scan,
+            ticker, game_state, sound, rdr, input, assets, win_state, menu_state, loader, scan,
         )
         .await;
         rdr.set_buffer_offset(prev_buffer);

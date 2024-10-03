@@ -7,14 +7,13 @@ use crate::def::{
     TILESHIFT,
 };
 use crate::play::ProjectionConfig;
+use crate::sd::Sound;
 use crate::state::{
     check_line, move_obj, new_state, select_chase_dir, select_dodge_dir, sight_player,
     spawn_new_obj, try_walk,
 };
 use crate::user::rnd_t;
 use crate::vga_render::VGARenderer;
-
-use opl::OPL;
 
 static START_HITPOINTS: [[i32; NUM_ENEMIES]; 4] = [
     [
@@ -795,7 +794,7 @@ fn t_path(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut OPL,
+    _: &mut Sound,
     rdr: &VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
@@ -863,7 +862,7 @@ fn t_dog_chase(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut OPL,
+    _: &mut Sound,
     rdr: &VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
@@ -940,7 +939,7 @@ fn t_bite(
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut OPL,
+    _: &mut Sound,
     rdr: &VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
@@ -1004,7 +1003,7 @@ fn t_stand(
     tics: u64,
     level_state: &mut LevelState,
     _: &mut GameState,
-    _: &mut OPL,
+    _: &mut Sound,
     _: &VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
@@ -1018,7 +1017,7 @@ fn t_chase(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut OPL,
+    _: &mut Sound,
     rdr: &VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,

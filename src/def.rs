@@ -2,8 +2,9 @@ use crate::fixed::Fixed;
 use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::map::{MapFileType, MapSegs, MapType};
 use crate::play::ProjectionConfig;
+use crate::sd::Sound;
 use crate::vga_render::{VGARenderer, PAGE_1_START, PAGE_2_START, PAGE_3_START};
-use opl::{AdlSound, OPL};
+use opl::AdlSound;
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -683,12 +684,13 @@ type Think = fn(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    opl: &mut OPL,
+    sound: &mut Sound,
     rdr: &VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     assets: &Assets,
 );
+
 type Action = fn(
     k: ObjKey,
     tics: u64,

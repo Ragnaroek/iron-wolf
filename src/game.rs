@@ -1,6 +1,5 @@
 use std::vec;
 
-use opl::OPL;
 use vga::VGA;
 
 use crate::act1::{spawn_door, spawn_static};
@@ -23,6 +22,7 @@ use crate::menu::{start_cp_music, MenuState, SaveLoadGame};
 use crate::play::{
     draw_play_screen, finish_palette_shifts, new_control_state, play_loop, ProjectionConfig, SONGS,
 };
+use crate::sd::Sound;
 use crate::vga_render::VGARenderer;
 use crate::vh::vw_fade_out;
 use crate::{map, time};
@@ -48,7 +48,7 @@ pub async fn game_loop(
     iw_config: &IWConfig,
     game_state: &mut GameState,
     vga: &VGA,
-    opl: &mut OPL,
+    sound: &mut Sound,
     rdr: &VGARenderer,
     input: &Input,
     prj: &ProjectionConfig,
@@ -70,7 +70,7 @@ pub async fn game_loop(
         win_state.in_game = true;
 
         let track = SONGS[game_state.map_on + game_state.episode * 10];
-        start_cp_music(opl, track, assets, loader);
+        start_cp_music(sound, track, assets, loader);
 
         //TODO PreloadGraphics?
 
@@ -93,7 +93,7 @@ pub async fn game_loop(
             menu_state,
             &mut control_state,
             vga,
-            opl,
+            sound,
             &mut rc,
             rdr,
             input,
@@ -136,6 +136,7 @@ pub async fn game_loop(
                     game_state,
                     &mut rc,
                     rdr,
+                    sound,
                     prj,
                     input,
                     assets,
@@ -162,6 +163,7 @@ async fn died(
     game_state: &mut GameState,
     rc: &mut RayCast,
     rdr: &VGARenderer,
+    sound: &mut Sound,
     prj: &ProjectionConfig,
     input: &Input,
     assets: &Assets,
@@ -217,7 +219,7 @@ async fn died(
             if player.angle >= ANGLES as i32 {
                 player.angle -= ANGLES as i32;
             }
-            three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
+            three_d_refresh(ticker, game_state, level_state, rc, rdr, sound, prj, assets).await;
         }
     } else {
         // rotate counterclockwise
@@ -241,7 +243,7 @@ async fn died(
             if player.angle < 0 {
                 player.angle += ANGLES as i32;
             }
-            three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
+            three_d_refresh(ticker, game_state, level_state, rc, rdr, sound, prj, assets).await;
         }
     }
 
