@@ -63,17 +63,17 @@ pub fn fixed_by_frac(a_f: Fixed, b_f: Fixed) -> Fixed {
     let a = a_f.to_i32();
     let b = b_f.to_i32();
     let bx = (b & 0xFFFF) as i16;
-    let mut si = (((b >> 16) & 0xFFFF)) as i16;
+    let mut si = ((b >> 16) & 0xFFFF) as i16;
     let mut ax = (a & 0xFFFF) as i16;
     let mut cx = ((a >> 16) & 0xFFFF) as i16;
 
     if cx < 0 {
         (cx, _) = cx.overflowing_neg();
-        let cf = if ax == 0 {0} else {1};
+        let cf = if ax == 0 { 0 } else { 1 };
         (ax, _) = ax.overflowing_neg();
         (cx, _) = cx.overflowing_sub(cf);
         si = (si as u16 ^ 0x8000) as i16; // toggle sign of result
-    } 
+    }
 
     let (dx, _) = mul(ax, bx); // fraction * fraction
     let di = dx;
@@ -88,7 +88,7 @@ pub fn fixed_by_frac(a_f: Fixed, b_f: Fixed) -> Fixed {
 
     if si as u16 & 0x8000 != 0 {
         (dx, _) = dx.overflowing_neg();
-        let cf = if ax == 0 {0} else {1};
+        let cf = if ax == 0 { 0 } else { 1 };
         (ax, _) = ax.overflowing_neg();
         dx = dx - cf;
     }

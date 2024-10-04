@@ -2,7 +2,7 @@ use vga::input::{self, NumCode};
 
 use std::sync::{Arc, Mutex};
 
-use super::time::{TimeCount, get_count};
+use super::time::{get_count, TimeCount};
 
 #[derive(PartialEq)]
 pub enum ControlDirection {
@@ -22,36 +22,39 @@ pub struct ControlInfo {
 }
 
 pub struct Input {
-	time: TimeCount,
-	pub input_monitoring: Arc<Mutex<input::InputMonitoring>>
+    time: TimeCount,
+    pub input_monitoring: Arc<Mutex<input::InputMonitoring>>,
 }
 
 pub fn init(time: TimeCount, input_monitoring: Arc<Mutex<input::InputMonitoring>>) -> Input {
-	Input{time, input_monitoring}
-} 
+    Input {
+        time,
+        input_monitoring,
+    }
+}
 
 impl Input {
-	pub async fn wait_user_input(&self, delay: u64) -> bool {
-		let last_count = get_count(&self.time);
+    pub async fn wait_user_input(&self, delay: u64) -> bool {
+        let last_count = get_count(&self.time);
         {
             let mut mon = self.input_monitoring.lock().unwrap();
-		    mon.clear_keyboard();
+            mon.clear_keyboard();
         }
-		loop {
-			if self.check_ack() {
-				return true;
-			}
+        loop {
+            if self.check_ack() {
+                return true;
+            }
 
-			if get_count(&self.time) - last_count > delay {
-				break;
-			}
-		}
-		false
-	}
+            if get_count(&self.time) - last_count > delay {
+                break;
+            }
+        }
+        false
+    }
 
-	pub async fn ack(&self) -> bool {
-		self.wait_user_input(u64::MAX).await
-	}
+    pub async fn ack(&self) -> bool {
+        self.wait_user_input(u64::MAX).await
+    }
 
     pub fn start_ack(&self) {
         let mut mon = self.input_monitoring.lock().unwrap();
@@ -69,12 +72,12 @@ impl Input {
         mon.key_pressed(code)
     }
 
-	pub fn clear_keys_down(&self) {
+    pub fn clear_keys_down(&self) {
         let mut mon = self.input_monitoring.lock().unwrap();
-		mon.clear_keyboard();
+        mon.clear_keyboard();
         mon.keyboard.last_scan = NumCode::None;
         mon.keyboard.last_ascii = '\0';
-	}
+    }
 
     pub fn clear_last_scan(&self) {
         let mut mon = self.input_monitoring.lock().unwrap();
@@ -112,7 +115,5 @@ pub fn read_control(input: &Input) -> ControlInfo {
         dir = ControlDirection::None;
     }
 
-    ControlInfo{
-        dir
-    }
+    ControlInfo { dir }
 }

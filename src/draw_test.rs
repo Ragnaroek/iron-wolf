@@ -1,23 +1,26 @@
-use crate::def::{ClassType, DirType, DoorAction, DoorLock, DoorType, Level, LevelState, ObjType, FL_NEVERMARK, MAP_SIZE};
-use crate::draw::{Op, Hit, init_ray_cast, init_ray_cast_consts, calc_height};
+use crate::agent::S_PLAYER;
+use crate::def::{
+    ClassType, DirType, DoorAction, DoorLock, DoorType, Level, LevelState, ObjType, FL_NEVERMARK,
+    MAP_SIZE,
+};
+use crate::draw::{calc_height, init_ray_cast, init_ray_cast_consts, Hit, Op};
 use crate::fixed::new_fixed_i32;
 use crate::map::MapSegs;
 use crate::play;
-use crate::agent::S_PLAYER;
 
 use super::RayCast;
 
 #[test]
-fn test_cast_angle_63() -> Result<(), String>{
+fn test_cast_angle_63() -> Result<(), String> {
     let mut prj = play::calc_projection(19);
     // fix rounding errors fine_tangents to make the
     // test results fully compatible with the original
-    prj.fine_tangents[898] = prj.fine_tangents[898]+2; 
-    let mut level_state = mock_level_state(); 
+    prj.fine_tangents[898] = prj.fine_tangents[898] + 2;
+    let mut level_state = mock_level_state();
     level_state.mut_player().angle = 63; // an interesting angle in the start level
     let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
     let mut rc = init_ray_cast(prj.view_width);
-    
+
     assert_eq!(consts.x_partialup, 42879);
     assert_eq!(consts.y_partialup, 12924);
     assert_eq!(consts.x_partialdown, 22657);
@@ -30,22 +33,22 @@ fn test_cast_angle_63() -> Result<(), String>{
             1 => check_init_pixx_1(&rc),
             42 => check_init_pixx_42(&rc),
             46 => check_init_pixx_46(&rc),
-            _ => () /* no check */,
+            _ => (), /* no check */
         }
-        
-        rc.cast(&consts,&mut level_state);
+
+        rc.cast(&consts, &mut level_state);
         match pixx {
             0 => check_cast_pixx_0(&rc),
             1 => check_cast_pixx_1(&rc),
             42 => check_cast_pixx_42(&rc),
             46 => check_cast_pixx_46(&rc),
-            _ => () /* no check */,
+            _ => (), /* no check */
         }
     }
     Ok(())
 }
 
-fn check_init_pixx_0(rc : &RayCast) {
+fn check_init_pixx_0(rc: &RayCast) {
     assert_eq!(rc.si, 0x0737);
     assert_eq!(rc.di, 0x0778, "di={:x}", rc.di);
     assert_eq!(rc.cx, 0x001D, "cx={:x}", rc.cx);
@@ -60,11 +63,11 @@ fn check_init_pixx_0(rc : &RayCast) {
     assert_eq!(rc.x_step, -10438);
     assert_eq!(rc.y_step, -411453);
     assert_eq!(rc.y_intercept, 3645918);
-    assert_eq!(rc.x_intercept&0xFFFF, 14278);
+    assert_eq!(rc.x_intercept & 0xFFFF, 14278);
     assert_eq!(rc.x_tile, 28);
     assert_eq!(rc.y_tile, 0);
 }
-fn check_cast_pixx_0(rc : &RayCast) {
+fn check_cast_pixx_0(rc: &RayCast) {
     assert_eq!(rc.hit, Hit::HorizontalWall);
     assert_eq!(rc.tile_hit, 0x09);
     assert_eq!(rc.x_intercept, 0x1D0F00, "x_intercept={:x}", rc.x_intercept);
@@ -73,7 +76,7 @@ fn check_cast_pixx_0(rc : &RayCast) {
     assert_eq!(rc.y_tile, 0x37);
 }
 
-fn check_init_pixx_1(rc : &RayCast) {
+fn check_init_pixx_1(rc: &RayCast) {
     assert_eq!(rc.si, 0x0737);
     assert_eq!(rc.di, 0x0778, "di={:x}", rc.di);
     assert_eq!(rc.cx, 0x001D, "cx={:x}", rc.cx);
@@ -88,11 +91,11 @@ fn check_init_pixx_1(rc : &RayCast) {
     assert_eq!(rc.x_step, -10204);
     assert_eq!(rc.y_step, -420906);
     assert_eq!(rc.y_intercept, 3642650);
-    assert_eq!(rc.x_intercept&0xFFFF, 0x3882);
+    assert_eq!(rc.x_intercept & 0xFFFF, 0x3882);
     assert_eq!(rc.x_tile, 28);
     assert_eq!(rc.y_tile, 0);
 }
-fn check_cast_pixx_1(rc : &RayCast) {
+fn check_cast_pixx_1(rc: &RayCast) {
     assert_eq!(rc.hit, Hit::HorizontalWall);
     assert_eq!(rc.tile_hit, 0x09);
     assert_eq!(rc.x_intercept, 0x1D10A6, "x_intercept={:x}", rc.x_intercept);
@@ -101,7 +104,7 @@ fn check_cast_pixx_1(rc : &RayCast) {
     assert_eq!(rc.y_tile, 0x37);
 }
 
-fn check_init_pixx_42(rc : &RayCast) {
+fn check_init_pixx_42(rc: &RayCast) {
     assert_eq!(rc.si, 0x071B);
     assert_eq!(rc.di, 0x0778, "di={:x}", rc.di);
     assert_eq!(rc.cx, 0x001D, "cx={:x}", rc.cx);
@@ -116,11 +119,11 @@ fn check_init_pixx_42(rc : &RayCast) {
     assert_eq!(rc.x_step, -743);
     assert_eq!(rc.y_step, -5776577);
     assert_eq!(rc.y_intercept, 1791096);
-    assert_eq!(rc.x_intercept&0xFFFF, 22061);
+    assert_eq!(rc.x_intercept & 0xFFFF, 22061);
     assert_eq!(rc.x_tile, 28);
     assert_eq!(rc.y_tile, 0);
 }
-fn check_cast_pixx_42(rc : &RayCast) {
+fn check_cast_pixx_42(rc: &RayCast) {
     assert_eq!(rc.hit, Hit::HorizontalWall);
     assert_eq!(rc.tile_hit, 0x09);
     assert_eq!(rc.x_intercept, 0x1D5346, "x_intercept={:x}", rc.x_intercept);
@@ -129,7 +132,7 @@ fn check_cast_pixx_42(rc : &RayCast) {
     assert_eq!(rc.y_tile, 0x37);
 }
 
-fn check_init_pixx_46(rc : &RayCast) {
+fn check_init_pixx_46(rc: &RayCast) {
     assert_eq!(rc.si, 0x06BF, "si={:x}", rc.si);
     assert_eq!(rc.di, 0x0778, "di={:x}", rc.di);
     assert_eq!(rc.cx, 0x001D, "cx={:x}", rc.cx);
@@ -144,11 +147,11 @@ fn check_init_pixx_46(rc : &RayCast) {
     assert_eq!(rc.x_step, 0xAB);
     assert_eq!(rc.y_step, -25032852, "ystep={:x}", rc.y_step);
     assert_eq!(rc.y_intercept, -12590370);
-    assert_eq!(rc.x_intercept&0xFFFF, 0x590A);
+    assert_eq!(rc.x_intercept & 0xFFFF, 0x590A);
     assert_eq!(rc.x_tile, 30);
     assert_eq!(rc.y_tile, 0);
 }
-fn check_cast_pixx_46(rc : &RayCast) {
+fn check_cast_pixx_46(rc: &RayCast) {
     assert_eq!(rc.hit, Hit::HorizontalWall);
     assert_eq!(rc.tile_hit, 0x09);
     assert_eq!(rc.x_intercept, 0x1D59B5, "x_intercept={:x}", rc.x_intercept);
@@ -158,9 +161,9 @@ fn check_cast_pixx_46(rc : &RayCast) {
 }
 
 #[test]
-fn test_cast_angle_353() -> Result<(), String>{
+fn test_cast_angle_353() -> Result<(), String> {
     let prj = play::calc_projection(19);
-    let mut level_state = mock_level_state(); 
+    let mut level_state = mock_level_state();
     level_state.mut_player().angle = 353;
     let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
     let mut rc = init_ray_cast(prj.view_width);
@@ -170,7 +173,7 @@ fn test_cast_angle_353() -> Result<(), String>{
     assert_eq!(consts.view_cos, new_fixed_i32(65047));
     assert_eq!(consts.view_sin, new_fixed_i32(-2147475662));
     assert_eq!(consts.view_x, 1911207);
-    assert_eq!(consts.view_y, 3765607); 
+    assert_eq!(consts.view_y, 3765607);
     assert_eq!(consts.x_partialup, 54873);
     assert_eq!(consts.y_partialup, 35481);
     assert_eq!(consts.x_partialdown, 10663);
@@ -185,13 +188,13 @@ fn test_cast_angle_353() -> Result<(), String>{
 }
 
 #[test]
-fn test_cast_angle_26() -> Result<(), String>{
+fn test_cast_angle_26() -> Result<(), String> {
     let prj = play::calc_projection(19);
     let mut level_state = mock_level_state();
-    level_state.mut_player().angle = 26; 
+    level_state.mut_player().angle = 26;
     let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
     let mut rc = init_ray_cast(prj.view_width);
-    
+
     assert_eq!(consts.x_partialup, 52785);
     assert_eq!(consts.y_partialup, 23005);
     assert_eq!(consts.x_partialdown, 12751);
@@ -201,19 +204,19 @@ fn test_cast_angle_26() -> Result<(), String>{
         rc.init_cast(&prj, pixx, &consts);
         match pixx {
             0 => check_init_angle_26_pixx_0(&rc),
-            _ => () /* no check */,
+            _ => (), /* no check */
         }
-        
+
         rc.cast(&consts, &mut level_state);
         match pixx {
             0 => check_cast_angle_26_pixx_0(&rc),
-            _ => () /* no check */,
+            _ => (), /* no check */
         }
     }
     Ok(())
 }
 
-fn check_init_angle_26_pixx_0(rc : &RayCast) {
+fn check_init_angle_26_pixx_0(rc: &RayCast) {
     assert_eq!(rc.si, 0x07B8);
     assert_eq!(rc.di, 0x0778, "di={:x}", rc.di);
     assert_eq!(rc.cx, 0x001D, "cx={:x}", rc.cx);
@@ -228,11 +231,11 @@ fn check_init_angle_26_pixx_0(rc : &RayCast) {
     assert_eq!(rc.x_step, 34772);
     assert_eq!(rc.y_step, -123515);
     assert_eq!(rc.y_intercept, 3678600);
-    assert_eq!(rc.x_intercept&0xFFFF, 35317);
+    assert_eq!(rc.x_intercept & 0xFFFF, 35317);
     assert_eq!(rc.x_tile, 30);
     assert_eq!(rc.y_tile, 0);
 }
-fn check_cast_angle_26_pixx_0(rc : &RayCast) {
+fn check_cast_angle_26_pixx_0(rc: &RayCast) {
     assert_eq!(rc.hit, Hit::HorizontalWall);
     assert_eq!(rc.tile_hit, 0x08);
     assert_eq!(rc.x_intercept, 0x1E11C9, "x_intercept={:x}", rc.x_intercept);
@@ -242,13 +245,13 @@ fn check_cast_angle_26_pixx_0(rc : &RayCast) {
 }
 
 #[test]
-fn test_cast_angle_288() -> Result<(), String>{
+fn test_cast_angle_288() -> Result<(), String> {
     let prj = play::calc_projection(19);
     let mut level_state = mock_level_state();
-    level_state.mut_player().angle = 288; 
+    level_state.mut_player().angle = 288;
     let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
     let mut rc = init_ray_cast(prj.view_width);
-    
+
     assert_eq!(consts.x_partialup, 39650);
     assert_eq!(consts.y_partialup, 53949);
     assert_eq!(consts.x_partialdown, 25886);
@@ -258,24 +261,24 @@ fn test_cast_angle_288() -> Result<(), String>{
         rc.init_cast(&prj, pixx, &consts);
         match pixx {
             274 => check_init_angle_288_pixx_274(&rc),
-            _ => () /* no check */,
+            _ => (), /* no check */
         }
-        
+
         rc.cast(&consts, &mut level_state);
         match pixx {
             274 => check_cast_angle_288_pixx_274(&rc),
-            _ => () /* no check */,
+            _ => (), /* no check */
         }
     }
     Ok(())
 }
 
-fn check_init_angle_288_pixx_274(rc : &RayCast) {
+fn check_init_angle_288_pixx_274(rc: &RayCast) {
     assert_eq!(rc.x_tilestep, -1);
     assert_eq!(rc.y_tilestep, 1);
     assert_eq!(rc.horizop, Op::JLE);
     assert_eq!(rc.vertop, Op::JGE);
-    
+
     assert_eq!(rc.si, 0x073A, "si={:x}", rc.si);
     assert_eq!(rc.di, 0x077A, "di={:x}", rc.di);
     assert_eq!(rc.cx, 0x001D, "cx={:x}", rc.cx);
@@ -286,11 +289,11 @@ fn check_init_angle_288_pixx_274(rc : &RayCast) {
     assert_eq!(rc.x_step, -14349);
     assert_eq!(rc.y_step, 299320);
     assert_eq!(rc.y_intercept, 3865367);
-    assert_eq!(rc.x_intercept&0xFFFF, 14074);
+    assert_eq!(rc.x_intercept & 0xFFFF, 14074);
     assert_eq!(rc.x_tile, 28);
     assert_eq!(rc.y_tile, 0);
 }
-fn check_cast_angle_288_pixx_274(rc : &RayCast) {
+fn check_cast_angle_288_pixx_274(rc: &RayCast) {
     assert_eq!(rc.hit, Hit::HorizontalWall);
     assert_eq!(rc.tile_hit, 0x09);
     assert_eq!(rc.x_intercept, 0x1CFEED, "x_intercept={:x}", rc.x_intercept);
@@ -325,7 +328,7 @@ fn test_calc_height() {
 // Helper
 
 fn mock_level_state() -> LevelState {
-    let mut tile_map = vec![vec![0; MAP_SIZE]; MAP_SIZE]; 
+    let mut tile_map = vec![vec![0; MAP_SIZE]; MAP_SIZE];
     tile_map[28][59] = 9;
     tile_map[29][55] = 9;
     tile_map[29][59] = 9;
@@ -340,10 +343,12 @@ fn mock_level_state() -> LevelState {
     let mut player = test_player();
     player.tilex = 29;
     player.tiley = 57;
-    
+
     LevelState {
         level: Level {
-            map_segs: MapSegs{segs: [Vec::with_capacity(0), Vec::with_capacity(0)]},
+            map_segs: MapSegs {
+                segs: [Vec::with_capacity(0), Vec::with_capacity(0)],
+            },
             info_map: Vec::with_capacity(0),
             tile_map,
         },
@@ -361,10 +366,10 @@ fn mock_level_state() -> LevelState {
     }
 }
 
-fn mock_doors() -> Vec<DoorType>{
+fn mock_doors() -> Vec<DoorType> {
     let mut doors = Vec::with_capacity(22);
     for i in 0..22 {
-        doors.push(DoorType{
+        doors.push(DoorType {
             num: i | 0x80,
             tile_x: 0,
             tile_y: 0,
@@ -379,7 +384,7 @@ fn mock_doors() -> Vec<DoorType>{
 }
 
 fn test_player() -> ObjType {
-    ObjType{
+    ObjType {
         class: ClassType::Player,
         tic_count: 0,
         distance: 0,

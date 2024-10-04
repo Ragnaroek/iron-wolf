@@ -1,20 +1,20 @@
 #![feature(test)]
 
-extern crate test;
 extern crate iw;
+extern crate test;
 
-use std::path::PathBuf;
-use std::sync::Arc;
 use iw::config::default_iw_config;
 use iw::loader::DiskLoader;
+use std::path::PathBuf;
+use std::sync::Arc;
 use test::Bencher;
 
-use iw::def::new_game_state;
-use iw::draw::{wall_refresh, init_ray_cast_consts, init_ray_cast};
-use iw::game::setup_game_level;
 use iw::assets;
-use iw::vga_render;
+use iw::def::new_game_state;
+use iw::draw::{init_ray_cast, init_ray_cast_consts, wall_refresh};
+use iw::game::setup_game_level;
 use iw::play;
+use iw::vga_render;
 
 #[bench]
 fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
@@ -24,7 +24,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
     let mut iw_config = default_iw_config()?;
     iw_config.data.wolf3d_data = data_path;
 
-    let loader = DiskLoader{
+    let loader = DiskLoader {
         variant: &assets::W3D1,
         data_path: iw_config.data.wolf3d_data.clone(),
         patch_path: iw_config.data.patch_data,
@@ -49,52 +49,52 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
         for _ in 0..1000 {
             wall_refresh(&mut level_state, &mut rc, &consts, &render, &prj, &assets);
         }
-        {   
+        {
             let player = level_state.mut_player();
-            player.x = 2283678; 
+            player.x = 2283678;
             player.y = 3446039;
-            player.angle = 98; 
+            player.angle = 98;
         }
         for _ in 0..1000 {
             wall_refresh(&mut level_state, &mut rc, &consts, &render, &prj, &assets);
         }
-        {   
+        {
             let player = level_state.mut_player();
-            player.x = 2263965; 
+            player.x = 2263965;
             player.y = 2428470;
-            player.angle = 90; 
+            player.angle = 90;
         }
         for _ in 0..1000 {
             wall_refresh(&mut level_state, &mut rc, &consts, &render, &prj, &assets);
         }
-        {   
+        {
             let player = level_state.mut_player();
-            player.x = 2263965; 
+            player.x = 2263965;
             player.y = 2061034;
-            player.angle = 334; 
+            player.angle = 334;
         }
         for _ in 0..1000 {
             wall_refresh(&mut level_state, &mut rc, &consts, &render, &prj, &assets);
         }
-        {   
+        {
             let player = level_state.mut_player();
-            player.x = 2246274; 
+            player.x = 2246274;
             player.y = 833690;
-            player.angle = 159; 
+            player.angle = 159;
         }
         for _ in 0..1000 {
             wall_refresh(&mut level_state, &mut rc, &consts, &render, &prj, &assets);
         }
-        {   
+        {
             let player = level_state.mut_player();
-            player.x = 2859077; 
+            player.x = 2859077;
             player.y = 678021;
-            player.angle = 290; 
+            player.angle = 290;
         }
         for _ in 0..1000 {
             wall_refresh(&mut level_state, &mut rc, &consts, &render, &prj, &assets);
         }
     });
-    
+
     Ok(())
 }

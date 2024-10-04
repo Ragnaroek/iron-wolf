@@ -5,8 +5,8 @@ use async_std::task;
 
 use vga::util;
 
-pub const TICK_BASE : u64 = 70; //Hz
-const TARGET_NANOS : u128 = 1_000_000_000 / TICK_BASE as u128; //duration of one tick in nanos
+pub const TICK_BASE: u64 = 70; //Hz
+const TARGET_NANOS: u128 = 1_000_000_000 / TICK_BASE as u128; //duration of one tick in nanos
 const MAX_TICS: u64 = 10;
 
 pub type TimeCount = Arc<AtomicU64>;
@@ -33,18 +33,25 @@ pub fn new_ticker() -> Ticker {
     let time_t = time_count.clone();
 
     util::spawn_task(async move {
-		let mut last_tick = now();
-		loop {
-			let last_duration = last_tick.elapsed().as_nanos();
-			let overlap = (last_duration as i128 - TARGET_NANOS as i128).clamp(0, TARGET_NANOS as i128);    
-		
-			last_tick = now();
-			task::sleep(std::time::Duration::from_nanos((TARGET_NANOS - overlap as u128) as u64)).await;
-			time_t.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-		}
+        let mut last_tick = now();
+        loop {
+            let last_duration = last_tick.elapsed().as_nanos();
+            let overlap =
+                (last_duration as i128 - TARGET_NANOS as i128).clamp(0, TARGET_NANOS as i128);
+
+            last_tick = now();
+            task::sleep(std::time::Duration::from_nanos(
+                (TARGET_NANOS - overlap as u128) as u64,
+            ))
+            .await;
+            time_t.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        }
     });
 
-    Ticker{time_count, last_count: AtomicU64::new(0)}
+    Ticker {
+        time_count,
+        last_count: AtomicU64::new(0),
+    }
 }
 
 impl Ticker {
@@ -58,7 +65,8 @@ impl Ticker {
 
     pub fn calc_tics(&self) -> u64 {
         let last_time_count = self.last_count.load(Ordering::Relaxed);
-        if last_time_count > get_count(&self.time_count) { // if the game was paused a LONG time
+        if last_time_count > get_count(&self.time_count) {
+            // if the game was paused a LONG time
             set_count(&self.time_count, last_time_count);
         }
 
@@ -74,7 +82,10 @@ impl Ticker {
         self.last_count.store(new_time, Ordering::Relaxed);
 
         if tics > MAX_TICS {
-            set_count(&self.time_count, get_count(&self.time_count) - (tics - MAX_TICS));
+            set_count(
+                &self.time_count,
+                get_count(&self.time_count) - (tics - MAX_TICS),
+            );
             tics = MAX_TICS
         }
         tics
@@ -82,7 +93,10 @@ impl Ticker {
 
     // waits for 'count' tics in a non-busy way
     pub async fn tics(&self, count: u64) {
-        task::sleep(std::time::Duration::from_nanos((TARGET_NANOS * count as u128) as u64)).await
+        task::sleep(std::time::Duration::from_nanos(
+            (TARGET_NANOS * count as u128) as u64,
+        ))
+        .await
     }
 }
 

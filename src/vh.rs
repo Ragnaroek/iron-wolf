@@ -1,16 +1,20 @@
 use vga::VGA;
 
-use crate::{vga_render::VGARenderer, vl::{fade_out, fade_in}, assets::GAMEPAL};
+use crate::{
+    assets::GAMEPAL,
+    vga_render::VGARenderer,
+    vl::{fade_in, fade_out},
+};
 
-pub const WHITE : u8 = 15;
-pub const BLACK : u8 = 0;
+pub const WHITE: u8 = 15;
+pub const BLACK: u8 = 0;
 
 pub fn vw_hlin(rdr: &VGARenderer, x: usize, z: usize, y: usize, color: u8) {
-    rdr.hlin(x, y, z-x+1, color);
+    rdr.hlin(x, y, z - x + 1, color);
 }
 
 pub fn vw_vlin(rdr: &VGARenderer, y: usize, z: usize, x: usize, color: u8) {
-    rdr.vlin(x, y, z-y+1, color)
+    rdr.vlin(x, y, z - y + 1, color)
 }
 
 pub async fn vw_fade_out(vga: &VGA) {
