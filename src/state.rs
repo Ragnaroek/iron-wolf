@@ -2,56 +2,173 @@
 #[path = "./state_test.rs"]
 mod state_test;
 
-use crate::fixed::new_fixed_i32;
-use crate::user::rnd_t;
-use crate::act2::{S_DOGCHASE1, S_DOGDIE1, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1};
-use crate::agent::{take_damage, give_points};
 use crate::act1::{open_door, place_item_type};
-use crate::def::{At, ClassType, DirType, GameState, LevelState, ObjKey, ObjType, StateType, StaticKind, WeaponType, FL_AMBUSH, FL_ATTACKMODE, FL_FIRSTATTACK, FL_NONMARK, FL_SHOOTABLE, MIN_ACTOR_DIST, TILEGLOBAL, TILESHIFT, UNSIGNEDSHIFT};
+use crate::act2::{
+    S_DOGCHASE1, S_DOGDIE1, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_SSCHASE1, S_SSDIE1,
+    S_SSPAIN, S_SSPAIN1,
+};
+use crate::agent::{give_points, take_damage};
+use crate::def::{
+    Assets, At, ClassType, DirType, GameState, LevelState, ObjKey, ObjType, StateType, StaticKind,
+    WeaponType, FL_AMBUSH, FL_ATTACKMODE, FL_FIRSTATTACK, FL_NONMARK, FL_SHOOTABLE, MIN_ACTOR_DIST,
+    TILEGLOBAL, TILESHIFT, UNSIGNEDSHIFT,
+};
+use crate::fixed::new_fixed_i32;
+use crate::sd::Sound;
+use crate::user::rnd_t;
 use crate::vga_render::VGARenderer;
 
-static OPPOSITE: [DirType; 9] = [DirType::West, DirType::SouthWest, DirType::South, DirType::SouthEast, DirType::East, DirType::NorthEast, DirType::North, DirType::NorthWest, DirType::NoDir];
+static OPPOSITE: [DirType; 9] = [
+    DirType::West,
+    DirType::SouthWest,
+    DirType::South,
+    DirType::SouthEast,
+    DirType::East,
+    DirType::NorthEast,
+    DirType::North,
+    DirType::NorthWest,
+    DirType::NoDir,
+];
 
 static DIAGONAL: [[DirType; 9]; 9] = [
-/* east */	[DirType::NoDir,DirType::NoDir,DirType::NorthEast,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::SouthEast,DirType::NoDir,DirType::NoDir],
-			[DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir],
-/* north */ [DirType::NorthEast,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NorthWest,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir],
-			[DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir],
-/* west */  [DirType::NoDir,DirType::NoDir,DirType::NorthWest,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::SouthWest,DirType::NoDir,DirType::NoDir],
-			[DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir],
-/* south */ [DirType::SouthEast,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::SouthWest,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir],
-			[DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir],
-			[DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir,DirType::NoDir]
+    /* east */
+    [
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NorthEast,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::SouthEast,
+        DirType::NoDir,
+        DirType::NoDir,
+    ],
+    [
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+    ],
+    /* north */
+    [
+        DirType::NorthEast,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NorthWest,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+    ],
+    [
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+    ],
+    /* west */
+    [
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NorthWest,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::SouthWest,
+        DirType::NoDir,
+        DirType::NoDir,
+    ],
+    [
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+    ],
+    /* south */
+    [
+        DirType::SouthEast,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::SouthWest,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+    ],
+    [
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+    ],
+    [
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+        DirType::NoDir,
+    ],
 ];
 
 pub const MIN_SIGHT: i32 = 0x18000;
 
-pub fn spawn_new_obj(tile_x: usize, tile_y: usize, state: &'static StateType, class: ClassType) -> ObjType {
+pub fn spawn_new_obj(
+    tile_x: usize,
+    tile_y: usize,
+    state: &'static StateType,
+    class: ClassType,
+) -> ObjType {
     // TODO set areanumber
-    
+
     let tic_count = if state.tic_time > 0 {
         rnd_t() as u32 % state.tic_time
     } else {
         0
     };
 
-    ObjType { 
+    ObjType {
         class,
         active: crate::def::ActiveType::Yes,
         tic_count,
         distance: 0,
         area_number: 0,
         flags: 0,
-        angle: 0, 
-        pitch: 0, 
-        tilex: tile_x, 
-        tiley: tile_y, 
+        angle: 0,
+        pitch: 0,
+        tilex: tile_x,
+        tiley: tile_y,
         view_x: 0,
         view_height: 0,
         trans_x: new_fixed_i32(0),
         trans_y: new_fixed_i32(0),
-		x: ((tile_x as i32) << TILESHIFT) + TILEGLOBAL / 2,
-		y: ((tile_y as i32) << TILESHIFT) + TILEGLOBAL / 2,
+        x: ((tile_x as i32) << TILESHIFT) + TILEGLOBAL / 2,
+        y: ((tile_y as i32) << TILESHIFT) + TILEGLOBAL / 2,
         dir: DirType::NoDir,
         speed: 0,
         temp1: 0,
@@ -65,166 +182,166 @@ pub fn spawn_new_obj(tile_x: usize, tile_y: usize, state: &'static StateType, cl
 /*
 =============================================================================
 
-				ENEMY TILE WORLD MOVEMENT CODE
+                ENEMY TILE WORLD MOVEMENT CODE
 
 =============================================================================
 */
 
 pub fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
-    let mut door_num : i32 = -1;
+    let mut door_num: i32 = -1;
     if level_state.obj(k).class == ClassType::Inert {
         level_state.update_obj(k, |obj| {
-        match obj.dir {
-            DirType::North => {
-                obj.tiley -= 1;
-            },
-            DirType::NorthEast => {
-                obj.tilex += 1;
-                obj.tiley -= 1;
-            },
-            DirType::East => {
-                obj.tilex += 1;
-            },
-            DirType::SouthEast => {
-                obj.tilex += 1;
-                obj.tiley += 1;
-            },
-            DirType::South => {
-                obj.tiley += 1;
-            },
-            DirType::SouthWest => {
-                obj.tilex -= 1;
-                obj.tiley += 1;
-            },
-            DirType::West => {
-                obj.tilex -= 1;
-            },
-            DirType::NorthWest => {
-                obj.tilex -= 1;
-                obj.tiley -= 1;
-            },
-            DirType::NoDir => { /* do nothing */}
-        }
-    });
+            match obj.dir {
+                DirType::North => {
+                    obj.tiley -= 1;
+                }
+                DirType::NorthEast => {
+                    obj.tilex += 1;
+                    obj.tiley -= 1;
+                }
+                DirType::East => {
+                    obj.tilex += 1;
+                }
+                DirType::SouthEast => {
+                    obj.tilex += 1;
+                    obj.tiley += 1;
+                }
+                DirType::South => {
+                    obj.tiley += 1;
+                }
+                DirType::SouthWest => {
+                    obj.tilex -= 1;
+                    obj.tiley += 1;
+                }
+                DirType::West => {
+                    obj.tilex -= 1;
+                }
+                DirType::NorthWest => {
+                    obj.tilex -= 1;
+                    obj.tiley -= 1;
+                }
+                DirType::NoDir => { /* do nothing */ }
+            }
+        });
     } else {
         let obj = level_state.obj(k);
         match obj.dir {
             DirType::North => {
                 if obj.class == ClassType::Dog || obj.class == ClassType::Fake {
-                    if !check_diag(level_state, obj.tilex, obj.tiley-1) {
+                    if !check_diag(level_state, obj.tilex, obj.tiley - 1) {
                         return false;
                     }
                 } else {
-                    let (check, door) = check_side(level_state, obj.tilex, obj.tiley-1);
+                    let (check, door) = check_side(level_state, obj.tilex, obj.tiley - 1);
                     if !check {
-                        return false;       
+                        return false;
                     }
                     door_num = door;
                 }
-                level_state.update_obj(k, |obj|obj.tiley -= 1);
-            },
+                level_state.update_obj(k, |obj| obj.tiley -= 1);
+            }
             DirType::NorthEast => {
-                if !check_diag(level_state, obj.tilex+1, obj.tiley-1) {
+                if !check_diag(level_state, obj.tilex + 1, obj.tiley - 1) {
                     return false;
                 }
-                if !check_diag(level_state, obj.tilex+1, obj.tiley) {
+                if !check_diag(level_state, obj.tilex + 1, obj.tiley) {
                     return false;
                 }
-                if !check_diag(level_state, obj.tilex, obj.tiley-1) {
+                if !check_diag(level_state, obj.tilex, obj.tiley - 1) {
                     return false;
                 }
-                level_state.update_obj(k, |obj|{
+                level_state.update_obj(k, |obj| {
                     obj.tilex += 1;
                     obj.tiley -= 1;
                 });
-            },
+            }
             DirType::East => {
                 if obj.class == ClassType::Dog || obj.class == ClassType::Fake {
-                    if !check_diag(level_state, obj.tilex+1, obj.tiley) {
+                    if !check_diag(level_state, obj.tilex + 1, obj.tiley) {
                         return false;
-                    } 
+                    }
                 } else {
-                    let (check, door) = check_side(level_state, obj.tilex+1, obj.tiley);
+                    let (check, door) = check_side(level_state, obj.tilex + 1, obj.tiley);
                     if !check {
-                        return false;       
+                        return false;
                     }
                     door_num = door;
                 }
-                level_state.update_obj(k, |obj|obj.tilex += 1); 
-            },
+                level_state.update_obj(k, |obj| obj.tilex += 1);
+            }
             DirType::SouthEast => {
-                if !check_diag(level_state, obj.tilex+1, obj.tiley+1) {
+                if !check_diag(level_state, obj.tilex + 1, obj.tiley + 1) {
                     return false;
                 }
-                if !check_diag(level_state, obj.tilex+1, obj.tiley) {
+                if !check_diag(level_state, obj.tilex + 1, obj.tiley) {
                     return false;
                 }
-                if !check_diag(level_state, obj.tilex, obj.tiley+1) {
+                if !check_diag(level_state, obj.tilex, obj.tiley + 1) {
                     return false;
                 }
-                level_state.update_obj(k, |obj|{
+                level_state.update_obj(k, |obj| {
                     obj.tilex += 1;
                     obj.tiley += 1;
                 });
-            },
+            }
             DirType::South => {
                 if obj.class == ClassType::Dog || obj.class == ClassType::Fake {
-                    if !check_diag(level_state, obj.tilex, obj.tiley+1) {
+                    if !check_diag(level_state, obj.tilex, obj.tiley + 1) {
                         return false;
-                    } 
+                    }
                 } else {
-                    let (check, door) = check_side(level_state, obj.tilex, obj.tiley+1);
+                    let (check, door) = check_side(level_state, obj.tilex, obj.tiley + 1);
                     if !check {
                         return false;
                     }
                     door_num = door;
                 }
-                level_state.update_obj(k, |obj|obj.tiley += 1); 
-            },
+                level_state.update_obj(k, |obj| obj.tiley += 1);
+            }
             DirType::SouthWest => {
-                if !check_diag(level_state, obj.tilex-1, obj.tiley+1) {
+                if !check_diag(level_state, obj.tilex - 1, obj.tiley + 1) {
                     return false;
                 }
-                if !check_diag(level_state, obj.tilex-1, obj.tiley) {
+                if !check_diag(level_state, obj.tilex - 1, obj.tiley) {
                     return false;
                 }
-                if !check_diag(level_state, obj.tilex, obj.tiley+1) {
+                if !check_diag(level_state, obj.tilex, obj.tiley + 1) {
                     return false;
                 }
-                level_state.update_obj(k, |obj|{
+                level_state.update_obj(k, |obj| {
                     obj.tilex -= 1;
                     obj.tiley += 1;
-                }); 
-            },
+                });
+            }
             DirType::West => {
                 if obj.class == ClassType::Dog || obj.class == ClassType::Fake {
-                    if !check_diag(level_state, obj.tilex-1, obj.tiley) {
+                    if !check_diag(level_state, obj.tilex - 1, obj.tiley) {
                         return false;
-                    } 
+                    }
                 } else {
-                    let (check, door) = check_side(level_state, obj.tilex-1, obj.tiley);
+                    let (check, door) = check_side(level_state, obj.tilex - 1, obj.tiley);
                     if !check {
-                        return false;       
+                        return false;
                     }
                     door_num = door;
                 }
-                level_state.update_obj(k, |obj|obj.tilex -= 1); 
-            },
+                level_state.update_obj(k, |obj| obj.tilex -= 1);
+            }
             DirType::NorthWest => {
-                if !check_diag(level_state, obj.tilex-1, obj.tiley-1) {
+                if !check_diag(level_state, obj.tilex - 1, obj.tiley - 1) {
                     return false;
                 }
-                if !check_diag(level_state, obj.tilex-1, obj.tiley) {
+                if !check_diag(level_state, obj.tilex - 1, obj.tiley) {
                     return false;
                 }
-                if !check_diag(level_state, obj.tilex, obj.tiley-1) {
+                if !check_diag(level_state, obj.tilex, obj.tiley - 1) {
                     return false;
                 }
-                level_state.update_obj(k, |obj|{
+                level_state.update_obj(k, |obj| {
                     obj.tilex -= 1;
                     obj.tiley -= 1;
-                }); 
-            },
+                });
+            }
             DirType::NoDir => {
                 return false;
             }
@@ -236,7 +353,7 @@ pub fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
             let door = &mut level_state.doors[door_num as usize];
             open_door(door);
         }
-        level_state.update_obj(k, |obj|{
+        level_state.update_obj(k, |obj| {
             obj.distance = -door_num - 1;
         });
         return true;
@@ -270,20 +387,25 @@ fn check_side(level_state: &LevelState, x: usize, y: usize) -> (bool, i32) {
                 return (true, (tile & 63) as i32);
             }
             return (false, -1);
-        },
+        }
         At::Nothing => (true, -1),
     }
 }
 
-pub fn select_dodge_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: usize, player_tile_y: usize) {
+pub fn select_dodge_dir(
+    k: ObjKey,
+    level_state: &mut LevelState,
+    player_tile_x: usize,
+    player_tile_y: usize,
+) {
     let mut dir_try: [DirType; 5] = [DirType::NoDir; 5];
     let turn_around = if level_state.obj(k).flags & FL_FIRSTATTACK != 0 {
         // turning around is only ok the very first time after noticing the
-	    // player
+        // player
         level_state.update_obj(k, |obj| {
             obj.flags &= !FL_FIRSTATTACK;
         });
-        
+
         DirType::NoDir
     } else {
         OPPOSITE[level_state.obj(k).dir as usize]
@@ -312,7 +434,7 @@ pub fn select_dodge_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: 
     }
 
     // randomize a bit for dodging
-    
+
     let abs_dx = delta_x.abs();
     let abs_dy = delta_y.abs();
 
@@ -361,7 +483,12 @@ pub fn select_dodge_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: 
     obj.dir = DirType::NoDir;
 }
 
-pub fn select_chase_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: usize, player_tile_y: usize) {
+pub fn select_chase_dir(
+    k: ObjKey,
+    level_state: &mut LevelState,
+    player_tile_x: usize,
+    player_tile_y: usize,
+) {
     let mut d: [DirType; 3] = [DirType::NoDir; 3];
 
     let old_dir = level_state.obj(k).dir;
@@ -418,7 +545,8 @@ pub fn select_chase_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: 
         }
     }
 
-    if rnd_t() > 128 { /*randomly determine direction of search*/
+    if rnd_t() > 128 {
+        /*randomly determine direction of search*/
         for t_dir in [DirType::North, DirType::NorthWest, DirType::West] {
             if t_dir != turn_around {
                 level_state.update_obj(k, |obj| obj.dir = t_dir);
@@ -434,7 +562,7 @@ pub fn select_chase_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: 
                 if try_walk(k, level_state) {
                     return;
                 }
-            } 
+            }
         }
     }
 
@@ -444,7 +572,7 @@ pub fn select_chase_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: 
             if try_walk(k, level_state) {
                 return;
             }
-        } 
+        }
     }
 
     level_state.update_obj(k, |obj| obj.dir = DirType::NoDir); // can't move
@@ -456,40 +584,47 @@ pub fn select_chase_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: 
 ///
 /// ob->x			= adjusted for new position
 /// ob->y
-pub fn move_obj(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, player_x: i32, player_y: i32, mov: i32, tics: u64) {
+pub fn move_obj(
+    k: ObjKey,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    rdr: &VGARenderer,
+    player_x: i32,
+    player_y: i32,
+    mov: i32,
+    tics: u64,
+) {
     level_state.update_obj(k, |obj| {
         match obj.dir {
-            DirType::North => {
-                obj.y -= mov
-            },
+            DirType::North => obj.y -= mov,
             DirType::NorthEast => {
                 obj.x += mov;
                 obj.y -= mov;
-            },
+            }
             DirType::East => {
                 obj.x += mov;
-            }, 
+            }
             DirType::SouthEast => {
                 obj.x += mov;
                 obj.y += mov;
-            } 
+            }
             DirType::South => {
                 obj.y += mov;
-            },
+            }
             DirType::SouthWest => {
                 obj.x -= mov;
                 obj.y += mov;
-            },
+            }
             DirType::West => {
                 obj.x -= mov;
             }
             DirType::NorthWest => {
                 obj.x -= mov;
                 obj.y -= mov;
-            },
+            }
             DirType::NoDir => {
                 // do nothing
-            } 
+            }
         }
     });
 
@@ -514,35 +649,33 @@ pub fn move_obj(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameSt
 
         let obj = level_state.mut_obj(k);
         match obj.dir {
-            DirType::North => {
-                obj.y += mov
-            },
+            DirType::North => obj.y += mov,
             DirType::NorthEast => {
                 obj.x -= mov;
                 obj.y += mov;
-            },
+            }
             DirType::East => {
                 obj.x -= mov;
-            },
+            }
             DirType::SouthEast => {
                 obj.x -= mov;
                 obj.y -= mov;
-            },
+            }
             DirType::South => {
                 obj.y -= mov;
-            },
+            }
             DirType::SouthWest => {
                 obj.x += mov;
                 obj.y -= mov;
-            },
+            }
             DirType::West => {
                 obj.x += mov;
-            },
+            }
             DirType::NorthWest => {
                 obj.x += mov;
                 obj.y += mov;
-            },
-            DirType::NoDir => { /* do nothing */}        
+            }
+            DirType::NoDir => { /* do nothing */ }
         }
         obj.distance -= mov;
     }
@@ -555,7 +688,7 @@ pub fn move_obj(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameSt
 /// Incorporates a random reaction delay
 pub fn sight_player(k: ObjKey, level_state: &mut LevelState, tics: u64) -> bool {
     let obj = level_state.obj(k);
-    
+
     if obj.flags & FL_ATTACKMODE != 0 {
         panic!("An actor in ATTACKMODE called SightPlayer!")
     }
@@ -565,7 +698,7 @@ pub fn sight_player(k: ObjKey, level_state: &mut LevelState, tics: u64) -> bool 
         if level_state.obj(k).temp2 > 0 {
             return false;
         }
-    } else  {
+    } else {
         if !level_state.area_by_player[obj.area_number] {
             return false;
         }
@@ -581,29 +714,40 @@ pub fn sight_player(k: ObjKey, level_state: &mut LevelState, tics: u64) -> bool 
                 return false;
             }
         }
-   
+
         match level_state.obj(k).class {
             ClassType::Guard => {
                 level_state.update_obj(k, |obj| obj.temp2 = 1 + rnd_t() as i32 / 4);
-            },
+            }
             ClassType::Officer => {
                 level_state.update_obj(k, |obj| obj.temp2 = 2);
-            },
+            }
             ClassType::Mutant => {
                 level_state.update_obj(k, |obj| obj.temp2 = 1 + rnd_t() as i32 / 6);
-            },
+            }
             ClassType::SS => {
                 level_state.update_obj(k, |obj| obj.temp2 = 1 + rnd_t() as i32 / 6);
-            },
+            }
             ClassType::Dog => {
                 level_state.update_obj(k, |obj| obj.temp2 = 1 + rnd_t() as i32 / 8);
-            },
-            ClassType::Boss|ClassType::Schabb|ClassType::Fake|ClassType::MechaHitler|ClassType::RealHitler
-            |ClassType::Gretel|ClassType::Gift|ClassType::Fat|ClassType::Spectre|ClassType::Angel
-            |ClassType::Trans|ClassType::Uber|ClassType::Will|ClassType::Death => {
+            }
+            ClassType::Boss
+            | ClassType::Schabb
+            | ClassType::Fake
+            | ClassType::MechaHitler
+            | ClassType::RealHitler
+            | ClassType::Gretel
+            | ClassType::Gift
+            | ClassType::Fat
+            | ClassType::Spectre
+            | ClassType::Angel
+            | ClassType::Trans
+            | ClassType::Uber
+            | ClassType::Will
+            | ClassType::Death => {
                 level_state.update_obj(k, |obj| obj.temp2 = 1);
-            },
-            _ => {/* do nothing for the other types */}
+            }
+            _ => { /* do nothing for the other types */ }
         }
         return false;
     }
@@ -613,7 +757,7 @@ pub fn sight_player(k: ObjKey, level_state: &mut LevelState, tics: u64) -> bool 
 }
 
 /// Puts an actor into attack mode and possibly reverses the direction
-/// if the player is behind it 
+/// if the player is behind it
 pub fn first_sighting(k: ObjKey, level_state: &mut LevelState) {
     // react to the player
     let obj = level_state.mut_obj(k);
@@ -622,18 +766,21 @@ pub fn first_sighting(k: ObjKey, level_state: &mut LevelState) {
             // TODO PlaySoundLocActor(HALTSND,ob);
             new_state(obj, &S_GRDCHASE1);
             obj.speed *= 3; // go faster when chasing player
-        },
+        }
         ClassType::Dog => {
             // TODO PlaySoundLocActor(SPIONSND,ob);
             new_state(obj, &S_DOGCHASE1);
-            obj.speed *= 2; // go faster when chasing player 
-        },
+            obj.speed *= 2; // go faster when chasing player
+        }
         ClassType::SS => {
             // TODO PlaySoundLocActor(SCHUTZADSND,ob);
             new_state(obj, &S_SSCHASE1);
             obj.speed *= 4;
-        },
-        _ => panic!("first sight for class type not implemented: {:?}", obj.class)
+        }
+        _ => panic!(
+            "first sight for class type not implemented: {:?}",
+            obj.class
+        ),
     }
 
     if obj.distance < 0 {
@@ -662,19 +809,34 @@ fn check_sight(k: ObjKey, level_state: &mut LevelState) -> bool {
     // if the player is real close, sight is automatic
     let delta_x = player.x - obj.x;
     let delta_y = player.y - obj.y;
- 
-    if delta_x > -MIN_SIGHT && delta_x < MIN_SIGHT
-       && delta_y > -MIN_SIGHT && delta_y < MIN_SIGHT {
+
+    if delta_x > -MIN_SIGHT && delta_x < MIN_SIGHT && delta_y > -MIN_SIGHT && delta_y < MIN_SIGHT {
         return true;
     }
 
     // see if they are looking in the right direction
 
     match obj.dir {
-        DirType::North => if delta_y > 0 { return false },
-        DirType::East => if delta_x < 0 { return false },
-        DirType::South => if delta_y < 0 { return false },
-        DirType::West => if delta_x > 0 { return false },
+        DirType::North => {
+            if delta_y > 0 {
+                return false;
+            }
+        }
+        DirType::East => {
+            if delta_x < 0 {
+                return false;
+            }
+        }
+        DirType::South => {
+            if delta_y < 0 {
+                return false;
+            }
+        }
+        DirType::West => {
+            if delta_x > 0 {
+                return false;
+            }
+        }
         _ => {}
     }
 
@@ -685,7 +847,7 @@ fn check_sight(k: ObjKey, level_state: &mut LevelState) -> bool {
 /// Returns true if a straight line between the player and ob is unobstructed
 pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
     let player = level_state.player();
-    
+
     let x1 = obj.x >> UNSIGNEDSHIFT; // 1/256 tile precision
     let y1 = obj.y >> UNSIGNEDSHIFT;
     let xt1 = x1 >> 8;
@@ -695,7 +857,7 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
     let y2 = player.y >> UNSIGNEDSHIFT;
     let mut xt2 = player.tilex as i32;
     let mut yt2 = player.tiley as i32;
-    
+
     let mut x_step;
     let mut y_step;
     let mut partial;
@@ -732,15 +894,14 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
             let y: i32 = y_frac >> 8;
             y_frac += y_step;
 
-
             //TODO remote this if areabyplayer check is there?
             if x > 64 || y > 64 {
                 break;
             }
 
-            let value =  level_state.level.tile_map[x as usize][y as usize];
+            let value = level_state.level.tile_map[x as usize][y as usize];
             x += x_step;
-            
+
             if value == 0 {
                 continue;
             }
@@ -812,8 +973,16 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
     true
 }
 
-pub fn damage_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, damage_param: usize) {
-    game_state.made_noise = true;    
+pub fn damage_actor(
+    k: ObjKey,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+    damage_param: usize,
+) {
+    game_state.made_noise = true;
 
     let mut damage = damage_param;
     // do double damage if shooting a non attack mode actor
@@ -821,9 +990,9 @@ pub fn damage_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut Ga
         damage <<= 1;
     }
 
-    level_state.update_obj(k, |obj|  obj.hitpoints -= damage as i32);
+    level_state.update_obj(k, |obj| obj.hitpoints -= damage as i32);
     if level_state.obj(k).hitpoints <= 0 {
-        kill_actor(k, level_state, game_state, rdr);
+        kill_actor(k, level_state, game_state, rdr, sound, assets);
     } else {
         if level_state.obj(k).flags & FL_ATTACKMODE == 0 {
             first_sighting(k, level_state); // put into combat mode
@@ -837,26 +1006,33 @@ pub fn damage_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut Ga
                 } else {
                     new_state(obj, &S_GRDPAIN1);
                 }
-            },
+            }
             ClassType::Officer => {
                 panic!("damage officer");
-            },
+            }
             ClassType::Mutant => {
                 panic!("damage mutant");
-            },
+            }
             ClassType::SS => {
                 if obj.hitpoints & 1 != 0 {
                     new_state(obj, &S_SSPAIN);
                 } else {
                     new_state(obj, &S_SSPAIN1);
                 }
-            },
-            _ => {/* do nothing */}
+            }
+            _ => { /* do nothing */ }
         }
     }
 }
 
-fn kill_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer) {
+fn kill_actor(
+    k: ObjKey,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+) {
     {
         let obj = level_state.mut_obj(k);
         let tile_x = (obj.x >> TILESHIFT) as usize;
@@ -866,56 +1042,54 @@ fn kill_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameStat
 
         match obj.class {
             ClassType::Guard => {
-                give_points(game_state, rdr, 100);  
+                give_points(game_state, rdr, sound, assets, 100);
                 new_state(obj, &S_GRDDIE1);
                 place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
-            },
+            }
             ClassType::Officer => {
                 panic!("kill officer");
-            },
+            }
             ClassType::Mutant => {
                 panic!("kill mutant");
-            },
+            }
             ClassType::SS => {
-                give_points(game_state, rdr, 500);
+                give_points(game_state, rdr, sound, assets, 500);
                 new_state(obj, &S_SSDIE1);
                 if game_state.best_weapon < WeaponType::MachineGun {
                     place_item_type(level_state, StaticKind::BoMachinegun, tile_x, tile_y);
                 } else {
                     place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
                 }
-            },
+            }
             ClassType::Dog => {
-                give_points(game_state, rdr, 200);
-                new_state (obj,&S_DOGDIE1);
-            },
+                give_points(game_state, rdr, sound, assets, 200);
+                new_state(obj, &S_DOGDIE1);
+            }
             ClassType::Boss => {
                 panic!("kill boss");
-            },
+            }
             ClassType::Gretel => {
                 panic!("kill gretel");
-            },
+            }
             ClassType::Gift => {
-                panic!("kill gift");   
-            },
+                panic!("kill gift");
+            }
             ClassType::Fat => {
                 panic!("kill fat");
-            },
+            }
             ClassType::Schabb => {
                 panic!("kill schabb");
-            },
+            }
             ClassType::Fake => {
                 panic!("kill fake");
-            },
+            }
             ClassType::MechaHitler => {
                 panic!("kill mecha hitler");
-            },
+            }
             ClassType::RealHitler => {
                 panic!("kill real hitler");
-            },
-            _ => {
-                /* ignore kill on this class of obj */
             }
+            _ => { /* ignore kill on this class of obj */ }
         }
     }
 

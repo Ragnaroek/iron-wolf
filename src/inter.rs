@@ -2,99 +2,319 @@ use std::ascii::Char;
 
 use crate::agent::{draw_level, draw_score, give_points};
 use crate::assets::{num_pic, GraphicNum};
-use crate::def::{GameState, IWConfig, WindowState, STATUS_LINES};
+use crate::def::{Assets, GameState, IWConfig, WindowState, STATUS_LINES};
 use crate::input::Input;
 use crate::menu::{clear_ms_screen, draw_stripes};
 use crate::play::{draw_all_play_border, ProjectionConfig};
+use crate::sd::Sound;
+use crate::time;
 use crate::vga_render::VGARenderer;
 use crate::vh::BLACK;
-use crate::time;
 
-static ALPHA : [GraphicNum; 43] = [
-    GraphicNum::NUM0PIC, GraphicNum::NUM1PIC, GraphicNum::NUM2PIC, GraphicNum::NUM3PIC, GraphicNum::NUM4PIC, GraphicNum::NUM5PIC,
-    GraphicNum::NUM6PIC, GraphicNum::NUM7PIC, GraphicNum::NUM8PIC, GraphicNum::NUM9PIC, GraphicNum::COLONPIC, GraphicNum::NONE, GraphicNum::NONE, GraphicNum::NONE, GraphicNum::NONE, GraphicNum::NONE, GraphicNum::NONE, GraphicNum::APIC, GraphicNum::BPIC, 
-    GraphicNum::CPIC, GraphicNum::DPIC, GraphicNum::EPIC, GraphicNum::FPIC, GraphicNum::GPIC, GraphicNum::HPIC, GraphicNum::IPIC, GraphicNum::JPIC, GraphicNum::KPIC, 
-    GraphicNum::LPIC, GraphicNum::MPIC, GraphicNum::NPIC, GraphicNum::OPIC, GraphicNum::PPIC, GraphicNum::QPIC, GraphicNum::RPIC, GraphicNum::SPIC, GraphicNum::TPIC, 
-    GraphicNum::UPIC, GraphicNum::VPIC, GraphicNum::WPIC, GraphicNum::XPIC, GraphicNum::YPIC, GraphicNum::ZPIC];
+static ALPHA: [GraphicNum; 43] = [
+    GraphicNum::NUM0PIC,
+    GraphicNum::NUM1PIC,
+    GraphicNum::NUM2PIC,
+    GraphicNum::NUM3PIC,
+    GraphicNum::NUM4PIC,
+    GraphicNum::NUM5PIC,
+    GraphicNum::NUM6PIC,
+    GraphicNum::NUM7PIC,
+    GraphicNum::NUM8PIC,
+    GraphicNum::NUM9PIC,
+    GraphicNum::COLONPIC,
+    GraphicNum::NONE,
+    GraphicNum::NONE,
+    GraphicNum::NONE,
+    GraphicNum::NONE,
+    GraphicNum::NONE,
+    GraphicNum::NONE,
+    GraphicNum::APIC,
+    GraphicNum::BPIC,
+    GraphicNum::CPIC,
+    GraphicNum::DPIC,
+    GraphicNum::EPIC,
+    GraphicNum::FPIC,
+    GraphicNum::GPIC,
+    GraphicNum::HPIC,
+    GraphicNum::IPIC,
+    GraphicNum::JPIC,
+    GraphicNum::KPIC,
+    GraphicNum::LPIC,
+    GraphicNum::MPIC,
+    GraphicNum::NPIC,
+    GraphicNum::OPIC,
+    GraphicNum::PPIC,
+    GraphicNum::QPIC,
+    GraphicNum::RPIC,
+    GraphicNum::SPIC,
+    GraphicNum::TPIC,
+    GraphicNum::UPIC,
+    GraphicNum::VPIC,
+    GraphicNum::WPIC,
+    GraphicNum::XPIC,
+    GraphicNum::YPIC,
+    GraphicNum::ZPIC,
+];
 
-const ASCII_ALPHA_RANGE : u8 = Char::SmallA as u8 - Char::CapitalA as u8; // 'a' - 'A'
+const ASCII_ALPHA_RANGE: u8 = Char::SmallA as u8 - Char::CapitalA as u8; // 'a' - 'A'
 
 struct ParTime {
     time: f32,
-    time_str: &'static str
+    time_str: &'static str,
 }
 
-const PAR_AMOUNT : i32 = 500;
-const RATIO_XX : usize = 37;
-const PERCENT_100_AMT : i32 = 10000;
+const PAR_AMOUNT: i32 = 500;
+const RATIO_XX: usize = 37;
+const PERCENT_100_AMT: i32 = 10000;
 
-static PAR_TIMES : [ParTime; 60] = [
-	 // Episode One Par Times
-     ParTime{time: 1.5,	time_str: "01:30"},
-	 ParTime{time: 2.0,	time_str: "02:00"},
-	 ParTime{time: 2.0,	time_str: "02:00"},
-	 ParTime{time: 3.5,	time_str: "03:30"},
-	 ParTime{time: 3.0,	time_str: "03:00"},
-	 ParTime{time: 3.0,	time_str: "03:00"},
-	 ParTime{time: 2.5,	time_str: "02:30"},
-	 ParTime{time: 2.5,	time_str: "02:30"},
-	 ParTime{time: 0.0,	time_str: "??:??"},	// Boss level
-	 ParTime{time: 0.0,	time_str: "??:??"},	// Secret level
-     // Episode Two Par Times
-	 ParTime{time: 1.5,	time_str: "01:30"},
-	 ParTime{time: 3.5,	time_str: "03:30"},
-	 ParTime{time: 3.0,	time_str: "03:00"},
-	 ParTime{time: 2.0,	time_str: "02:00"},
-	 ParTime{time: 4.0,	time_str: "04:00"},
-	 ParTime{time: 6.0,	time_str: "06:00"},
-	 ParTime{time: 1.0,	time_str: "01:00"},
-	 ParTime{time: 3.0,	time_str: "03:00"},
-	 ParTime{time: 0.0,	time_str: "??:??"},
-	 ParTime{time: 0.0,	time_str: "??:??"},
-     // Episode Three Par Times
-	 ParTime{time: 1.5,	time_str: "01:30"},
-	 ParTime{time: 1.5,	time_str: "01:30"},
-	 ParTime{time: 2.5,	time_str: "02:30"},
-	 ParTime{time: 2.5,	time_str: "02:30"},
-	 ParTime{time: 3.5,	time_str: "03:30"},
-	 ParTime{time: 2.5,	time_str: "02:30"},
-	 ParTime{time: 2.0,	time_str: "02:00"},
-	 ParTime{time: 6.0,	time_str: "06:00"},
-	 ParTime{time: 0.0,	time_str: "??:??"},
-	 ParTime{time: 0.0,	time_str: "??:??"},
-     // Episode Four Par Times
-	 ParTime{time: 2.0,	time_str: "02:00"},
-	 ParTime{time: 2.0,	time_str: "02:00"},
-	 ParTime{time: 1.5,	time_str: "01:30"},
-	 ParTime{time: 1.0,	time_str: "01:00"},
-	 ParTime{time: 4.5,	time_str: "04:30"},
-	 ParTime{time: 3.5,	time_str: "03:30"},
-	 ParTime{time: 2.0,	time_str: "02:00"},
-	 ParTime{time: 4.5,	time_str: "04:30"},
-	 ParTime{time: 0.0,	time_str: "??:??"},
-	 ParTime{time: 0.0,	time_str: "??:??"},
-     // Episode Five Par Times
-	 ParTime{time: 2.5,	time_str: "02:30"},
-	 ParTime{time: 1.5,	time_str: "01:30"},
-	 ParTime{time: 2.5,	time_str: "02:30"},
-	 ParTime{time: 2.5,	time_str: "02:30"},
-	 ParTime{time: 4.0,	time_str: "04:00"},
-	 ParTime{time: 3.0,	time_str: "03:00"},
-	 ParTime{time: 4.5,	time_str: "04:30"},
-	 ParTime{time: 3.5,	time_str: "03:30"},
-	 ParTime{time: 0.0,	time_str: "??:??"},
-	 ParTime{time: 0.0,	time_str: "??:??"},
-     // Episode Six Par Times
-	 ParTime{time: 6.5,	time_str: "06:30"},
-	 ParTime{time: 4.0,	time_str: "04:00"},
-	 ParTime{time: 4.5,	time_str: "04:30"},
-	 ParTime{time: 6.0,	time_str: "06:00"},
-	 ParTime{time: 5.0,	time_str: "05:00"},
-	 ParTime{time: 5.5,	time_str: "05:30"},
-	 ParTime{time: 5.5,	time_str: "05:30"},
-	 ParTime{time: 8.5,	time_str: "08:30"},
-	 ParTime{time: 0.0,	time_str: "??:??"},
-	 ParTime{time: 0.0,	time_str: "??:??"}
+static PAR_TIMES: [ParTime; 60] = [
+    // Episode One Par Times
+    ParTime {
+        time: 1.5,
+        time_str: "01:30",
+    },
+    ParTime {
+        time: 2.0,
+        time_str: "02:00",
+    },
+    ParTime {
+        time: 2.0,
+        time_str: "02:00",
+    },
+    ParTime {
+        time: 3.5,
+        time_str: "03:30",
+    },
+    ParTime {
+        time: 3.0,
+        time_str: "03:00",
+    },
+    ParTime {
+        time: 3.0,
+        time_str: "03:00",
+    },
+    ParTime {
+        time: 2.5,
+        time_str: "02:30",
+    },
+    ParTime {
+        time: 2.5,
+        time_str: "02:30",
+    },
+    ParTime {
+        time: 0.0,
+        time_str: "??:??",
+    }, // Boss level
+    ParTime {
+        time: 0.0,
+        time_str: "??:??",
+    }, // Secret level
+    // Episode Two Par Times
+    ParTime {
+        time: 1.5,
+        time_str: "01:30",
+    },
+    ParTime {
+        time: 3.5,
+        time_str: "03:30",
+    },
+    ParTime {
+        time: 3.0,
+        time_str: "03:00",
+    },
+    ParTime {
+        time: 2.0,
+        time_str: "02:00",
+    },
+    ParTime {
+        time: 4.0,
+        time_str: "04:00",
+    },
+    ParTime {
+        time: 6.0,
+        time_str: "06:00",
+    },
+    ParTime {
+        time: 1.0,
+        time_str: "01:00",
+    },
+    ParTime {
+        time: 3.0,
+        time_str: "03:00",
+    },
+    ParTime {
+        time: 0.0,
+        time_str: "??:??",
+    },
+    ParTime {
+        time: 0.0,
+        time_str: "??:??",
+    },
+    // Episode Three Par Times
+    ParTime {
+        time: 1.5,
+        time_str: "01:30",
+    },
+    ParTime {
+        time: 1.5,
+        time_str: "01:30",
+    },
+    ParTime {
+        time: 2.5,
+        time_str: "02:30",
+    },
+    ParTime {
+        time: 2.5,
+        time_str: "02:30",
+    },
+    ParTime {
+        time: 3.5,
+        time_str: "03:30",
+    },
+    ParTime {
+        time: 2.5,
+        time_str: "02:30",
+    },
+    ParTime {
+        time: 2.0,
+        time_str: "02:00",
+    },
+    ParTime {
+        time: 6.0,
+        time_str: "06:00",
+    },
+    ParTime {
+        time: 0.0,
+        time_str: "??:??",
+    },
+    ParTime {
+        time: 0.0,
+        time_str: "??:??",
+    },
+    // Episode Four Par Times
+    ParTime {
+        time: 2.0,
+        time_str: "02:00",
+    },
+    ParTime {
+        time: 2.0,
+        time_str: "02:00",
+    },
+    ParTime {
+        time: 1.5,
+        time_str: "01:30",
+    },
+    ParTime {
+        time: 1.0,
+        time_str: "01:00",
+    },
+    ParTime {
+        time: 4.5,
+        time_str: "04:30",
+    },
+    ParTime {
+        time: 3.5,
+        time_str: "03:30",
+    },
+    ParTime {
+        time: 2.0,
+        time_str: "02:00",
+    },
+    ParTime {
+        time: 4.5,
+        time_str: "04:30",
+    },
+    ParTime {
+        time: 0.0,
+        time_str: "??:??",
+    },
+    ParTime {
+        time: 0.0,
+        time_str: "??:??",
+    },
+    // Episode Five Par Times
+    ParTime {
+        time: 2.5,
+        time_str: "02:30",
+    },
+    ParTime {
+        time: 1.5,
+        time_str: "01:30",
+    },
+    ParTime {
+        time: 2.5,
+        time_str: "02:30",
+    },
+    ParTime {
+        time: 2.5,
+        time_str: "02:30",
+    },
+    ParTime {
+        time: 4.0,
+        time_str: "04:00",
+    },
+    ParTime {
+        time: 3.0,
+        time_str: "03:00",
+    },
+    ParTime {
+        time: 4.5,
+        time_str: "04:30",
+    },
+    ParTime {
+        time: 3.5,
+        time_str: "03:30",
+    },
+    ParTime {
+        time: 0.0,
+        time_str: "??:??",
+    },
+    ParTime {
+        time: 0.0,
+        time_str: "??:??",
+    },
+    // Episode Six Par Times
+    ParTime {
+        time: 6.5,
+        time_str: "06:30",
+    },
+    ParTime {
+        time: 4.0,
+        time_str: "04:00",
+    },
+    ParTime {
+        time: 4.5,
+        time_str: "04:30",
+    },
+    ParTime {
+        time: 6.0,
+        time_str: "06:00",
+    },
+    ParTime {
+        time: 5.0,
+        time_str: "05:00",
+    },
+    ParTime {
+        time: 5.5,
+        time_str: "05:30",
+    },
+    ParTime {
+        time: 5.5,
+        time_str: "05:30",
+    },
+    ParTime {
+        time: 8.5,
+        time_str: "08:30",
+    },
+    ParTime {
+        time: 0.0,
+        time_str: "??:??",
+    },
+    ParTime {
+        time: 0.0,
+        time_str: "??:??",
+    },
 ];
 
 pub fn clear_split_vwb(win_state: &mut WindowState) {
@@ -106,7 +326,6 @@ pub fn clear_split_vwb(win_state: &mut WindowState) {
 }
 
 pub async fn check_highscore(rdr: &VGARenderer, input: &Input, score: i32, map: usize) {
-
     // TODO load high_score and check whether user achieved high_score
 
     draw_high_scores(rdr);
@@ -122,9 +341,9 @@ pub fn draw_high_scores(rdr: &VGARenderer) {
     draw_stripes(rdr, 10);
 
     rdr.pic(48, 0, GraphicNum::HIGHSCOREPIC);
-    rdr.pic(4*8, 68, GraphicNum::CNAMEPIC);
-    rdr.pic(20*8, 68, GraphicNum::CLEVELPIC);
-    rdr.pic(28*8, 68, GraphicNum::CSCOREPIC);
+    rdr.pic(4 * 8, 68, GraphicNum::CNAMEPIC);
+    rdr.pic(20 * 8, 68, GraphicNum::CLEVELPIC);
+    rdr.pic(28 * 8, 68, GraphicNum::CSCOREPIC);
 }
 /// LevelCompleted
 ///
@@ -132,11 +351,20 @@ pub fn draw_high_scores(rdr: &VGARenderer) {
 /// Still in split screen mode with the status bar
 ///
 /// Exit with the screen faded out
-pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &Input, game_state: &mut GameState, prj: &ProjectionConfig, win_state: &mut WindowState) {
+pub async fn level_completed(
+    ticker: &time::Ticker,
+    rdr: &VGARenderer,
+    input: &Input,
+    game_state: &mut GameState,
+    prj: &ProjectionConfig,
+    sound: &mut Sound,
+    assets: &Assets,
+    win_state: &mut WindowState,
+) {
     rdr.set_buffer_offset(rdr.active_buffer());
 
     clear_split_vwb(win_state);
-    rdr.bar(0, 0, 320, 200-STATUS_LINES, 127);
+    rdr.bar(0, 0, 320, 200 - STATUS_LINES, 127);
     // TODO StartCPMusic(ENDLEVEL_MUS)
 
     input.clear_keys_down();
@@ -157,13 +385,13 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
         write(rdr, 5, 16, "secret ratio    %");
         write(rdr, 1, 18, "treasure ratio    %");
 
-        write(rdr, 26, 2, (game_state.map_on+1).to_string().as_str());
-        let par_time = &PAR_TIMES[game_state.episode*10+game_state.map_on]; 
+        write(rdr, 26, 2, (game_state.map_on + 1).to_string().as_str());
+        let par_time = &PAR_TIMES[game_state.episode * 10 + game_state.map_on];
         write(rdr, 26, 12, par_time.time_str);
 
-        let mut sec = game_state.time_count/70;
-        if sec > 99*60 {
-            sec = 99*60;
+        let mut sec = game_state.time_count / 70;
+        if sec > 99 * 60 {
+            sec = 99 * 60;
         }
         let time_left = if game_state.time_count < (par_time.time * 4200.0) as u64 {
             ((par_time.time * 4200.0 / 70.0) as u64 - sec) as i32
@@ -174,16 +402,16 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
         let min = sec / 60;
         sec %= 60;
 
-        let mut i = 26*8;
-        rdr.pic(i, 10*8, num_pic((min/10) as usize));
-        i += 2*8;
-        rdr.pic(i, 10*8, num_pic((min%10) as usize));
-        i += 2*8;
-        write(rdr, i/8, 10, ":");
-        i += 2*8;
-        rdr.pic(i, 10*8, num_pic((sec/10) as usize));
-        i += 2*8;
-        rdr.pic(i, 10*8, num_pic((sec%10) as usize));
+        let mut i = 26 * 8;
+        rdr.pic(i, 10 * 8, num_pic((min / 10) as usize));
+        i += 2 * 8;
+        rdr.pic(i, 10 * 8, num_pic((min % 10) as usize));
+        i += 2 * 8;
+        write(rdr, i / 8, 10, ":");
+        i += 2 * 8;
+        rdr.pic(i, 10 * 8, num_pic((sec / 10) as usize));
+        i += 2 * 8;
+        rdr.pic(i, 10 * 8, num_pic((sec % 10) as usize));
 
         rdr.fade_in().await;
 
@@ -208,18 +436,32 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
         let mut bonus = time_left * PAR_AMOUNT;
         if bonus > 0 {
             for i in 0..=time_left {
-              let str = (i*PAR_AMOUNT).to_string();
-              let x = 36 - str.len() * 2;
-              write(rdr, x, 7, &str);
-              if i%(PAR_AMOUNT/10) == 0 {
-                // TODO PlaySound(ENDBONUS1SND)
-                // TODO Breath while sound is playing, code is a dummy implementation
-                fake_sound_breathe(ticker, rdr, &mut bj_breather);
-              }
+                let str = (i * PAR_AMOUNT).to_string();
+                let x = 36 - str.len() * 2;
+                write(rdr, x, 7, &str);
+                if i % (PAR_AMOUNT / 10) == 0 {
+                    // TODO PlaySound(ENDBONUS1SND)
+                    // TODO Breath while sound is playing, code is a dummy implementation
+                    fake_sound_breathe(ticker, rdr, &mut bj_breather);
+                }
 
-             if input.check_ack() {
-                return done_normal_level_complete(ticker, rdr, input, game_state, prj, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
-             }
+                if input.check_ack() {
+                    return done_normal_level_complete(
+                        ticker,
+                        rdr,
+                        input,
+                        game_state,
+                        sound,
+                        prj,
+                        assets,
+                        time_left,
+                        kill_ratio,
+                        secret_ratio,
+                        treasure_ratio,
+                        &mut bj_breather,
+                    )
+                    .await;
+                }
             }
 
             // TODO PlaySound(ENDBONUS2SND)
@@ -231,14 +473,28 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
             let str = i.to_string();
             let x = RATIO_XX - str.len() * 2;
             write(rdr, x, 14, &str);
-            if i%10 == 0 {
+            if i % 10 == 0 {
                 fake_sound_breathe(ticker, rdr, &mut bj_breather);
             }
 
             if input.check_ack() {
-                return done_normal_level_complete(ticker, rdr, input, game_state, prj, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
+                return done_normal_level_complete(
+                    ticker,
+                    rdr,
+                    input,
+                    game_state,
+                    sound,
+                    prj,
+                    assets,
+                    time_left,
+                    kill_ratio,
+                    secret_ratio,
+                    treasure_ratio,
+                    &mut bj_breather,
+                )
+                .await;
             }
-        } 
+        }
         if kill_ratio == 100 {
             bonus += PERCENT_100_AMT;
             let str = bonus.to_string();
@@ -258,11 +514,25 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
             let str = i.to_string();
             let x = RATIO_XX - str.len() * 2;
             write(rdr, x, 16, &str);
-            if i%10 == 0 {
+            if i % 10 == 0 {
                 fake_sound_breathe(ticker, rdr, &mut bj_breather);
             }
             if input.check_ack() {
-                return done_normal_level_complete(ticker, rdr, input, game_state, prj, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
+                return done_normal_level_complete(
+                    ticker,
+                    rdr,
+                    input,
+                    game_state,
+                    sound,
+                    prj,
+                    assets,
+                    time_left,
+                    kill_ratio,
+                    secret_ratio,
+                    treasure_ratio,
+                    &mut bj_breather,
+                )
+                .await;
             }
         }
         if secret_ratio == 100 {
@@ -283,11 +553,25 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
             let str = i.to_string();
             let x = RATIO_XX - str.len() * 2;
             write(rdr, x, 18, &str);
-            if i%10 == 0 {
+            if i % 10 == 0 {
                 fake_sound_breathe(ticker, rdr, &mut bj_breather);
             }
             if input.check_ack() {
-                return done_normal_level_complete(ticker, rdr, input, game_state, prj, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
+                return done_normal_level_complete(
+                    ticker,
+                    rdr,
+                    input,
+                    game_state,
+                    sound,
+                    prj,
+                    assets,
+                    time_left,
+                    kill_ratio,
+                    secret_ratio,
+                    treasure_ratio,
+                    &mut bj_breather,
+                )
+                .await;
             }
         }
         if treasure_ratio == 100 {
@@ -295,12 +579,26 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
             let str = bonus.to_string();
             let x = (RATIO_XX - 1) - str.len() * 2;
             write(rdr, x, 7, &str);
-            // TODO SD_PlaySound(PERCENT100SND) 
+            // TODO SD_PlaySound(PERCENT100SND)
         } else if treasure_ratio == 0 {
             // TODO SD_StopSound()
-            // TODO SD_PlaySound(NOBONUSSND) 
-        } 
-        return done_normal_level_complete(ticker, rdr, input, game_state, prj, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
+            // TODO SD_PlaySound(NOBONUSSND)
+        }
+        return done_normal_level_complete(
+            ticker,
+            rdr,
+            input,
+            game_state,
+            sound,
+            prj,
+            assets,
+            time_left,
+            kill_ratio,
+            secret_ratio,
+            treasure_ratio,
+            &mut bj_breather,
+        )
+        .await;
     }
 
     // secret floor completed
@@ -308,10 +606,9 @@ pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &I
     write(rdr, 10, 16, "15000 bonus!");
     rdr.fade_in().await;
 
-    give_points(game_state, rdr, 15000);
+    give_points(game_state, rdr, sound, assets, 15000);
 
-    return finish_level_complete(ticker, rdr, input, game_state, prj,&mut bj_breather).await;
-        
+    return finish_level_complete(ticker, rdr, input, game_state, prj, &mut bj_breather).await;
 }
 
 // placeholder for starting a sound, waiting for it to complete
@@ -323,14 +620,27 @@ fn fake_sound_breathe(ticker: &time::Ticker, rdr: &VGARenderer, bj_breather: &mu
     }
 }
 
-async fn done_normal_level_complete(ticker: &time::Ticker, rdr: &VGARenderer, input: &Input, game_state: &mut GameState, prj: &ProjectionConfig, time_left: i32, kill_ratio: i32, secret_ratio: i32, treasure_ratio: i32, bj_breather: &mut BjBreather) {
+async fn done_normal_level_complete(
+    ticker: &time::Ticker,
+    rdr: &VGARenderer,
+    input: &Input,
+    game_state: &mut GameState,
+    sound: &mut Sound,
+    prj: &ProjectionConfig,
+    assets: &Assets,
+    time_left: i32,
+    kill_ratio: i32,
+    secret_ratio: i32,
+    treasure_ratio: i32,
+    bj_breather: &mut BjBreather,
+) {
     let str = kill_ratio.to_string();
     let x = RATIO_XX - str.len() * 2;
     write(rdr, x, 14, &str);
 
     let str = secret_ratio.to_string();
     let x = RATIO_XX - str.len() * 2;
-    write(rdr, x, 16, &str); 
+    write(rdr, x, 16, &str);
 
     let str = treasure_ratio.to_string();
     let x = RATIO_XX - str.len() * 2;
@@ -348,21 +658,28 @@ async fn done_normal_level_complete(ticker: &time::Ticker, rdr: &VGARenderer, in
     }
 
     let str = bonus.to_string();
-    let x = 36 - str.len()*2;
+    let x = 36 - str.len() * 2;
     write(rdr, x, 7, &str);
 
-    give_points(game_state, rdr, bonus);
+    give_points(game_state, rdr, sound, assets, bonus);
 
     // SAVE RATIO INFORMATION FOR ENDGAME
     game_state.level_ratios[game_state.map_on].kill = kill_ratio;
     game_state.level_ratios[game_state.map_on].secret = secret_ratio;
     game_state.level_ratios[game_state.map_on].treasure = treasure_ratio;
-    game_state.level_ratios[game_state.map_on].time = (game_state.time_count/70) as i32;
+    game_state.level_ratios[game_state.map_on].time = (game_state.time_count / 70) as i32;
 
     finish_level_complete(ticker, rdr, input, game_state, prj, bj_breather).await;
 }
 
-async fn finish_level_complete(ticker: &time::Ticker, rdr: &VGARenderer, input: &Input, game_state: &mut GameState, prj: &ProjectionConfig, bj_breather: &mut BjBreather) {
+async fn finish_level_complete(
+    ticker: &time::Ticker,
+    rdr: &VGARenderer,
+    input: &Input,
+    game_state: &mut GameState,
+    prj: &ProjectionConfig,
+    bj_breather: &mut BjBreather,
+) {
     draw_score(game_state, rdr);
 
     input.start_ack();
@@ -389,29 +706,29 @@ fn write(rdr: &VGARenderer, x: usize, y: usize, str: &str) {
                     Char::ExclamationMark => {
                         rdr.pic(nx, ny, GraphicNum::EXPOINTPIC);
                         nx += 8;
-                    },
+                    }
                     Char::Apostrophe => {
                         rdr.pic(nx, ny, GraphicNum::APOSTROPHEPIC);
                         nx += 8;
-                    },
+                    }
                     Char::Space => {
                         nx += 16;
-                    },
+                    }
                     Char::Colon => {
                         rdr.pic(nx, ny, GraphicNum::COLONPIC);
                         nx += 8;
-                    },
+                    }
                     Char::PercentSign => {
                         rdr.pic(nx, ny, GraphicNum::PERCENTPIC);
                         nx += 16;
-                    },
+                    }
                     _ => {
                         let mut ch = ascii_char;
                         if ch >= Char::SmallA {
                             ch = Char::from_u8(ch as u8 - ASCII_ALPHA_RANGE).expect("valid ascii")
                         }
                         ch = Char::from_u8(ch as u8 - Char::Digit0 as u8).expect("valid ascii");
-                        
+
                         rdr.pic(nx, ny, ALPHA[ch as usize]);
                         nx += 16;
                     }
@@ -422,14 +739,18 @@ fn write(rdr: &VGARenderer, x: usize, y: usize, str: &str) {
 }
 
 struct BjBreather {
-    which : bool,
+    which: bool,
     max: u64,
 
     time_start: u64,
 }
 
 fn new_bj_breather() -> BjBreather {
-    BjBreather{which: true, max: 10, time_start: 0}
+    BjBreather {
+        which: true,
+        max: 10,
+        time_start: 0,
+    }
 }
 
 impl BjBreather {
@@ -447,12 +768,19 @@ impl BjBreather {
     }
 }
 
-pub async fn preload_graphics(ticker: &time::Ticker, iw_config: &IWConfig, state: &GameState, prj: &ProjectionConfig, input: &Input, rdr: &VGARenderer) {
+pub async fn preload_graphics(
+    ticker: &time::Ticker,
+    iw_config: &IWConfig,
+    state: &GameState,
+    prj: &ProjectionConfig,
+    input: &Input,
+    rdr: &VGARenderer,
+) {
     draw_level(state, rdr);
     // TODO ClearSplitVWB() (is there split screen support?)
 
-    rdr.bar(0, 0, 320, 200-STATUS_LINES, 127);
-    rdr.pic((20-14)*8, 80-3*8, GraphicNum::GETPSYCHEDPIC);
+    rdr.bar(0, 0, 320, 200 - STATUS_LINES, 127);
+    rdr.pic((20 - 14) * 8, 80 - 3 * 8, GraphicNum::GETPSYCHEDPIC);
 
     rdr.fade_in().await;
 
@@ -467,18 +795,18 @@ pub async fn preload_graphics(ticker: &time::Ticker, iw_config: &IWConfig, state
 // Only fakes the pre-load since in iw all graphics are already loaded into
 // memory. Simulates the thermometer update on the Get Psyched Screen only.
 async fn preload(ticker: &time::Ticker, iw_config: &IWConfig, rdr: &VGARenderer) {
-    let x = 160-14*8;
-    let y = 80-3*8;
-    let width = 28*8;
+    let x = 160 - 14 * 8;
+    let y = 80 - 3 * 8;
+    let width = 28 * 8;
     let height = 48;
     let total = 100;
     for current in 0..total {
-        let w = width - 10; 
-        rdr.bar(x+5, y+height-3, w, 2, BLACK);
+        let w = width - 10;
+        rdr.bar(x + 5, y + height - 3, w, 2, BLACK);
         let w = (w * current) / total;
         if w > 0 {
-            rdr.bar(x+5, y+height - 3, w, 2, 0x37); //SECONDCOLOR
-            rdr.bar(x+5, y + height - 3, w-1, 1, 0x32);
+            rdr.bar(x + 5, y + height - 3, w, 2, 0x37); //SECONDCOLOR
+            rdr.bar(x + 5, y + height - 3, w - 1, 1, 0x32);
         }
         if !iw_config.options.fast_psyched {
             ticker.tics(1).await;

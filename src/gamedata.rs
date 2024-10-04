@@ -80,7 +80,11 @@ pub fn load_texture<M: Read + Seek>(
 ) -> Result<TextureData, String> {
     data.seek(SeekFrom::Start(header.offset as u64))
         .expect("seek failed");
-    assert!(header.length == 4096 || header.length == 0); // textures should always be 64 x 64 pixels (or 0 for demo data)
+    assert!(
+        header.length == 4096 || header.length == 0,
+        "header length was {}, but should be 4096 or 0 for a texture",
+        header.length
+    ); // textures should always be 64 x 64 pixels (or 0 for demo data)
     let mut buffer: Vec<u8> = vec![0; header.length as usize];
     let n = data.read(&mut buffer).expect("reading texture data failed");
     if n != header.length as usize {

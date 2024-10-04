@@ -1,4 +1,7 @@
-use crate::{assets::SoundName, def::Assets};
+use crate::{
+    assets::SoundName,
+    def::{Assets, TILESHIFT},
+};
 
 use opl::OPL;
 
@@ -10,5 +13,31 @@ impl Sound {
     pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) {
         let sound = &assets.audio_sounds[sound as usize];
         self.opl.play_adl(sound.clone()).expect("play sound file");
+    }
+
+    pub fn play_sound_loc_tile(
+        &mut self,
+        sound: SoundName,
+        assets: &Assets,
+        tile_x: usize,
+        tile_y: usize,
+    ) {
+        self.play_sound_loc_global(
+            sound,
+            assets,
+            (tile_x << TILESHIFT) + (1 << (TILESHIFT - 1)),
+            (tile_y << TILESHIFT) + (1 << (TILESHIFT - 1)),
+        );
+    }
+
+    fn play_sound_loc_global(
+        &mut self,
+        sound: SoundName,
+        assets: &Assets,
+        tile_x: usize,
+        tile_y: usize,
+    ) {
+        // TODO set sound location and position for digitized sounds
+        self.play_sound(sound, assets);
     }
 }

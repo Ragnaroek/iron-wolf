@@ -113,7 +113,10 @@ pub async fn game_loop(
                 draw_keys(&game_state, rdr);
                 vw_fade_out(vga).await;
 
-                level_completed(ticker, rdr, input, game_state, prj, win_state).await;
+                level_completed(
+                    ticker, rdr, input, game_state, prj, sound, assets, win_state,
+                )
+                .await;
 
                 game_state.old_score = game_state.score;
 
@@ -314,7 +317,7 @@ pub fn setup_game_level(
         return Err("Map not 64*64!".to_string());
     }
 
-    let map_segs = load_map_from_assets(assets, mapnum)?;
+    let mut map_segs = load_map_from_assets(assets, mapnum)?;
 
     let mut tile_map = vec![vec![0; MAP_SIZE]; MAP_SIZE];
     let mut actor_at = vec![vec![At::Nothing; MAP_SIZE]; MAP_SIZE];
@@ -343,6 +346,7 @@ pub fn setup_game_level(
                 let door = match tile {
                     90 | 92 | 94 | 96 | 98 | 100 => spawn_door(
                         &mut tile_map,
+                        &mut map_segs,
                         doornum,
                         x,
                         y,
@@ -351,6 +355,7 @@ pub fn setup_game_level(
                     ),
                     91 | 93 | 95 | 97 | 99 | 101 => spawn_door(
                         &mut tile_map,
+                        &mut map_segs,
                         doornum,
                         x,
                         y,

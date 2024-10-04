@@ -1,29 +1,34 @@
 extern crate web_sys;
 
 use std::cell::RefCell;
-use std::rc::Rc;
 use std::collections::HashMap;
 use std::io::Cursor;
+use std::rc::Rc;
 
 use wasm_bindgen::prelude::*;
 
-use crate::start::iw_start;
-use crate::assets::{self, WolfFile, WolfVariant, file_name};
-use crate::loader::Loader;
+use crate::assets::{self, file_name, WolfFile, WolfVariant};
 use crate::config;
-use crate::map;
 use crate::gamedata;
+use crate::loader::Loader;
+use crate::map;
 use crate::patch::PatchConfig;
+use crate::start::iw_start;
+
+#[wasm_bindgen]
+pub fn init_panic_hook() {
+    console_error_panic_hook::set_once();
+}
 
 #[wasm_bindgen]
 pub fn iw_init(upload_id: &str) {
-    console_error_panic_hook::set_once(); 
+    console_error_panic_hook::set_once();
 
     let variant = &assets::W3D6;
 
-    let loader = WebLoader{
+    let loader = WebLoader {
         variant,
-        files : HashMap::new(),
+        files: HashMap::new(),
     };
 
     register_loader(upload_id, loader);
@@ -73,29 +78,40 @@ impl WebLoader {
     }
 
     pub fn all_files_loaded(&self) -> bool {
-        self.files.contains_key(assets::GRAPHIC_DICT) 
-        && self.files.contains_key(assets::GRAPHIC_HEAD) 
-        && self.files.contains_key(assets::GRAPHIC_DATA)
-        && self.files.contains_key(assets::MAP_HEAD)
-        && self.files.contains_key(assets::GAME_MAPS)
-        && self.files.contains_key(assets::GAMEDATA)
-        && self.files.contains_key(assets::CONFIG_DATA)
+        self.files.contains_key(assets::GRAPHIC_DICT)
+            && self.files.contains_key(assets::GRAPHIC_HEAD)
+            && self.files.contains_key(assets::GRAPHIC_DATA)
+            && self.files.contains_key(assets::MAP_HEAD)
+            && self.files.contains_key(assets::GAME_MAPS)
+            && self.files.contains_key(assets::GAMEDATA)
+            && self.files.contains_key(assets::CONFIG_DATA)
     }
 }
 
 #[wasm_bindgen]
 pub fn register_loader(id: &str, loader: WebLoader) {
     let document = web_sys::window().unwrap().document().unwrap();
-    let button_elem = document.get_element_by_id(id).expect("upload button not found");
-    let button = button_elem.dyn_into::<web_sys::HtmlInputElement>().expect("wrong input element");
-    let click_handler : Closure::<dyn FnMut(_)> = Closure::once(move |e: web_sys::Event| handle_upload(e, loader));    
-    
-    button.add_event_listener_with_callback("change", click_handler.as_ref().unchecked_ref()).expect("add event");
+    let button_elem = document
+        .get_element_by_id(id)
+        .expect("upload button not found");
+    let button = button_elem
+        .dyn_into::<web_sys::HtmlInputElement>()
+        .expect("wrong input element");
+    let click_handler: Closure<dyn FnMut(_)> =
+        Closure::once(move |e: web_sys::Event| handle_upload(e, loader));
+
+    button
+        .add_event_listener_with_callback("change", click_handler.as_ref().unchecked_ref())
+        .expect("add event");
     click_handler.forget();
 }
 
 fn handle_upload(event: web_sys::Event, loader: WebLoader) {
-    let input = event.target().expect("upload button target").dyn_into::<web_sys::HtmlInputElement>().expect("input element");
+    let input = event
+        .target()
+        .expect("upload button target")
+        .dyn_into::<web_sys::HtmlInputElement>()
+        .expect("input element");
     let files = input.files().expect("files");
 
     let loader_ref = Rc::new(RefCell::new(loader));
@@ -105,14 +121,21 @@ fn handle_upload(event: web_sys::Event, loader: WebLoader) {
         reader.read_as_array_buffer(&file).expect("read triggered");
         let name = file.name();
         let handle_ref = loader_ref.clone();
-        let load_handler : Closure::<dyn FnMut(_)> = Closure::once(move |e:web_sys::Event| handle_load(e, name, handle_ref));
-        reader.add_event_listener_with_callback("loadend", load_handler.as_ref().unchecked_ref()).expect("add event");
+        let load_handler: Closure<dyn FnMut(_)> =
+            Closure::once(move |e: web_sys::Event| handle_load(e, name, handle_ref));
+        reader
+            .add_event_listener_with_callback("loadend", load_handler.as_ref().unchecked_ref())
+            .expect("add event");
         load_handler.forget();
     }
 }
 
 fn handle_load(event: web_sys::Event, name: String, loader: Rc<RefCell<WebLoader>>) {
-    let reader = event.target().expect("reader target").dyn_into::<web_sys::FileReader>().expect("file reader");
+    let reader = event
+        .target()
+        .expect("reader target")
+        .dyn_into::<web_sys::FileReader>()
+        .expect("file reader");
     let vec_data = js_sys::Uint8Array::new(&reader.result().expect("buffer")).to_vec();
     let all_loaded = {
         let mut l = loader.borrow_mut();
@@ -121,7 +144,9 @@ fn handle_load(event: web_sys::Event, name: String, loader: Rc<RefCell<WebLoader
     };
 
     if all_loaded {
-        let l = Rc::<RefCell<WebLoader>>::try_unwrap(loader).unwrap().into_inner();
+        let l = Rc::<RefCell<WebLoader>>::try_unwrap(loader)
+            .unwrap()
+            .into_inner();
         iw_start_web(l).expect("iw start");
     }
 
@@ -140,7 +165,13 @@ impl Loader for WebLoader {
     }
 
     fn load_wolf_file(&self, file: WolfFile) -> Vec<u8> {
-        let buffer = self.files.get(&file_name(file, &self.variant)).expect(&format!("file {} not found", file_name(file, &self.variant)));
+        let buffer = self
+            .files
+            .get(&file_name(file, &self.variant))
+            .expect(&format!(
+                "file {} not found",
+                file_name(file, &self.variant)
+            ));
         buffer.clone()
     }
 
@@ -160,13 +191,21 @@ impl Loader for WebLoader {
     fn save_save_game(&self, which: usize, bytes: &[u8]) -> Result<(), String> {
         todo!("save game saving not implemented yet for web");
     }
+    fn load_wolf_file_slice(
+        &self,
+        file: WolfFile,
+        offset: u64,
+        len: usize,
+    ) -> Result<Vec<u8>, String> {
+        todo!("wolf_file_slice not implemented yet for web")
+    }
 }
 
 // Assets
 
 #[wasm_bindgen]
 pub fn gamepal_color(ix: usize) -> JsValue {
-	let result = assets::gamepal_color(ix);
+    let result = assets::gamepal_color(ix);
     JsValue::from_serde(&result).unwrap()
 }
 
@@ -178,10 +217,11 @@ pub fn load_gamedata_headers(buffer: &Buffer) -> JsValue {
         &buffer.buffer(),
         buffer.byte_offset(),
         buffer.length(),
-    ).to_vec();
+    )
+    .to_vec();
 
-	let result = gamedata::load_gamedata_headers(&bytes).unwrap();
-	JsValue::from_serde(&result).unwrap()
+    let result = gamedata::load_gamedata_headers(&bytes).unwrap();
+    JsValue::from_serde(&result).unwrap()
 }
 
 #[wasm_bindgen]
@@ -190,27 +230,46 @@ pub fn load_texture(gamedata_js: &Buffer, header_js: &JsValue) -> JsValue {
         &gamedata_js.buffer(),
         gamedata_js.byte_offset(),
         gamedata_js.length(),
-    ).to_vec();
+    )
+    .to_vec();
 
-	let header : gamedata::GamedataHeader = header_js.into_serde().unwrap();
-	let result = gamedata::load_texture(&mut Cursor::new(gamedata), &header).unwrap();
-	JsValue::from_serde(&result).unwrap()
+    let header: gamedata::GamedataHeader = header_js.into_serde().unwrap();
+    let result_load = gamedata::load_texture(&mut Cursor::new(gamedata), &header);
+    if result_load.is_err() {
+        println!("result = {:?}", result_load.as_ref().err());
+    } else {
+        println!("texture load ok");
+    }
+    let result = result_load.expect("load texture");
+    JsValue::from_serde(&result).expect("deserialize texture")
 }
 
 // Map
 
 #[wasm_bindgen]
-pub fn load_map(map_data_js: &Buffer, map_headers_js: &JsValue, map_offsets_js: &JsValue, mapnum: usize) -> JsValue {
+pub fn load_map(
+    map_data_js: &Buffer,
+    map_headers_js: &JsValue,
+    map_offsets_js: &JsValue,
+    mapnum: usize,
+) -> JsValue {
     let map_data: Vec<u8> = js_sys::Uint8Array::new_with_byte_offset_and_length(
         &map_data_js.buffer(),
         map_data_js.byte_offset(),
         map_data_js.length(),
-    ).to_vec();
+    )
+    .to_vec();
 
-	let map_headers : Vec<map::MapType> = map_headers_js.into_serde().unwrap();
-	let map_offsets : map::MapFileType = map_offsets_js.into_serde().unwrap();
-	let result = map::load_map(&mut Cursor::new(map_data), &map_headers, &map_offsets, mapnum).unwrap();
-	JsValue::from_serde(&result).unwrap()
+    let map_headers: Vec<map::MapType> = map_headers_js.into_serde().unwrap();
+    let map_offsets: map::MapFileType = map_offsets_js.into_serde().unwrap();
+    let result = map::load_map(
+        &mut Cursor::new(map_data),
+        &map_headers,
+        &map_offsets,
+        mapnum,
+    )
+    .unwrap();
+    JsValue::from_serde(&result).unwrap()
 }
 
 #[wasm_bindgen]
@@ -219,21 +278,23 @@ pub fn load_map_offsets(buffer: &Buffer) -> JsValue {
         &buffer.buffer(),
         buffer.byte_offset(),
         buffer.length(),
-    ).to_vec();
+    )
+    .to_vec();
 
-	let result = map::load_map_offsets(&bytes).unwrap();
-	JsValue::from_serde(&result).unwrap()
+    let result = map::load_map_offsets(&bytes).unwrap();
+    JsValue::from_serde(&result).unwrap()
 }
 
 #[wasm_bindgen]
 pub fn load_map_headers(buffer: &Buffer, offsets_js: &JsValue) -> JsValue {
-	let bytes: Vec<u8> = js_sys::Uint8Array::new_with_byte_offset_and_length(
+    let bytes: Vec<u8> = js_sys::Uint8Array::new_with_byte_offset_and_length(
         &buffer.buffer(),
         buffer.byte_offset(),
         buffer.length(),
-    ).to_vec();
+    )
+    .to_vec();
 
-	let offsets: map::MapFileType = offsets_js.into_serde().unwrap();
-	let (_, result) = map::load_map_headers(&bytes, offsets).unwrap();
-	JsValue::from_serde(&result).unwrap()
+    let offsets: map::MapFileType = offsets_js.into_serde().unwrap();
+    let (_, result) = map::load_map_headers(&bytes, offsets).unwrap();
+    JsValue::from_serde(&result).unwrap()
 }

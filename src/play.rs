@@ -373,7 +373,7 @@ pub async fn play_loop(
 
         poll_controls(control_state, tics, input);
 
-        move_doors(level_state, tics);
+        move_doors(level_state, sound, assets, tics);
         move_push_walls(level_state, game_state, tics);
 
         for i in 0..level_state.actors.len() {
