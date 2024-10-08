@@ -483,6 +483,7 @@ fn scan_info_plane(
                 108..=111 => {
                     // guard stand: normal mode
                     spawn_stand(
+                        map_data,
                         EnemyType::Guard,
                         &mut actors,
                         actor_at,
@@ -495,6 +496,7 @@ fn scan_info_plane(
                 112..=115 => {
                     // guard patrol: normal mode
                     spawn_patrol(
+                        map_data,
                         EnemyType::Guard,
                         &mut actors,
                         actor_at,
@@ -515,7 +517,7 @@ fn scan_info_plane(
                 }
                 124 => {
                     // guard: dead
-                    spawn_dead_guard(&mut actors, actor_at, x, y);
+                    spawn_dead_guard(map_data, &mut actors, actor_at, x, y);
                 }
                 125 => {
                     todo!("trans");
@@ -523,6 +525,7 @@ fn scan_info_plane(
                 126..=129 => {
                     // ss stand: normal mode
                     spawn_stand(
+                        map_data,
                         EnemyType::SS,
                         &mut actors,
                         actor_at,
@@ -535,6 +538,7 @@ fn scan_info_plane(
                 130..=133 => {
                     // ss patrol: normal mode
                     spawn_patrol(
+                        map_data,
                         EnemyType::SS,
                         &mut actors,
                         actor_at,
@@ -548,6 +552,7 @@ fn scan_info_plane(
                 134..=137 => {
                     // dogs stand: normal mode
                     spawn_stand(
+                        map_data,
                         EnemyType::Dog,
                         &mut actors,
                         actor_at,
@@ -560,6 +565,7 @@ fn scan_info_plane(
                 138..=141 => {
                     // dogs patrol: normal mode
                     spawn_patrol(
+                        map_data,
                         EnemyType::Dog,
                         &mut actors,
                         actor_at,
@@ -580,6 +586,7 @@ fn scan_info_plane(
                     // guard stand: medium mode
                     if difficulty >= Difficulty::Medium {
                         spawn_stand(
+                            map_data,
                             EnemyType::Guard,
                             &mut actors,
                             actor_at,
@@ -594,6 +601,7 @@ fn scan_info_plane(
                     // guard patrol: medium mode
                     if difficulty >= Difficulty::Medium {
                         spawn_patrol(
+                            map_data,
                             EnemyType::Guard,
                             &mut actors,
                             actor_at,
@@ -623,6 +631,7 @@ fn scan_info_plane(
                     // ss stand: medium mode
                     if difficulty >= Difficulty::Medium {
                         spawn_stand(
+                            map_data,
                             EnemyType::SS,
                             &mut actors,
                             actor_at,
@@ -637,6 +646,7 @@ fn scan_info_plane(
                     // ss patrol: medium mode
                     if difficulty >= Difficulty::Medium {
                         spawn_patrol(
+                            map_data,
                             EnemyType::SS,
                             &mut actors,
                             actor_at,
@@ -658,6 +668,7 @@ fn scan_info_plane(
                     // dogs patrol: medium mode
                     if difficulty >= Difficulty::Medium {
                         spawn_patrol(
+                            map_data,
                             EnemyType::Dog,
                             &mut actors,
                             actor_at,
@@ -679,6 +690,7 @@ fn scan_info_plane(
                     // guard stand: hard mode
                     if difficulty >= Difficulty::Hard {
                         spawn_stand(
+                            map_data,
                             EnemyType::Guard,
                             &mut actors,
                             actor_at,
@@ -693,6 +705,7 @@ fn scan_info_plane(
                     // guard patrol: hard mode
                     if difficulty >= Difficulty::Hard {
                         spawn_patrol(
+                            map_data,
                             EnemyType::Guard,
                             &mut actors,
                             actor_at,
@@ -722,6 +735,7 @@ fn scan_info_plane(
                     // ss stand: hard mode
                     if difficulty >= Difficulty::Hard {
                         spawn_stand(
+                            map_data,
                             EnemyType::SS,
                             &mut actors,
                             actor_at,
@@ -736,6 +750,7 @@ fn scan_info_plane(
                     // ss patrol: hard mode
                     if difficulty >= Difficulty::Hard {
                         spawn_patrol(
+                            map_data,
                             EnemyType::SS,
                             &mut actors,
                             actor_at,
@@ -757,6 +772,7 @@ fn scan_info_plane(
                     // dogs patrol: hard mode
                     if difficulty >= Difficulty::Hard {
                         spawn_patrol(
+                            map_data,
                             EnemyType::Dog,
                             &mut actors,
                             actor_at,

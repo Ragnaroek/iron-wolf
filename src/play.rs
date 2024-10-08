@@ -540,7 +540,6 @@ fn do_actor(
     }
 
     // transitional object
-
     level_state.update_obj(k, |obj| {
         obj.tic_count = obj.tic_count.saturating_sub(tics as u32)
     });

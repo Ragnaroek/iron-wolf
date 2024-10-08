@@ -19,6 +19,7 @@ fn test_check_line_1() {
     player.y = 3768320;
     let mut level_state = mock_level_state(player);
     spawn_stand(
+        &level_state.level.map_segs,
         EnemyType::Guard,
         &mut level_state.actors,
         &mut level_state.actor_at,
@@ -40,6 +41,7 @@ fn test_check_line_2() {
     player.y = 3768320;
     let mut level_state = mock_level_state(player);
     spawn_stand(
+        &level_state.level.map_segs,
         EnemyType::Guard,
         &mut level_state.actors,
         &mut level_state.actor_at,
@@ -57,6 +59,7 @@ fn test_check_diag() {
     let mut level_state = mock_level_state_with_actor_at();
     //level state contains a completely empty map without any walls or objects
     spawn_stand(
+        &level_state.level.map_segs,
         EnemyType::Guard,
         &mut level_state.actors,
         &mut level_state.actor_at,
@@ -88,6 +91,7 @@ fn test_check_diag() {
 fn test_check_side() {
     let mut level_state = mock_level_state_with_actor_at();
     spawn_stand(
+        &level_state.level.map_segs,
         EnemyType::Guard,
         &mut level_state.actors,
         &mut level_state.actor_at,
@@ -137,7 +141,7 @@ fn mock_level_state(player: ObjType) -> LevelState {
     LevelState {
         level: Level {
             map_segs: MapSegs {
-                segs: [Vec::with_capacity(0), Vec::with_capacity(0)],
+                segs: [vec![109; MAP_SIZE * MAP_SIZE], Vec::with_capacity(0)],
             },
             info_map: Vec::with_capacity(0),
             tile_map,

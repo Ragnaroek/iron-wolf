@@ -1,6 +1,6 @@
 use crate::{
     assets::SoundName,
-    def::{Assets, TILESHIFT},
+    def::{Assets, ObjType, TILESHIFT},
 };
 
 use opl::OPL;
@@ -28,6 +28,10 @@ impl Sound {
             (tile_x << TILESHIFT) + (1 << (TILESHIFT - 1)),
             (tile_y << TILESHIFT) + (1 << (TILESHIFT - 1)),
         );
+    }
+
+    pub fn play_sound_loc_actor(&mut self, sound: SoundName, assets: &Assets, obj: &ObjType) {
+        self.play_sound_loc_global(sound, assets, obj.x as usize, obj.y as usize);
     }
 
     fn play_sound_loc_global(
