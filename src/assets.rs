@@ -59,10 +59,15 @@ pub fn file_name(file: WolfFile) -> &'static str {
 
 #[derive(Copy, Clone)]
 pub enum GraphicNum {
+	CLEVELPIC = 38,
+	CNAMEPIC = 39,
+	CSCOREPIC = 40,
+
 	STATUSBARPIC = 86,
 	TITLEPIC = 87,
 	PG13PIC = 88,
 	CREDITSPIC = 89,
+	HIGHSCOREPIC = 90,
 	// TODO add missing pics
 	// Lump Start
 	KNIFEPIC = 91,

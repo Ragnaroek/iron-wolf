@@ -7,6 +7,7 @@ use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{dead_guard, stand};
 use crate::agent::{spawn_player, thrust};
 use crate::draw::{RayCast, init_ray_cast, three_d_refresh};
+use crate::inter::check_highscore;
 use crate::play::{draw_play_screen, finish_palette_shifts, play_loop, ProjectionConfig, new_game_state, new_control_state};
 use crate::{map, time};
 use crate::vga_render::VGARenderer;
@@ -55,8 +56,8 @@ pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, inpu
 				}
 
 				rdr.fade_out().await;
-
-				// TODO show high score
+				
+				check_highscore(rdr, input, game_state.score, game_state.map_on+1).await;
 
 				return;
 			},
