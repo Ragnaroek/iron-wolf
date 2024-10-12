@@ -5,14 +5,14 @@ use vga::SCReg;
 use vga::input::NumCode;
 use vga::util::spawn_task;
 
-use crate::def::{Assets, WindowState};
+use crate::def::{Assets, ItemInfo, ItemType, MenuItem, WindowState};
 use crate::assets::{GraphicNum, SIGNON, GAMEPAL};
 use crate::assets;
 use crate::def::IWConfig;
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::config;
-use crate::menu::control_panel;
+use crate::menu::{control_panel, MENU_X, MENU_Y};
 use crate::play;
 use crate::us1::c_print;
 use crate::vl;
@@ -79,6 +79,19 @@ fn initial_window_state() -> WindowState {
         font_number: 0,
         back_color: 0,
         debug_ok: false,
+
+        main_menu: [
+            ItemType{item: MenuItem::NewGame, active: true, string: "New Game"},
+            ItemType{item: MenuItem::Sound, active: true, string: "Sound"},
+            ItemType{item: MenuItem::Control, active: true, string: "Control"},
+            ItemType{item: MenuItem::LoadGame, active: true, string: "Load Game"},
+            ItemType{item: MenuItem::SaveGame, active: true, string: "Save Game"},
+            ItemType{item: MenuItem::ChangeView, active: true, string: "Change View"},
+            ItemType{item: MenuItem::ViewScores, active: true, string: "View Scores"},
+            ItemType{item: MenuItem::BackToDemo, active: true, string: "Back to Demo"},
+            ItemType{item: MenuItem::Quit, active: true, string: "Quit"},
+        ],
+        main_state: ItemInfo{x: MENU_X, y: MENU_Y, cur_pos: MenuItem::NewGame, indent: 24},
     }
 }
 
