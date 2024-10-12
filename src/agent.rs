@@ -1,7 +1,9 @@
 use crate::act1::operate_door;
+use crate::assets::{GraphicNum, num_pic, weapon_pic, face_pic};
 use crate::play::ProjectionConfig;
-use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType};
+use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType, GameState, Difficulty, PlayState, SCREENLOC, STATUS_LINES};
 use crate::fixed::{new_fixed_i32, fixed_by_frac};
+use crate::vga_render::Renderer;
 
 const ANGLE_SCALE : i32 = 20;
 const MOVE_SCALE : i32 = 150;
@@ -16,7 +18,7 @@ pub static S_PLAYER : StateType = StateType{
     next: None,
 };
 
-fn t_player(k: ObjKey, level_state: &mut LevelState, _: u64, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn t_player(k: ObjKey, _: u64, level_state: &mut LevelState, _: &mut GameState, _: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
     if control_state.button_state[Button::Use as usize] {
         cmd_use(level_state, control_state);
     }
@@ -95,8 +97,34 @@ pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
     r
 }
 
-pub fn take_damage(attacker: &ObjType, points: u64) {
-    panic!("take damage not implemented")
+pub fn take_damage(attacker: ObjKey, points_param: i32, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer) {
+    
+    let mut points = points_param;
+
+    level_state.last_attacker = Some(attacker);
+    if game_state.victory_flag {
+        return;
+    }
+    if game_state.difficulty == Difficulty::Baby {
+        points >>= 2;
+    }
+    if !game_state.god_mode {
+        game_state.health -= points;
+    }
+
+    if game_state.health <= 0 {
+        game_state.health = 0;
+        game_state.play_state = PlayState::Died;
+        game_state.killer_obj = Some(attacker);
+    }
+
+    // TODO StartDamageFlash?
+    // TODO gotgatgun?
+
+    draw_health(game_state, rdr);
+    draw_face(game_state, rdr);
+
+    // TODO SPEAR make eyes bug on major damage
 }
 
 fn control_movement(k: ObjKey, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
@@ -216,4 +244,82 @@ fn set_move(k: ObjKey, level_state: &mut LevelState, dx: i32, dy: i32) {
     let obj = level_state.mut_obj(k);
     obj.x = dx;
     obj.y = dy;
+}
+
+pub fn draw_health(state: &GameState, rdr: &dyn Renderer) {
+	latch_number(rdr, 21, 16, 3, state.health);
+}
+
+pub fn draw_lives(state: &GameState, rdr: &dyn Renderer) {
+	latch_number(rdr, 14, 16, 1, state.lives);
+}
+
+pub fn draw_level(state: &GameState, rdr: &dyn Renderer) {
+	latch_number(rdr, 2, 16, 2, state.map_on as i32 + 1);
+}
+
+pub fn draw_ammo(state: &GameState, rdr: &dyn Renderer) {
+	latch_number(rdr, 27, 16, 2, state.ammo);
+}
+
+pub fn draw_face(state: &GameState, rdr: &dyn Renderer) {
+	if state.health > 0 {
+		status_draw_pic(rdr, 17, 4, face_pic(3*((100-state.health as usize)/16)+state.face_frame));
+	} else {
+		// TODO draw mutant face if last attack was needleobj
+		status_draw_pic(rdr, 17, 4, GraphicNum::FACE8APIC)
+	}
+}
+
+pub fn draw_keys(state: &GameState, rdr: &dyn Renderer) {
+	if state.keys & 1 != 0 {
+		status_draw_pic(rdr, 30, 4, GraphicNum::GOLDKEYPIC);
+	} else {
+		status_draw_pic(rdr, 30, 4, GraphicNum::NOKEYPIC)
+	}
+
+	if state.keys & 2 != 0 {
+		status_draw_pic(rdr, 30, 20, GraphicNum::SILVERKEYPIC);
+	} else {
+		status_draw_pic(rdr, 30, 20, GraphicNum::NOKEYPIC);
+	}
+}
+
+pub fn draw_weapon(state: &GameState, rdr: &dyn Renderer) {
+	status_draw_pic(rdr, 32, 8, weapon_pic(state.weapon))
+}
+
+pub fn draw_score(state: &GameState, rdr: &dyn Renderer) {
+	latch_number(rdr, 6, 16, 6, state.score);
+}
+
+fn latch_number(rdr: &dyn Renderer, x_start: usize, y: usize, width: usize, num: i32) {
+	let str = num.to_string();
+	let mut w_cnt = width;
+	let mut x = x_start;
+	while str.len() < w_cnt {
+		status_draw_pic(rdr, x, y, GraphicNum::NBLANKPIC);
+		x += 1;
+		w_cnt -= 1;
+	}
+
+	let mut c = if str.len() <= w_cnt {0} else {str.len()-w_cnt};
+	let mut chars = str.chars();
+	while c<str.len() {
+		let ch = chars.next().unwrap();
+		status_draw_pic(rdr, x, y, num_pic(ch.to_digit(10).unwrap() as usize));
+		x += 1;
+		c += 1;
+	}
+}
+
+// x in bytes
+fn status_draw_pic(rdr: &dyn Renderer, x: usize, y: usize, pic: GraphicNum) {
+    let offset_prev = rdr.buffer_offset();
+    for i in 0..3 {
+        rdr.set_buffer_offset(SCREENLOC[i]);
+        let y_status = (200-STATUS_LINES) + y;
+        rdr.pic(x*8, y_status, pic);  
+    } 
+    rdr.set_buffer_offset(offset_prev);
 }

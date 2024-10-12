@@ -5,6 +5,7 @@ use libiw::gamedata::{TextureData, SpriteData};
 
 use crate::fixed::Fixed;
 use crate::play::ProjectionConfig;
+use crate::vga_render::{Renderer, self};
 
 pub const GLOBAL1 : i32	= 1<<16;
 pub const MAP_SIZE : usize = 64;
@@ -41,6 +42,9 @@ pub const FL_AMBUSH: u8 = 64;
 pub const FL_NONMARK: u8 = 128;
 
 pub const SPD_PATROL : i32 = 512;
+
+pub const STATUS_LINES : usize = 40;
+pub static SCREENLOC : [usize; 3] = [vga_render::PAGE_1_START, vga_render::PAGE_2_START, vga_render::PAGE_3_START];
 
 pub static DIR_ANGLE : [usize; 9] = [0, ANGLES/8, 2*ANGLES/8, 3*ANGLES/8, 4*ANGLES/8, 5*ANGLES/8, 6*ANGLES/8, 7*ANGLES/8, ANGLES];
 
@@ -115,6 +119,7 @@ pub struct LevelState {
     pub vislist: Vec<VisObj>, // allocate this once and re-use
     //misc
     pub thrustspeed: i32,
+    pub last_attacker: Option<ObjKey>,
 }
 
 // This is the key of the actor in the LevelState actors[] array
@@ -200,17 +205,35 @@ pub enum Difficulty {
 pub struct GameState {
     pub difficulty: Difficulty,
 	pub map_on: usize,
-	pub score: usize,
-	pub lives: usize,
-	pub health: usize,
-	pub ammo: usize,
-	pub keys: usize,
+	pub score: i32,
+	pub lives: i32,
+	pub health: i32,
+	pub ammo: i32,
+	pub keys: i32,
 	pub weapon: WeaponType,
     pub weapon_frame: usize,
 
 	pub face_frame: usize,
 
 	pub episode : usize,
+    pub victory_flag : bool,
+    pub play_state: PlayState,
+    pub killer_obj: Option<ObjKey>,
+    //cheats
+    pub god_mode : bool,
+}
+
+pub enum PlayState {
+    StillPlaying,
+    Completed,
+    Died,
+    Warped,
+    ResetGame,
+    LoadedGame,
+    Victorious,
+    Abort,
+    DemoDone,
+    SecretLevel,
 }
 
 #[repr(usize)]
@@ -363,8 +386,8 @@ pub struct Assets {
     pub sprites: Vec<SpriteData>,
 }
 
-type Think = fn(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &mut ControlState, prj: &ProjectionConfig); 
-type Action = fn(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &mut ControlState, prj: &ProjectionConfig);
+type Think = fn(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig); 
+type Action = fn(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig);
 
 #[derive(Debug)]
 pub struct StateType {
@@ -399,24 +422,29 @@ derive_from!{
         Stat40 = 42, Stat41 = 43, Stat42 = 44, Stat43 = 45,
         Stat44 = 46, Stat45 = 47, Stat46 = 48, Stat47 = 49,
 
-
         // guard
         GuardS1 = 50, GuardS2 = 51, GuardS3 = 52, GuardS4 = 53,
         GuardS5 = 54, GuardS6 = 55, GuardS7 = 56, GuardS8 = 57,
-
-		GuardW11 = 58, GuardW12 = 59, GuardW13 = 60, GuardW14 = 61,
+		
+        GuardW11 = 58, GuardW12 = 59, GuardW13 = 60, GuardW14 = 61,
 		GuardW15 = 62, GuardW16 = 63, GuardW17 = 64, GuardW18 = 65,
-
+        
         GuardW21 = 66, GuardW22 = 67, GuardW23 = 68, GuardW24 = 69,
+        GuardW25 = 70, GuardW26 = 71, GuardW27 = 72, GuardW28 = 73,
 
         GuardW31 = 74 ,GuardW32 = 75, GuardW33 = 76, GuardW34 = 77,
+        GuardW35 = 78, GuardW36 = 79, GuardW37 = 80, GuardW38 = 81,
 
 		GuardW41 = 82, GuardW42 = 83, GuardW43 = 84, GuardW44 = 85,
+        GuardW45 = 86, GuardW46 = 87, GuardW47 = 88, GuardW48 = 89,
 
         GuardPain1 = 90, GuardDie1 = 91, GuardDie2 = 92, GuardDie3 = 93,
         GuardPain2 = 94, GuardDead = 95,
 
         GuardShoot1 = 96, GuardShoot2 = 97, GuardShoot3 = 98,
+
+        // dogs
+        // TODO
 
         // SS
         SSS1 = 140, SSS2 = 141, SSS3 = 142, SSS4 = 143,

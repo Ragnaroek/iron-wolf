@@ -2,7 +2,7 @@
 #[path = "./state_test.rs"]
 mod state_test;
 
-use crate::{def::{ObjType, TILESHIFT, TILEGLOBAL, StateType, DirType, ClassType, FL_ATTACKMODE, FL_AMBUSH, LevelState, ObjKey, UNSIGNEDSHIFT, FL_FIRSTATTACK, MIN_ACTOR_DIST, At, FL_SHOOTABLE}, fixed::new_fixed_i32, time, user::rnd_t, act2::S_GRDCHASE1, agent::take_damage, act1::open_door, game::AREATILE};
+use crate::{def::{ObjType, TILESHIFT, TILEGLOBAL, StateType, DirType, ClassType, FL_ATTACKMODE, FL_AMBUSH, LevelState, ObjKey, UNSIGNEDSHIFT, FL_FIRSTATTACK, MIN_ACTOR_DIST, At, FL_SHOOTABLE, GameState}, fixed::new_fixed_i32, time, user::rnd_t, act2::S_GRDCHASE1, agent::take_damage, act1::open_door, game::AREATILE, vga_render::Renderer};
 
 static OPPOSITE: [DirType; 9] = [DirType::West, DirType::SouthWest, DirType::South, DirType::SouthEast, DirType::East, DirType::NorthEast, DirType::North, DirType::NorthWest, DirType::NoDir];
 
@@ -449,59 +449,63 @@ pub fn select_chase_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: 
 ///
 /// ob->x			= adjusted for new position
 /// ob->y
-pub fn move_obj(player_x: i32, player_y: i32, obj: &mut ObjType, mov: i32, tics: u64) {
-    match obj.dir {
-        DirType::North => {
-            obj.y -= mov
-        },
-        DirType::NorthEast => {
-            obj.x += mov;
-            obj.y -= mov;
-        },
-        DirType::East => {
-            obj.x += mov;
-        }, 
-        DirType::SouthEast => {
-            obj.x += mov;
-            obj.y += mov;
-        } 
-        DirType::South => {
-            obj.y += mov;
-        },
-        DirType::SouthWest => {
-            obj.x -= mov;
-            obj.y += mov;
-        },
-        DirType::West => {
-            obj.x -= mov;
+pub fn move_obj(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, player_x: i32, player_y: i32, mov: i32, tics: u64) {
+    level_state.update_obj(k, |obj| {
+        match obj.dir {
+            DirType::North => {
+                obj.y -= mov
+            },
+            DirType::NorthEast => {
+                obj.x += mov;
+                obj.y -= mov;
+            },
+            DirType::East => {
+                obj.x += mov;
+            }, 
+            DirType::SouthEast => {
+                obj.x += mov;
+                obj.y += mov;
+            } 
+            DirType::South => {
+                obj.y += mov;
+            },
+            DirType::SouthWest => {
+                obj.x -= mov;
+                obj.y += mov;
+            },
+            DirType::West => {
+                obj.x -= mov;
+            }
+            DirType::NorthWest => {
+                obj.x -= mov;
+                obj.y -= mov;
+            },
+            DirType::NoDir => {
+                // do nothing
+            } 
         }
-        DirType::NorthWest => {
-            obj.x -= mov;
-            obj.y -= mov;
-        },
-        DirType::NoDir => {
-            // do nothing
-        } 
-    }
+    });
 
     // check to make sure it's not on top of player
 
     // TODO areabyplayer check here!
-    let delta_x = obj.x - player_x;
+    let delta_x = level_state.obj(k).x - player_x;
     if delta_x < -MIN_ACTOR_DIST || delta_x > MIN_ACTOR_DIST {
-        obj.distance -= mov;
+        level_state.update_obj(k, |obj| obj.distance -= mov);
         return;
     }
-    let delta_y = obj.y - player_y;
+    let delta_y = level_state.obj(k).y - player_y;
     if delta_y < -MIN_ACTOR_DIST || delta_y > MIN_ACTOR_DIST {
-        obj.distance -= mov;
+        level_state.update_obj(k, |obj| obj.distance -= mov);
         return;
     }
 
-    if obj.class == ClassType::Ghost || obj.class == ClassType::Spectre {
-        take_damage(obj, tics*2)
+    let class = level_state.obj(k).class;
+    if class == ClassType::Ghost || class == ClassType::Spectre {
+        take_damage(k, (tics * 2) as i32, level_state, game_state, rdr)
     }
 
+    let obj = level_state.mut_obj(k);
     match obj.dir {
         DirType::North => {
             obj.y += mov
