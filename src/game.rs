@@ -6,6 +6,8 @@ use super::time;
 use super::config;
 use super::vga_render;
 
+use std::thread;
+
 const STATUS_LINES : usize = 40;
 const HEIGHT_RATIO : f32 = 0.5;
 const SCREEN_WIDTH : usize = 80;
@@ -109,53 +111,118 @@ struct Level {
 pub fn game_loop(state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
 	draw_play_screen(state, rdr, prj);
 	
-	let level = setup_game_level(state, assets).unwrap();
+    // TODO do player 
+	let mut level = setup_game_level(state, assets).unwrap();
 	
 	//TODO StartMusic
 	//TODO PreloadGraphics
 
 	draw_level(state, rdr);
-	//TODO DrawLevel
-	
-	play_loop(state, rdr, prj);
+    
+    rdr.fade_in();
+
+	play_loop(state, &mut level, rdr, prj);
 
 	//TODO Go to next level (gamestate.map_on+=1)
 
-	rdr.fade_in();
 	input.user_input(time::TICK_BASE*1000);
 }
 
-fn play_loop(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
+fn play_loop(state: &GameState, level: &mut Level, rdr: &dyn Renderer, prj: &ProjectionConfig) {
 	//TODO A lot to do here (clear palette, poll controls, prepare world)
-
-	three_d_refresh(state, rdr, prj);
+    loop {
+        level.player.angle += 0.1;
+        if level.player.angle > 2.0 * std::f64::consts::PI {
+            level.player.angle = 0.0;
+        }
+	    three_d_refresh(state, level, rdr, prj);
+        thread::sleep_ms(60); //TODO until double buffering is implemented
+    }
 }
 
-fn three_d_refresh(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
-	rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
+fn three_d_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig) {
+    rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
 
 	clear_screen(state, rdr, prj);
-
-	wall_refresh(state, prj);
+    wall_refresh(state, level, rdr, prj);
 
 	rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
 
-	// TODO: increment buffer offset to next page
+	// TODO: increment buffer offset to next page (impl. double buffering)
 }
 
-fn wall_refresh(state: &GameState, prj: &ProjectionConfig) {
-	
-	//TODO take player angle from Level: level.player
-	//let midangle = state.player.angle * (FINE_ANGLES/ANGLES);
-	
-	let midangle = 0;
-	for pixx in 0..prj.view_width {
-		let angle = midangle + prj.pixelangle[pixx];
-		
-		// compute xstep and ystep from angle!
-		// depending on case 0-90, 90-180, 180-270, ... one of xstep or ystep is always 1!!
+fn wall_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig) {
 
-		// cast ray and see if it intersects with vertical or horizontal wall
+    let angle = level.player.angle;
+    let dir_x = angle.cos() - angle.sin();
+    let dir_y = angle.sin() + angle.cos();
+    
+    let plane_x_start = 0.0;
+    let plane_y_start = 0.66;
+    let plane_x = plane_x_start * angle.cos() - plane_y_start * angle.sin();
+    let plane_y = plane_x_start * angle.sin() + plane_y_start * angle.cos(); 
+
+    //TODO player.x, player.y contains very high numbers (wolf internal float format?) 
+    let pos_x = level.player.tilex as f64; //TODO use real player position here
+    let pos_y = level.player.tiley as f64;
+
+	for x in 0..prj.view_width {
+        //TODO remove pixelangle??? since the project is simpler in iron-wolf
+
+        let camera_x = 2.0 * x as f64 / prj.view_width as f64 - 1.0;        
+        let raydir_x = dir_x + plane_x * camera_x;
+        let raydir_y = dir_y + plane_y * camera_x;
+
+        let delta_dist_x = if raydir_x == 0.0 { f64::MAX } else {(1.0 / raydir_x).abs()};
+        let delta_dist_y = if raydir_y == 0.0 { f64::MAX } else {(1.0 / raydir_y).abs()};
+
+        let mut side_dist_x : f64;
+        let mut side_dist_y : f64;
+
+        let mut map_x = level.player.tilex as i64;
+        let mut map_y = level.player.tiley as i64;
+
+        let step_x : i64;
+        let step_y : i64;
+        if raydir_x < 0.0 {
+            step_x = -1;
+            side_dist_x = (pos_x - map_x as f64) + delta_dist_x;
+        } else {
+            step_x = 1;
+            side_dist_x = (map_x as f64 + 1.0 - pos_x) * delta_dist_x;
+        }
+        if raydir_y < 0.0 {
+            step_y = -1;
+            side_dist_y = (pos_y - map_y as f64) * delta_dist_y;
+        } else {
+            step_y = 1;
+            side_dist_y = (map_y as f64 + 1.0 - pos_y) + delta_dist_y;
+        }
+
+        let mut hit = false;
+        let mut side = 0;
+
+        while !hit {
+            if side_dist_x < side_dist_y {
+                side_dist_x += delta_dist_x;
+                map_x += step_x;
+                side = 0;
+            } else {
+                side_dist_y += delta_dist_y;
+                map_y += step_y;
+                side = 1;
+            }
+            if level.tile_map[map_x as usize][map_y as usize] > 0 {
+                hit = true
+            }
+        }
+
+        let perp_wall_dist = 
+        if side == 0 {side_dist_x - delta_dist_x} else {side_dist_y - delta_dist_y};
+
+        let line_height = ((prj.view_height as f64 / perp_wall_dist) as usize).min(prj.view_height);
+        let y = prj.view_height/2 - line_height/2;
+        rdr.vlin(x, y, line_height, 0x50);
 	}
 }
 
@@ -165,7 +232,7 @@ fn clear_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
 
 	let half = prj.view_height/2;
 	rdr.bar(0, 0, prj.view_width, half, ceil_color); 
-	rdr.bar(0, half, prj.view_width, half, 0x19);	
+	rdr.bar(0, half, prj.view_width, half, 0x19);
 }
 
 fn setup_game_level(state: &GameState, assets: &Assets) -> Result<Level, String> {
@@ -236,7 +303,7 @@ fn scan_info_plane(map_data: &libiw::map::MapData) -> ObjType {
 
 fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
 	ObjType{
-		angle: (1-dir)*90,
+		angle: 0.0,
 		tilex,
 		tiley,
 		x: ((tilex as u32) << TILESHIFT) + TILEGLOBAL / 2,
