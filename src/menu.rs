@@ -30,6 +30,11 @@ pub const MENU_Y : usize = 55;
 const MENU_W : usize = 178;
 const MENU_H : usize = 13*10+6;
 
+const LSA_X : usize = 96;
+const LSA_Y	: usize = 80;
+const LSA_W : usize = 130;
+const LSA_H : usize = 42;
+
 const LSM_X : usize = 85;
 const LSM_Y : usize = 55;
 const LSM_W : usize = 175;
@@ -59,7 +64,10 @@ static END_STRINGS : [&'static str; 9] = [
 
 static BACK_TO_DEMO : &'static str = "Back to Demo";
 static BACK_TO_GAME : &'static str = "Back to Game";
+
 static STR_EMPTY : &'static str = "      - empty -";
+static STR_LOADING : &'static str = "Loading...";
+static STR_SAVING : &'static str = "Saving...";
 
 static COLOR_HLITE : [u8; 4] = [
     DEACTIVE,
@@ -257,7 +265,18 @@ fn initial_difficulty_menu() -> MenuStateEntry {
 
 fn initial_load_save_menu() -> MenuStateEntry {
     MenuStateEntry {
-        items: vec![],
+        items: vec![
+            ItemType{item: 0, active: ItemActivity::Active, string: ""},
+            ItemType{item: 1, active: ItemActivity::Active, string: ""},
+            ItemType{item: 2, active: ItemActivity::Active, string: ""},
+            ItemType{item: 3, active: ItemActivity::Active, string: ""},
+            ItemType{item: 4, active: ItemActivity::Active, string: ""},
+            ItemType{item: 5, active: ItemActivity::Active, string: ""},
+            ItemType{item: 6, active: ItemActivity::Active, string: ""},
+            ItemType{item: 7, active: ItemActivity::Active, string: ""},
+            ItemType{item: 8, active: ItemActivity::Active, string: ""},
+            ItemType{item: 9, active: ItemActivity::Active, string: ""},
+        ],
         state: ItemInfo{x: LSM_X, y: LSM_Y, cur_pos: 0, indent: 24},
     }
 }
@@ -363,26 +382,36 @@ async fn cp_new_game(ticker: &Ticker, game_state: &mut GameState, rdr: &VGARende
 
 async fn cp_load_game(ticker: &Ticker, game_state: &mut GameState, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState, loader: &dyn Loader) -> MenuHandle {
     // TODO Handle QuickLoad
-    
-    println!("cp_save_game");
     let state = read_save_game_state(loader);
-    
     draw_load_save_screen(rdr, input, win_state, menu_state, &state, false).await;
-    // TODO save game handle loop
-
-    println!("state = {:?}", state.len());
-
-    return MenuHandle::QuitMenu; // TODO placeholder
+    let load_handle = handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
+    if let MenuHandle::Selected(load_selected) = load_handle {
+        println!("load save game {}", load_selected);
+        // TODO load game!
+        draw_ls_action(rdr, win_state, false);
+        wait_key_up(input); // TODO only for testing
+        return MenuHandle::BackToGameLoop;
+    } else {
+        rdr.fade_out().await;
+        return load_handle;
+    }
 }
 
 async fn cp_save_game(ticker: &Ticker, game_state: &mut GameState, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState, loader: &dyn Loader) -> MenuHandle {
     // TODO Handle QuickSave
     let state = read_save_game_state(loader);
     draw_load_save_screen(rdr, input, win_state, menu_state, &state, true).await;
+    let save_handle = handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
+    if let MenuHandle::Selected(save_selected) = save_handle {
+        println!("save game {}", save_selected);
+        // TODO load game!
+        draw_ls_action(rdr, win_state, false);
 
-
-
-    return MenuHandle::QuitMenu; // TODO placeholder
+        return MenuHandle::BackToGameLoop;
+    } else {
+        rdr.fade_out().await;
+        return save_handle;
+    }
 }
 
 struct SaveGameState {
@@ -412,6 +441,23 @@ fn read_save_game_state(loader: &dyn Loader) -> Vec<SaveGameState> {
     return result;
 }
 
+fn draw_ls_action(rdr: &VGARenderer, win_state: &mut WindowState, save: bool) {
+    cp_draw_window(rdr, LSA_X, LSA_Y, LSA_W, LSA_H, TEXT_COLOR);
+    draw_outline(rdr, LSA_X, LSA_Y, LSA_W, LSA_H, 0, HIGHLIGHT);
+    rdr.pic(LSA_X+8, LSA_Y+5, GraphicNum::CDISKLOADING1PIC);
+
+    win_state.font_number = 1;
+    win_state.set_font_color(0, TEXT_COLOR);
+    win_state.print_x = LSA_X + 46;
+    win_state.print_y = LSA_Y + 13;
+
+    if save {
+        print(rdr, win_state, &STR_SAVING);
+    } else {
+        print(rdr, win_state, &STR_LOADING);
+    }
+}
+
 async fn draw_load_save_screen(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState, state: &Vec<SaveGameState>, save: bool) {
     clear_ms_screen(rdr);
     
@@ -422,8 +468,10 @@ async fn draw_load_save_screen(rdr: &VGARenderer, input: &Input, win_state: &mut
 
     if save {
         rdr.pic(60, 0,  GraphicNum::CSAVEGAMEPIC);
+        menu_state.select_menu(Menu::MainMenu(MainMenuItem::SaveGame));
     } else {
         rdr.pic(60, 0, GraphicNum::CLOADGAMEPIC);
+        menu_state.select_menu(Menu::MainMenu(MainMenuItem::LoadGame));
     }
 
     let mut i = 0;
@@ -433,7 +481,6 @@ async fn draw_load_save_screen(rdr: &VGARenderer, input: &Input, win_state: &mut
     }
 
     rdr.fade_in().await;
-    wait_key_up(input);
 }
 
 fn print_ls_entry(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState, save_game: &SaveGameState, w: usize, color: u8) {
