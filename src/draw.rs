@@ -199,7 +199,7 @@ impl RayCast {
             self.vertop = Op::JGE;
             self.x_step = -prj.fine_tangents[DEG270-1-angl as usize];
             self.y_step = prj.fine_tangents[angl as usize - DEG180 as usize];
-            self.x_partial=consts.x_partialup;
+            self.x_partial=consts.x_partialdown;
             self.y_partial=consts.y_partialup; 
         } else if angl<DEG360 as i32 {
             self.x_tilestep = 1;
