@@ -89,7 +89,14 @@ fn t_attack(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
                 game_state.weapon_frame = 0;
                 return;
             },
-            4 => { panic!("attack 4")},
+            4 => { 
+                if game_state.ammo == 0 {
+                    break;
+                }
+                if control_state.button_state[Button::Attack as usize] {
+                    game_state.attack_frame -= 2;
+                }
+            },
             1 => {
                 if game_state.ammo == 0 {
                     // can only happen with chain gun
@@ -380,7 +387,11 @@ pub fn give_extra_man(game_state: &mut GameState, rdr: &VGARenderer) {
 pub fn get_bonus(game_state: &mut GameState, rdr: &VGARenderer, check: &mut StaticType) {
     match check.item_number {
         StaticKind::BoFirstaid => {
-            panic!("get first aid");
+            if game_state.health == 100 {
+                return;
+            }
+            // TODO SD_PlaySound(HEALTH2SND);
+            heal_self(game_state, rdr, 25);
         },
         StaticKind::BoKey1|StaticKind::BoKey2|StaticKind::BoKey3|StaticKind::BoKey4 => {
             panic!("get key");
@@ -409,7 +420,8 @@ pub fn get_bonus(game_state: &mut GameState, rdr: &VGARenderer, check: &mut Stat
             give_ammo(game_state, rdr, 4);
         },
         StaticKind::BoMachinegun => {
-            panic!("get machine gun");
+            // TODO SD_PlaySound(GETMACHINESND);
+            give_weapon(game_state, rdr, WeaponType::MachineGun);
         },
         StaticKind::BoChaingun => {
             panic!("get chaingun");
@@ -444,6 +456,16 @@ fn heal_self(game_state: &mut GameState, rdr: &VGARenderer, points: i32) {
     draw_health(&game_state, rdr);
     // TODO set gotgatgun to 0 
     draw_face(&game_state, rdr);
+}
+
+fn give_weapon(game_state: &mut GameState, rdr: &VGARenderer, weapon: WeaponType) {
+    give_ammo(game_state, rdr, 6);
+    if game_state.best_weapon < weapon {
+        game_state.best_weapon = weapon;
+        game_state.weapon = weapon;
+        game_state.chosen_weapon = weapon;
+    }
+    draw_weapon(game_state, rdr);
 }
 
 fn give_ammo(game_state: &mut GameState, rdr: &VGARenderer, ammo: i32) {

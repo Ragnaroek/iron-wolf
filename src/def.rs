@@ -78,7 +78,7 @@ macro_rules! derive_from {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, PartialOrd)]
 #[repr(usize)]
 pub enum WeaponType {
     None,
@@ -220,6 +220,8 @@ pub struct GameState {
 	pub health: i32,
 	pub ammo: i32,
 	pub keys: i32,
+
+    pub best_weapon: WeaponType,
 	pub weapon: WeaponType,
     pub chosen_weapon: WeaponType,
 

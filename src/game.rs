@@ -167,7 +167,7 @@ async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &
 	if game_state.lives > -1 {
 		game_state.health = 100;
 		game_state.weapon = WeaponType::Pistol;
-		//TODO set bestweapon to Pistol
+		game_state.best_weapon = WeaponType::Pistol;
 		game_state.chosen_weapon = WeaponType::Pistol;
 		game_state.keys = 0;
 		game_state.attack_frame = 0;

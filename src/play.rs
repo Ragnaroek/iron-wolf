@@ -88,6 +88,7 @@ pub fn new_game_state() -> GameState {
 		health: 100,
 		ammo: 8,
 		keys: 0,
+        best_weapon: WeaponType::Pistol,
 		weapon: WeaponType::Pistol,
         chosen_weapon: WeaponType::Pistol,
         weapon_frame: 0,
