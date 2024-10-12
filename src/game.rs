@@ -1,6 +1,6 @@
 
 use super::vga_render::Renderer;
-use super::assets::{GraphicNum, face_pic};
+use super::assets::{GraphicNum, face_pic, num_pic};
 use super::input;
 use super::time;
 use super::config;
@@ -59,6 +59,7 @@ fn draw_play_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfi
 	rdr.set_buffer_offset(offset_prev);
 
 	draw_face(state, rdr);
+	draw_health(state, rdr);
 
 	//TODO draw face, health, lives,...
 }
@@ -99,8 +100,32 @@ fn draw_face(state: &GameState, rdr: &dyn Renderer) {
 	}
 }
 
+fn draw_health(state: &GameState, rdr: &dyn Renderer) {
+	latch_number(rdr, 21, 16, 3, state.health);
+}
+
 // x in bytes
 fn status_draw_pic(rdr: &dyn Renderer, x: usize, y: usize, pic: GraphicNum) {
 	let y_status = (200-STATUS_LINES) + y;
 	rdr.pic(x*8, y_status, pic);
+}
+
+fn latch_number(rdr: &dyn Renderer, x_start: usize, y: usize, width: usize, num: usize) {
+	let str = num.to_string();
+	let mut w_cnt = width;
+	let mut x = x_start;
+	while str.len() < w_cnt {
+		status_draw_pic(rdr, x, y, GraphicNum::NBLANKPIC);
+		x += 1;
+		w_cnt -= 1;
+	}
+
+	let mut c = if str.len() <= w_cnt {0} else {str.len()-w_cnt};
+	let mut chars = str.chars();
+	while c<str.len() {
+		let ch = chars.next().unwrap();
+		status_draw_pic(rdr, x, y, num_pic(ch.to_digit(10).unwrap() as usize));
+		x += 1;
+		c += 1;
+	}
 }
