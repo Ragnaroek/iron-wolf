@@ -37,9 +37,9 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
     let vga_screen = Arc::new(vga);
     let render = vga_render::init(vga_screen.clone(), graphics, fonts, tiles);
 
-    let game_state = new_game_state();
+    let mut game_state = new_game_state();
 
-    let mut level_state = setup_game_level(&prj, &game_state, &assets).unwrap();
+    let mut level_state = setup_game_level(&prj, &mut game_state, &assets).unwrap();
 
     let player = level_state.player();
     let mut rc = init_ray_cast(prj.view_width);

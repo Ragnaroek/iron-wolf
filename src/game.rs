@@ -35,7 +35,7 @@ pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, inpu
 
 	'game_loop:
 	loop {
-		let mut level_state = setup_game_level(prj, &game_state, assets).unwrap();
+		let mut level_state = setup_game_level(prj, &mut game_state, assets).unwrap();
 		let mut rc = init_ray_cast(prj.view_width);
 
 		//TODO StartMusic
@@ -183,7 +183,7 @@ async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &
 	}
 }
 
-pub fn setup_game_level(prj: &ProjectionConfig, game_state: &GameState, assets: &Assets) -> Result<LevelState, String> {
+pub fn setup_game_level(prj: &ProjectionConfig, game_state: &mut GameState, assets: &Assets) -> Result<LevelState, String> {
 	let map = &assets.map_headers[game_state.map_on];
 	if map.width != MAP_SIZE as u16 || map.height != MAP_SIZE as u16 {
 		panic!("Map not 64*64!");
@@ -226,7 +226,7 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &GameState, assets: 
 		}
 	}
 
-	let (actors, statics, info_map) = scan_info_plane(&map_data, &mut actor_at, game_state.difficulty);
+	let (actors, statics, info_map) = scan_info_plane(&map_data, game_state, &mut actor_at, game_state.difficulty);
 
 	// take out the ambush markers
 	map_ptr = 0;
@@ -269,7 +269,7 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &GameState, assets: 
 }
 
 // By convention the first element in the returned actors vec is the player
-fn scan_info_plane(map_data: &map::MapData, actor_at : &mut Vec<Vec<At>>, difficulty: Difficulty) -> (Vec<ObjType>, Vec<StaticType>, Vec<Vec<u16>>) {
+fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at : &mut Vec<Vec<At>>, difficulty: Difficulty) -> (Vec<ObjType>, Vec<StaticType>, Vec<Vec<u16>>) {
 	let mut player = None;
 	let mut statics = Vec::new();
 	let mut actors = Vec::new();
@@ -291,7 +291,7 @@ fn scan_info_plane(map_data: &map::MapData, actor_at : &mut Vec<Vec<At>>, diffic
 					if statics.len() >= MAX_STATS {
 						panic!("Too many static objects!")
 					}
-					statics.push(spawn_static(actor_at, x, y, (tile-23) as usize));
+					statics.push(spawn_static(actor_at, game_state, x, y, (tile-23) as usize));
 
 				},
 				98 => { // P wall

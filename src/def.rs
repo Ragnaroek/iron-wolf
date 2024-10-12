@@ -35,8 +35,6 @@ pub const UNSIGNEDSHIFT : i32 =	8;
 pub const FOCAL_LENGTH : i32 = 0x5700;
 pub const FINE_ANGLES : usize = 3600;
 
-
-
 pub const NUM_BUTTONS : usize = 8;
 pub const NUM_WEAPONS : usize = 5;
 
@@ -234,6 +232,10 @@ pub struct GameState {
     pub secret_count: usize,
     pub treasure_count: usize,
     pub kill_count: i32,
+    pub secret_total: usize,
+    pub treasure_total: usize,
+    pub kill_total: usize,
+
     pub victory_flag : bool,
     pub play_state: PlayState,
     pub killer_obj: Option<ObjKey>,
@@ -522,7 +524,6 @@ pub struct StaticInfo {
 
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
 pub enum StaticKind {
-    None,
     Dressing,
 	Block,
 	BoGibs,

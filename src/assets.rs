@@ -387,10 +387,6 @@ fn expand_chunk(chunk: usize, data_in: &[u8], grhuffman: &Vec<Huffnode>) -> Vec<
 		data = &data_in[4..]; // skip over length
 	}
 
-	if chunk == STARTTILE8 {
-		println!("expanded = {}", expanded);
-	}
-
 	huff_expand(data, expanded, grhuffman)
 }
 
