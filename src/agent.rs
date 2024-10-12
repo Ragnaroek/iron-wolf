@@ -451,7 +451,6 @@ fn clip_move(k : ObjKey, level_state: &mut LevelState, x_move: i32, y_move: i32)
     if try_move(k, level_state) {
         return;
     }
-
     // TODO add noclip check here (for cheats)
 
     // TODO Play HITWALLSND sound here

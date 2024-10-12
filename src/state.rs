@@ -254,25 +254,27 @@ fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
 
 fn check_diag(level_state: &LevelState, x: usize, y: usize) -> bool {
     let actor = level_state.actor_at[x][y];
-    if let At::Obj(k) = actor {
-         return level_state.obj(k).flags & FL_SHOOTABLE == 0;
+    match actor {
+        At::Obj(k) => level_state.obj(k).flags & FL_SHOOTABLE == 0,
+        At::Blocked => false,
+        At::Wall(_) => false,
+        At::Nothing => true,
     }
-    true
 }
 
 fn check_side(level_state: &LevelState, x: usize, y: usize) -> (bool, i32) {
     let actor = level_state.actor_at[x][y];
-    if let At::Obj(k) = actor {
-        if k.0 < 128 {
+    match actor {
+        At::Obj(k) => (level_state.obj(k).flags & FL_SHOOTABLE == 0, -1),
+        At::Blocked => (false, -1),
+        At::Wall(tile) => {
+            if tile >= 128 && tile < 256 {
+                return (true, (tile & 63) as i32);
+            }
             return (false, -1);
-        }
-        if k.0 < 256 {
-            return (true, (k.0 & 63) as i32);
-        } else if level_state.obj(k).flags & FL_SHOOTABLE != 0 {
-            return (false, -1);
-        } 
-   }
-   (true, -1) 
+        },
+        At::Nothing => (true, -1),
+    }
 }
 
 pub fn select_dodge_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: usize, player_tile_y: usize) {
