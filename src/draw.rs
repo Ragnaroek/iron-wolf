@@ -2,8 +2,9 @@
 #[path = "./draw_test.rs"]
 mod draw_test;
 
+use crate::agent::get_bonus;
 use crate::play::ProjectionConfig;
-use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS, FL_VISABLE, ClassType, DIR_ANGLE};
+use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS, FL_VISABLE, ClassType, DIR_ANGLE, StaticKind};
 use crate::scale::{simple_scale_shape, scale_shape, MAP_MASKS_1};
 use crate::vga_render::Renderer;
 use crate::vga_render;
@@ -457,7 +458,7 @@ pub fn wall_refresh(level_state: &mut LevelState, rc: &mut RayCast, consts: &Ray
     }
 }
 
-pub fn three_d_refresh(game_state: &GameState, level_state: &mut LevelState, rc: &mut RayCast, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+pub fn three_d_refresh(game_state: &mut GameState, level_state: &mut LevelState, rc: &mut RayCast, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
     rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
 
     let player = level_state.player();
@@ -466,7 +467,7 @@ pub fn three_d_refresh(game_state: &GameState, level_state: &mut LevelState, rc:
 	clear_screen(game_state, rdr, prj);
     wall_refresh(level_state, rc, &consts, rdr, prj, assets);
 
-    draw_scaleds(level_state, &rc.wall_height, &consts, rdr, prj, assets);
+    draw_scaleds(level_state, game_state, &rc.wall_height, &consts, rdr, prj, assets);
     draw_player_weapon(game_state, rdr, prj, assets);
 
 	rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
@@ -659,10 +660,10 @@ fn draw_player_weapon(game_state: &GameState, rdr: &dyn Renderer, prj: &Projecti
     // TODO handle demorecord || demoplayback
 }
 
-fn draw_scaleds(level_state: &mut LevelState, wall_height: &Vec<i32>, consts: &RayCastConsts, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+fn draw_scaleds(level_state: &mut LevelState, game_state: &mut GameState, wall_height: &Vec<i32>, consts: &RayCastConsts, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
     let mut visptr = 0;
     // place static objects
-    for stat in &level_state.statics {
+    for stat in &mut level_state.statics {
         if stat.sprite == Sprite::None {
             continue // object has been deleted
         }
@@ -675,7 +676,7 @@ fn draw_scaleds(level_state: &mut LevelState, wall_height: &Vec<i32>, consts: &R
         let vis = &mut level_state.vislist[visptr];
         let can_grab = transform_tile(consts, prj, stat, vis);
         if can_grab && (stat.flags & FL_BONUS) != 0 {
-            get_bonus(); // TODO implement get_bonus and the state manipulation in it
+            get_bonus(game_state, rdr, stat); 
             continue
         }
 
@@ -833,8 +834,4 @@ fn transform_tile(consts: &RayCastConsts, prj: &ProjectionConfig, stat: &StaticT
         return true
     }
     return false;
-}
-
-fn get_bonus() {
-    // TODO implement
 }

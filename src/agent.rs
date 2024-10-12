@@ -1,7 +1,7 @@
 use crate::act1::operate_door;
 use crate::assets::{GraphicNum, num_pic, weapon_pic, face_pic};
-use crate::play::ProjectionConfig;
-use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType, GameState, Difficulty, PlayState, SCREENLOC, STATUS_LINES, FL_SHOOTABLE, FL_VISABLE, WeaponType, EXTRA_POINTS};
+use crate::play::{ProjectionConfig, start_bonus_flash, start_damage_flash};
+use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType, GameState, Difficulty, PlayState, SCREENLOC, STATUS_LINES, FL_SHOOTABLE, FL_VISABLE, WeaponType, EXTRA_POINTS, StaticKind, Sprite, StaticType};
 use crate::fixed::{new_fixed_i32, fixed_by_frac};
 use crate::state::{check_line, damage_actor};
 use crate::user::rnd_t;
@@ -266,7 +266,6 @@ pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
 }
 
 pub fn take_damage(attacker: ObjKey, points_param: i32, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer) {
-    
     let mut points = points_param;
 
     level_state.last_attacker = Some(attacker);
@@ -286,7 +285,8 @@ pub fn take_damage(attacker: ObjKey, points_param: i32, level_state: &mut LevelS
         game_state.killer_obj = Some(attacker);
     }
 
-    // TODO StartDamageFlash?
+    start_damage_flash(game_state, points);
+
     // TODO gotgatgun?
 
     draw_health(game_state, rdr);
@@ -370,6 +370,75 @@ pub fn give_extra_man(game_state: &mut GameState, rdr: &dyn Renderer) {
     }
     draw_lives(game_state, rdr);
     // TODO PlaySound(BONUS1UPSND);
+}
+
+pub fn get_bonus(game_state: &mut GameState, rdr: &dyn Renderer, check: &mut StaticType) {
+    match check.item_number {
+        StaticKind::BoFirstaid => {
+            panic!("get first aid");
+        },
+        StaticKind::BoKey1|StaticKind::BoKey2|StaticKind::BoKey3|StaticKind::BoKey4 => {
+            panic!("get key");
+        },
+        StaticKind::BoCross => {
+            panic!("get cross");
+        },
+        StaticKind::BoChalice => {
+            panic!("get chalice");
+        },
+        StaticKind::BoBible => {
+            panic!("get bible");
+        },
+        StaticKind::BoClip => {
+            if game_state.ammo == 99 {
+                return;
+            }
+            // TODO PlaySound(GETAMMOSND);
+            give_ammo(game_state, rdr, 8);
+        },
+        StaticKind::BoClip2 => {
+            if game_state.ammo == 99 {
+                return;
+            }
+            // TODO PlaySound(GETAMMOSND)
+            give_ammo(game_state, rdr, 4);
+        },
+        StaticKind::BoMachinegun => {
+            panic!("get machine gun");
+        },
+        StaticKind::BoChaingun => {
+            panic!("get chaingun");
+        },
+        StaticKind::BoFullheal => {
+            panic!("get full heal");
+        },
+        StaticKind::BoFood => {
+            panic!("get food");
+        },
+        StaticKind::BoGibs => {
+            panic!("get gibs");
+        },
+        StaticKind::BoSpear => {
+            panic!("get spear");
+        },
+        _ => { /* ignore all other static kinds */}
+    }
+    start_bonus_flash(game_state);
+    check.sprite = Sprite::None; // remove from list
+}
+
+fn give_ammo(game_state: &mut GameState, rdr: &dyn Renderer, ammo: i32) {
+    if game_state.ammo <= 0 { // knife was out
+        if game_state.attack_frame <= 0 {
+            game_state.weapon = game_state.chosen_weapon;
+            draw_weapon(&game_state, rdr)
+        }
+    }
+    game_state.ammo += ammo;
+    if game_state.ammo > 99 {
+        game_state.ammo = 99;
+    }
+    draw_ammo(game_state, rdr);
 }
 
 fn clip_move(k : ObjKey, level_state: &mut LevelState, x_move: i32, y_move: i32) {
