@@ -17,6 +17,7 @@ use vgaemu::screen;
 use vgaemu::{SCReg, set_vertical_display_end};
 
 use assets::{GraphicNum};
+use game::{new_game_state};
 use vga_render::Renderer;
 
 fn main() -> Result<(), String> {
@@ -66,6 +67,8 @@ fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionCon
         pg_13(rdr, input);
     }
 
+    let mut game_state = new_game_state();
+
     loop {
         while !iw_config.no_wait { // title screen & demo loop
             rdr.pic(0, 0, GraphicNum::TITLEPIC);
@@ -86,7 +89,7 @@ fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionCon
             //TODO PlayDemo() here
         }
 
-        game::game_loop(rdr, input, prj);
+        game::game_loop(&game_state, rdr, input, prj);
         rdr.fade_out();
     }
 }

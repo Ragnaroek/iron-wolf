@@ -1,6 +1,6 @@
 
 use super::vga_render::Renderer;
-use super::assets::{GraphicNum};
+use super::assets::{GraphicNum, face_pic};
 use super::input;
 use super::time;
 use super::config;
@@ -17,6 +17,18 @@ pub struct ProjectionConfig {
 	view_height: usize,
 }
 
+pub struct GameState {
+	health: usize,
+	face_frame: usize,
+}
+
+pub fn new_game_state() -> GameState {
+	GameState {
+		health: 100,
+		face_frame: 0,
+	}
+}
+
 pub fn new_projection_config(config: &config::WolfConfig) -> ProjectionConfig {
 	let view_width = ((config.viewsize * 16) & !15) as usize;
 	let view_height = ((((config.viewsize * 16) as f32 * HEIGHT_RATIO) as u16) & !1) as usize;
@@ -28,14 +40,14 @@ pub fn new_projection_config(config: &config::WolfConfig) -> ProjectionConfig {
 	}
 }
 
-pub fn game_loop(rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig) {
-	draw_play_screen(rdr, prj);
+pub fn game_loop(state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig) {
+	draw_play_screen(state, rdr, prj);
 
 	rdr.fade_in();
 	input.user_input(time::TICK_BASE*1000);
 }
 
-fn draw_play_screen(rdr: &dyn Renderer, prj: &ProjectionConfig) {
+fn draw_play_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
 	rdr.fade_out();
 
 	let offset_prev = rdr.buffer_offset();
@@ -46,7 +58,7 @@ fn draw_play_screen(rdr: &dyn Renderer, prj: &ProjectionConfig) {
 	}
 	rdr.set_buffer_offset(offset_prev);
 
-	draw_face(rdr);
+	draw_face(state, rdr);
 
 	//TODO draw face, health, lives,...
 }
@@ -78,9 +90,13 @@ fn vlin(rdr: &dyn Renderer, y: usize, z: usize, x: usize, c: u8) {
 	rdr.vlin(x, y, (z-y)+1, c)
 }
 
-fn draw_face(rdr: &dyn Renderer) {
-	// TODO testpic, draw appropriate pic depending on gamestate!
-	status_draw_pic(rdr, 17, 4, GraphicNum::FACE8APIC)
+fn draw_face(state: &GameState, rdr: &dyn Renderer) {
+	if state.health > 0 {
+		status_draw_pic(rdr, 17, 4, face_pic(3*((100-state.health)/16)+state.face_frame));
+	} else {
+		// TODO draw mutant face if last attack was needleobj
+		status_draw_pic(rdr, 17, 4, GraphicNum::FACE8APIC)
+	}
 }
 
 // x in bytes
