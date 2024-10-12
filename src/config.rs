@@ -12,7 +12,7 @@ pub const MAX_SCORES : usize = 7;
 pub fn load_iw_config() -> IWConfig {
     //TODO load from toml file
     IWConfig {
-        wolf3d_data: Path::new("/Users/mb/_w3d/w3d_data"),
+        wolf3d_data: Path::new("/Users/michaelbohn/_w3d/w3d_data"),
         no_wait: true,
     }
 }
