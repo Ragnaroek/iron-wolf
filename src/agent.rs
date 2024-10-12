@@ -1,6 +1,5 @@
 use crate::act1::operate_door;
 use crate::assets::{GraphicNum, num_pic, weapon_pic, face_pic};
-use crate::game;
 use crate::play::ProjectionConfig;
 use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType, GameState, Difficulty, PlayState, SCREENLOC, STATUS_LINES, FL_SHOOTABLE, FL_VISABLE, WeaponType, EXTRA_POINTS};
 use crate::fixed::{new_fixed_i32, fixed_by_frac};

@@ -75,9 +75,9 @@ pub fn fixed_by_frac(a_f: Fixed, b_f: Fixed) -> Fixed {
         si = (si as u16 ^ 0x8000) as i16; // toggle sign of result
     } 
 
-    let (dx, mut ax) = mul(ax, bx); // fraction * fraction
+    let (dx, _) = mul(ax, bx); // fraction * fraction
     let di = dx;
-    ax = cx;
+    let ax = cx;
     let (mut dx, ax) = mul(ax, bx); // units * fraction
 
     let (ax_unsigned, cf) = (ax as u16).overflowing_add(di as u16);

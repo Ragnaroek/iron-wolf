@@ -2,7 +2,13 @@
 #[path = "./state_test.rs"]
 mod state_test;
 
-use crate::{def::{ObjType, TILESHIFT, TILEGLOBAL, StateType, DirType, ClassType, FL_ATTACKMODE, FL_AMBUSH, LevelState, ObjKey, UNSIGNEDSHIFT, FL_FIRSTATTACK, MIN_ACTOR_DIST, At, FL_SHOOTABLE, GameState, FL_NONMARK, StaticType, StaticKind}, fixed::new_fixed_i32, time, user::rnd_t, act2::{S_GRDCHASE1, S_GRDPAIN, S_GRDPAIN1, S_GRDDIE1}, agent::{take_damage, draw_score, give_points}, act1::{open_door, place_item_type}, game::{AREATILE, self}, vga_render::Renderer};
+use crate::fixed::new_fixed_i32;
+use crate::user::rnd_t;
+use crate::act2::{S_GRDCHASE1, S_GRDPAIN, S_GRDPAIN1, S_GRDDIE1};
+use crate::agent::{take_damage, give_points};
+use crate::act1::{open_door, place_item_type};
+use crate::vga_render::Renderer;
+use crate::def::{ObjType, TILESHIFT, TILEGLOBAL, StateType, DirType, ClassType, FL_ATTACKMODE, FL_AMBUSH, LevelState, ObjKey, UNSIGNEDSHIFT, FL_FIRSTATTACK, MIN_ACTOR_DIST, At, FL_SHOOTABLE, GameState, FL_NONMARK, StaticKind};
 
 static OPPOSITE: [DirType; 9] = [DirType::West, DirType::SouthWest, DirType::South, DirType::SouthEast, DirType::East, DirType::NorthEast, DirType::North, DirType::NorthWest, DirType::NoDir];
 
