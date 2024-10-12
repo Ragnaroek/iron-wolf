@@ -10,7 +10,7 @@ pub static CONFIG_DATA: &'static str = "CONFIG.WL6";
 pub const MAX_SCORES : usize = 7;
 
 pub fn load_iw_config() -> IWConfig {
-    //TODO load from toml file
+    //TODO load from a toml file
     IWConfig {
         wolf3d_data: Path::new("/Users/michaelbohn/_w3d/w3d_data"),
         no_wait: true,

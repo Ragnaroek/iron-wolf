@@ -328,3 +328,18 @@ pub fn load_all_textures(config: &IWConfig, headers: &GamedataHeaders) -> Result
     let mut file = File::open(&config.wolf3d_data.join(GAMEDATA)).expect("opening gamedata file failed");
     libiw::gamedata::load_all_textures(&mut file, headers)
 }
+
+// loads all assets for the game into memory
+pub fn load_assets(iw_config: IWConfig) -> Result<Assets, String> {
+    let (map_offsets, map_headers) = load_map_headers_from_config(&iw_config)?;
+
+    let (_, headers) = load_gamedata(&iw_config)?;
+    let textures = load_all_textures(&iw_config, &headers)?;
+
+    Ok(Assets {
+        map_headers,
+        map_offsets,
+        iw_config,
+        textures,
+    })
+}

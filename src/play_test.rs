@@ -1,5 +1,6 @@
+use super::calc_pixelangle;
 use super::calc_projection;
-use super::new_fixed_i32;
+use crate::fixed::new_fixed_i32;
 
 #[test]
 fn test_calc_sines() {
@@ -34,5 +35,27 @@ fn test_calc_sines() {
 
 }
 
+#[test]
+fn test_calc_pixelangles() {
+    let angles = calc_pixelangle(304, 44800.0);
+
+    assert_eq!(angles[151], 0);
+    assert_eq!(angles[152], 0);
+
+    assert_eq!(angles[165], -35);
+    assert_eq!(angles[137], 38);
+
+    assert_eq!(angles[182], -82);
+    assert_eq!(angles[120], 84);
+
+    assert_eq!(angles[214], -166);
+    assert_eq!(angles[88], 168);
+
+    assert_eq!(angles[291], -337);
+    assert_eq!(angles[11], 339);
+
+    assert_eq!(angles[0], 360);
+    assert_eq!(angles[303], -360);
+}
 
 

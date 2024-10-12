@@ -3,6 +3,7 @@ pub mod assets;
 pub mod config;
 pub mod def;
 pub mod draw;
+pub mod fixed;
 pub mod game;
 pub mod input;
 pub mod play;
@@ -12,7 +13,6 @@ pub mod user;
 pub mod util;
 pub mod vga_render;
 pub mod vl;
-pub mod wolf_hack;
 
 use std::sync::Arc;
 use std::io::prelude::*;
@@ -37,17 +37,7 @@ fn main() -> Result<(), String> {
 	vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
     let graphics = assets::load_all_graphics(&iw_config)?;
-    let (map_offsets, map_headers) = assets::load_map_headers_from_config(&iw_config)?;
-
-    let (_, headers) = assets::load_gamedata(&iw_config)?;
-    let textures = assets::load_all_textures(&iw_config, &headers)?;
-
-    let assets = Assets {
-        map_headers,
-        map_offsets,
-        iw_config,
-        textures,
-    };
+    let assets = assets::load_assets(iw_config)?;
 
     init_game(&vga);
 
