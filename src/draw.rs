@@ -367,6 +367,8 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
             // TODO hit other things (door, pwall)
         }
     }
+
+    //println!("heights={:?}", rc.wall_height);
 }
 
 pub fn three_d_refresh(game_state: &GameState, level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
@@ -416,24 +418,22 @@ pub fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, co
 pub fn scale_post(scaler_state: &ScalerState, height: i32, prj: &ProjectionConfig, rdr: &dyn Renderer, assets: &Assets) {
     let texture = &assets.textures[scaler_state.texture_ix];
 
-    let mut h = ((height & 0xFFF8)>>2) as usize;
+    let mut h = ((height & 0xFFF8)>>1) as usize;
     if h >= prj.scaler.scale_call.len() {
         h = prj.scaler.scale_call.len()-1;
     }
 
-    //both additionally shift by 1, in the original the computed offsets are in 16-bit words that
-    //point into a 32-bit array 
-    let ix = prj.scaler.scale_call[h];
-    let scaler = &prj.scaler.scalers[ix>>1];
-
-    let bx = ((scaler_state.post_x &0x03) << 3) + scaler_state.post_width;				
-    rdr.set_mask(MAP_MASKS_1[bx-1]);
-
-    let line_start = (scaler_state.post_x >> 2) + rdr.buffer_offset();
+    //shr by 2, the original offset is a offset into a DWORD pointer array.
+    //We have to correct here for that in jump table.
+    let ix = prj.scaler.scale_call[h>>2];
+    let scaler = &prj.scaler.scalers[ix];
+    let offset = (scaler_state.post_x >> 2) + rdr.buffer_offset();
+    let mask = ((scaler_state.post_x & 3) << 3)+1;
+    rdr.set_mask(MAP_MASKS_1[mask-1]);
     for pix_scaler in &scaler.pixel_scalers {
         let pix = texture.bytes[scaler_state.post_source + pix_scaler.texture_src];
         for mem_dest in &pix_scaler.mem_dests {
-            rdr.write_mem(line_start + *mem_dest as usize, pix);
+            rdr.write_mem(offset + *mem_dest as usize, pix);
         }
     }
 }
