@@ -8,7 +8,6 @@ use vga::VGA;
 
 use crate::act1::{move_doors, move_push_walls};
 use crate::agent::{draw_health, draw_level, draw_face, draw_lives, draw_ammo, draw_keys, draw_weapon, draw_score};
-use crate::debug::debug_actor_at;
 use crate::debug::debug_keys;
 use crate::def::ObjType;
 use crate::def::WindowState;
@@ -200,9 +199,9 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
         game_state.god_mode = true;
         if game_state.episode == 0 && game_state.map_on == 0 {
             let player = level_state.mut_player();
-            /*player.x = 1465555;
+            player.x = 1465555;
             player.y = 3112211;
-            player.angle = 0;*/
+            player.angle = 0;
         }
     }
 
