@@ -148,10 +148,13 @@ async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &
 	// fade to red
 	finish_palette_shifts(game_state, &rdr.vga).await;
 
-	rdr.set_buffer_offset(rdr.buffer_offset()+prj.screenofs);
-	rdr.activate_buffer(rdr.buffer_offset()-prj.screenofs).await;
+	let source_buffer = rdr.buffer_offset()+prj.screenofs;
+	rdr.set_buffer_offset(source_buffer);
+	// fill source buffer with all red screen for the fizzle_fade
+	rdr.bar(0, 0, prj.view_width, prj.view_height, 4);
+	
 	input.clear_keys_down();
-	rdr.fizzle_fade(ticker, prj.view_width, prj.view_height, 70, false).await;
+	rdr.fizzle_fade(ticker, source_buffer, rdr.active_buffer()+prj.screenofs, prj.view_width, prj.view_height, 70, false).await;
 	rdr.set_buffer_offset(rdr.buffer_offset()-prj.screenofs);
 	input.wait_user_input(100).await;
 	//TODO SD_WaitSoundDone

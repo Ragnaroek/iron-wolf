@@ -4,7 +4,7 @@ use std::sync::atomic::AtomicUsize;
 use vga::{CRTReg, SCReg, VGA};
 use vga::util;
 
-use crate::time;
+use crate::{time, draw};
 
 use super::assets::{Graphic, GraphicNum, GAMEPAL};
 use super::vl;
@@ -24,6 +24,7 @@ pub struct VGARenderer {
 	pub vga: Arc<VGA>,
 	linewidth: usize,
 	bufferofs: AtomicUsize,
+	displayofs: AtomicUsize,
 	graphics: Vec<Graphic>,
 }
 
@@ -32,6 +33,7 @@ pub fn init(vga: Arc<VGA>, graphics: Vec<Graphic>) -> VGARenderer {
 		vga,
 		linewidth: 80,
 		bufferofs: AtomicUsize::new(PAGE_1_START),
+		displayofs: AtomicUsize::new(PAGE_1_START),
 		graphics,
 	}
 }
@@ -71,14 +73,21 @@ impl VGARenderer {
 	}
 
     pub async fn activate_buffer(&self, offset: usize) {
-        util::display_enable(&self.vga).await;
+		util::display_enable(&self.vga).await;
 
         let addr_parts = offset.to_le_bytes();
         self.vga.set_crt_data(CRTReg::StartAdressLow, addr_parts[0]);
         self.vga.set_crt_data(CRTReg::StartAdressHigh, addr_parts[1]);
 
+		self.displayofs.store(offset, std::sync::atomic::Ordering::Relaxed);
+
         util::vsync(&self.vga).await;
     }
+
+	// displayofs in the orginal
+	pub fn active_buffer(&self) -> usize {
+		self.displayofs.load(std::sync::atomic::Ordering::Relaxed)
+	}
 
     pub fn write_mem(&self, offset: usize, v_in: u8) {
         self.vga.write_mem(offset, v_in)
@@ -194,7 +203,8 @@ impl VGARenderer {
 		vl::fade_in(&self.vga,0, 255, GAMEPAL, 30).await;
 	}
 
-	pub async fn fizzle_fade(&self, ticker: &time::Ticker, width: usize, height: usize, frames: usize, abortable: bool) -> bool {
+	pub async fn fizzle_fade(&self, ticker: &time::Ticker, source: usize, dest: usize, width: usize, height: usize, frames: usize, abortable: bool) -> bool {
+		let (page_delta, _) = dest.overflowing_sub(source);
 		let mut rnd_val : u32 = 1;
 		let pix_per_frame = 64000 / frames;
 
@@ -208,8 +218,8 @@ impl VGARenderer {
 				let mut dx: u32 = (rnd_val >> 16) & 0xFFFF;
 
 				let (bx, _) = ax.overflowing_sub(1);
-				let y = bx & 0xFF; // low 8 bits - 1 = y coordinate
-				let x = ((ax & 0xFF00) >> 8) | (dx << 8); // next 9 bits = x coordinate
+				let y = (bx & 0xFF) as usize; // low 8 bits - 1 = y coordinate
+				let x = (((ax & 0xFF00) >> 8) | (dx << 8)) as usize; // next 9 bits = x coordinate
 
 				// advance to next random element
 				let carry_dx = dx & 0x01;
@@ -223,11 +233,18 @@ impl VGARenderer {
 
 				rnd_val = ax | (dx << 16);
 
-				if x as usize > width || y as usize > height {
+				if x > width || y > height {
 					continue;
 				}
 
-				self.plot(x as usize, y as usize, 4);
+				let draw_ofs = self.y_offset(y) + (x >> 2);
+				self.vga.set_gc_data(vga::GCReg::ReadMapSelect, (x&3) as u8);
+				let src_pix = self.vga.read_mem(draw_ofs);
+
+				let mask = PIXMASKS[x&3];
+				self.vga.set_sc_data(SCReg::MapMask, mask);
+				let (dst, _) = draw_ofs.overflowing_add(page_delta);
+				self.vga.write_mem(dst, src_pix);	
 
 				if rnd_val == 1 {
 					return false;
