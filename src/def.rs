@@ -94,7 +94,7 @@ pub struct GameState {
 	pub episode : usize,
 }
 
-#[derive(Clone, Copy)] //XXX do not make this Clone, fix actor_at (also takes a ObjKey instead ObjType???)
+#[derive(Debug, Clone, Copy)] //XXX do not make this Clone, fix actor_at (also takes a ObjKey instead ObjType???)
 pub struct ObjType {
 	pub angle: i32,
     pub pitch: u32,
@@ -121,6 +121,7 @@ pub struct Assets {
 
 type Think = fn(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig); 
 
+#[derive(Debug)]
 pub struct StateType {
     pub think: Option<Think>,
     pub next: Option<&'static StateType>
