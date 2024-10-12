@@ -4,7 +4,7 @@ mod draw_test;
 
 use crate::agent::get_bonus;
 use crate::play::ProjectionConfig;
-use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS, FL_VISABLE, ClassType, DIR_ANGLE, StaticKind};
+use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS, FL_VISABLE, ClassType, DIR_ANGLE };
 use crate::scale::{simple_scale_shape, scale_shape, MAP_MASKS_1};
 use crate::vga_render::Renderer;
 use crate::vga_render;

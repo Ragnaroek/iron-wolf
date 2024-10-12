@@ -11,11 +11,15 @@ pub mod draw;
 pub mod fixed;
 pub mod game;
 pub mod input;
+pub mod loader;
 pub mod play;
 pub mod time;
 pub mod scale;
+pub mod start;
 pub mod state;
 pub mod user;
-pub mod util;
 pub mod vga_render;
 pub mod vl;
+
+#[cfg(feature = "web")]
+pub mod web;

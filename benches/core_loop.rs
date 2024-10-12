@@ -6,6 +6,7 @@ extern crate iw;
 use std::path::PathBuf;
 use std::env;
 use std::sync::Arc;
+use iw::loader::DiskLoader;
 use test::Bencher;
 
 use iw::def::IWConfig;
@@ -25,9 +26,12 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
         wolf3d_data: path,
         no_wait: true,
     };
-    let assets = assets::load_assets(iw_config)?;
+    let loader = DiskLoader{
+        data_path: iw_config.wolf3d_data.clone(),
+    };
+    let assets = assets::load_assets(&loader)?;
     let prj = play::calc_projection(19);
-    let graphics = assets::load_all_graphics(&assets.iw_config)?;
+    let graphics = assets::load_all_graphics(&loader)?;
 
     let vga = vga::new(0x13);
     let vga_screen = Arc::new(vga);

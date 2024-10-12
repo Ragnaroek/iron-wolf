@@ -410,8 +410,10 @@ name = "iw"
 version = "0.1.0"
 dependencies = [
  "async-std",
+ "console_error_panic_hook",
  "libiw",
  "vga-emu",
+ "wasm-bindgen",
 ]
 
 [[package]]
