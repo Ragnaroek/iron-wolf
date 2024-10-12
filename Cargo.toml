@@ -2,9 +2,13 @@
 name = "iw"
 version = "0.1.0"
 edition = "2021"
+authors = ["Michael Bohn <spaceodyssey@gmx.de>"]
 description = "Iron-Wolf a Wolfenstein 3D source port"
 
 [dependencies]
 sdl2 = "0.35.2"
 vga-emu = "0.3.0" #{path="../vga-emu/"}
 libiw = "0.2.0" #{path="../libiw"}
+
+[profile.bench]
+debug = true

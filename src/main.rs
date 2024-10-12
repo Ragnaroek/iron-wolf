@@ -1,19 +1,4 @@
-pub mod act1;
-pub mod agent;
-pub mod assets;
-pub mod config;
-pub mod def;
-pub mod draw;
-pub mod fixed;
-pub mod game;
-pub mod input;
-pub mod play;
-pub mod time;
-pub mod scale;
-pub mod user;
-pub mod util;
-pub mod vga_render;
-pub mod vl;
+extern crate iw;
 
 use std::sync::Arc;
 use std::io::prelude::*;
@@ -24,9 +9,16 @@ use vgaemu::screen;
 use vgaemu::SCReg;
 use libiw::assets::GAMEPAL;
 
-use def::Assets;
-use assets::GraphicNum;
-use vga_render::Renderer;
+use iw::def::Assets;
+use iw::assets::GraphicNum;
+use iw::vga_render::Renderer;
+use iw::config;
+use iw::assets;
+use iw::play;
+use iw::vl;
+use iw::vga_render;
+use iw::time;
+use iw::input;
 
 fn main() -> Result<(), String> {
     let iw_config = config::load_iw_config();

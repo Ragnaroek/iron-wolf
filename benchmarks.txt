@@ -1,0 +1,3 @@
+
+### v0.1 initial benchmark
+test bench_ray_cast_loop ... bench: 1,285,921,375 ns/iter (+/- 7,938,687)
