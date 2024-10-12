@@ -1,5 +1,5 @@
 use crate::play::ProjectionConfig;
-use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, At, ANGLES, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT};
+use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT};
 use crate::fixed::{new_fixed_i32, fixed_by_frac};
 
 const ANGLE_SCALE : i32 = 20;
@@ -13,9 +13,50 @@ pub const S_PLAYER : StateType = StateType{
 
 fn t_player(k: ObjKey, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
 
-    //TODO Cmd_use here
+    if control_state.button_state[Button::Use as usize] {
+        cmd_use(level_state, control_state);
+    }
 
     control_movement(k, level_state, control_state, prj);
+}
+
+fn cmd_use(level_state: &LevelState, control_state: &ControlState) {
+
+    //TODO pushable wall, elevator
+
+    let check_x;
+    let check_y;
+    let dir;
+    let mut elevator_ok = true;
+
+    // find which cardinal direction the player is facing
+    let player = level_state.player();
+    if player.angle < ANGLES_I32/8 || player.angle > 7*ANGLES_I32/8 {
+        check_x = player.tilex+1;
+        check_y = player.tiley;
+        dir = Dir::East;
+        elevator_ok = true;
+    } else if player.angle < 3*ANGLES_I32/8 {
+        check_x = player.tilex;
+        check_y = player.tiley-1;
+        dir = Dir::North;
+        elevator_ok = false;
+    } else if player.angle < 5*ANGLES_I32/8 {
+        check_x = player.tilex-1;
+        check_y = player.tiley;
+        dir = Dir::West;
+        elevator_ok = true;
+    } else {
+        check_x = player.tilex;
+        check_y = player.tiley+1;
+        dir = Dir::South;
+        elevator_ok = false;
+    }
+
+    let doornum = level_state.level.tile_map[check_x][check_y];
+    if !control_state.button_held[Button::Use as usize] && doornum & 0x80 != 0 {
+        println!("used door {}", doornum)
+    }
 }
 
 pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
@@ -68,7 +109,6 @@ fn control_movement(k: ObjKey, level_state: &mut LevelState, control_state: &mut
 }
 
 pub fn thrust(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig, angle: i32, speed_param: i32) {
-
     let speed = new_fixed_i32(if speed_param >= MIN_DIST*2 {
         MIN_DIST*2-1
     } else {

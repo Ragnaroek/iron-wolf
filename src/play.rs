@@ -7,7 +7,7 @@ use vgaemu::input::NumCode;
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::three_d_refresh;
 use crate::vga_render::Renderer;
-use crate::def::{GameState, ControlState, WeaponType, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS};
+use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS};
 use crate::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
 use crate::input;
 use crate::time;
@@ -25,20 +25,19 @@ const SCREEN_WIDTH : usize = 80;
 
 const PI : f32 = 3.141592657;
 
-const ANGLE_TO_FINE_SHIFT : u32 = 19;
 const ANG90 : usize = FINE_ANGLES/4;
 const ANG180 : usize = ANG90*2;
 
 const NUM_FINE_TANGENTS : usize = FINE_ANGLES/2 + ANG180;
 const VIEW_GLOBAL : usize = 0x10000;
-const TEXTURE_WIDTH : usize = 64;
-const TEXTURE_HEIGHT : usize = 64;
 const RAD_TO_INT : f64 = FINE_ANGLES as f64 / 2.0 / std::f64::consts::PI;
 
 const RUN_MOVE : i32 = 70;
 const BASE_MOVE: i32 = 35;
 
 static SCREENLOC : [usize; 3] = [vga_render::PAGE_1_START, vga_render::PAGE_2_START, vga_render::PAGE_3_START];
+
+static BUTTON_SCAN : [NumCode; NUM_BUTTONS] = [NumCode::Control, NumCode::Alt, NumCode::RShift, NumCode::Space, NumCode::Num1, NumCode::Num2, NumCode::Num3, NumCode::Num4];
 
 pub struct ProjectionConfig {
 	pub view_width: usize,
@@ -79,6 +78,7 @@ pub fn new_control_state() -> ControlState {
     ControlState {
         control: Control { x: 0, y: 0 },
         angle_frac: 0,
+        button_held: [false; NUM_BUTTONS],
         button_state: [false; NUM_BUTTONS]
     }
 }
@@ -340,7 +340,13 @@ fn latch_number(rdr: &dyn Renderer, x_start: usize, y: usize, width: usize, num:
 fn poll_controls(state: &mut ControlState, ticker: &time::Ticker, input: &input::Input) {
     let tics = ticker.calc_tics() as i32;
 
-    poll_keyboard_buttons();
+    state.control.x = 0;
+    state.control.y = 0;
+    state.button_held.copy_from_slice(&state.button_state);
+
+    poll_keyboard_buttons(state, input);
+
+    //println!("button_held {:}", state.)
 
     poll_keyboard_move(state, input, tics);
     //TODO Mouse Move
@@ -363,16 +369,15 @@ fn poll_controls(state: &mut ControlState, ticker: &time::Ticker, input: &input:
     }
 }
 
-fn poll_keyboard_buttons() {
-
+fn poll_keyboard_buttons(state: &mut ControlState, input: &input::Input) {
+    for i in 0..NUM_BUTTONS {
+        state.button_state[i] = input.key_pressed(BUTTON_SCAN[i])
+    }
 }
 
 fn poll_keyboard_move(state: &mut ControlState, input: &input::Input, tics: i32) {
     //TODO impl button mapping, uses hardcoded buttons as for now
-    state.control.y = 0;
-    state.control.x = 0;
-    
-    let move_factor = if input.key_pressed(NumCode::RShift) {
+    let move_factor = if state.button_state[Button::Run as usize] {
         RUN_MOVE * tics
     } else {
         BASE_MOVE * tics
