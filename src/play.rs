@@ -112,28 +112,11 @@ pub fn calc_projection(view_size: usize) -> ProjectionConfig {
 
 fn calc_fine_tangents() -> [i32; NUM_FINE_TANGENTS] {
     let mut tangents = [0; FINE_ANGLES];
-
     for i in 0..FINE_ANGLES/8 {
         let tang = ((i as f64 +0.5)/RAD_TO_INT).tan();
         tangents[i] = (tang * TILEGLOBAL as f64) as i32;
         tangents[FINE_ANGLES/4-1-i] = (1.0/tang*TILEGLOBAL as f64) as i32;
-        /*
-        let tang = ((i as f64 +0.5)/RAD_TO_INT).tan();
-        let t = (tang * FRAC_UNIT as f64) as i32;
-        tangents[i] = t;
-        tangents[i+FINE_ANGLES/2] = t;
-        tangents[FINE_ANGLES/4-1-i] = ((1.0/tang)*FRAC_UNIT as f64) as i32;
-        tangents[FINE_ANGLES/4+i]=-tangents[FINE_ANGLES/4-1-i];
-        tangents[FINE_ANGLES/2-1-i]=-tangents[i];
-        */
     }
-    /*
-    let mut src = 0;
-    for i in FINE_ANGLES/2..FINE_ANGLES {
-        tangents[i] = tangents[src];
-        src += 1;
-    }*/
-
     tangents
 }
 
@@ -196,7 +179,7 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
 	//TODO A lot to do here (clear palette, poll controls, prepare world)
 
     //TODO DEBUG
-    //level_state.mut_player().angle = 353;
+    //level_state.mut_player().angle = 26;
     
     loop {
         level_state.control = poll_controls(ticker, input);

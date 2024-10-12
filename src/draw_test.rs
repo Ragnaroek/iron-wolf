@@ -203,6 +203,69 @@ fn test_cast_angle_353() -> Result<(), String>{
 }
 
 #[test]
+fn test_cast_angle_26() -> Result<(), String>{
+    // TODO Test will not work on CI or somewhere else
+    // Use public shareware data for this test or mock the tile data to only what is needed
+    let assets = assets::load_assets(IWConfig {
+        wolf3d_data: Path::new("/Users/michaelbohn/_w3d/w3d_data"),
+        no_wait: true,
+    })?;
+    let prj = play::calc_projection(19);
+    let mut level_state = setup_game_level(&prj, 0, &assets).unwrap();
+    level_state.mut_player().angle = 26; 
+    let consts = init_ray_cast_consts(&prj, level_state.player());
+    let mut rc = init_ray_cast(prj.view_width);
+    
+    assert_eq!(consts.x_partialup, 52785);
+    assert_eq!(consts.y_partialup, 23005);
+    assert_eq!(consts.x_partialdown, 12751);
+    assert_eq!(consts.y_partialdown, 42531);
+
+    for pixx in 0..prj.view_width {
+        rc.init_cast(&prj, pixx, &consts);
+        match pixx {
+            0 => check_init_angle_26_pixx_0(&rc),
+            _ => () /* no check */,
+        }
+        
+        rc.cast(&level_state.level);
+        match pixx {
+            0 => check_cast_angle_26_pixx_0(&rc),
+            _ => () /* no check */,
+        }
+    }
+    Ok(())
+}
+
+fn check_init_angle_26_pixx_0(rc : &RayCast) {
+    assert_eq!(rc.si, 0x07B8);
+    assert_eq!(rc.di, 0x0778, "di={:x}", rc.di);
+    assert_eq!(rc.cx, 0x001D, "cx={:x}", rc.cx);
+    assert_eq!(rc.dx, 0x0038, "dx={:x}", rc.dx);
+    assert_eq!(rc.bx, 0x001E);
+    assert_eq!(rc.bp, 0x0038);
+
+    assert_eq!(rc.x_tilestep, 1);
+    assert_eq!(rc.y_tilestep, -1);
+    assert_eq!(rc.horizop, Op::JGE);
+    assert_eq!(rc.vertop, Op::JLE);
+    assert_eq!(rc.x_step, 34772);
+    assert_eq!(rc.y_step, -123515);
+    assert_eq!(rc.y_intercept, 3678600);
+    assert_eq!(rc.x_intercept&0xFFFF, 35317);
+    assert_eq!(rc.x_tile, 30);
+    assert_eq!(rc.y_tile, 0);
+}
+fn check_cast_angle_26_pixx_0(rc : &RayCast) {
+    assert_eq!(rc.hit, Hit::HorizontalWall);
+    assert_eq!(rc.tile_hit, 0x08);
+    assert_eq!(rc.x_intercept, 0x1E11C9, "x_intercept={:x}", rc.x_intercept);
+    assert_eq!(rc.y_intercept, 0x370000, "y_intercept={:x}", rc.y_intercept);
+    assert_eq!(rc.x_tile, 0x1E);
+    assert_eq!(rc.y_tile, 0x37);
+}
+
+#[test]
 fn test_init_ray_cast_consts() {
     let prj = play::calc_projection(19);
     let player = ObjType{

@@ -351,7 +351,7 @@ impl RayCast {
 
 fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
     let player = level_state.player();
-    // TODO allocate memory for RayCast + RayCastConsts only once, not on each wall_refresh!
+    // TODO allocate memory for RayCast + RayCastConsts only once, not on each wall_refresh (benchmark it)!
     let consts = init_ray_cast_consts(prj, player);
     let mut rc = init_ray_cast(prj.view_width);
     let mut scaler_state = init_scaler_state();
@@ -367,8 +367,6 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
             // TODO hit other things (door, pwall)
         }
     }
-
-    //println!("heights={:?}", rc.wall_height);
 }
 
 pub fn three_d_refresh(game_state: &GameState, level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
@@ -417,15 +415,16 @@ pub fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, co
 
 pub fn scale_post(scaler_state: &ScalerState, height: i32, prj: &ProjectionConfig, rdr: &dyn Renderer, assets: &Assets) {
     let texture = &assets.textures[scaler_state.texture_ix];
-
-    let mut h = ((height & 0xFFF8)>>1) as usize;
+    
+    //shr additionally by 2, the original offset is a offset into a DWORD pointer array.
+    //We have to correct here for that in jump table.
+    let mut h = ((height & 0xFFF8)>>3) as usize;
     if h >= prj.scaler.scale_call.len() {
         h = prj.scaler.scale_call.len()-1;
     }
 
-    //shr by 2, the original offset is a offset into a DWORD pointer array.
-    //We have to correct here for that in jump table.
-    let ix = prj.scaler.scale_call[h>>2];
+
+    let ix = prj.scaler.scale_call[h];
     let scaler = &prj.scaler.scalers[ix];
     let offset = (scaler_state.post_x >> 2) + rdr.buffer_offset();
     let mask = ((scaler_state.post_x & 3) << 3)+1;
