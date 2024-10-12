@@ -22,7 +22,7 @@ pub async fn check_highscore(rdr: &VGARenderer, input: &Input, score: i32, map: 
     input.wait_user_input(500).await;
 }
 
-fn draw_high_scores(rdr: &VGARenderer) {
+pub fn draw_high_scores(rdr: &VGARenderer) {
     clear_ms_screen(rdr);
     draw_stripes(rdr, 10);
 
