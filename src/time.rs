@@ -52,6 +52,10 @@ impl Ticker {
         get_count(&self.time_count)
     }
 
+    pub fn clear_count(&self) {
+        set_count(&self.time_count, 0)
+    }
+
     pub fn calc_tics(&self) -> u64 {
         let last_time_count = self.last_count.load(Ordering::Relaxed);
         if last_time_count > get_count(&self.time_count) { // if the game was paused a LONG time

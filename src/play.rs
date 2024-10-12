@@ -9,7 +9,7 @@ use vga::VGA;
 use crate::act1::move_doors;
 use crate::agent::{draw_health, draw_level, draw_face, draw_lives, draw_ammo, draw_keys, draw_weapon, draw_score};
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
-use crate::draw::{three_d_refresh, init_ray_cast};
+use crate::draw::{RayCast, three_d_refresh};
 use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC, EXTRA_POINTS};
 use crate::assets::{GraphicNum, GAMEPAL};
 use crate::input;
@@ -203,8 +203,7 @@ fn calc_sines() -> Vec<Fixed> {
     sines
 }
 
-pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState, vga: &VGA, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
-    let mut rc = init_ray_cast(prj.view_width);
+pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState, vga: &VGA, rc: &mut RayCast, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let shifts = init_colour_shifts();
 
     clear_palette_shifts(game_state);
@@ -241,7 +240,7 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
 
         update_palette_shifts(game_state, vga, &shifts, tics).await;
         
-	    three_d_refresh(game_state, level_state, &mut rc, rdr, prj, assets).await;
+	    three_d_refresh(game_state, level_state, rc, rdr, prj, assets).await;
 
         let offset_prev = rdr.buffer_offset();
         for i in 0..3 {
@@ -249,8 +248,6 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
         } 
         rdr.set_buffer_offset(offset_prev);
     }
-
-    // TODO FinishPaletteShifts if not died!
 }
 
 fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
@@ -544,3 +541,12 @@ async fn update_palette_shifts(game_state: &mut GameState, vga: &VGA, shifts: &C
     }
 }
 
+
+/// Resets palette to normal if needed
+pub async fn finish_palette_shifts(game_state: &mut GameState, vga: &VGA) {
+    if game_state.pal_shifted {
+        game_state.pal_shifted = false;
+        util::vsync(vga).await;
+        set_palette(vga, &GAMEPAL);
+    }
+}
