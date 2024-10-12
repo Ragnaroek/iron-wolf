@@ -365,20 +365,21 @@ fn mock_level_state() -> LevelState {
         }],
         actor_at: Vec::with_capacity(0),
         doors: mock_doors(),
-        door_position: vec![0;22],
     }
 }
 
 fn mock_doors() -> Vec<DoorType>{
     let mut doors = Vec::with_capacity(22);
-    for _ in 0..22 {
+    for i in 0..22 {
         doors.push(DoorType{
+            num: i | 0x80,
             tile_x: 0,
             tile_y: 0,
             vertical: true,
             lock: 0,
             action: DoorAction::Closed,
             tic_count: 0,
+            position: 0,
         });
     }
     return doors;

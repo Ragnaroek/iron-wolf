@@ -277,7 +277,7 @@ impl RayCast {
                             let ic = (self.y_intercept >> 16) & 0xFFFF;
                             if ic == dx { // is it still in the same tile?
                                 //hitvmid
-                                let door_pos = level_state.door_position[door_num];
+                                let door_pos = level_state.doors[door_num].position;
                                 let ax = (x & 0xFFFF) as u16;
                                 if ax < door_pos {
                                     self.bx = self.x_tile;

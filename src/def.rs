@@ -55,9 +55,6 @@ pub struct LevelState {
     pub actors: Vec<ObjType>,
     /// Door stuff
     pub doors: Vec<DoorType>, 
-    pub door_position: Vec<u16>,
-    
-
 }
 
 // This is the key of the actor in the LevelState actors[] array
@@ -148,12 +145,14 @@ pub enum DoorAction {
 }
 
 pub struct DoorType {
+    pub num: u16,
     pub tile_x: usize,
 	pub tile_y: usize,
     pub vertical: bool,
     pub lock: u16,
     pub action: DoorAction,
     pub tic_count: u32,
+    pub position: u16,
 }
 
 // iron-wolf specific configuration
