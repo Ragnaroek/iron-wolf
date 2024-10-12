@@ -1,5 +1,5 @@
 use super::time::{TimeCount, get_count};
-use vgaemu::input;
+use vgaemu::input::{self, NumCode};
 
 pub struct Input {
 	time: TimeCount,
@@ -25,5 +25,9 @@ impl Input {
 		}
 		false
 	}
+
+    pub fn key_pressed(&self, code: NumCode) -> bool {
+        self.input_monitoring.key_pressed(code)
+    }
 }
 
