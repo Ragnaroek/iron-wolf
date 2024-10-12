@@ -118,7 +118,7 @@ pub fn carmack_expand(data: &[u8], len: usize) -> Vec<u8> {
 // map stuff
 
 #[derive(Serialize, Deserialize)]
-pub struct MapData {
+pub struct MapSegs {
 	pub segs: [Vec<u16>; MAP_PLANES]
 }
 
@@ -137,8 +137,7 @@ pub struct MapFileType {
 	pub header_offsets: Vec<i32>,
 }
 
-pub fn load_map<M: Seek + Read>(map_data: &mut M, map_headers: &Vec<MapType>, map_offsets: &MapFileType, mapnum: usize) -> Result<MapData, String>{
- 
+pub fn load_map<M: Seek + Read>(map_data: &mut M, map_headers: &Vec<MapType>, map_offsets: &MapFileType, mapnum: usize) -> Result<MapSegs, String>{
 	let mut segs = [Vec::with_capacity(0), Vec::with_capacity(0)];
 
 	for plane in 0..MAP_PLANES {
@@ -160,7 +159,7 @@ pub fn load_map<M: Seek + Read>(map_data: &mut M, map_headers: &Vec<MapType>, ma
 		segs[plane] = expanded;
 	}
 
-	Ok(MapData{segs}) 
+	Ok(MapSegs{segs}) 
 }
 
 pub fn load_map_headers(bytes: &Vec<u8>, offsets: MapFileType) -> Result<(MapFileType, Vec<MapType>), String> {

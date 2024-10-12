@@ -1,6 +1,9 @@
+use futures::SinkExt;
+
 use crate::def::{ClassType, DirType, DoorAction, DoorLock, DoorType, Level, LevelState, ObjType, FL_NEVERMARK, MAP_SIZE};
 use crate::draw::{Op, Hit, init_ray_cast, init_ray_cast_consts, calc_height};
 use crate::fixed::new_fixed_i32;
+use crate::map::{MapSegs, MAP_PLANES};
 use crate::play;
 use crate::agent::S_PLAYER;
 
@@ -342,12 +345,16 @@ fn mock_level_state() -> LevelState {
     
     LevelState {
         level: Level {
+            map_segs: MapSegs{segs: [Vec::with_capacity(0), Vec::with_capacity(0)]},
             info_map: Vec::with_capacity(0),
             tile_map,
         },
+        map_width: MAP_SIZE as usize,
         actors: vec![player],
         actor_at: Vec::with_capacity(0),
         doors: mock_doors(),
+        area_connect: Vec::with_capacity(0),
+        area_by_player: Vec::with_capacity(0),
         statics: Vec::with_capacity(0),
         spotvis: vec![vec![false; MAP_SIZE]; MAP_SIZE],
         vislist: Vec::with_capacity(0),

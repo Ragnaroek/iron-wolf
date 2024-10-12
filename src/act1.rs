@@ -1,4 +1,4 @@
-use crate::def::{At, Dir, DoorAction, DoorLock, DoorType, GameState, LevelState, Sprite, StaticInfo, StaticKind, StaticType, FL_BONUS, MAX_STATS, MIN_DIST, TILESHIFT};
+use crate::{def::{At, Dir, DoorAction, DoorLock, DoorType, GameState, LevelState, Sprite, StaticInfo, StaticKind, StaticType, FL_BONUS, MAP_SIZE, MAX_STATS, MIN_DIST, NUM_AREAS, TILESHIFT}, game::AREATILE};
 
 const OPENTICS : u32 = 300;
 const NUM_STAT_INFO : usize = 49;
@@ -128,6 +128,23 @@ pub fn place_item_type(level_state: &mut LevelState, item_type: StaticKind, tile
 
 =============================================================================
 */
+
+// Scans outward from playerarea, marking all connected areas
+fn connect_areas(level_state: &mut LevelState) {
+    level_state.area_by_player.fill(false);
+    let area_num = level_state.player().area_number as usize;
+    level_state.area_by_player[area_num] = true;
+    recursive_connect(level_state, area_num);
+}
+
+fn recursive_connect(level_state: &mut LevelState, area_num: usize) {
+    for i in 0..NUM_AREAS {
+        if level_state.area_connect[area_num][i] != 0 && level_state.area_by_player[i] {
+            level_state.area_by_player[i] = true;
+            recursive_connect(level_state, i);
+        }
+    }
+}
 
 pub fn spawn_door(tile_map: &mut Vec<Vec<u16>>, doornum: usize, tile_x: usize, tile_y: usize, vertical: bool, lock: DoorLock) -> DoorType {
     if doornum == 64 {
@@ -259,12 +276,26 @@ fn door_open(doornum: usize, level_state: &mut LevelState, tics: u64) {
 }
 
 fn door_opening(doornum: usize, level_state: &mut LevelState, tics: u64) {
-    let door = &mut level_state.doors[doornum as usize];
+    let door = &level_state.doors[doornum as usize];
     let mut position = door.position as u64;
-    
     if position == 0 {
-        // TODO connect areas if door just opened!
+        // door is just starting to open, so connect the areas
+        let (area1, area2) = if door.vertical {
+            vert_door_areas(level_state, door.tile_x, door.tile_y)
+        } else {
+            horiz_door_areas(level_state, door.tile_x, door.tile_y)
+        };
+        level_state.area_connect[area1][area2] += 1;
+        level_state.area_connect[area2][area1] += 1;
+
+        connect_areas(level_state);
+
+        if level_state.area_by_player[area1] {
+            // TODO PlaySoundLocTile(OPENDOORSND,doorobjlist[door].tilex,doorobjlist[door].tiley);	// JAB
+        }
     }
+
+    let door = &mut level_state.doors[doornum as usize];
 
     // slide the door by an adaptive amount
     position += tics << 10;
@@ -281,30 +312,54 @@ fn door_opening(doornum: usize, level_state: &mut LevelState, tics: u64) {
 fn door_closing(doornum: usize, level_state: &mut LevelState, tics: u64) {
     let p_tile_x = level_state.player().tilex;
     let p_tile_y = level_state.player().tiley; 
-    
-    let door = &mut level_state.doors[doornum as usize];
+    {
+        let door = &mut level_state.doors[doornum as usize];
+        if let At::Obj(_) = level_state.actor_at[door.tile_x][door.tile_y] {
+            // something got inside the door
+            open_door(door);
+            return;   
+        }
 
-    if let At::Obj(_) = level_state.actor_at[door.tile_x][door.tile_y] {
-        // something got inside the door
-        open_door(door);
-        return;   
+        if p_tile_x == door.tile_x && p_tile_y == door.tile_y {
+            // player got inside the door
+            open_door(door);
+            return;
+        }
     }
-
-    if p_tile_x == door.tile_x && p_tile_y == door.tile_y {
-        // player got inside the door
-        open_door(door);
-        return;
-    }
-
+    let door = &level_state.doors[doornum as usize];
     let mut position = door.position as u64;
-    let door = &mut level_state.doors[doornum as usize];
     // slide the door by an adaptive amount
     position = position.saturating_sub(tics << 10);
     if position == 0 {
-        // TODO disconnect areas (// door is closed all the way, so disconnect the areas)
-        door.action = DoorAction::Closed;
+        // door is closed all the way, so disconnect the areas
+        let (area1, area2) = if door.vertical {
+            vert_door_areas(level_state, door.tile_x, door.tile_y)
+        } else {
+            horiz_door_areas(level_state, door.tile_x, door.tile_y)
+        };
+
+        level_state.area_connect[area1][area2] -= 1;
+        level_state.area_connect[area2][area1] -= 1;
+
+        connect_areas(level_state);
+
+        level_state.doors[doornum as usize].action = DoorAction::Closed;
     }
-    door.position = position as u16;
+    level_state.doors[doornum as usize].position = position as u16;
+}
+
+// extract the area information on a vertical door (from the horizontal connected door tiles)
+fn vert_door_areas(level_state: &LevelState, tile_x: usize, tile_y: usize) -> (usize, usize) {
+    let area1 = level_state.level.map_segs.segs[0][tile_y*MAP_SIZE + (tile_x-1)] as usize;
+    let area2 = level_state.level.map_segs.segs[0][tile_y*MAP_SIZE + (tile_x+1)] as usize;
+    (area1-AREATILE as usize, area2-AREATILE as usize)
+}
+
+// extract the area information on a horizontal door (from the vertical connected door tiles)
+fn horiz_door_areas(level_state: &LevelState, tile_x: usize, tile_y: usize) -> (usize, usize) {
+    let area1 = level_state.level.map_segs.segs[0][(tile_y-1)*MAP_SIZE + tile_x] as usize;
+    let area2 = level_state.level.map_segs.segs[0][(tile_y+1)*MAP_SIZE + tile_x] as usize;
+    (area1-AREATILE as usize, area2-AREATILE as usize)
 }
 
 /*
@@ -436,3 +491,4 @@ pub fn move_push_walls(level_state: &mut LevelState, game_state: &mut GameState,
     }
     game_state.push_wall_pos = ((game_state.push_wall_state/2)&63) as i32;
 }
+

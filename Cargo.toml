@@ -46,4 +46,7 @@ wasm-timer = {version = "0.2.5", optional = true }
 debug = true
 
 [profile.release]
-debug = true
+strip = true
+lto = true
+codegen-units = 1
+panic = "abort"

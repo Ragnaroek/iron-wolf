@@ -3,14 +3,13 @@
 mod config_test;
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use crate::{assets::{WolfFile, WolfVariant}, loader::Loader};
 
 use super::user;
 use super::def::IWConfig;
 use super::util;
 
-use toml;
 use vga::input::{NumCode, to_numcode};
 
 pub const IW_CONFIG_FILE_NAME: &str = "iw_config.toml";

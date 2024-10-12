@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use serde::{Serialize, Deserialize};
 
-use crate::map::{load_map, load_map_headers, load_map_offsets, MapType, MapFileType, MapData};
+use crate::map::{load_map, load_map_headers, load_map_offsets, MapType, MapFileType, MapSegs};
 use crate::loader::Loader;
 use crate::def::{WeaponType, Assets};
 use crate::gamedata;
@@ -562,7 +562,7 @@ fn huff_expand(data: &[u8], expanded_len: usize, grhuffman: &Vec<Huffnode>) -> V
 // map stuff
 
 // load map and uncompress it
-pub fn load_map_from_assets(assets: &Assets, mapnum: usize) -> Result<MapData, String> {
+pub fn load_map_from_assets(assets: &Assets, mapnum: usize) -> Result<MapSegs, String> {
 	let mut cursor = Cursor::new(&assets.game_maps);
 	load_map(&mut cursor, &assets.map_headers, &assets.map_offsets, mapnum)
 }

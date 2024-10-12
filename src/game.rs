@@ -1,7 +1,9 @@
+use std::vec;
+
 use vga::VGA;
 
 use crate::agent::{draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_weapon};
-use crate::def::{Assets, At, ControlState, Difficulty, DoorLock, EnemyType, GameState, IWConfig, Level, LevelState, ObjType, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState, AMBUSH_TILE, ANGLES, MAP_SIZE, MAX_DOORS, MAX_STATS, PLAYER_KEY};
+use crate::def::{Assets, At, ControlState, Difficulty, DoorLock, EnemyType, GameState, IWConfig, Level, LevelState, ObjType, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState, AMBUSH_TILE, ANGLES, MAP_SIZE, MAX_DOORS, MAX_STATS, NUM_AREAS, PLAYER_KEY};
 use crate::assets::load_map_from_assets;
 use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{spawn_dead_guard, spawn_patrol, spawn_stand};
@@ -212,7 +214,6 @@ async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &
 }
 
 pub fn setup_game_level(prj: &ProjectionConfig, game_state: &mut GameState, assets: &Assets) -> Result<LevelState, String> {
-	
 	// TODO check loadedgame
 	game_state.time_count = 0;
 	game_state.secret_total = 0;
@@ -222,7 +223,6 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &mut GameState, asse
 	game_state.kill_count = 0;
 	game_state.treasure_count = 0;
 	
-	
 	let mapnum = game_state.map_on+game_state.episode*10;
 	
 	let map = &assets.map_headers[mapnum];
@@ -230,7 +230,7 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &mut GameState, asse
 		panic!("Map not 64*64!");
 	}
 
-	let map_data = load_map_from_assets(assets, mapnum)?;
+	let map_segs = load_map_from_assets(assets, mapnum)?;
 
     let mut tile_map = vec![vec![0; MAP_SIZE]; MAP_SIZE];
     let mut actor_at = vec![vec![At::Nothing; MAP_SIZE]; MAP_SIZE];
@@ -238,7 +238,7 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &mut GameState, asse
 	let mut map_ptr = 0;
 	for y in 0..MAP_SIZE {
 		for x in 0..MAP_SIZE {
-			let tile = map_data.segs[0][map_ptr];
+			let tile = map_segs.segs[0][map_ptr];
 			map_ptr += 1;
 			if tile > 0 && tile < AREATILE {
 				tile_map[x][y] = tile;
@@ -253,7 +253,7 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &mut GameState, asse
 	let mut doors = Vec::with_capacity(MAX_DOORS);
 	for y in 0..MAP_SIZE {
 		for x in 0..MAP_SIZE {
-			let tile = map_data.segs[0][map_ptr];
+			let tile = map_segs.segs[0][map_ptr];
 			map_ptr += 1;
 			if tile >= 90 && tile <= 101 {
 				let door = match tile {
@@ -267,13 +267,13 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &mut GameState, asse
 		}
 	}
 
-	let (actors, statics, info_map) = scan_info_plane(&map_data, game_state, &mut actor_at, game_state.difficulty);
+	let (actors, statics, info_map) = scan_info_plane(&map_segs, game_state, &mut actor_at, game_state.difficulty);
 
 	// take out the ambush markers
 	map_ptr = 0;
 	for y in 0..MAP_SIZE {
 		for x in 0..MAP_SIZE {
-			let tile = map_data.segs[0][map_ptr];
+			let tile = map_segs.segs[0][map_ptr];
 			map_ptr += 1;
 
 			if tile == AMBUSH_TILE {
@@ -291,12 +291,16 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &mut GameState, asse
 	
 	let mut level_state = LevelState{
         level: Level {
+			map_segs,
 			info_map,
 		    tile_map,
         },
+		map_width: map.width as usize,
         actors,
         actor_at,
 		doors,
+		area_connect: vec![vec![0; NUM_AREAS]; NUM_AREAS],
+		area_by_player: vec![false; NUM_AREAS],
 		statics,
 		spotvis: vec![vec![false; MAP_SIZE]; MAP_SIZE],
 		vislist: vec![VisObj{view_x: 0, view_height: 0, sprite: Sprite::None}; MAX_STATS],
@@ -322,7 +326,7 @@ fn door_lock(tile: u16) -> DoorLock {
 }
 
 // By convention the first element in the returned actors vec is the player
-fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at : &mut Vec<Vec<At>>, difficulty: Difficulty) -> (Vec<ObjType>, Vec<StaticType>, Vec<Vec<u16>>) {
+fn scan_info_plane(map_data: &map::MapSegs, game_state: &mut GameState, actor_at : &mut Vec<Vec<At>>, difficulty: Difficulty) -> (Vec<ObjType>, Vec<StaticType>, Vec<Vec<u16>>) {
 	let mut player = None;
 	let mut statics = Vec::new();
 	let mut actors = Vec::new();
