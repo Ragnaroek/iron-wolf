@@ -1,5 +1,6 @@
 use crate::act1::open_door;
 use crate::agent::take_damage;
+use crate::assets::SoundName;
 use crate::def::{
     ActiveType, Assets, At, ClassType, ControlState, Difficulty, DirType, DoorAction, EnemyType,
     GameState, LevelState, ObjKey, ObjType, Sprite, StateType, FL_SHOOTABLE, FL_VISABLE,
@@ -1265,9 +1266,11 @@ fn t_shoot(
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
+    sound: &mut Sound,
     rdr: &VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
+    assets: &Assets,
 ) {
     let obj = level_state.obj(k);
     if !level_state.area_by_player[obj.area_number] {
@@ -1316,17 +1319,29 @@ fn t_shoot(
         take_damage(k, damage as i32, level_state, game_state, rdr)
     }
 
-    // TODO Play fire sounds!
+    let obj = level_state.obj(k);
+    match obj.class {
+        ClassType::SS => sound.play_sound(SoundName::SSFIRE, assets),
+        ClassType::Gift | ClassType::Fat => sound.play_sound(SoundName::MISSILEFIRE, assets),
+        ClassType::MechaHitler | ClassType::RealHitler | ClassType::Boss => {
+            sound.play_sound(SoundName::BOSSFIRE, assets)
+        }
+        ClassType::Schabb => sound.play_sound(SoundName::SCHABBSTHROW, assets),
+        ClassType::Fake => sound.play_sound(SoundName::FLAMETHROWER, assets),
+        _ => sound.play_sound(SoundName::NAZIFIRE, assets),
+    }
 }
 
 fn a_death_scream(
-    _k: ObjKey,
-    _tics: u64,
-    _level_state: &mut LevelState,
-    _game_state: &mut GameState,
-    _rdr: &VGARenderer,
-    _control_state: &mut ControlState,
-    _prj: &ProjectionConfig,
+    _: ObjKey,
+    _: u64,
+    _: &mut LevelState,
+    _: &mut GameState,
+    _: &mut Sound,
+    _: &VGARenderer,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    _: &Assets,
 ) {
     // TODO play death sounds
     todo!("a_death_scream")

@@ -545,7 +545,17 @@ fn do_actor(
     });
     while level_state.obj(k).tic_count <= 0 {
         if let Some(action) = level_state.obj(k).state.expect("state").action {
-            action(k, tics, level_state, game_state, rdr, control_state, prj);
+            action(
+                k,
+                tics,
+                level_state,
+                game_state,
+                sound,
+                rdr,
+                control_state,
+                prj,
+                assets,
+            );
             if level_state.obj(k).state.is_none() {
                 return;
             }

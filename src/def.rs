@@ -696,9 +696,11 @@ type Action = fn(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
+    sound: &mut Sound,
     rdr: &VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
+    assets: &Assets,
 );
 
 #[derive(Eq, PartialEq, Debug)]
