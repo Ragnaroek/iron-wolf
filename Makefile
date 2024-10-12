@@ -7,8 +7,14 @@ build-sdl:
 run-sdl:
 	cargo run --features sdl
 
+run-sdl-debug:
+	cargo run --features sdl -- -goobers
+
 build-web:
 	wasm-pack build --debug --target web --features web
+
+run-web: build-web
+	miniserve ./
 
 coverage-sdl:
 	cargo tarpaulin --features sdl --ignore-tests --out Lcov

@@ -1,3 +1,5 @@
+use std::env;
+
 pub struct DataReader<'a> {
 	data: &'a [u8],
 	offset: usize,
@@ -54,4 +56,14 @@ impl DataReader<'_> {
 	pub fn unread_bytes(&self) -> &[u8] {
 		&self.data[self.offset..]
 	}
+}
+
+pub fn check_param(check: &str) -> bool {
+	for arg in env::args() {
+		let normal_arg : String = arg.chars().filter(|&c| c.is_alphanumeric()).collect();
+		if normal_arg == check {
+			return true;
+		}
+	}
+	false
 }

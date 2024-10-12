@@ -3,7 +3,7 @@ use std::sync::Arc;
 use vga::SCReg;
 use vga::util::spawn_task;
 
-use crate::def::Assets;
+use crate::def::{Assets, UserState};
 use crate::assets::{GraphicNum, SIGNON, GAMEPAL};
 use crate::assets;
 use crate::def::IWConfig;
@@ -24,10 +24,10 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
 	let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
 	vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
-    let graphics = assets::load_all_graphics(loader)?;
+    let (graphics, fonts) = assets::load_all_graphics(loader)?;
     let assets = assets::load_assets(loader)?;
 
-    init_game(&vga);
+    let mut user_state = init_game(&vga);
 
     // TODO calc_projection and setup_scaling have to be re-done if view size changes in config
     let prj = play::calc_projection(config.viewsize as usize);
@@ -36,12 +36,12 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
 
     let vga_screen = Arc::new(vga);
     let vga_loop = vga_screen.clone();
-    let render = vga_render::init(vga_screen.clone(), graphics);
+    let render = vga_render::init(vga_screen.clone(), graphics, fonts);
     let ticker = time::new_ticker();
     let input = input::init(ticker.time_count.clone(), input_monitoring.clone());
 
 	spawn_task(async move { 
-        demo_loop(&iw_config, ticker, &vga_loop, &render, &input, &prj, &assets).await;
+        demo_loop(&iw_config, ticker, &vga_loop, &render, &input, &prj, &assets, &mut user_state).await;
     });
 
 	let options: vga::Options = vga::Options {
@@ -53,12 +53,24 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
     Ok(())
 }
 
-fn init_game(vga: &vga::VGA) {
+fn init_game(vga: &vga::VGA) -> UserState {
     vl::set_palette(vga, GAMEPAL);
     signon_screen(vga);
+
+    // TODO InitRedShifts
+    finish_signon()
 }
 
-async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr: &VGARenderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets) {
+fn finish_signon() -> UserState {
+    UserState {
+        window_x: 0,
+        window_y: 0,
+        window_w: 320,
+        window_h: 160,
+    }
+}
+
+async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr: &VGARenderer, input: &input::Input, prj: &play::ProjectionConfig, assets: &Assets, user_state: &mut UserState) {
     if !config.no_wait {
         pg_13(rdr, input).await;
     }
@@ -83,7 +95,7 @@ async fn demo_loop(config: &IWConfig, ticker: time::Ticker, vga: &vga::VGA, rdr:
             //TODO PlayDemo() here
         }
 
-        game_loop(&ticker, vga, rdr, input, prj, assets).await;
+        game_loop(&ticker, vga, rdr, input, prj, assets, user_state).await;
         rdr.fade_out().await;
     }
 }

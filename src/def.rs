@@ -257,6 +257,13 @@ pub struct GameState {
     pub push_wall_dir: Dir,
 }
 
+pub struct UserState {
+    pub window_x : usize,
+    pub window_y : usize,
+    pub window_w : usize,
+    pub window_h : usize,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum PlayState {
     StillPlaying,
