@@ -1,4 +1,4 @@
-use crate::{def::{DoorType, StaticType, StaticKind, StaticInfo, Sprite, DoorAction, LevelState, At, FL_BONUS, MAX_STATS, GameState, Dir}, game};
+use crate::def::{DoorType, StaticType, StaticKind, StaticInfo, Sprite, DoorAction, LevelState, At, FL_BONUS, MAX_STATS, GameState, Dir};
 
 const OPENTICS : u32 = 300;
 const NUM_STAT_INFO : usize = 49;

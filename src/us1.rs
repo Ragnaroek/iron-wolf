@@ -1,25 +1,25 @@
-use crate::{assets::{Font, GraphicNum}, def::UserState, vga_render::VGARenderer, vh::{WHITE, draw_tile_8}};
+use crate::{assets::Font, def::WindowState, vga_render::VGARenderer, vh::{WHITE, draw_tile_8}};
 
-pub fn print(rdr: &VGARenderer, user_state: &mut UserState, str: &str, px_in: usize, py_in: usize) {
-    let font = &rdr.fonts[user_state.font_number];
+pub fn print(rdr: &VGARenderer, win_state: &mut WindowState, str: &str) {
+    let font = &rdr.fonts[win_state.font_number];
     let lines = str.split("\n");
-    let mut px = px_in;
-    let mut py = py_in;
+    let mut px = win_state.print_x;
+    let mut py = win_state.print_y;
     for line in lines {
         let (_, h) = measure_string(font, line);
-        draw_string(rdr, font, line, px, py, user_state.font_color);
-        px = user_state.window_x;
+        draw_string(rdr, font, line, px, py, win_state.font_color);
+        px = win_state.window_x;
         py += h;
     }
 }
 
 /// Prints a string centered in the current window.
-pub fn print_centered(rdr: &VGARenderer, user_state: &mut UserState, str: &str) {
-    let font = &rdr.fonts[user_state.font_number];
+pub fn print_centered(rdr: &VGARenderer, win_state: &mut WindowState, str: &str) {
+    let font = &rdr.fonts[win_state.font_number];
     let (w, h) = measure_string(font, str);
-    let px = user_state.window_x + ((user_state.window_w - w) / 2);
-    let py = user_state.window_y + ((user_state.window_h - h) / 2);
-    draw_string(rdr, font, str, px, py, user_state.font_color);
+    let px = win_state.window_x + ((win_state.window_w - w) / 2);
+    let py = win_state.window_y + ((win_state.window_h - h) / 2);
+    draw_string(rdr, font, str, px, py, win_state.font_color);
 }
 
 fn draw_string(rdr: &VGARenderer, font: &Font, str: &str, px_in: usize, py: usize, color: u8) {
@@ -51,18 +51,20 @@ fn measure_string(font: &Font, str: &str) -> (usize, usize) {
     return (w, font.height as usize);
 }
 
-pub fn draw_window(rdr: &VGARenderer, user_state: &mut UserState, x: usize, y: usize, width: usize, height: usize) {
-    user_state.window_x = x * 8;
-    user_state.window_y = y * 8;
-    user_state.window_w = width * 8;
-    user_state.window_h = height * 8;
-
-    clear_window(rdr, user_state);
+pub fn draw_window(rdr: &VGARenderer, win_state: &mut WindowState, x: usize, y: usize, width: usize, height: usize) {
+    win_state.window_x = x * 8;
+    win_state.window_y = y * 8;
+    win_state.window_w = width * 8;
+    win_state.window_h = height * 8;
+    win_state.print_x = win_state.window_x;
+    win_state.print_y = win_state.window_y;    
 
     let sx = (x-1)*8;
     let sy = (y-1)*8;
     let sw = (width+1)*8;
     let sh = (height+1)*8;
+
+    clear_window(rdr, win_state);
 
     draw_tile_8(rdr, sx, sy, 0);
     draw_tile_8(rdr, sx, sy + sh, 5);
@@ -82,6 +84,6 @@ pub fn draw_window(rdr: &VGARenderer, user_state: &mut UserState, x: usize, y: u
     }
 }
 
-pub fn clear_window(rdr: &VGARenderer, user_state: &mut UserState) {
-    rdr.bar(user_state.window_x, user_state.window_y, user_state.window_w, user_state.window_h, WHITE);
+pub fn clear_window(rdr: &VGARenderer, win_state: &mut WindowState) {
+    rdr.bar(win_state.window_x, win_state.window_y, win_state.window_w, win_state.window_h, WHITE);
 }

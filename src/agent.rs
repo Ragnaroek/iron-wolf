@@ -1,7 +1,7 @@
 use crate::act1::{operate_door, push_wall};
 use crate::assets::{GraphicNum, num_pic, weapon_pic, face_pic};
 use crate::play::{ProjectionConfig, start_bonus_flash, start_damage_flash};
-use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType, GameState, Difficulty, PlayState, SCREENLOC, STATUS_LINES, FL_SHOOTABLE, FL_VISABLE, WeaponType, EXTRA_POINTS, StaticKind, Sprite, StaticType, PUSHABLE_TILE};
+use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType, GameState, Difficulty, PlayState, SCREENLOC, STATUS_LINES, FL_SHOOTABLE, FL_VISABLE, WeaponType, EXTRA_POINTS, StaticKind, Sprite, StaticType, PUSHABLE_TILE, ELEVATOR_TILE, ALT_ELEVATOR_TILE};
 use crate::fixed::{new_fixed_i32, fixed_by_frac};
 use crate::state::{check_line, damage_actor};
 use crate::user::rnd_t;
@@ -201,14 +201,10 @@ fn cmd_fire(level_state: &mut LevelState, game_state: &mut GameState, control_st
 }
 
 fn cmd_use(level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState) {
-
-    //TODO elevator
-
     let check_x;
     let check_y;
     let dir;
-    let mut elevator_ok = true;
-
+    let elevator_ok;
     // find which cardinal direction the player is facing
     let player = level_state.player();
     if player.angle < ANGLES_I32/8 || player.angle > 7*ANGLES_I32/8 {
@@ -239,9 +235,24 @@ fn cmd_use(level_state: &mut LevelState, game_state: &mut GameState, control_sta
     }
 
     let doornum = level_state.level.tile_map[check_x][check_y];
-    if !control_state.button_held[Button::Use as usize] && doornum & 0x80 != 0 {
-        control_state.button_held[Button::Use as usize] = true;
+    if !control_state.button_held(Button::Use) && doornum == ELEVATOR_TILE && elevator_ok {
+        // use elevator
+        control_state.set_button_held(Button::Use, true);
+        
+        if level_state.level.tile_map[player.tilex][player.tiley] == ALT_ELEVATOR_TILE {
+            game_state.play_state = PlayState::SecretLevel;
+        } else {
+            game_state.play_state = PlayState::Completed;
+        }
+        level_state.level.tile_map[check_x][check_y] += 1; // flip switch [to animate the lever to move up]
+        // TODO SD_PlaySound(LEVELDONESND) && WaitSoundDone
+    }
+
+    if !control_state.button_held(Button::Use) && doornum & 0x80 != 0 {
+        control_state.set_button_held(Button::Use, true);
         operate_door(doornum & !0x80, level_state);
+    } else {
+        // TODO SD_PlaySound(DONOTHINGSND)
     }
 }
 

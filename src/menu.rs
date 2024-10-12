@@ -1,6 +1,6 @@
 
 use std::ascii;
-use crate::{vga_render::VGARenderer, def::UserState, vh::{vw_hlin, vw_vlin}, us1::print};
+use crate::{vga_render::VGARenderer, def::WindowState, vh::{vw_hlin, vw_vlin}, us1::print};
 
 const STRIPE : u8 = 0x2c;
 const BORDER_COLOR : u8 = 0x29;
@@ -21,10 +21,10 @@ pub fn clear_ms_screen(rdr: &VGARenderer) {
 
 /// The supplied message should only contain ASCII characters.
 /// All other characters are not supported and ignored.
-pub fn message(rdr: &VGARenderer, user_state: &mut UserState, str: &str) {
-    user_state.font_number = 1;
-    user_state.font_color = 0;
-    let font = &rdr.fonts[user_state.font_number];
+pub fn message(rdr: &VGARenderer, win_state: &mut WindowState, str: &str) {
+    win_state.font_number = 1;
+    win_state.font_color = 0;
+    let font = &rdr.fonts[win_state.font_number];
     let mut h = font.height as usize;
     let mut w : usize = 0;
     let mut mw : usize = 0;
@@ -46,14 +46,15 @@ pub fn message(rdr: &VGARenderer, user_state: &mut UserState, str: &str) {
         mw = w + 10;
     }
 
-    let print_y = (user_state.window_h/2)-h/2;
-    user_state.window_x = 160-mw/2;
+    win_state.print_y = (win_state.window_h/2)-h/2;
+    win_state.window_x = 160-mw/2;
+    win_state.print_x = win_state.window_x;
     
     let prev_buffer = rdr.buffer_offset();
     rdr.set_buffer_offset(rdr.active_buffer());
-    draw_window(rdr, user_state.window_x-5, print_y-5, mw+10, h+10, TEXT_COLOR);
-    draw_outline(rdr, user_state.window_x-5, print_y-5, mw+10, h+10, 0, HIGHLIGHT);
-    print(rdr, user_state, str, user_state.window_x, print_y);
+    draw_window(rdr, win_state.window_x-5, win_state.print_y-5, mw+10, h+10, TEXT_COLOR);
+    draw_outline(rdr, win_state.window_x-5, win_state.print_y-5, mw+10, h+10, 0, HIGHLIGHT);
+    print(rdr, win_state, str);
     rdr.set_buffer_offset(prev_buffer);
 }
 
