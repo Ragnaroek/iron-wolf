@@ -11,8 +11,6 @@ use vga::input::NumCode;
 use vga::util::spawn_task;
 use vga::SCReg;
 
-use opl::OPL;
-
 use crate::assets::{self, GraphicNum, GAMEPAL, SIGNON};
 use crate::config;
 use crate::def::{
@@ -31,6 +29,7 @@ use crate::menu::{
     MenuState,
 };
 use crate::play::{self, ProjectionConfig};
+use crate::sd::Sound;
 use crate::time;
 use crate::us1::c_print;
 use crate::util::{new_data_reader_with_offset, new_data_writer, DataReader, DataWriter};
@@ -102,13 +101,15 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     let vga_loop = vga_screen.clone();
     let rdr = vga_render::init(vga_screen.clone(), graphics, fonts, tiles, loader.variant());
 
+    let mut sound = Sound { opl };
+
     spawn_task(async move {
         init_game(&vga_loop, &rdr, &input, &mut win_state).await;
         demo_loop(
             &iw_config,
             ticker,
             &vga_loop,
-            &mut opl,
+            &mut sound,
             &rdr,
             &input,
             &prj,
@@ -191,7 +192,7 @@ async fn demo_loop(
     iw_config: &IWConfig,
     ticker: time::Ticker,
     vga: &vga::VGA,
-    opl: &mut OPL,
+    sound: &mut Sound,
     rdr: &VGARenderer,
     input: &input::Input,
     prj: &play::ProjectionConfig,
@@ -200,7 +201,7 @@ async fn demo_loop(
     menu_state: &mut MenuState,
     loader: &dyn Loader,
 ) {
-    start_cp_music(opl, intro_song(loader.variant()), assets, loader);
+    start_cp_music(sound, intro_song(loader.variant()), assets, loader);
 
     if !iw_config.options.no_wait {
         pg_13(rdr, input).await;
@@ -242,7 +243,7 @@ async fn demo_loop(
         let save_load = control_panel(
             &ticker,
             &mut game_state,
-            opl,
+            sound,
             rdr,
             input,
             assets,
@@ -258,7 +259,7 @@ async fn demo_loop(
             iw_config,
             &mut game_state,
             vga,
-            opl,
+            sound,
             rdr,
             input,
             prj,

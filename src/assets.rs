@@ -165,7 +165,7 @@ pub enum SoundName {
     BONUS1UP,      // 44
     BONUS4,        // 45
     PUSHWALL,      // 46
-    NOBONUSSND,    // 47
+    NOBONUS,       // 47
     PERCENT100,    // 48
     BOSSACTIVE,    // 49
     MUTTI,         // 50

@@ -9,12 +9,10 @@ use crate::def::{
 };
 use crate::fixed::{fixed_by_frac, new_fixed_i32};
 use crate::play::{start_bonus_flash, start_damage_flash, ProjectionConfig};
-use crate::sd::play_sound;
+use crate::sd::Sound;
 use crate::state::{check_line, damage_actor};
 use crate::user::rnd_t;
 use crate::vga_render::VGARenderer;
-
-use opl::OPL;
 
 const ANGLE_SCALE: i32 = 20;
 const MOVE_SCALE: i32 = 150;
@@ -140,7 +138,7 @@ fn t_attack(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    opl: &mut OPL,
+    sound: &mut Sound,
     rdr: &VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
@@ -212,7 +210,7 @@ fn t_attack(
                     game_state.attack_frame += 1;
                     break;
                 }
-                gun_attack(level_state, game_state, opl, rdr, prj, assets);
+                gun_attack(level_state, game_state, sound, rdr, prj, assets);
                 game_state.ammo -= 1;
                 draw_ammo(&game_state, rdr);
             }
@@ -272,16 +270,16 @@ fn knife_attack(
 fn gun_attack(
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    opl: &mut OPL,
+    sound: &mut Sound,
     rdr: &VGARenderer,
     prj: &ProjectionConfig,
     assets: &Assets,
 ) {
     //TODO play weapon sound!
     match game_state.weapon {
-        Some(WeaponType::Pistol) => play_sound(SoundName::ATKPISTOL, opl, assets),
-        Some(WeaponType::MachineGun) => play_sound(SoundName::ATKMACHINEGUN, opl, assets),
-        Some(WeaponType::ChainGun) => play_sound(SoundName::ATKGATLING, opl, assets),
+        Some(WeaponType::Pistol) => sound.play_sound(SoundName::ATKPISTOL, assets),
+        Some(WeaponType::MachineGun) => sound.play_sound(SoundName::ATKMACHINEGUN, assets),
+        Some(WeaponType::ChainGun) => sound.play_sound(SoundName::ATKGATLING, assets),
         _ => { /* ignore anything else */ }
     }
     game_state.made_noise = true;
@@ -342,7 +340,7 @@ fn t_player(
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut OPL,
+    _: &mut Sound,
     _: &VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
@@ -591,56 +589,65 @@ pub fn give_extra_man(game_state: &mut GameState, rdr: &VGARenderer) {
     // TODO PlaySound(BONUS1UPSND);
 }
 
-pub fn get_bonus(game_state: &mut GameState, rdr: &VGARenderer, check: &mut StaticType) {
+pub fn get_bonus(
+    game_state: &mut GameState,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+    check: &mut StaticType,
+) {
     match check.item_number {
         StaticKind::BoFirstaid => {
             if game_state.health == 100 {
                 return;
             }
-            // TODO SD_PlaySound(HEALTH2SND);
+            sound.play_sound(SoundName::HEALTH2, assets);
             heal_self(game_state, rdr, 25);
         }
         StaticKind::BoKey1 | StaticKind::BoKey2 | StaticKind::BoKey3 | StaticKind::BoKey4 => {
             panic!("get key");
         }
         StaticKind::BoCross => {
-            // TODO SD_PlaySound(BONUS1SND)
+            sound.play_sound(SoundName::BONUS1, assets);
             give_points(game_state, rdr, 100);
             game_state.treasure_count += 1;
         }
         StaticKind::BoChalice => {
-            // TODO SD_PlaySound(BONUS2SND)
+            sound.play_sound(SoundName::BONUS2, assets);
             give_points(game_state, rdr, 500);
             game_state.treasure_count += 1;
         }
         StaticKind::BoBible => {
-            // TODO SD_PlaySound(BONUS2SND)
+            sound.play_sound(SoundName::BONUS3, assets);
             give_points(game_state, rdr, 1000);
             game_state.treasure_count += 1;
+        }
+        StaticKind::BoCrown => {
+            todo!("get crown");
         }
         StaticKind::BoClip => {
             if game_state.ammo == 99 {
                 return;
             }
-            // TODO PlaySound(GETAMMOSND);
+            sound.play_sound(SoundName::GETAMMO, assets);
             give_ammo(game_state, rdr, 8);
         }
         StaticKind::BoClip2 => {
             if game_state.ammo == 99 {
                 return;
             }
-            // TODO PlaySound(GETAMMOSND)
+            sound.play_sound(SoundName::GETAMMO, assets);
             give_ammo(game_state, rdr, 4);
         }
         StaticKind::BoMachinegun => {
-            // TODO SD_PlaySound(GETMACHINESND);
+            sound.play_sound(SoundName::GETMACHINE, assets);
             give_weapon(game_state, rdr, WeaponType::MachineGun);
         }
         StaticKind::BoChaingun => {
             panic!("get chaingun");
         }
         StaticKind::BoFullheal => {
-            // TODO SD_PlaySound (BONUS1UPSND);
+            sound.play_sound(SoundName::BONUS1UP, assets);
             heal_self(game_state, rdr, 99);
             give_ammo(game_state, rdr, 25);
             give_extra_man(game_state, rdr);
@@ -650,8 +657,11 @@ pub fn get_bonus(game_state: &mut GameState, rdr: &VGARenderer, check: &mut Stat
             if game_state.health == 100 {
                 return;
             }
-            // TODO PlaySound(HEALTH1SND)
+            sound.play_sound(SoundName::HEALTH1, assets);
             heal_self(game_state, rdr, 10);
+        }
+        StaticKind::BoAlpo => {
+            todo!("give BoAlpo");
         }
         StaticKind::BoGibs => {
             panic!("get gibs");

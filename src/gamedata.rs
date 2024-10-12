@@ -204,7 +204,6 @@ pub fn load_audio_sounds<M: Read + Seek>(
 ) -> Result<Vec<AdlSound>, String> {
     let mut sounds = Vec::with_capacity(variant.start_digi_sound - variant.start_adlib_sound);
     for chunk_no in variant.start_adlib_sound..variant.start_digi_sound {
-        println!("chunk_no = {}", chunk_no);
         let offset = headers[chunk_no];
         let size = (headers[chunk_no + 1] - offset) as usize;
         let mut data_buf = vec![0; size];

@@ -1,4 +1,3 @@
-use opl::OPL;
 use std::{ascii, collections::HashMap, str};
 use vga::input::NumCode;
 
@@ -6,6 +5,7 @@ use crate::assets::{is_sod, GraphicNum, Music, WolfFile, WolfVariant};
 use crate::def::{difficulty, Assets, GameState, WindowState};
 use crate::input::{read_control, ControlDirection, ControlInfo, Input};
 use crate::loader::Loader;
+use crate::sd::Sound;
 use crate::start::quit;
 use crate::time::Ticker;
 use crate::us1::{c_print, line_input, print};
@@ -451,7 +451,7 @@ fn placeholder() -> ItemType {
 pub async fn control_panel(
     ticker: &Ticker,
     game_state: &mut GameState,
-    opl: &mut OPL,
+    sound: &mut Sound,
     rdr: &VGARenderer,
     input: &Input,
     assets: &Assets,
@@ -462,7 +462,7 @@ pub async fn control_panel(
 ) -> Option<SaveLoadGame> {
     // TODO scan code handling
 
-    start_cp_music(opl, Music::WONDERIN, assets, loader);
+    start_cp_music(sound, Music::WONDERIN, assets, loader);
     setup_control_panel(win_state, menu_state);
 
     let mut menu_stack: Vec<Menu> = Vec::new();
@@ -1334,7 +1334,7 @@ pub fn intro_song(variant: &WolfVariant) -> Music {
     }
 }
 
-pub fn start_cp_music(opl: &mut OPL, track: Music, assets: &Assets, loader: &dyn Loader) {
+pub fn start_cp_music(sound: &mut Sound, track: Music, assets: &Assets, loader: &dyn Loader) {
     let variant = loader.variant();
     let trackno = track as usize;
     let offset = assets.audio_headers[variant.start_music + trackno];
@@ -1344,5 +1344,5 @@ pub fn start_cp_music(opl: &mut OPL, track: Music, assets: &Assets, loader: &dyn
         .load_wolf_file_slice(WolfFile::AudioData, (offset + 2) as u64, (len - 2) as usize)
         .expect("Audio file");
 
-    opl.play_imf(track_data).expect("start song play");
+    sound.opl.play_imf(track_data).expect("start song play");
 }
