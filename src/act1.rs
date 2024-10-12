@@ -78,8 +78,9 @@ pub fn spawn_static(actor_at: &mut Vec<Vec<At>>, game_state: &mut GameState, til
         flags = 0;
     } else {
         if info.kind == StaticKind::BoCross || info.kind == StaticKind::BoChalice || info.kind == StaticKind::BoBible || info.kind == StaticKind::BoCrown || info.kind == StaticKind::BoFullheal {
-            // TODO check loaded game from iw-ed?
-            game_state.treasure_total += 1;
+            if !game_state.loaded_game {
+                game_state.treasure_total += 1;
+            }
         }
         flags = FL_BONUS;
     }

@@ -373,8 +373,9 @@ fn scan_info_plane(map_data: &map::MapSegs, game_state: &mut GameState, actor_at
 
 				},
 				98 => { // P wall
-					// TODO check for loadedgame?
-					game_state.secret_total += 1;
+					if !game_state.loaded_game {
+						game_state.secret_total += 1;
+					}
 				},
 				108..=111 => { // guard stand: normal mode
 					spawn_stand(EnemyType::Guard, &mut actors, actor_at, x, y, tile-108, difficulty);

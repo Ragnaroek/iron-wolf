@@ -3,3 +3,6 @@
 flamegraph.svg
 lcov.info
 iw_config.toml
+
+# generated testdata files
+testdata/shareware_data/SAVEGAM9.WL1

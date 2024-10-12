@@ -2,6 +2,7 @@
 #[path = "./start_test.rs"]
 mod start_test;
 
+use std::cmp::min;
 use std::process::exit;
 use std::sync::{Arc, Mutex};
 use std::usize;
@@ -19,7 +20,7 @@ use crate::config;
 use crate::menu::{check_for_episodes, control_panel, initial_menu_state, message, MenuState };
 use crate::play::{self, ProjectionConfig};
 use crate::us1::c_print;
-use crate::util::{new_data_reader_with_offset, DataReader};
+use crate::util::{new_data_reader_with_offset, new_data_writer, DataReader, DataWriter};
 use crate::vl;
 use crate::vga_render::{self, VGARenderer};
 use crate::time;
@@ -27,6 +28,8 @@ use crate::input::{self, Input};
 use crate::game::{game_loop, setup_game_level};
 
 const OBJ_TYPE_LEN : usize = 60;
+const STAT_TYPE_LEN : usize = 8;
+const DOOR_TYPE_LEN : usize = 10;
 const SAVEGAME_NAME_LEN : usize = 32;
 
 static STR_SAVE_CHEAT : &'static str = "Your Save Game file is,\nshall we say, \"corrupted\".\nBut I'll let you go on and\nplay anyway....";
@@ -238,6 +241,229 @@ pub fn quit(err: Option<&str>) {
     exit(0)
 }
 
+pub fn save_the_game(level_state: &LevelState, game_state: &GameState, rdr: &VGARenderer, loader: &dyn Loader, which: usize, name: &str, x: usize, y: usize) {
+    let mut disk_anim = new_disk_anim(x, y);
+
+    // Save bytes to a writer (need this for checkumming)
+    let writer = &mut new_data_writer(game_file_size(level_state));
+
+    let mut header = [0; SAVEGAME_NAME_LEN];
+    let name_bytes = name.as_bytes();
+    for i in 0..(min(name.len(), SAVEGAME_NAME_LEN-1)) {
+        header[i] = name_bytes[i];
+    }
+    writer.write_bytes(&header);
+    disk_anim.disk_flop_anim(rdr);
+    write_game_state(writer, game_state);
+    let (offset, checksum) = do_write_checksum(writer, SAVEGAME_NAME_LEN, 0);
+
+    write_level_ratios(writer, game_state);
+    let (offset, checksum) = do_write_checksum(writer, offset, checksum); 
+
+    for x in 0..MAP_SIZE {
+		for y in 0..MAP_SIZE {
+            writer.write_u8(level_state.level.tile_map[x][y] as u8);
+        }
+	}
+    let (offset, checksum) = do_write_checksum(writer, offset, checksum); 
+
+    for x in 0..MAP_SIZE {
+		for y in 0..MAP_SIZE {
+            match level_state.actor_at[x][y] {
+                At::Nothing => writer.write_u16(0),
+                At::Wall(at_val) => writer.write_u16(at_val),
+                At::Obj(ObjKey(at_val)) => {
+                    // invalid for W3D, as it assumes a real pointer to the
+                    // obj here. This makes the save game invalid for load
+                    // in W3D.
+                    writer.write_u16((at_val + 255) as u16); // + 255 so it will not be recognized as a wall
+                },
+            }
+        }
+	}
+    let (_, checksum) = do_write_checksum(writer, offset, checksum); 
+    // returned offset will not be used, since the obj section is skipped in the checksum check
+
+    for x in 0..NUM_AREAS {
+        for y in 0..NUM_AREAS {
+            writer.write_u8(level_state.area_connect[x][y]);
+        }
+    }
+
+    for i in 0..NUM_AREAS {
+        let v = if level_state.area_by_player[i] {
+            1
+        } else {
+            0
+        };
+        writer.write_u16(v);
+    }
+
+    for obj in &level_state.actors {
+        write_obj_type(writer, obj);
+    }
+    write_obj_type(writer, &null_obj_type());
+
+    let offset = writer.offset(); // no checksum over obj_type, reset the offset
+    writer.skip(2); //lastobjlist always nulled, not needed for iw
+    let (offset, checksum) = do_write_checksum(writer, offset, checksum); 
+
+    for i in 0..level_state.statics.len() {
+        write_static(writer, &level_state.statics[i]);
+    }
+    writer.skip((MAX_STATS-level_state.statics.len()) * STAT_TYPE_LEN);
+    let (offset, checksum) = do_write_checksum(writer, offset, checksum); 
+
+    for i in 0..level_state.doors.len() {
+        writer.write_u16(level_state.doors[i].position);
+    }
+    writer.skip((MAX_DOORS-level_state.doors.len()) * 2);
+    let (offset, checksum) = do_write_checksum(writer, offset, checksum); 
+
+    for door in &level_state.doors {
+        write_door(writer, door);
+    }
+    writer.skip((MAX_DOORS-level_state.doors.len()) * DOOR_TYPE_LEN);
+    let (offset, checksum) = do_write_checksum(writer, offset, checksum); 
+
+    writer.write_u16(game_state.push_wall_state as u16);
+    let (offset, checksum) = do_write_checksum(writer, offset, checksum); 
+    writer.write_u16(game_state.push_wall_x as u16);
+    let (offset, checksum) = do_write_checksum(writer, offset, checksum); 
+    writer.write_u16(game_state.push_wall_y as u16);
+    let (offset, checksum) = do_write_checksum(writer, offset, checksum); 
+    writer.write_u16(game_state.push_wall_dir as u16);
+    let (offset, checksum) = do_write_checksum(writer, offset, checksum); 
+    writer.write_i16(game_state.push_wall_pos as i16);
+    let (_, checksum) = do_write_checksum(writer, offset, checksum); 
+    
+    writer.write_i32(checksum);
+
+    loader.save_save_game(which, &writer.data).expect("save game saved")
+}
+
+// in bytes
+fn game_file_size(level_state: &LevelState) -> usize {
+    98 + // GameState
+    80 + // LevelRatios
+    4096 + // tile_map
+    8192 + // actor_at
+    1369 + // area_connect
+    74 + // area_by_player
+    (level_state.actors.len() + 1) * OBJ_TYPE_LEN + // obj, +1 for the nullobj
+    2 + // lastobjlist ptr
+    3200 + // statics
+    128 + // door positions
+    640 + // doors
+    14 // push wall states + checksum
+}
+
+fn write_game_state(writer: &mut DataWriter, game_state: &GameState) {    
+    writer.write_u16(game_state.difficulty as u16);
+    writer.write_u16(game_state.map_on as u16);
+    writer.write_i32(game_state.old_score);
+    writer.write_i32(game_state.score);
+    writer.write_i32(game_state.next_extra);
+    writer.write_i16(game_state.lives as i16);
+    writer.write_i16(game_state.health as i16);
+    writer.write_i16(game_state.ammo as i16);
+    writer.write_i16(game_state.keys as i16);
+
+    writer.write_u16(game_state.best_weapon as u16);
+    if let Some(weapon) = game_state.weapon {
+        writer.write_u16(weapon as u16);
+    } else  {
+        writer.write_u16(0);
+    }
+    writer.write_u16(game_state.chosen_weapon as u16);
+    
+    writer.write_u16(game_state.face_frame as u16);
+    writer.write_u16(game_state.attack_frame as u16);
+    writer.write_u16(game_state.attack_count as u16);
+    writer.write_u16(game_state.weapon_frame as u16);
+
+    writer.write_u16(game_state.episode as u16);
+    writer.write_u16(game_state.secret_count as u16);
+    writer.write_u16(game_state.treasure_count as u16);
+    writer.write_u16(game_state.kill_count as u16);
+    writer.write_u16(game_state.secret_total as u16);
+    writer.write_u16(game_state.treasure_total as u16);
+    writer.write_u16(game_state.kill_total as u16);
+
+    writer.write_u32(game_state.time_count as u32);
+    writer.write_u32(game_state.kill_x as u32);
+    writer.write_u32(game_state.kill_y as u32);
+    if game_state.victory_flag {
+        writer.write_u16(1);
+    } else {
+        writer.write_u16(0);
+    }
+}
+
+fn write_level_ratios(writer: &mut DataWriter, game_state: &GameState) {
+    for ratio in &game_state.level_ratios {
+        writer.write_u16(ratio.kill as u16);
+        writer.write_u16(ratio.secret as u16);
+        writer.write_u16(ratio.treasure as u16);
+        writer.write_i32(ratio.time);
+    }
+}
+
+fn write_obj_type(writer: &mut DataWriter, obj: &ObjType) {
+    writer.write_i16(obj.active as i16);
+    writer.write_u16(obj.tic_count as u16);
+    writer.write_u16(obj.class as u16);
+    writer.skip(2); // state ptr not restored, pointer values not available
+    writer.write_u8(obj.flags);
+    writer.skip(1); //padding flags
+    
+    writer.write_i32(obj.distance);
+    writer.write_u16(obj.dir as u16);
+
+    writer.write_i32(obj.x);
+    writer.write_i32(obj.y);
+
+    writer.write_u16(obj.tilex as u16);
+    writer.write_u16(obj.tiley as u16);
+    writer.write_u8(obj.area_number as u8);
+    writer.skip(1);
+
+    writer.write_i16(obj.view_x as i16);
+    writer.write_u16(obj.view_height as u16);
+
+    writer.write_i32(obj.trans_x.to_i32());
+    writer.write_i32(obj.trans_y.to_i32()); 
+
+    writer.write_u16(obj.angle as u16);
+
+    writer.write_i16(obj.hitpoints as i16);
+    writer.write_i32(obj.speed);
+    writer.write_i16(obj.temp1 as i16);
+    writer.write_i16(obj.temp2 as i16);
+    writer.write_i16(obj.temp3 as i16);
+    writer.skip(4); // next, prev pointer always nulled
+}
+
+fn write_static(writer: &mut DataWriter, stat: &StaticType) {
+    writer.write_u8(stat.tile_x as u8);
+    writer.write_u8(stat.tile_y as u8);
+    writer.skip(2); //visspot not used in iw
+    writer.write_u16(stat.sprite as u16);
+    writer.write_u8(stat.flags);
+    writer.write_u8(stat.item_number as u8);
+}
+
+fn write_door(writer: &mut DataWriter, door: &DoorType) {
+    writer.write_u8(door.tile_x as u8);
+    writer.write_u8(door.tile_y as u8);
+    let vertical = if door.vertical { 1 } else { 0 };
+    writer.write_u16(vertical);
+    writer.write_u8(door.lock as u8);
+    writer.skip(1); // padding
+    writer.write_u16(door.action as u16);
+    writer.write_u16(door.tic_count as u16);
+}
+
 // Returns true if the savegame file passed the checksum test, otherwise returns false.
 pub async fn load_the_game(level_state: &mut LevelState, game_state: &mut GameState, win_state: &mut WindowState, rdr: &VGARenderer, input: &Input, prj: &ProjectionConfig, assets: &Assets, loader: &dyn Loader, which: usize, x: usize, y: usize) {
     let checksums_matched = do_load(level_state, game_state, rdr, prj, assets, loader, which, x, y);
@@ -257,12 +483,12 @@ pub fn do_load(level_state: &mut LevelState, game_state: &mut GameState, rdr: &V
     // reconstruct GameState
     disk_anim.disk_flop_anim(rdr);
     load_game_state(reader, game_state);
-    let (offset, checksum) = do_checksum(reader, SAVEGAME_NAME_LEN, 0);
+    let (offset, checksum) = do_read_checksum(reader, SAVEGAME_NAME_LEN, 0);
 
     // reconstruct LevelRatio
     disk_anim.disk_flop_anim(rdr);
     load_level_ratios(reader, game_state);
-    let (offset, checksum) = do_checksum(reader, offset, checksum);
+    let (offset, checksum) = do_read_checksum(reader, offset, checksum);
     
     disk_anim.disk_flop_anim(rdr);
     *level_state = setup_game_level(prj, game_state, assets).expect("set up game level"); // TODO replace expect with Quit()
@@ -274,7 +500,7 @@ pub fn do_load(level_state: &mut LevelState, game_state: &mut GameState, rdr: &V
             level_state.level.tile_map[x][y] = tile as u16;
         }
 	}
-    let (offset, checksum) = do_checksum(reader, offset, checksum);
+    let (offset, checksum) = do_read_checksum(reader, offset, checksum);
 
     let mut at_vals = Vec::with_capacity(level_state.actors.len());
     // load actorat
@@ -294,7 +520,8 @@ pub fn do_load(level_state: &mut LevelState, game_state: &mut GameState, rdr: &V
     // sorted at_vals should give a mapping from save game pointers to actors keys
     // used later in fixing up the "wrong" ObjKey values used above.
     at_vals.sort();
-    let (_, checksum) = do_checksum(reader, offset, checksum);
+    let (_, checksum) = do_read_checksum(reader, offset, checksum);
+    // returned offset will not be used, since the obj section is skipped in the checksum check
 
     for x in 0..NUM_AREAS {
         for y in 0..NUM_AREAS {
@@ -339,15 +566,15 @@ pub fn do_load(level_state: &mut LevelState, game_state: &mut GameState, rdr: &V
 
     let offset = reader.offset(); // no checksum over obj_type, reset the offset
     reader.skip(2); // laststatobj pointer, don't need that in iw
-    let (offset, checksum) = do_checksum(reader, offset, checksum);    
+    let (offset, checksum) = do_read_checksum(reader, offset, checksum);    
 
     // only read the statics available in the level. The remaining 
     // statics contain garbage and will be skipped
     for i in 0..level_state.statics.len() {
         level_state.statics[i] = read_static(reader);
     }
-    reader.skip((MAX_STATS-level_state.statics.len()) * 8); // skip garbage static data
-    let (offset, checksum) = do_checksum(reader, offset, checksum);
+    reader.skip((MAX_STATS-level_state.statics.len()) * STAT_TYPE_LEN); // skip garbage static data
+    let (offset, checksum) = do_read_checksum(reader, offset, checksum);
 
     let mut door_positions = vec![0; level_state.doors.len()];
     for i in 0..level_state.doors.len() {
@@ -355,31 +582,29 @@ pub fn do_load(level_state: &mut LevelState, game_state: &mut GameState, rdr: &V
         door_positions[i] = door_pos;
     }
     reader.skip((MAX_DOORS-level_state.doors.len()) * 2); // skip garbage door position data
-    let (offset, checksum) = do_checksum(reader, offset, checksum); 
+    let (offset, checksum) = do_read_checksum(reader, offset, checksum); 
 
     for i in 0..level_state.doors.len() {
         let mut door = read_door_type(reader, level_state.doors[i].num);
         door.position = door_positions[i];
         level_state.doors[i] = door;
     }
-    reader.skip((MAX_DOORS-level_state.doors.len()) * 10); // skip garbage door data
-    let (offset, checksum) = do_checksum(reader, offset, checksum);
+    reader.skip((MAX_DOORS-level_state.doors.len()) * DOOR_TYPE_LEN); // skip garbage door data
+    let (offset, checksum) = do_read_checksum(reader, offset, checksum);
 
     game_state.push_wall_state = reader.read_u16() as u64;
-    let (offset, checksum) = do_checksum(reader, offset, checksum);
+    let (offset, checksum) = do_read_checksum(reader, offset, checksum);
     game_state.push_wall_x = reader.read_u16() as usize;
-    let (offset, checksum) = do_checksum(reader, offset, checksum);
+    let (offset, checksum) = do_read_checksum(reader, offset, checksum);
     game_state.push_wall_y = reader.read_u16() as usize;
-    let (offset, checksum) = do_checksum(reader, offset, checksum);
+    let (offset, checksum) = do_read_checksum(reader, offset, checksum);
     game_state.push_wall_dir = Dir::try_from(reader.read_u16() as usize).expect("valid door direction");
-    let (offset, checksum) = do_checksum(reader, offset, checksum);
+    let (offset, checksum) = do_read_checksum(reader, offset, checksum);
     game_state.push_wall_pos = reader.read_i16() as i32;
-    let (_, checksum) = do_checksum(reader, offset, checksum);
+    let (_, checksum) = do_read_checksum(reader, offset, checksum);
     
     let old_checksum = reader.read_i32();
-
     let checksums_matched = old_checksum == checksum;
-
     if !checksums_matched {
         game_state.score = 0;
         game_state.lives = 1;
@@ -388,7 +613,6 @@ pub fn do_load(level_state: &mut LevelState, game_state: &mut GameState, rdr: &V
         game_state.best_weapon = WeaponType::Pistol;
         game_state.ammo = 8;
     }
-
     checksums_matched
 }
 
@@ -458,11 +682,11 @@ pub fn null_obj_type() -> ObjType {
     ObjType {
         active: ActiveType::BadObject,
         tic_count: 0,
-        class: ClassType::Player,
+        class: ClassType::Nothing,
         state: None,
         flags : 0,
         distance: 0,
-        dir: DirType::NoDir,
+        dir: DirType::East, // East is 0, not NoDir
         x: 0,
         y: 0,
         tilex: 0,
@@ -607,14 +831,21 @@ fn load_level_ratios(reader: &mut DataReader, game_state: &mut GameState) {
     game_state.level_ratios = level_ratios;
 }
 
-fn do_checksum(reader: &DataReader, prev_offset: usize, checksum_init: i32) -> (usize, i32) {
+fn do_read_checksum(reader: &DataReader, prev_offset: usize, checksum_init: i32) -> (usize, i32) {
     let offset = reader.offset();
-
     let block = reader.slice(prev_offset, offset);    
+    checksum(offset, block, prev_offset, checksum_init)
+}
 
+fn do_write_checksum(writer: &DataWriter, prev_offset: usize, checksum_init: i32) -> (usize, i32) {
+    let offset = writer.offset();
+    let block = writer.slice(prev_offset, offset);    
+    checksum(offset, block, prev_offset, checksum_init)
+}
+
+fn checksum(offset: usize, block: &[u8], prev_offset: usize, checksum_init: i32) -> (usize, i32) {
     let mut checksum = checksum_init;
     for i in 0..((offset-prev_offset)-1) {
-        //println!("b[i]={},b[+1]={}", block[i], block[i+1]);
         checksum += (block[i]^block[i+1]) as i32;
     }
     (offset, checksum)
