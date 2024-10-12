@@ -9,12 +9,12 @@ use std::sync::Arc;
 use iw::loader::DiskLoader;
 use test::Bencher;
 
-use iw::def::IWConfig;
+use iw::def::{new_game_state, IWConfig};
 use iw::draw::{wall_refresh, init_ray_cast_consts, init_ray_cast};
 use iw::game::setup_game_level;
 use iw::assets;
 use iw::vga_render;
-use iw::play::{self, new_game_state};
+use iw::play;
 
 #[bench]
 fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
