@@ -1,5 +1,5 @@
 use crate::act2::spawn_stand;
-use crate::def::{ObjType, ClassType, FL_NEVERMARK, DirType, LevelState, MAP_SIZE, Level, Difficulty, At, ObjKey, EnemyType, FL_SHOOTABLE};
+use crate::def::{At, ClassType, Difficulty, DirType, EnemyType, Level, LevelState, ObjKey, ObjType, FL_NEVERMARK, FL_SHOOTABLE, MAP_SIZE};
 use crate::fixed::new_fixed_i32;
 use crate::agent::S_PLAYER;
 use crate::map::MapSegs;

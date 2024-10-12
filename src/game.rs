@@ -11,7 +11,7 @@ use crate::agent::{spawn_player, thrust};
 use crate::draw::{RayCast, init_ray_cast, three_d_refresh};
 use crate::inter::{check_highscore, level_completed, preload_graphics};
 use crate::loader::Loader;
-use crate::menu::MenuState;
+use crate::menu::{MenuState, SaveLoadGame};
 use crate::play::{draw_play_screen, finish_palette_shifts, play_loop, ProjectionConfig, new_control_state};
 use crate::vh::vw_fade_out;
 use crate::{map, time};
@@ -45,7 +45,9 @@ pub async fn game_loop(
 	assets: &Assets,
 	win_state: &mut WindowState,
 	menu_state: &mut MenuState,
-	loader: &dyn Loader) {
+	loader: &dyn Loader,
+	save_load_param: Option<SaveLoadGame>) {
+	let mut save_load = save_load_param;
     let mut control_state : ControlState = new_control_state();
     
     draw_play_screen(&game_state, rdr, prj).await;
@@ -71,7 +73,8 @@ pub async fn game_loop(
 		
 		rdr.fade_in().await;
 
-		play_loop(ticker, &mut level_state, game_state, win_state, menu_state, &mut control_state, vga, &mut rc, rdr, input, prj, assets, loader).await;
+		play_loop(ticker, &mut level_state, game_state, win_state, menu_state, &mut control_state, vga, &mut rc, rdr, input, prj, assets, loader, save_load).await;
+		save_load = None;
 
 		game_state.in_game = false;
 
@@ -231,20 +234,21 @@ async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &
 }
 
 pub fn setup_game_level(prj: &ProjectionConfig, game_state: &mut GameState, assets: &Assets) -> Result<LevelState, String> {
-	// TODO check loadedgame
-	game_state.time_count = 0;
-	game_state.secret_total = 0;
-	game_state.kill_total = 0;
-	game_state.treasure_total = 0;
-	game_state.secret_count = 0;
-	game_state.kill_count = 0;
-	game_state.treasure_count = 0;
+	if !game_state.loaded_game {
+		game_state.time_count = 0;
+		game_state.secret_total = 0;
+		game_state.kill_total = 0;
+		game_state.treasure_total = 0;
+		game_state.secret_count = 0;
+		game_state.kill_count = 0;
+		game_state.treasure_count = 0;
+	}
 	
 	let mapnum = game_state.map_on+game_state.episode*10;
 	
 	let map = &assets.map_headers[mapnum];
 	if map.width != MAP_SIZE as u16 || map.height != MAP_SIZE as u16 {
-		panic!("Map not 64*64!");
+		return Err("Map not 64*64!".to_string());
 	}
 
 	let map_segs = load_map_from_assets(assets, mapnum)?;

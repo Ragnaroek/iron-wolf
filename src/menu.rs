@@ -9,7 +9,7 @@ use crate::user::rnd_t;
 use crate::vga_render::VGARenderer;
 use crate::vh::{vw_hlin, vw_vlin};
 use crate::time::Ticker;
-use crate::def::{Difficulty, GameState, WindowState};
+use crate::def::{difficulty, GameState, WindowState};
 use crate::assets::GraphicNum;
 
 const NUM_SAVE_GAMES : usize = 10;
@@ -30,8 +30,8 @@ pub const MENU_Y : usize = 55;
 const MENU_W : usize = 178;
 const MENU_H : usize = 13*10+6;
 
-const LSA_X : usize = 96;
-const LSA_Y	: usize = 80;
+pub const LSA_X : usize = 96;
+pub const LSA_Y	: usize = 80;
 const LSA_W : usize = 130;
 const LSA_H : usize = 42;
 
@@ -156,13 +156,19 @@ impl DifficultyItem {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(PartialEq, Debug)]
 pub enum MenuHandle {
     None,
     OpenMenu(Menu),
     Selected(usize),
     QuitMenu,
-    BackToGameLoop,
+    BackToGameLoop(Option<SaveLoadGame>),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum SaveLoadGame {
+    Save(usize),
+    Load(usize),
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Hash, Debug)]
@@ -298,7 +304,7 @@ fn placeholder() -> ItemType {
 }
 
 /// Wolfenstein Control Panel!  Ta Da!
-pub async fn control_panel(ticker: &Ticker, game_state: &mut GameState, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState, loader: &dyn Loader, scan: NumCode) {
+pub async fn control_panel(ticker: &Ticker, game_state: &mut GameState, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState, loader: &dyn Loader, scan: NumCode) -> Option<SaveLoadGame>  {
     // TODO scan code handling
     // TODO StartCPMusic(MENUSONG)
 
@@ -316,8 +322,8 @@ pub async fn control_panel(ticker: &Ticker, game_state: &mut GameState, rdr: &VG
                 Menu::MainMenu(item) => {
                     match item {
                         MainMenuItem::NewGame => cp_new_game(ticker, game_state, rdr, input, win_state, menu_state).await,
-                        MainMenuItem::LoadGame => cp_load_game(ticker, game_state, rdr, input, win_state, menu_state, loader).await,
-                        MainMenuItem::SaveGame => cp_save_game(ticker, game_state, rdr, input, win_state, menu_state, loader).await,
+                        MainMenuItem::LoadGame => cp_load_game(ticker,  rdr, input, win_state, menu_state, loader).await,
+                        MainMenuItem::SaveGame => cp_save_game(ticker, rdr, input, win_state, menu_state, loader).await,
                         _ => todo!("implement other menu selects"),
                     }
                 },
@@ -328,16 +334,15 @@ pub async fn control_panel(ticker: &Ticker, game_state: &mut GameState, rdr: &VG
                 MenuHandle::QuitMenu => {
                     menu_stack.pop();
                 },
-                MenuHandle::BackToGameLoop => {
-                    break;
+                MenuHandle::BackToGameLoop(save_load) => {
+                    return save_load;
                 },
                 _ => {/* ignore */},
             }
         } else {
-            return // back to game loop
+            return None // back to game loop
         }
     }
-    // RETURN/START GAME EXECUTION
 }
 
 async fn cp_main_menu(ticker: &Ticker, game_state: &GameState, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState) -> MenuHandle {
@@ -352,7 +357,7 @@ async fn cp_main_menu(ticker: &Ticker, game_state: &GameState, rdr: &VGARenderer
     } else if handle == MenuHandle::Selected(MainMenuItem::ViewScores.pos()) {
         todo!("show view scores");
     } else if handle == MenuHandle::Selected(MainMenuItem::BackTo.pos()) {
-        return MenuHandle::BackToGameLoop;
+        return MenuHandle::BackToGameLoop(None);
     } else if handle == MenuHandle::QuitMenu || handle == MenuHandle::Selected(MainMenuItem::Quit.pos()) {
         menu_quit(ticker, game_state, rdr, input, win_state, menu_state).await;
         return MenuHandle::QuitMenu;
@@ -380,34 +385,29 @@ async fn cp_new_game(ticker: &Ticker, game_state: &mut GameState, rdr: &VGARende
 
 // Load & Save
 
-async fn cp_load_game(ticker: &Ticker, game_state: &mut GameState, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState, loader: &dyn Loader) -> MenuHandle {
+async fn cp_load_game(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState, loader: &dyn Loader) -> MenuHandle {
     // TODO Handle QuickLoad
     let state = read_save_game_state(loader);
     draw_load_save_screen(rdr, input, win_state, menu_state, &state, false).await;
     let load_handle = handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
-    if let MenuHandle::Selected(load_selected) = load_handle {
-        println!("load save game {}", load_selected);
-        // TODO load game!
+    if let MenuHandle::Selected(which) = load_handle {
         draw_ls_action(rdr, win_state, false);
-        wait_key_up(input); // TODO only for testing
-        return MenuHandle::BackToGameLoop;
+        return MenuHandle::BackToGameLoop(Some(SaveLoadGame::Load(which)));
     } else {
         rdr.fade_out().await;
         return load_handle;
     }
 }
 
-async fn cp_save_game(ticker: &Ticker, game_state: &mut GameState, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState, loader: &dyn Loader) -> MenuHandle {
+async fn cp_save_game(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState, loader: &dyn Loader) -> MenuHandle {
     // TODO Handle QuickSave
     let state = read_save_game_state(loader);
     draw_load_save_screen(rdr, input, win_state, menu_state, &state, true).await;
     let save_handle = handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
-    if let MenuHandle::Selected(save_selected) = save_handle {
-        println!("save game {}", save_selected);
-        // TODO load game!
-        draw_ls_action(rdr, win_state, false);
-
-        return MenuHandle::BackToGameLoop;
+    if let MenuHandle::Selected(which) = save_handle {
+        println!("save game {}", which);
+        draw_ls_action(rdr, win_state, true);
+        return MenuHandle::BackToGameLoop(Some(SaveLoadGame::Save(which)));
     } else {
         rdr.fade_out().await;
         return save_handle;
@@ -484,7 +484,6 @@ async fn draw_load_save_screen(rdr: &VGARenderer, input: &Input, win_state: &mut
 }
 
 fn print_ls_entry(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState, save_game: &SaveGameState, w: usize, color: u8) {
-
     let ls_entry = &menu_state.menues[&Menu::MainMenu(MainMenuItem::LoadGame)];
 
     win_state.set_font_color(color, BKGD_COLOR);
@@ -500,6 +499,8 @@ fn print_ls_entry(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &m
     } else {
         print(rdr, win_state, &STR_EMPTY);
     }
+
+    win_state.font_number = 1;
 }
 
 fn draw_new_game_diff(rdr: &VGARenderer, which: usize) {
@@ -518,7 +519,7 @@ async fn cp_difficulty_select(ticker: &Ticker, game_state: &mut GameState, rdr: 
         game_state.difficulty = difficulty(diff_selected);
 
         rdr.fade_out().await;
-        return MenuHandle::BackToGameLoop;
+        return MenuHandle::BackToGameLoop(None);
     }
     rdr.fade_out().await;
     handle
@@ -550,16 +551,6 @@ fn difficulty_pic(i: usize) -> GraphicNum {
         3 => GraphicNum::CHARDPIC,
         _ => GraphicNum::CBABYMODEPIC,
     }
-}
-
-fn difficulty(i: usize) -> Difficulty {
-    match i {
-        0 => Difficulty::Baby,
-        1 => Difficulty::Easy,
-        2 => Difficulty::Hard,
-        3 => Difficulty::Hard,
-        _ => Difficulty::Baby,
-    } 
 }
 
 async fn draw_new_episode(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState) {

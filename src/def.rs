@@ -91,6 +91,17 @@ pub enum WeaponType {
 	ChainGun = 3,    
 }
 
+// Note: An illegal usize will be mapped to Knife (everything > 3)
+pub fn weapon_type(i: usize) -> WeaponType {
+    match i {
+        0 => WeaponType::Knife,
+        1 => WeaponType::Pistol,
+        2 => WeaponType::MachineGun,
+        3 => WeaponType::ChainGun,
+        _ => WeaponType::Knife,
+    }
+}
+
 /// static level data (map and actors)
 pub struct Level {
     pub map_segs : MapSegs,      // contains the unmodified loaded map data from the asset file
@@ -136,7 +147,6 @@ pub struct LevelState {
     //misc
     pub thrustspeed: i32,
     pub last_attacker: Option<ObjKey>,
-
 }
 
 // This is the key of the actor in the LevelState actors[] array
@@ -232,6 +242,16 @@ pub enum Difficulty {
     Hard,
 }
 
+pub fn difficulty(i: usize) -> Difficulty {
+    match i {
+        0 => Difficulty::Baby,
+        1 => Difficulty::Easy,
+        2 => Difficulty::Hard,
+        3 => Difficulty::Hard,
+        _ => Difficulty::Baby,
+    } 
+}
+
 pub struct LevelRatio {
     pub kill: i32,
     pub secret: i32,
@@ -241,6 +261,8 @@ pub struct LevelRatio {
 
 /// State across the whole game
 pub struct GameState {
+    pub loaded_game: bool,
+
     pub died: bool,
     pub difficulty: Difficulty,
 	pub map_on: usize,
@@ -261,7 +283,7 @@ pub struct GameState {
     pub attack_count: i32,
     pub weapon_frame: usize,
 
-	pub episode : usize,
+	pub episode: usize,
     pub secret_count: i32,
     pub treasure_count: i32,
     pub kill_count: i32,
@@ -270,6 +292,8 @@ pub struct GameState {
     pub kill_total: i32,
 
     pub time_count: u64,
+    pub kill_x: usize,
+    pub kill_y: usize,
 
     pub victory_flag : bool,
     pub play_state: PlayState,
@@ -304,6 +328,7 @@ pub fn new_game_state() -> GameState {
     }
 
 	GameState {
+        loaded_game: false,
         died: false,
 		map_on: 0,
         difficulty: Difficulty::Hard,
@@ -327,6 +352,8 @@ pub fn new_game_state() -> GameState {
         treasure_total: 0,
         kill_total: 0,
         time_count: 0,
+        kill_x: 0,
+        kill_y: 0,
         victory_flag: false,
         god_mode: false,
         play_state: PlayState::StillPlaying,

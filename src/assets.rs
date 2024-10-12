@@ -42,15 +42,20 @@ pub struct WolfVariant {
 	pub start_pics: usize,
 }
 
-// TODO Put this behind conditional compilation (once Spear of Destiny support is started)
+pub static W3D1 : WolfVariant = WolfVariant {
+	file_ending: "WL1",
+	num_pics: 139,
+	start_pics: 3,
+};
 
 // TODO Demo file support WL1 and WL3??
-pub static W3D : WolfVariant = WolfVariant {
+pub static W3D6 : WolfVariant = WolfVariant {
 	file_ending: "WL6",
 	num_pics: 132,
 	start_pics: 3,
 };
 
+// TODO Put this behind conditional compilation (once Spear of Destiny support is started)?
 pub static SOD : WolfVariant = WolfVariant {
 	file_ending: "SOD",
 	num_pics: 147,
@@ -367,13 +372,13 @@ fn extract_picsizes(grdata: &Vec<u8>, grstarts: &Vec<u8>, grhuffman: &Vec<Huffno
 	let f_offset = (grfilepos(STRUCTPIC, grstarts) + 4) as usize;
 	let expanded = huff_expand(&grdata[f_offset..(f_offset+complen)], explen, grhuffman);
 	
-	assert_eq!(explen/4, variant.num_pics); // otherwise the data file may not match the code
+	assert!(explen/4 >= variant.num_pics); // otherwise the data file may not match the code
 
 	let mut picsizes = Vec::with_capacity(variant.num_pics);
 	let mut offset = 0;
 
 	// TODO Write util functions for from_le_bytes()..try_into.unwrap noise
-	for _ in 0..(explen/4) {
+	for _ in 0..variant.num_pics /* (explen/4)*/ {
 		let width = i16::from_le_bytes(expanded[offset..(offset+2)].try_into().unwrap()) as usize;
 		let height = i16::from_le_bytes(expanded[offset + 2..(offset+4)].try_into().unwrap()) as usize;
 		picsizes.push(
