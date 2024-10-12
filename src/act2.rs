@@ -1320,13 +1320,14 @@ fn t_shoot(
 }
 
 fn a_death_scream(
-    k: ObjKey,
-    tics: u64,
-    level_state: &mut LevelState,
-    game_state: &mut GameState,
-    rdr: &VGARenderer,
-    control_state: &mut ControlState,
-    prj: &ProjectionConfig,
+    _k: ObjKey,
+    _tics: u64,
+    _level_state: &mut LevelState,
+    _game_state: &mut GameState,
+    _rdr: &VGARenderer,
+    _control_state: &mut ControlState,
+    _prj: &ProjectionConfig,
 ) {
     // TODO play death sounds
+    todo!("a_death_scream")
 }

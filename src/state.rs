@@ -369,8 +369,7 @@ pub fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
     }
     let area = {
         let obj = level_state.obj(k);
-        //level_state.level.tile_map[obj.tilex][obj.tiley] - AREATILE
-        0 // TODO return correct areanumber from mapsegs[0]
+        (level_state.level.map_segs.segs[0][obj.tiley * MAP_SIZE + obj.tilex] - AREATILE) as usize
     };
     let obj = level_state.mut_obj(k);
     obj.area_number = area;
@@ -817,6 +816,7 @@ fn check_sight(k: ObjKey, level_state: &mut LevelState) -> bool {
     let player = level_state.player();
     let obj = level_state.obj(k);
 
+    // don't bother tracing a line if the area isn't connected to the player's
     if !level_state.area_by_player[obj.area_number] {
         return false;
     }
@@ -909,11 +909,6 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
             let y: i32 = y_frac >> 8;
             y_frac += y_step;
 
-            //TODO remote this if areabyplayer check is there?
-            if x > 64 || y > 64 {
-                break;
-            }
-
             let value = level_state.level.tile_map[x as usize][y as usize];
             x += x_step;
 
@@ -984,7 +979,6 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
             }
         }
     }
-
     true
 }
 
