@@ -25,7 +25,11 @@ jobs:
       run: sudo apt-get update
     - name: Install SDL
       run: sudo apt-get install libsdl2-dev libsdl2-ttf-dev
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+    - name: Build SDL
+      run: cargo build --features sdl --verbose
+    - name: Run tests SDL
+      run: cargo test --features sdl --verbose
+    - name: Build Web
+      run: cargo build --features web --verbose
+    - name: Run tests Web
+      run: cargo test --features web --verbose
