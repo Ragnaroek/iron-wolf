@@ -6,8 +6,6 @@ use super::time;
 use super::config;
 use super::vga_render;
 
-use std::thread;
-
 const STATUS_LINES : usize = 40;
 const HEIGHT_RATIO : f32 = 0.5;
 const SCREEN_WIDTH : usize = 80;
@@ -27,7 +25,6 @@ const TILESHIFT : u32 = 16;
 const TILEGLOBAL : u32 = 1<<16;
 
 const FINE_ANGLES : i32 = 3600;
-const ANGLES : i32 = 360;
 
 const VIEW_GLOBAL : usize = 0x10000;
 const FOCAL_LENGTH : usize = 0x5700;
@@ -131,12 +128,11 @@ pub fn game_loop(state: &GameState, rdr: &dyn Renderer, input: &input::Input, pr
 fn play_loop(state: &GameState, level: &mut Level, rdr: &dyn Renderer, prj: &ProjectionConfig) {
 	//TODO A lot to do here (clear palette, poll controls, prepare world)
     loop {
-        level.player.angle += 0.1;
+        level.player.angle += 0.05;
         if level.player.angle > 2.0 * std::f64::consts::PI {
             level.player.angle = 0.0;
         }
 	    three_d_refresh(state, level, rdr, prj);
-        thread::sleep_ms(60); //TODO until double buffering is implemented
     }
 }
 
@@ -147,8 +143,14 @@ fn three_d_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &P
     wall_refresh(state, level, rdr, prj);
 
 	rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
+    rdr.activate_buffer(rdr.buffer_offset());
 
-	// TODO: increment buffer offset to next page (impl. double buffering)
+    //set offset to buffer for next frame
+    let mut next_offset = rdr.buffer_offset() + vga_render::SCREEN_SIZE;
+    if next_offset > vga_render::PAGE_3_START {
+        next_offset = vga_render::PAGE_1_START;
+    }
+    rdr.set_buffer_offset(next_offset);
 }
 
 fn wall_refresh(state: &GameState, level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig) {
@@ -408,8 +410,13 @@ fn draw_score(state: &GameState, rdr: &dyn Renderer) {
 
 // x in bytes
 fn status_draw_pic(rdr: &dyn Renderer, x: usize, y: usize, pic: GraphicNum) {
-	let y_status = (200-STATUS_LINES) + y;
-	rdr.pic(x*8, y_status, pic);
+    let offset_prev = rdr.buffer_offset();
+    for i in 0..3 {
+        rdr.set_buffer_offset(SCREENLOC[i]);
+        let y_status = (200-STATUS_LINES) + y;
+        rdr.pic(x*8, y_status, pic);  
+    } 
+    rdr.set_buffer_offset(offset_prev);
 }
 
 fn latch_number(rdr: &dyn Renderer, x_start: usize, y: usize, width: usize, num: usize) {

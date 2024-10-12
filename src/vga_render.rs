@@ -1,14 +1,16 @@
 use std::sync::Arc;
 use std::cell::Cell;
+use std::thread;
+use std::time::Duration;
 
-use vgaemu::{SCReg};
+use vgaemu::{CRTReg, SCReg, GeneralReg};
 
 use super::assets::{Graphic, GraphicNum, GAMEPAL};
 use super::vl;
 
 const MAXSCANLINES: usize = 200;
-const SCREENBWIDE: usize = 80;
-const SCREEN_SIZE: usize = SCREENBWIDE * 208;
+pub const SCREENBWIDE: usize = 80;
+pub const SCREEN_SIZE: usize = SCREENBWIDE * 208;
 
 pub const PAGE_1_START: usize = 0;
 pub const PAGE_2_START: usize = SCREEN_SIZE;
@@ -19,10 +21,15 @@ static PIXMASKS: [u8; 4] = [1, 2, 4, 8];
 static LEFTMASKS: [u8; 4]	= [15, 14, 12, 8];
 static RIGHTMASKS: [u8; 4] = [1, 3, 7, 15];
 
+const DE_MASK: u8 = 0x01;
+const VSYNC_MASK: u8 = 0x08;
+const POLL_WAIT_MICROS : u64 = 500;
+
 pub trait Renderer {
 
 	fn set_buffer_offset(&self, offset: usize);
 	fn buffer_offset(&self) -> usize;
+    fn activate_buffer(&self, offset: usize);
 
 	fn bar(&self, x: usize, y: usize, width: usize, height: usize, color: u8);
 	fn pic(&self, x: usize, y: usize, picnum: GraphicNum);
@@ -85,6 +92,16 @@ impl Renderer for VGARenderer {
 	fn buffer_offset(&self) -> usize {
 		self.bufferofs.get()
 	}
+
+    fn activate_buffer(&self, offset: usize) {
+        wait_display_enable(&self.vga);
+
+        let addr_parts = offset.to_le_bytes();
+        self.vga.set_crt_data(CRTReg::StartAdressLow, addr_parts[0]);
+        self.vga.set_crt_data(CRTReg::StartAdressHigh, addr_parts[1]);
+
+        wait_vsync(&self.vga);
+    }
 
 	fn bar(&self, x: usize, y: usize, width: usize, height: usize, color: u8) {
 		let leftmask = LEFTMASKS[x & 3];
@@ -185,6 +202,25 @@ impl Renderer for VGARenderer {
 	}
 }
 
+fn wait_display_enable(vga: &Arc<vgaemu::VGA>) {
+    loop {
+        let in1 = vga.get_general_reg(GeneralReg::InputStatus1);
+        if in1 & DE_MASK == 0 {
+            break;
+        }
+        thread::sleep(Duration::from_micros(POLL_WAIT_MICROS));
+    }
+}
+
+fn wait_vsync(vga: &Arc<vgaemu::VGA>) {
+    loop {
+        let in1 = vga.get_general_reg(GeneralReg::InputStatus1);
+        if in1 & VSYNC_MASK != 0 {
+            break;
+        }
+        thread::sleep(Duration::from_micros(POLL_WAIT_MICROS));
+    }
+}
 
 
 

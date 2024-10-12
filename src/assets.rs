@@ -13,6 +13,7 @@ pub static GRAPHIC_DATA: &'static str = "VGAGRAPH.WL6";
 pub static MAP_HEAD: &'static str = "MAPHEAD.WL6";
 pub static GAME_MAPS: &'static str = "GAMEMAPS.WL6";
 
+#[derive(Copy, Clone)]
 pub enum GraphicNum {
 	STATUSBARPIC = 86,
 	TITLEPIC = 87,
