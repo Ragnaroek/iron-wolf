@@ -481,7 +481,7 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
 
         rc.cast(&level_state.level);
         
-        let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, view_x, view_y, view_cos, view_sin, pixx == 28);
+        let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, view_x, view_y, view_cos, view_sin);
 
         let side = match rc.hit {
             Hit::HorizontalBorder|Hit::HorizontalWall => 0,

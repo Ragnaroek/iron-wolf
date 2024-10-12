@@ -46,7 +46,7 @@ fn mul(a: i16, b: i16) -> (i16, i16) {
     (((wa >> 16) & 0xFFFF) as i16, (wa & 0xFFFF) as i16)
 }
 
-pub fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, view_x: i32, view_y: i32, view_cos: Fixed, view_sin: Fixed, dbg: bool) -> i32 {
+pub fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, view_x: i32, view_y: i32, view_cos: Fixed, view_sin: Fixed) -> i32 {
     let gx = new_fixed_i32(x_intercept - view_x);
     let gxt = fixed_by_frac(gx, view_cos);
 
@@ -55,23 +55,9 @@ pub fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, vi
 
     let mut nx = gxt.to_i32() - gyt.to_i32();
 
-    if dbg {
-        println!("heigthnumerator={}", height_numerator);
-        println!("gx={}, gy={}, gy_i32={}", gx.to_i32(), gy.to_i32(), y_intercept - view_y);
-        println!("gxt_r = {:?}", gxt);
-        println!("gxt={}, gyt={}", gxt.to_i32(), gyt.to_i32());
-        println!("viewcos={}, viewsin={}", view_cos, view_sin);
-        println!("x_intercept={}, y_intercept={}", x_intercept, y_intercept);
-        println!("viewy={}, viewx={}, nx={}", view_y, view_x, nx);
-    }
-
     if nx < MIN_DIST {
          nx = MIN_DIST;
     }
 
-    let h = height_numerator/(nx >> 8);
-    if dbg {
-        println!("h={}", h);
-    }
-    h
+    height_numerator/(nx >> 8)
 }
