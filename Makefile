@@ -10,6 +10,9 @@ run-sdl:
 run-sdl-debug:
 	cargo run --features sdl -- -goobers
 
+run-sdl-profile:
+	sudo -E cargo flamegraph --features sdl --profile=dev -- run 
+
 build-web:
 	wasm-pack build --debug --target web --features web
 

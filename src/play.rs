@@ -252,8 +252,9 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
 }
 
 fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
-
-    // TODO areabyplayer check here!
+    if !level_state.obj(k).active && !level_state.area_by_player[level_state.obj(k).area_number] {
+        return;
+    }
 
     if level_state.obj(k).flags & (FL_NONMARK|FL_NEVERMARK) == 0 {
         let (tilex, tiley) = {

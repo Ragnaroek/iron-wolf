@@ -497,57 +497,57 @@ pub fn move_obj(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameSt
 
     // check to make sure it's not on top of player
 
-    // TODO areabyplayer check here!
-    let delta_x = level_state.obj(k).x - player_x;
-    if delta_x < -MIN_ACTOR_DIST || delta_x > MIN_ACTOR_DIST {
-        level_state.update_obj(k, |obj| obj.distance -= mov);
-        return;
-    }
-    let delta_y = level_state.obj(k).y - player_y;
-    if delta_y < -MIN_ACTOR_DIST || delta_y > MIN_ACTOR_DIST {
-        level_state.update_obj(k, |obj| obj.distance -= mov);
-        return;
-    }
+    if level_state.area_by_player[level_state.obj(k).area_number] {
+        let delta_x = level_state.obj(k).x - player_x;
+        if delta_x < -MIN_ACTOR_DIST || delta_x > MIN_ACTOR_DIST {
+            level_state.update_obj(k, |obj| obj.distance -= mov);
+            return;
+        }
+        let delta_y = level_state.obj(k).y - player_y;
+        if delta_y < -MIN_ACTOR_DIST || delta_y > MIN_ACTOR_DIST {
+            level_state.update_obj(k, |obj| obj.distance -= mov);
+            return;
+        }
 
-    let class = level_state.obj(k).class;
-    if class == ClassType::Ghost || class == ClassType::Spectre {
-        take_damage(k, (tics * 2) as i32, level_state, game_state, rdr)
-    }
+        let class = level_state.obj(k).class;
+        if class == ClassType::Ghost || class == ClassType::Spectre {
+            take_damage(k, (tics * 2) as i32, level_state, game_state, rdr)
+        }
 
-    let obj = level_state.mut_obj(k);
-    match obj.dir {
-        DirType::North => {
-            obj.y += mov
-        },
-        DirType::NorthEast => {
-            obj.x -= mov;
-            obj.y += mov;
-        },
-        DirType::East => {
-            obj.x -= mov;
-        },
-        DirType::SouthEast => {
-            obj.x -= mov;
-            obj.y -= mov;
-        },
-        DirType::South => {
-            obj.y -= mov;
-        },
-        DirType::SouthWest => {
-            obj.x += mov;
-            obj.y -= mov;
-        },
-        DirType::West => {
-            obj.x += mov;
-        },
-        DirType::NorthWest => {
-            obj.x += mov;
-            obj.y += mov;
-        },
-        DirType::NoDir => { /* do nothing */}        
+        let obj = level_state.mut_obj(k);
+        match obj.dir {
+            DirType::North => {
+                obj.y += mov
+            },
+            DirType::NorthEast => {
+                obj.x -= mov;
+                obj.y += mov;
+            },
+            DirType::East => {
+                obj.x -= mov;
+            },
+            DirType::SouthEast => {
+                obj.x -= mov;
+                obj.y -= mov;
+            },
+            DirType::South => {
+                obj.y -= mov;
+            },
+            DirType::SouthWest => {
+                obj.x += mov;
+                obj.y -= mov;
+            },
+            DirType::West => {
+                obj.x += mov;
+            },
+            DirType::NorthWest => {
+                obj.x += mov;
+                obj.y += mov;
+            },
+            DirType::NoDir => { /* do nothing */}        
+        }
+        obj.distance -= mov;
     }
-
-    obj.distance -= mov;
 }
 
 /// Called by actors that ARE NOT chasing the player.  If the player
@@ -568,7 +568,9 @@ pub fn sight_player(k: ObjKey, level_state: &mut LevelState, tics: u64) -> bool 
             return false;
         }
     } else  {
-        // TODO check areabyplayer to optimise this
+        if !level_state.area_by_player[obj.area_number] {
+            return false;
+        }
 
         if obj.flags & FL_AMBUSH != 0 {
             if !check_sight(k, level_state) {
@@ -652,11 +654,12 @@ pub fn new_state(obj: &mut ObjType, state: &'static StateType) {
 /// If the sight is ok, check alertness and angle to see if they notice
 /// returns true if the player has been spoted.
 fn check_sight(k: ObjKey, level_state: &mut LevelState) -> bool {
-
-    // TODO check areabyplayer here!
-
     let player = level_state.player();
     let obj = level_state.obj(k);
+
+    if !level_state.area_by_player[obj.area_number] {
+        return false;
+    }
 
     // if the player is real close, sight is automatic
     let delta_x = player.x - obj.x;

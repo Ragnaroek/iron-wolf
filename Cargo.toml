@@ -45,6 +45,10 @@ wasm-timer = {version = "0.2.5", optional = true }
 [profile.bench]
 debug = true
 
+[profile.dev]
+debug = true
+opt-level = 3
+
 [profile.release]
 strip = true
 lto = true

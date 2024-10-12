@@ -1,9 +1,7 @@
-use futures::SinkExt;
-
 use crate::def::{ClassType, DirType, DoorAction, DoorLock, DoorType, Level, LevelState, ObjType, FL_NEVERMARK, MAP_SIZE};
 use crate::draw::{Op, Hit, init_ray_cast, init_ray_cast_consts, calc_height};
 use crate::fixed::new_fixed_i32;
-use crate::map::{MapSegs, MAP_PLANES};
+use crate::map::MapSegs;
 use crate::play;
 use crate::agent::S_PLAYER;
 

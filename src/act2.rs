@@ -1157,10 +1157,11 @@ fn spawn(actors: &mut Vec<ObjType>, actor_at: &mut Vec<Vec<At>>, obj: ObjType) {
 
 /// Try to damage the player, based on skill level and player's speed
 fn t_shoot(k: ObjKey, _: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, _: &mut ControlState, _: &ProjectionConfig) {
-    
-    // TODO areabyplayer check!
-
     let obj = level_state.obj(k);
+    if !level_state.area_by_player[obj.area_number] {
+        return;
+    }
+
     let player = level_state.player();
     if !check_line(&level_state, obj) { // player is behind a wall
         return;
