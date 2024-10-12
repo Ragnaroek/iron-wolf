@@ -63,11 +63,12 @@ pub fn file_name(file: WolfFile) -> &'static str {
 
 // num values are chunk offsets. They need to be translated to
 // picture offset in the graphics array with GraphicNum::PG13PIC - STARTPICS.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum GraphicNum {
 	// Lump Start
 	COPTIONSPIC = 10,
 	CCURSOR1PIC = 11,
+	CCURSOR2PIC = 12,
 	CMOUSELBACKPIC = 18,
 	
 	CLEVELPIC = 38,
