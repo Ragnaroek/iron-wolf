@@ -2,8 +2,6 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
-use std::time::Instant;
-
 use vgaemu::input::NumCode;
 
 use crate::act1::move_doors;

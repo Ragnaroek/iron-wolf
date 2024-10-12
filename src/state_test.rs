@@ -43,6 +43,7 @@ fn mock_level_state(player: ObjType) -> LevelState {
         statics: Vec::with_capacity(0),
         spotvis: vec![vec![false; MAP_SIZE]; MAP_SIZE],
         vislist: Vec::with_capacity(0),
+        thrustspeed: 0,
     }
 }
 

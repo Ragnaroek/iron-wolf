@@ -1,5 +1,6 @@
 use crate::act1::open_door;
-use crate::def::{ObjType, StateType, Sprite, DirType, EnemyType, SPD_PATROL, ObjKey, LevelState, ControlState, FL_SHOOTABLE, ClassType, DoorAction, TILEGLOBAL, TILESHIFT};
+use crate::agent::take_damage;
+use crate::def::{ObjType, StateType, Sprite, DirType, EnemyType, SPD_PATROL, ObjKey, LevelState, ControlState, FL_SHOOTABLE, ClassType, DoorAction, TILEGLOBAL, TILESHIFT, RUN_SPEED, FL_VISABLE};
 use crate::state::{spawn_new_obj, new_state, sight_player, check_line, select_dodge_dir, select_chase_dir, move_obj};
 use crate::play::ProjectionConfig;
 use crate::user::rnd_t;
@@ -279,8 +280,62 @@ fn dir_from_tile(tile_dir: u16) -> DirType {
 	}
 }
 
-// FIGHT
+/*
+=============================================================================
 
+								FIGHT
+
+=============================================================================
+*/
+
+/// Try to damage the player, based on skill level and player's speed
 fn t_shoot(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &mut ControlState, prj: &ProjectionConfig) {
-    panic!("impl t_shoot");
+    
+    let mut hit_chance = 128;
+
+    // TODO areabyplayer check!
+
+    let obj = level_state.obj(k);
+    let player = level_state.player();
+    if !check_line(&level_state, obj) { // player is behind a wall
+        return;
+    }
+    
+    let dx = obj.tilex.abs_diff(player.tilex);
+    let dy = obj.tiley.abs_diff(player.tiley);
+    
+    let mut dist = if dx > dy { dx } else { dy };
+    if obj.class == ClassType::SS || obj.class == ClassType::Boss {
+        dist = dist * 2 / 3; // ss are better shots
+    }
+
+    if level_state.thrustspeed >= RUN_SPEED {
+        if obj.flags & FL_VISABLE != 0 {
+            hit_chance = 160 - dist * 16; // player can see to dodge
+        } else {
+            hit_chance = 160 - dist * 8;
+        }
+    } else {
+        if obj.flags & FL_VISABLE != 0 {
+            hit_chance = 256 - dist * 16; // player can see to dodge
+        } else {
+            hit_chance = 256 - dist * 8;
+        }
+    }
+
+    // see if the shot was a hit
+
+    if rnd_t() < hit_chance as u8 {
+        let damage = if dist < 2 {
+            rnd_t() >> 2   
+        } else if dist < 4 {
+            rnd_t() >> 3
+        } else {
+            rnd_t() >> 4
+        };
+
+        take_damage(obj, damage as u64)
+    }
+
+    // TODO Play fire sounds!
 }

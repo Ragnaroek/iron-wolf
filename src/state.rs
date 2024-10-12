@@ -443,12 +443,12 @@ pub fn select_chase_dir(k: ObjKey, level_state: &mut LevelState, player_tile_x: 
     level_state.update_obj(k, |obj| obj.dir = DirType::NoDir); // can't move
 }
 
-// Moves ob be move global units in ob->dir direction
-// Actors are not allowed to move inside the player
-// Does NOT check to see if the move is tile map valid
-//
-// ob->x			= adjusted for new position
-// ob->y
+/// Moves ob be move global units in ob->dir direction
+/// Actors are not allowed to move inside the player
+/// Does NOT check to see if the move is tile map valid
+///
+/// ob->x			= adjusted for new position
+/// ob->y
 pub fn move_obj(player_x: i32, player_y: i32, obj: &mut ObjType, mov: i32, tics: u64) {
     match obj.dir {
         DirType::North => {

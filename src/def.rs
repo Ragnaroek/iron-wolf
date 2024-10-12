@@ -5,7 +5,6 @@ use libiw::gamedata::{TextureData, SpriteData};
 
 use crate::fixed::Fixed;
 use crate::play::ProjectionConfig;
-use crate::time;
 
 pub const GLOBAL1 : i32	= 1<<16;
 pub const MAP_SIZE : usize = 64;
@@ -15,6 +14,8 @@ pub const ANGLES : usize = 360; //must be divisable by 4
 pub const ANGLES_I32 : i32 = ANGLES as i32;
 pub const ANGLE_QUAD : usize = ANGLES/4;
 pub const TILEGLOBAL : i32 = 1<<16;
+
+pub const RUN_SPEED : i32 = 6000;
 
 pub const MIN_ACTOR_DIST : i32 = 0x10000;
 
@@ -112,6 +113,8 @@ pub struct LevelState {
     pub statics: Vec<StaticType>,
     pub spotvis: Vec<Vec<bool>>,
     pub vislist: Vec<VisObj>, // allocate this once and re-use
+    //misc
+    pub thrustspeed: i32,
 }
 
 // This is the key of the actor in the LevelState actors[] array

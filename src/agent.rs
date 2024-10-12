@@ -100,6 +100,11 @@ pub fn take_damage(attacker: &ObjType, points: u64) {
 }
 
 fn control_movement(k: ObjKey, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
+    
+    level_state.thrustspeed = 0;    
+
+    // TODO Impl strafing
+    
     // side to side move
     let control_x = control_state.control.x;
     let control_y = control_state.control.y;
@@ -133,6 +138,11 @@ fn control_movement(k: ObjKey, level_state: &mut LevelState, control_state: &mut
 }
 
 pub fn thrust(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig, angle: i32, speed_param: i32) {
+    
+    //TODO reset funnyticount (only for Spear?)
+
+    level_state.thrustspeed += speed_param;
+    
     let speed = new_fixed_i32(if speed_param >= MIN_DIST*2 {
         MIN_DIST*2-1
     } else {
@@ -146,9 +156,7 @@ pub fn thrust(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig, a
 
     let obj = level_state.mut_obj(k);
     obj.tilex = obj.x as usize >> TILESHIFT;
-    obj.tiley = obj.y as usize >> TILESHIFT;
-
-    //TODO update thrustspeed + reset funnyticount (only for Spear?)
+    obj.tiley = obj.y as usize >> TILESHIFT;    
 }
 
 fn clip_move(k : ObjKey, level_state: &mut LevelState, x_move: i32, y_move: i32) {
