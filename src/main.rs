@@ -32,7 +32,7 @@ fn main() -> Result<(), String> {
 
     init_game(&vga);
 
-    let input_monitoring = screen::new_input_monitoring();
+    let input_monitoring = vgaemu::input::new_input_monitoring();
 
     let vga_screen = Arc::new(vga);
     let render = vga_render::init(vga_screen.clone(), graphics);
