@@ -6,7 +6,7 @@ use crate::play::ProjectionConfig;
 use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES};
 use crate::vga_render::Renderer;
 use crate::vga_render;
-use crate::fixed::{Fixed, fixed_mul, fixed_by_frac, new_fixed_i32};
+use crate::fixed::{Fixed, fixed_by_frac, new_fixed_i32};
 
 const DEG90 : usize = 900;
 const DEG180 : usize = 1800;
@@ -362,8 +362,8 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
         rc.cast(&level_state.level);
 
         match rc.hit {
-            Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, assets),
-            Hit::HorizontalWall|Hit::HorizontalBorder => hit_horiz_wall(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, assets),
+            Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state.level, assets),
+            Hit::HorizontalWall|Hit::HorizontalBorder => hit_horiz_wall(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state.level, assets),
             // TODO hit other things (door, pwall)
         }
     }
@@ -437,7 +437,7 @@ pub fn scale_post(scaler_state: &ScalerState, height: i32, prj: &ProjectionConfi
     }
 }
 
-pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &dyn Renderer, assets: &Assets) {
+pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &dyn Renderer, level: &Level, assets: &Assets) {
     let mut post_source = 0xFC0 - ((rc.y_intercept>>4) & 0xFC0);
     if rc.x_tilestep == -1 {
         post_source = 0xFC0-post_source;
@@ -452,7 +452,13 @@ pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts:
     }
 
     let texture_ix = if rc.tile_hit & 0x040 != 0 {
-        vert_wall(rc.tile_hit as usize & !0x40)
+        rc.y_tile = rc.y_intercept >> TILESHIFT;
+        if level.tile_map[(rc.x_tile-rc.x_tilestep) as usize][rc.y_tile as usize]&0x80 != 0 {
+            // TODO replace 106 constant with value loaded from assets/level
+            (106 - 8)+3
+        } else {
+            vert_wall(rc.tile_hit as usize & !0x40)
+        }
     } else {
         vert_wall(rc.tile_hit as usize)
     };
@@ -464,7 +470,7 @@ pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts:
     scaler_state.texture_ix = texture_ix;
 }
 
-pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &dyn Renderer, assets: &Assets) {
+pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &dyn Renderer, level: &Level, assets: &Assets) {
     let mut post_source = 0xFC0 - ((rc.x_intercept>>4) & 0xFC0);
     if rc.y_tilestep == -1 {
         rc.y_intercept += TILEGLOBAL;
@@ -479,8 +485,15 @@ pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts
         scale_post(scaler_state, height, prj, rdr, assets);
     }
 
+    //??? will this ever become true for doors? This is also checked in the raycast?
     let texture_ix = if rc.tile_hit & 0x040 != 0 {
-        horiz_wall(rc.tile_hit as usize & !0x40)
+        rc.x_tile = rc.x_intercept >> TILESHIFT;
+        if level.tile_map[rc.x_tile as usize][(rc.y_tile-rc.y_tilestep) as usize] & 0x80 != 0 {
+            // TODO replace 106 constant with value loaded from assets/level
+            (106 - 8)+2
+        } else {
+            horiz_wall(rc.tile_hit as usize & !0x40)
+        }
     } else {
         horiz_wall(rc.tile_hit as usize)
     };
