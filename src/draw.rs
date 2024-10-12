@@ -321,18 +321,48 @@ impl RayCast {
                     if hit {
                         //hithoriz:
                         self.tile_hit = tile;
+                        let mut do_break: bool = false;
                         if tile & 0x80 != 0 {
-                            // TODO handle half-closed door here
-                            self.hit = Hit::HorizontalDoor;
+                            self.x_tile = self.bx; // save off live register variables
+                            self.y_intercept = self.y_intercept & 0xFFFF | self.dx << 16;
+
+                            if tile & 0x40 != 0 {
+                                //TOOD handle horizpushwall here
+                            }
+
+                            let door_num = (self.tile_hit & 0x7f) as usize;
+                            let x_0 = self.x_step >> 1;
+                            let x = x_0 + self.x_intercept;
+                            let dx = (x >> 16) & 0xFFFF;
+                            let ic = (self.x_intercept >> 16) & 0xFFFF;
+                            if ic == dx { // is it still in the same tile?
+                                //hithmid
+                                let door_pos = level_state.doors[door_num].position;
+                                let ax = (x & 0xFFFF) as u16;
+                                if ax < door_pos {
+                                    self.bx = self.x_tile;
+                                    self.dx = ic;
+                                    do_break = false //continue with passhoriz
+                                } else { //draw the door
+                                    self.x_intercept = (self.x_intercept & (0xFFFF << 16)) | ax as i32; 
+                                    self.y_intercept = (self.bp & 0xFFFF as i32) << 16 | 0x8000;
+                                    do_break = true;
+                                    self.hit = Hit::HorizontalDoor
+                                }
+                            } //else continue with tracing in passhoriz
                         } else {
+                            do_break = true;
                             self.hit = Hit::HorizontalWall;
+                            self.x_intercept &= 0xFFFF;
+                            self.x_intercept |= self.cx << 16;
+                            self.x_tile = self.cx;
+                            self.y_intercept = self.bp << 16;
+                            self.y_tile = self.bp;
                         }
-                        self.x_intercept &= 0xFFFF;
-                        self.x_intercept |= self.cx << 16;
-                        self.x_tile = self.cx;
-                        self.y_intercept = self.bp << 16;
-                        self.y_tile = self.bp;
-                        break 'checkLoop;
+
+                        if do_break {
+                            break 'checkLoop;
+                        }
                     }
                     //passhoriz:
                     // TODO update spotvis
@@ -405,7 +435,7 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
             Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state.level, assets),
             Hit::HorizontalWall|Hit::HorizontalBorder => hit_horiz_wall(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state.level, assets),
             Hit::VerticalDoor => hit_vert_door(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state, assets),
-            Hit::HorizontalDoor => hit_horiz_door(),
+            Hit::HorizontalDoor => hit_horiz_door(&mut scaler_state, &mut rc, &consts, pixx, prj, rdr, &level_state, assets),
             // TODO hit other things (pwall)
         }
     }
@@ -547,11 +577,24 @@ pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts
     scaler_state.texture_ix = texture_ix;
 }
 
-pub fn hit_horiz_door() {
+pub fn hit_horiz_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &dyn Renderer, level_state: &LevelState, assets: &Assets) {
+    let doornum = rc.tile_hit & 0x7F;
+    let doorpos = level_state.doors[doornum as usize].position as i32;
+    let post_source = (rc.x_intercept - doorpos ) >> 4 & 0xFC0;
+    let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, consts);
+    rc.wall_height[pixx] = height;
+    if scaler_state.last_side {
+        scale_post(scaler_state, height, prj, rdr, assets);
+    } 
+
+    scaler_state.last_side = true;
+    scaler_state.post_x = pixx;
+    scaler_state.post_width = 1;
+    scaler_state.post_source = post_source as usize;
+    scaler_state.texture_ix = 98; //TODO take texture based on lock state of door 
 }
 
 pub fn hit_vert_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &dyn Renderer, level_state: &LevelState, assets: &Assets) {
-    //TOOD incorporate doorposition here
     let doornum = rc.tile_hit & 0x7F;
     let doorpos = level_state.doors[doornum as usize].position as i32;
     let post_source = (rc.y_intercept - doorpos ) >> 4 & 0xFC0;

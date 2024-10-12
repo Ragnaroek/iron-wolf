@@ -10,7 +10,7 @@ use crate::draw::three_d_refresh;
 use crate::vga_render::Renderer;
 use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS};
 use crate::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
-use crate::input;
+use crate::{input, play};
 use crate::time;
 use crate::vga_render;
 use crate::game::setup_game_level;
@@ -193,6 +193,11 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
         let tics = ticker.calc_tics();
 
         poll_controls(control_state, tics, input);
+
+        if input.key_pressed(NumCode::P) {
+            let player = level_state.player();
+            println!("x={},y={},angle={}", player.x, player.y, player.angle); 
+        }
 
         move_doors(level_state, tics);
 
