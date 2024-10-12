@@ -33,11 +33,11 @@ pub fn new_fixed(int_part: i32, frac_part: i32) -> Fixed {
     Fixed(int_part << 16 | frac_part)
 }
 
-pub fn new_fixed_raw(raw: i32) -> Fixed {
+pub fn new_fixed_i32(raw: i32) -> Fixed {
     Fixed(raw)
 }
 
-pub fn new_fixed_raw_u32(raw: u32) -> Fixed {
+pub fn new_fixed_u32(raw: u32) -> Fixed {
     Fixed(raw as i32)
 }
 
@@ -58,6 +58,14 @@ impl fmt::Debug for Fixed {
         let i = self.0 >> 16;
         let frac = self.0 & 0xFFFF;
         write!(f, "{:#04x}.{:#04x}({}.{})", i, frac, i, frac)
+    }
+}
+
+impl std::ops::Neg for Fixed {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        new_fixed_i32(-self.0)
     }
 }
 

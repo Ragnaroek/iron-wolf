@@ -1,7 +1,8 @@
+
 use super::play::ProjectionConfig;
 use super::game::TILESHIFT;
-use super::def::{StateType, ObjType, ObjKey, LevelState, At, ANGLES, MIN_DIST, PLAYER_SIZE, TILEGLOBAL};
-use super::wolf_hack::fixed_mul;
+use super::draw::fixed_by_frac;
+use super::def::{StateType, ObjType, ObjKey, LevelState, At, new_fixed_i32, ANGLES, MIN_DIST, PLAYER_SIZE, TILEGLOBAL};
 
 const ANGLE_SCALE : i32 = 20;
 const MOVE_SCALE : i32 = 150;
@@ -69,24 +70,24 @@ fn control_movement(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionCon
 
 pub fn thrust(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig, angle: i32, speed_param: i32) {
 
-    let speed = if speed_param >= MIN_DIST*2 {
+    let speed = new_fixed_i32(if speed_param >= MIN_DIST*2 {
         MIN_DIST*2-1
     } else {
         speed_param
-    };
+    });
 
-    let x_move = fixed_mul(speed, prj.cos(angle as usize));
-    let y_move: i32 = -fixed_mul(speed, prj.sin(angle as usize));
+    let x_move = fixed_by_frac(speed, prj.cos(angle as usize));
+    let y_move = -fixed_by_frac(speed, prj.sin(angle as usize));
 
     //println!("xmove={}, ymove={}, angle={}", x_move, y_move, angle);
-    println!("xmove=({}, {})={};a={}", speed, prj.cos(angle as usize), x_move, angle);
-    println!("ymove=({}, {})={};a={}", speed, prj.sin(angle as usize), y_move, angle);
+    println!("xmove=({}, {})={};a={}", speed.to_i32(), prj.cos(angle as usize), x_move.to_i32(), angle);
+    println!("ymove=({}, {})={};a={}", speed.to_i32(), prj.sin(angle as usize), y_move.to_i32(), angle);
 
     /*{
         let ob = level_state.obj(k);
         println!("before: ob.x={},ob.y={},ob.angle={}", ob.x, ob.y, ob.angle);
     }*/
-    clip_move(k, level_state, x_move, y_move);
+    clip_move(k, level_state, x_move.to_i32(), y_move.to_i32());
     /*{
         let ob = level_state.obj(k);
         println!("after: ob.x={},ob.y={},ob.angle={}", ob.x, ob.y, ob.angle);
@@ -143,11 +144,8 @@ fn try_move(k : ObjKey, level_state: &mut LevelState) -> bool {
                 At::Wall(_) => true,
                 _ => false,
             } {
-                //println!("hit wall: {:?}", level_state.actor_at[x as usize][y as usize]);
                 return false;
-            } else {
-                //println!("no hit wall {:?}", level_state.actor_at[x as usize][y as usize]);
-            }
+            } 
         }
     }
 
