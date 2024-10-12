@@ -1,33 +1,41 @@
 pub mod assets;
 pub mod vga_render;
 pub mod vl;
+pub mod config;
 
 use std::sync::Arc;
 use std::io::prelude::*;
 use std::fs::File;
-use std::{thread, time};
+use std::thread;
+use std::path::Path;
 
 use vgaemu::screen;
 use vgaemu::{SCReg, set_vertical_display_end};
 
+use assets::{GraphicNum};
 use vga_render::Renderer;
+use config::Config;
 
-fn main() {
+fn main() -> Result<(), String> {
+
+    let config = load_config();
+
     let vga = vgaemu::new(0x13);
-
 	//enable Mode X
 	let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
 	vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 	set_vertical_display_end(&vga, 480);
 
+    let graphics = assets::load_all_graphics(&config)?;
+
     init_game(&vga);
 
     let vga_screen = Arc::new(vga);
-    let render = vga_render::init(vga_screen.clone());
+    let render = vga_render::init(vga_screen.clone(), graphics);
 
 	thread::spawn(move || { 
         // TODO Wait for key press instead
-        thread::sleep(time::Duration::from_secs(3));
+        //thread::sleep(time::Duration::from_secs(3));
         pg_13(&render);
     });
 
@@ -38,6 +46,7 @@ fn main() {
 		..Default::default()
 	};
 	screen::start(vga_screen, options).unwrap();
+    Ok(())
 }
 
 fn init_game(vga: &vgaemu::VGA) {
@@ -74,5 +83,14 @@ fn signon_screen(vga: &vgaemu::VGA) {
 
 fn pg_13(rdr: &dyn Renderer) {
     rdr.bar(0, 0, 320, 200, 0x82);
-    //TODO draw pg13 pic from assets
+    rdr.pic(216, 110, GraphicNum::PG13PIC);
+
+    //TODO Fade In & Fade Out
+}
+
+fn load_config() -> Config {
+    //TODO load from file
+    Config {
+        wolf3d_data: Path::new("/Users/mb/_w3d/w3d_data")
+    }
 }
