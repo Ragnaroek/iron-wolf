@@ -9,14 +9,12 @@ use libiw::assets::{GAMEPAL};
 use super::assets::{Graphic, GraphicNum};
 use super::vl;
 
-const MAXSCANLINES: usize = 200;
 pub const SCREENBWIDE: usize = 80;
 pub const SCREEN_SIZE: usize = SCREENBWIDE * 208;
 
 pub const PAGE_1_START: usize = 0;
 pub const PAGE_2_START: usize = SCREEN_SIZE;
 pub const PAGE_3_START: usize = SCREEN_SIZE*2;
-const FREE_START: usize = SCREEN_SIZE*3;
 
 static PIXMASKS: [u8; 4] = [1, 2, 4, 8];
 static LEFTMASKS: [u8; 4]	= [15, 14, 12, 8];
