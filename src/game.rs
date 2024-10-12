@@ -1,11 +1,11 @@
 
-use crate::def::{Sprite, StaticType, VisObj, MAX_STATS, MAX_DOORS};
-
-use super::def::{Assets, ObjType, Level, LevelState, At, MAP_SIZE, PLAYER_KEY};
-use super::assets::load_map_from_assets;
-use super::act1::{spawn_door, spawn_static};
-use super::agent::{spawn_player, thrust};
-use super::play::ProjectionConfig;
+use crate::def::{Sprite, StaticType, VisObj, MAX_STATS, MAX_DOORS, ObjKey};
+use crate::act2::dead_guard;
+use crate::def::{Assets, ObjType, Level, LevelState, At, MAP_SIZE, PLAYER_KEY};
+use crate::assets::load_map_from_assets;
+use crate::act1::{spawn_door, spawn_static};
+use crate::agent::{spawn_player, thrust};
+use crate::play::ProjectionConfig;
 
 pub const AREATILE : u16 = 107;
 
@@ -62,9 +62,7 @@ pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) 
 		}
 	}
 
-	let (player, statics) = scan_info_plane(&map_data, &mut actor_at);
-    let actors = init_actors(player);
-
+	let (actors, statics) = scan_info_plane(&map_data, &mut actor_at);
     let mut level_state = LevelState{
         level: Level {
 		    tile_map,
@@ -78,35 +76,115 @@ pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) 
 	};
 
     thrust(PLAYER_KEY, &mut level_state, prj, 0, 0); // set some variables
-	//TODO init_static_list?
 
 	//TODO ambush markers
 	Ok(level_state)
 }
 
-fn init_actors(player: ObjType) -> Vec<ObjType> {
-    vec![player]
-    //TODO init NP actors here
-}
-
-//Returns the player object
-fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>) -> (ObjType, Vec<StaticType>) {
+// By convention the first element in the returned actors vec is the player
+fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>) -> (Vec<ObjType>, Vec<StaticType>) {
 	let mut player = None;
 	let mut statics = Vec::new();
+	let mut actors = Vec::new();
 
 	let mut map_ptr = 0;
 	for y in 0..MAP_SIZE {
 		for x in 0..MAP_SIZE {
 			let tile = map_data.segs[1][map_ptr];
 			map_ptr += 1;
+			
 			match tile {
-				19..=22 => player = Some(spawn_player(x, y, NORTH+(tile-19)as i32)),
-				23..=74 => {
+				19..=22 => { // player start position
+					player = Some(spawn_player(x, y, NORTH+(tile-19)as i32))
+				}
+				23..=74 => { // statics
 					if statics.len() >= MAX_STATS {
 						panic!("Too many static objects!")
 					}
 					statics.push(spawn_static(actor_at, x, y, (tile-23) as usize));
+
 				},
+				98 => { // P wall
+					// TODO push wall
+				},
+				108..=111 => { // guard stand: normal mode
+
+				},
+				112..=115 => { // guard patrol: normal mode
+
+				},
+				116..=119 => { // officer stand: normal mode
+
+				},
+				120..=123 => { // officer patrol: normal mode
+
+				},
+				124 => { // guard: dead
+					spawn(&mut actors, actor_at, dead_guard(x, y));
+				},
+				126..=129 => { // ss stand: normal mode
+
+				},
+				130..=133 => { // ss patrol: normal mode
+
+				},
+				134..=137 => { // dogs stand: normal mode
+
+				},
+				138..=141 => { // dogs patrol: normal mode
+
+				},
+				144..=147 => { // guard stand: medium mode
+
+				},
+				148..=151 => { // guard patrol: medium mode
+
+				},
+				152..=155 => { // officer stand: medium mode
+
+				},
+				156..=159 => { // officer patrol: medium mode
+
+				},
+				162..=165 => { // ss stand: medium mode
+
+				},
+				166..=169 => { // ss patrol: medium mode
+
+				},
+				170..=173 => { // dogs stand: medium mode
+
+				},
+				174..=177 => { // dogs patrol: medium mode
+
+				},
+				180..=183 => { // guard stand: hard mode
+
+				},
+				184..=187 => { // guard patrol: hard mode
+
+				},
+				188..=191 => { // officer stand: hard mode
+
+				},
+				192..=195 => { // officer patrol: hard mode
+
+				},
+				198..=201 => { // ss stand: hard mode
+
+				},
+				202..=205 => { // ss patrol: hard mode
+
+				},
+				206..=209 => { // dogs stand: hard mode
+
+				},
+				210..=213 => { // dogs patrol: hard mode
+
+				}
+
+				// TODO scan bosses, mutants and ghosts
+
 				_ => {},
 			}
 		}
@@ -116,6 +194,14 @@ fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>)
 		panic!("No player start position in map");
 	}
 
-	(player.unwrap(), statics)
+	actors.insert(0, player.unwrap());
+
+	(actors, statics)
 }
 
+// spawns the obj into the map
+fn spawn(actors: &mut Vec<ObjType>, actor_at: &mut Vec<Vec<At>>, obj: ObjType) {
+	actors.push(obj);
+	let key = ObjKey(actors.len()); // +1 offset (not len()-1), since player will be later at position 0 and positions will shift
+	actor_at[obj.tilex][obj.tiley] = At::Obj(key)
+}

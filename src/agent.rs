@@ -1,6 +1,6 @@
 use crate::act1::operate_door;
 use crate::play::ProjectionConfig;
-use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT};
+use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, StateNext, FL_NEVERMARK};
 use crate::fixed::{new_fixed_i32, fixed_by_frac};
 
 const ANGLE_SCALE : i32 = 20;
@@ -8,8 +8,11 @@ const MOVE_SCALE : i32 = 150;
 const BACKMOVE_SCALE : i32 = 100;
 
 pub const S_PLAYER : StateType = StateType{
+    rotate: false,
+    sprite: None,
+    tic_count: 0,
     think: Some(t_player),
-    next: None,
+    next: StateNext::None,
 };
 
 fn t_player(k: ObjKey, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
@@ -62,10 +65,16 @@ fn cmd_use(level_state: &mut LevelState, control_state: &mut ControlState) {
 
 pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
 	let r = ObjType{
-		angle: (1-dir)*90, 
+        active: true,
+		angle: (1-dir)*90,
+        flags: FL_NEVERMARK, 
         pitch: 0,
 		tilex,
 		tiley,
+        view_x: 0,
+        view_height: 0,
+        trans_x: new_fixed_i32(0),
+        trans_y: new_fixed_i32(0),
 		x: ((tilex as i32) << TILESHIFT) + TILEGLOBAL / 2,
 		y: ((tiley as i32) << TILESHIFT) + TILEGLOBAL / 2,
         state: &S_PLAYER,
