@@ -90,7 +90,7 @@ pub async fn game_loop(ticker: &time::Ticker, game_state: &mut GameState, vga: &
 }
 
 async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, rc: &mut RayCast, rdr: &VGARenderer, prj: &ProjectionConfig, input: &Input, assets: &Assets) {
-	game_state.weapon = WeaponType::None; // take away weapon
+	game_state.weapon = None; // take away weapon
 	//TODO SD_PlaySound(PLAYERDEATHSND)
 
 	let player = level_state.player();
@@ -188,7 +188,7 @@ async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &
 
 	if game_state.lives > -1 {
 		game_state.health = 100;
-		game_state.weapon = WeaponType::Pistol;
+		game_state.weapon = Some(WeaponType::Pistol);
 		game_state.best_weapon = WeaponType::Pistol;
 		game_state.chosen_weapon = WeaponType::Pistol;
 		game_state.keys = 0;

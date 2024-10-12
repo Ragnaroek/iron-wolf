@@ -72,16 +72,16 @@ fn t_attack(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
 
     game_state.attack_count -= tics as i32;
     while game_state.attack_count <= 0 {
-        let cur = &ATTACK_INFO[game_state.weapon as usize][game_state.attack_frame];
+        let cur = &ATTACK_INFO[game_state.weapon.expect("weapon") as usize][game_state.attack_frame];
         match cur.attack {
             -1 => {
                 level_state.update_obj(k, |obj| obj.state = Some(&S_PLAYER));
                 if game_state.ammo <= 0 {
-                    game_state.weapon = WeaponType::Knife;
+                    game_state.weapon = Some(WeaponType::Knife);
                     draw_weapon(&game_state, rdr);
                 } else {
-                    if game_state.weapon != game_state.chosen_weapon {
-                        game_state.weapon = game_state.chosen_weapon;
+                    if game_state.weapon.is_some() && game_state.weapon.unwrap() != game_state.chosen_weapon {
+                        game_state.weapon = Some(game_state.chosen_weapon);
                         draw_weapon(&game_state, rdr);
                     }
                 }
@@ -107,7 +107,9 @@ fn t_attack(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
                 game_state.ammo -= 1;
                 draw_ammo(&game_state, rdr);
             },
-            2 => {panic!("attack 2")},
+            2 => {
+                knife_attack(level_state, game_state, rdr, prj);
+            },
             3 => {
                 if game_state.ammo != 0 && control_state.button_state[Button::Attack as usize] {
                     game_state.attack_frame -= 2;
@@ -118,8 +120,31 @@ fn t_attack(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
 
         game_state.attack_count += cur.tics;
         game_state.attack_frame += 1;
-        game_state.weapon_frame = ATTACK_INFO[game_state.weapon as usize][game_state.attack_frame].frame;
+        game_state.weapon_frame = ATTACK_INFO[game_state.weapon.unwrap() as usize][game_state.attack_frame].frame;
     }
+}
+
+fn knife_attack(level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {
+    // TODO SD_PlaySound(ATKKNIFESND)
+
+    let mut dist = 0x7fffffff;
+    let mut closest = None;
+    for i in 1..level_state.actors.len() {
+        let check = &level_state.actors[i];
+        if check.flags & FL_SHOOTABLE != 0 &&
+            check.flags & FL_VISABLE != 0 &&
+            check.view_x.abs_diff(prj.center_x as i32) < prj.shoot_delta as u32 {
+                if check.trans_x.to_i32() < dist {
+                    dist = check.trans_x.to_i32();
+                    closest = Some(ObjKey(i));
+                }
+            } 
+    }
+
+    if closest.is_none() || dist > 0x18000 {
+        return; //missed
+    }
+    damage_actor(closest.expect("closest enemy"), level_state, game_state, rdr, (rnd_t() >> 4) as usize)
 }
 
 fn gun_attack(level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {
@@ -127,9 +152,7 @@ fn gun_attack(level_state: &mut LevelState, game_state: &mut GameState, rdr: &VG
     //TODO play weapon sound!
 
     game_state.made_noise = true;
-
     let mut view_dist = 0x7fffffff;
-
     let mut closest = None;
     loop {
         for i in 1..level_state.actors.len() {
@@ -196,8 +219,10 @@ fn cmd_fire(level_state: &mut LevelState, game_state: &mut GameState, control_st
     level_state.mut_player().state = Some(&S_ATTACK);
 
     game_state.attack_frame = 0;
-    game_state.attack_count = ATTACK_INFO[game_state.weapon as usize][game_state.attack_frame].tics;
-    game_state.weapon_frame = ATTACK_INFO[game_state.weapon as usize][game_state.attack_frame].frame;
+    if let Some(weapon) = game_state.weapon {
+        game_state.attack_count = ATTACK_INFO[weapon as usize][game_state.attack_frame].tics;
+        game_state.weapon_frame = ATTACK_INFO[weapon as usize][game_state.attack_frame].frame;
+    }
 }
 
 fn cmd_use(level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState) {
@@ -483,7 +508,7 @@ fn give_weapon(game_state: &mut GameState, rdr: &VGARenderer, weapon: WeaponType
     give_ammo(game_state, rdr, 6);
     if game_state.best_weapon < weapon {
         game_state.best_weapon = weapon;
-        game_state.weapon = weapon;
+        game_state.weapon = Some(weapon);
         game_state.chosen_weapon = weapon;
     }
     draw_weapon(game_state, rdr);
@@ -492,7 +517,7 @@ fn give_weapon(game_state: &mut GameState, rdr: &VGARenderer, weapon: WeaponType
 fn give_ammo(game_state: &mut GameState, rdr: &VGARenderer, ammo: i32) {
     if game_state.ammo <= 0 { // knife was out
         if game_state.attack_frame <= 0 {
-            game_state.weapon = game_state.chosen_weapon;
+            game_state.weapon = Some(game_state.chosen_weapon);
             draw_weapon(&game_state, rdr)
         }
     }
