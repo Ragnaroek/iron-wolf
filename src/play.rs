@@ -2,10 +2,9 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
-use crate::def::{new_fixed, new_fixed_u32, new_fixed_i32};
-
+use super::draw::calc_height;
 use super::vga_render::Renderer;
-use super::def::{GameState, WeaponType, Assets, Level, ObjKey, LevelState, Control, Fixed, GLOBAL1, TILEGLOBAL, MAP_SIZE, ANGLES, ANGLE_QUAD};
+use super::def::{GameState, WeaponType, Assets, Level, ObjKey, LevelState, Control, Fixed, new_fixed, new_fixed_u32, new_fixed_i32, GLOBAL1, TILEGLOBAL, MAP_SIZE, ANGLES, ANGLE_QUAD};
 use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
 use libiw::gamedata::Texture;
 use vgaemu::input::NumCode;
@@ -482,7 +481,7 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
 
         rc.cast(&level_state.level);
         
-        let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, view_x, view_y, view_cos.to_i32(), view_sin.to_i32());
+        let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, view_x, view_y, view_cos, view_sin, pixx == 28);
 
         let side = match rc.hit {
             Hit::HorizontalBorder|Hit::HorizontalWall => 0,
@@ -527,14 +526,6 @@ fn draw_scaled(x: usize, post_src: i32, height: i32, view_height: i32, texture: 
         rdr.plot(x, y_draw as usize, pixel);
         src += step;
     }
-}
-
-fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, view_x: i32, view_y: i32, view_cos: i32, view_sin: i32) -> i32 {
-    let mut z = fixed_mul(new_fixed_i32(x_intercept-view_x), new_fixed_i32(view_cos)).to_i32() - fixed_mul(new_fixed_i32(y_intercept - view_y), new_fixed_i32(view_sin)).to_i32();
-    if z < MIN_DIST {
-         z = MIN_DIST;
-    }
-    (height_numerator << 8) / z
 }
 
 // Clears the screen and already draws the bottom and ceiling
