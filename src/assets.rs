@@ -1,17 +1,17 @@
 use std::fs::{File};
 
 use libiw::map::{load_map, load_map_headers, load_map_offsets, MapType, MapFileType, MapData};
+use libiw::gamedata::{GamedataHeaders, Texture};
 
 use super::def::{WeaponType, Assets, IWConfig};
 use super::util;
-
-pub static GAMEPAL: &'static [u8] = include_bytes!("../assets/gamepal.bin");
 
 pub static GRAPHIC_DICT: &'static str = "VGADICT.WL6";
 pub static GRAPHIC_HEAD: &'static str = "VGAHEAD.WL6";
 pub static GRAPHIC_DATA: &'static str = "VGAGRAPH.WL6";
 pub static MAP_HEAD: &'static str = "MAPHEAD.WL6";
 pub static GAME_MAPS: &'static str = "GAMEMAPS.WL6";
+pub static GAMEDATA: &'static str = "VSWAP.WL6";
 
 #[derive(Copy, Clone)]
 pub enum GraphicNum {
@@ -305,7 +305,7 @@ fn huff_expand(data: &[u8], len: usize, grhuffman: &Vec<Huffnode>) -> Vec<u8> {
 
 // load map and uncompress it
 pub fn load_map_from_assets(assets: &Assets, mapnum: usize) -> Result<MapData, String> {
-	let mut file = File::open(&assets.iw_config.wolf3d_data.join(GAME_MAPS)).unwrap();
+	let mut file = File::open(&assets.iw_config.wolf3d_data.join(GAME_MAPS)).expect("opening map file failed");
 	load_map(&mut file, &assets.map_headers, &assets.map_offsets, mapnum)
 }
 
@@ -314,4 +314,17 @@ pub fn load_map_headers_from_config(config: &IWConfig) -> Result<(MapFileType, V
 	let map_bytes = util::load_file(&config.wolf3d_data.join(GAME_MAPS));
 	let offsets = load_map_offsets(&offset_bytes)?;
 	load_map_headers(&map_bytes, offsets)
-} 
+}
+
+// gamedata stuff
+
+pub fn load_gamedata(config: &IWConfig) -> Result<(Vec<u8>, GamedataHeaders), String> {
+    let mut header_bytes = util::load_file(&config.wolf3d_data.join(GAMEDATA));
+    let headers = libiw::gamedata::load_gamedata_headers(&header_bytes)?;
+    Ok((header_bytes, headers))
+}
+
+pub fn load_all_textures(config: &IWConfig, headers: &GamedataHeaders) -> Result<Vec<Texture>, String> {
+    let mut file = File::open(&config.wolf3d_data.join(GAMEDATA)).expect("opening gamedata file failed");
+    libiw::gamedata::load_all_textures(&mut file, headers)
+}
