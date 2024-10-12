@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use libiw::map::{MapType, MapFileType};
+
 #[derive(Copy, Clone)]
 pub enum WeaponType {
 	Knife,
@@ -20,19 +22,12 @@ pub struct GameState {
 	pub face_frame: usize,
 
 	pub episode : usize,
+
+	pub player: ObjStruct,
 }
 
-pub struct MapType {
-	pub plane_start: [i32; 3],
-	pub plane_length: [u16; 3],
-	pub width: u16,
-	pub height: u16,
-	pub name: String,
-}
-
-pub struct MapFileType {
-	pub rlew_tag: u16,
-	pub header_offsets: Vec<i32>,
+pub struct ObjStruct {
+	pub angle: i32,
 }
 
 // iron-wolf specific configuration

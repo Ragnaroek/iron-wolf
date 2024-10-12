@@ -9,9 +9,6 @@ pub mod game;
 pub mod user;
 pub mod util;
 
-#[cfg(test)]
-mod assets_test;
-
 use std::sync::Arc;
 use std::io::prelude::*;
 use std::fs::File;
@@ -36,7 +33,7 @@ fn main() -> Result<(), String> {
 	vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
     let graphics = assets::load_all_graphics(&iw_config)?;
-    let (map_offsets, map_headers) = assets::load_map_headers(&iw_config)?;
+    let (map_offsets, map_headers) = assets::load_map_headers_from_config(&iw_config)?;
 
     let assets = Assets {
         map_headers,
