@@ -56,7 +56,7 @@ pub async fn game_loop(ticker: &time::Ticker, game_state: &mut GameState, vga: &
 				draw_keys(&game_state, rdr);
 				vw_fade_out(vga).await;
 
-				level_completed(ticker, rdr, input, game_state, win_state).await;
+				level_completed(ticker, rdr, input, game_state, prj, win_state).await;
 
 				game_state.old_score = game_state.score;
 
@@ -87,7 +87,6 @@ pub async fn game_loop(ticker: &time::Ticker, game_state: &mut GameState, vga: &
 			_ => panic!("not implemented end with state {:?}", game_state.play_state)
 		}
 	}
-	//TODO Go to next level (gamestate.map_on+=1)
 }
 
 async fn died(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, rc: &mut RayCast, rdr: &VGARenderer, prj: &ProjectionConfig, input: &Input, assets: &Assets) {
@@ -338,7 +337,7 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 					spawn_stand(EnemyType::Guard, &mut actors, actor_at, x, y, tile-108, difficulty);
 				},
 				112..=115 => { // guard patrol: normal mode
-					spawn_patrol(EnemyType::Guard, &mut actors, actor_at, x, y, tile-112, difficulty);
+					spawn_patrol(EnemyType::Guard, &mut actors, actor_at, game_state, x, y, tile-112, difficulty);
 				},
 				116..=119 => { // officer stand: normal mode
 					todo!("officer stand");
@@ -353,16 +352,16 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 					todo!("trans");
 				},
 				126..=129 => { // ss stand: normal mode
-					todo!("ss stand");
+					spawn_stand(EnemyType::SS, &mut actors, actor_at, x, y, tile-126, difficulty);
 				},
 				130..=133 => { // ss patrol: normal mode
-					todo!("ss patrol");
+					spawn_patrol(EnemyType::SS, &mut actors, actor_at, game_state, x, y, tile-130, difficulty);
 				},
 				134..=137 => { // dogs stand: normal mode
 					spawn_stand(EnemyType::Dog, &mut actors, actor_at, x, y, tile-134, difficulty);
 				},
 				138..=141 => { // dogs patrol: normal mode
-					spawn_patrol(EnemyType::Dog, &mut actors, actor_at, x, y, tile-138, difficulty);
+					spawn_patrol(EnemyType::Dog, &mut actors, actor_at, game_state, x, y, tile-138, difficulty);
 				},
 				142 => {
 					todo!("uber");
@@ -377,7 +376,7 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 				},
 				148..=151 => { // guard patrol: medium mode
 					if difficulty >= Difficulty::Medium {
-						spawn_patrol(EnemyType::Guard, &mut actors, actor_at, x, y, tile-148, difficulty);
+						spawn_patrol(EnemyType::Guard, &mut actors, actor_at, game_state, x, y, tile-148, difficulty);
 					}
 				},
 				152..=155 => { // officer stand: medium mode
@@ -393,10 +392,14 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 					todo!("death");
 				},
 				162..=165 => { // ss stand: medium mode
-					todo!("ss stand");
+					if difficulty >= Difficulty::Medium {
+						spawn_stand(EnemyType::SS, &mut actors, actor_at, x, y, tile-162, difficulty);
+					}
 				},
 				166..=169 => { // ss patrol: medium mode
-					todo!("ss patrol");
+					if difficulty >= Difficulty::Medium {
+						spawn_patrol(EnemyType::SS, &mut actors, actor_at, game_state, x, y, tile-166, difficulty);
+					}
 				},
 				170..=173 => { // dogs stand: medium mode
 					if difficulty >= Difficulty::Medium {
@@ -405,7 +408,7 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 				},
 				174..=177 => { // dogs patrol: medium mode
 					if difficulty >= Difficulty::Medium {
-						spawn_patrol(EnemyType::Dog, &mut actors, actor_at, x, y, tile-174, difficulty);
+						spawn_patrol(EnemyType::Dog, &mut actors, actor_at, game_state, x, y, tile-174, difficulty);
 					}
 				},
 				178 => {
@@ -421,7 +424,7 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 				},
 				184..=187 => { // guard patrol: hard mode
 					if difficulty >= Difficulty::Hard {
-						spawn_patrol(EnemyType::Guard, &mut actors, actor_at, x, y, tile-184, difficulty);
+						spawn_patrol(EnemyType::Guard, &mut actors, actor_at, game_state, x, y, tile-184, difficulty);
 					}
 				},
 				188..=191 => { // officer stand: hard mode
@@ -437,10 +440,14 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 					todo!("gretel");
 				},
 				198..=201 => { // ss stand: hard mode
-					todo!("ss stand");
+					if difficulty >= Difficulty::Hard {
+						spawn_stand(EnemyType::SS, &mut actors, actor_at, x, y, tile-198, difficulty)
+					}
 				},
 				202..=205 => { // ss patrol: hard mode
-					todo!("ss patrol");
+					if difficulty >= Difficulty::Hard {
+						spawn_patrol(EnemyType::SS, &mut actors, actor_at, game_state, x, y, tile-202, difficulty);
+					}
 				},
 				206..=209 => { // dogs stand: hard mode
 					if difficulty >= Difficulty::Hard {
@@ -449,7 +456,7 @@ fn scan_info_plane(map_data: &map::MapData, game_state: &mut GameState, actor_at
 				},
 				210..=213 => { // dogs patrol: hard mode
 					if difficulty >= Difficulty::Hard {
-						spawn_patrol(EnemyType::Dog, &mut actors, actor_at, x, y, tile-210, difficulty);
+						spawn_patrol(EnemyType::Dog, &mut actors, actor_at, game_state, x, y, tile-210, difficulty);
 					}
 				}
 				214 => {

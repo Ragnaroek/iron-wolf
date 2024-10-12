@@ -541,6 +541,249 @@ pub static S_SSSTAND : StateType = StateType {
     next: Some(&S_SSSTAND),   
 };
 
+pub static S_SSPATH1 : StateType = StateType {
+    rotate: 1,
+    sprite: Some(Sprite::SSW11),
+    tic_time: 20,
+    think: Some(t_path),
+    action: None,
+    next: Some(&S_SSPATH1S),
+};
+
+pub static S_SSPATH1S : StateType = StateType {
+    rotate: 1,
+    sprite: Some(Sprite::SSW11),
+    tic_time: 5,
+    think: None,
+    action: None,
+    next: Some(&S_SSPATH2),    
+};
+
+pub static S_SSPATH2 : StateType = StateType {
+    rotate: 1,
+    sprite: Some(Sprite::SSW21),
+    tic_time: 15,
+    think: Some(t_path),
+    action: None,
+    next: Some(&S_SSPATH3),
+};
+
+pub static S_SSPATH3 : StateType = StateType {
+    rotate: 1,
+    sprite: Some(Sprite::SSW31),
+    tic_time: 20,
+    think: Some(t_path),
+    action: None,
+    next: Some(&S_SSPATH3S),
+};
+
+pub static S_SSPATH3S : StateType = StateType {
+    rotate: 1,
+    sprite: Some(Sprite::SSW31),
+    tic_time: 5,
+    think: None,
+    action: None,
+    next: Some(&S_SSPATH4),
+};
+
+pub static S_SSPATH4 : StateType = StateType {
+    rotate: 1,
+    sprite: Some(Sprite::SSW41),
+    tic_time: 15,
+    think: Some(t_path),
+    action: None,
+    next: Some(&S_SSPATH1),
+};
+
+pub static S_SSPAIN : StateType = StateType {
+    rotate: 2,
+    sprite: Some(Sprite::SSPAIN1),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_SSCHASE1),
+};
+
+pub static S_SSPAIN1 : StateType = StateType {
+    rotate: 2,
+    sprite: Some(Sprite::SSPAIN2),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_SSCHASE1),
+};
+
+pub static S_SSSHOOT1 : StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::SSSHOOT1),
+    tic_time: 20,
+    think: None,
+    action: None,
+    next: Some(&S_SSSHOOT2),    
+};
+
+pub static S_SSSHOOT2 : StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::SSSHOOT2),
+    tic_time: 20,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_SSSHOOT3),
+};
+
+pub static S_SSSHOOT3 : StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::SSSHOOT3),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_SSSHOOT4),
+};
+
+pub static S_SSSHOOT4 : StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::SSSHOOT2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_SSSHOOT5),
+};
+
+pub static S_SSSHOOT5 : StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::SSSHOOT3),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_SSSHOOT6),
+};
+
+pub static S_SSSHOOT6 : StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::SSSHOOT2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_SSSHOOT7),
+};
+
+pub static S_SSSHOOT7 : StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::SSSHOOT3),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_SSSHOOT8),
+};
+
+pub static S_SSSHOOT8 : StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::SSSHOOT2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_SSSHOOT9),
+};
+
+pub static S_SSSHOOT9 : StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::SSSHOOT3),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_SSCHASE1),
+};
+
+pub static S_SSCHASE1 : StateType = StateType {
+    rotate: 1,
+    sprite: Some(Sprite::SSW11),
+    tic_time: 10,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_SSCHASE1S),
+};
+
+pub static S_SSCHASE1S : StateType = StateType {
+    rotate: 1,
+    sprite: Some(Sprite::SSW11),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_SSCHASE2),
+};
+
+pub static S_SSCHASE2 : StateType = StateType {
+    rotate: 1,
+    sprite: Some(Sprite::SSW21),
+    tic_time: 8,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_SSCHASE3),
+};
+
+pub static S_SSCHASE3 : StateType = StateType {
+    rotate: 1,
+    sprite: Some(Sprite::SSW31),
+    tic_time: 10,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_SSCHASE3S)
+};
+
+pub static S_SSCHASE3S : StateType = StateType {
+    rotate: 1,
+    sprite: Some(Sprite::SSW31),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_SSCHASE4),
+};
+
+pub static S_SSCHASE4 : StateType = StateType {
+    rotate: 1,
+    sprite: Some(Sprite::SSW41),
+    tic_time: 8,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_SSCHASE1),
+};
+
+pub static S_SSDIE1 : StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::SSDIE1),
+    tic_time: 15,
+    think: None,
+    action: Some(a_death_scream),
+    next: Some(&S_SSDIE2),
+};
+
+pub static S_SSDIE2 : StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::SSDIE2),
+    tic_time: 15,
+    think: None,
+    action: None,
+    next: Some(&S_SSDIE3)
+};
+
+pub static S_SSDIE3 : StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::SSDIE3),
+    tic_time: 15,
+    think: None,
+    action: None,
+    next: Some(&S_SSDIE4),
+};
+
+pub static S_SSDIE4 : StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::SSDEAD),
+    tic_time: 0,
+    think: None,
+    action: None,
+    next: Some(&S_SSDIE4),
+};
+
 fn t_path(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, _: &mut ControlState, _: &ProjectionConfig) {
     if sight_player(k, level_state, tics) {
         return;
@@ -738,6 +981,7 @@ fn t_chase(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut 
             // go into attack frame
             let state_change = match obj.class {
                 ClassType::Guard => Some(&S_GRDSHOOT1),
+                ClassType::SS => Some(&S_SSSHOOT1),
                 _ => panic!("impl state change for {:?}", obj.class)
             };
 
@@ -832,11 +1076,13 @@ pub fn spawn_stand(which: EnemyType, actors: &mut Vec<ObjType>, actor_at: &mut V
     spawn(actors, actor_at, stand);
 }
 
-pub fn spawn_patrol(which: EnemyType, actors: &mut Vec<ObjType>, actor_at: &mut Vec<Vec<At>>, x_tile: usize, y_tile: usize, tile_dir: u16, difficulty: Difficulty) {
+pub fn spawn_patrol(which: EnemyType, actors: &mut Vec<ObjType>, actor_at: &mut Vec<Vec<At>>, game_state: &mut GameState, x_tile: usize, y_tile: usize, tile_dir: u16, difficulty: Difficulty) {
     let mut patrol = match which {
         EnemyType::Guard => {
             let mut obj = spawn_new_obj(x_tile, y_tile, &S_GRDPATH1, ClassType::Guard);
             obj.speed = SPD_PATROL;
+            // TODO check loadedgame
+            game_state.kill_total += 1;
             obj
         },
         EnemyType::Officer => {
@@ -844,27 +1090,33 @@ pub fn spawn_patrol(which: EnemyType, actors: &mut Vec<ObjType>, actor_at: &mut 
             /*
             let obj = spawn_new_obj(x_tile, y_tile, &S_OFCPATH1, ClassType::Officer);
             obj.speed = SPD_PATROL;
+            // TODO check loadedgame
+            game_state.kill_total += 1;
             obj
             */
         },
         EnemyType::SS => {
-            todo!("spawn with &S_SSPPATH1");
-            /*
-            let obj = spawn_new_obj(x_tile, y_tile, &S_SSPPATH1, ClassType::SS);
+            let mut obj = spawn_new_obj(x_tile, y_tile, &S_SSPATH1, ClassType::SS);
             obj.speed = SPD_PATROL;
-            obj*/
+            // TODO check loadedgame
+            game_state.kill_total += 1;
+            obj
         },
         EnemyType::Mutant => {
             todo!("spawn with &S_MUTPATH1");
             /*
             let obj = spawn_new_obj(x_tile, y_tile, &S_MUTPATH1, ClassType::Mutant);
             obj.speed = SPD_PATROL;
+            // TODO check loadedgame
+            game_state.kill_total += 1;
             obj
             */
         },
         EnemyType::Dog => {
             let mut obj = spawn_new_obj(x_tile, y_tile, &S_DOGPATH1, ClassType::Dog);
             obj.speed = SPD_DOG;
+            // TODO check loadedgame
+            game_state.kill_total += 1;
             obj
         },
         _ => {
@@ -917,7 +1169,7 @@ fn t_shoot(k: ObjKey, _: u64, level_state: &mut LevelState, game_state: &mut Gam
     let dx = obj.tilex.abs_diff(player.tilex);
     let dy = obj.tiley.abs_diff(player.tiley);
     
-    let mut dist = if dx > dy { dx } else { dy };
+    let mut dist = if dx > dy { dx } else { dy } as i32;
     if obj.class == ClassType::SS || obj.class == ClassType::Boss {
         dist = dist * 2 / 3; // ss are better shots
     }
@@ -938,8 +1190,7 @@ fn t_shoot(k: ObjKey, _: u64, level_state: &mut LevelState, game_state: &mut Gam
     }
 
     // see if the shot was a hit
-
-    if rnd_t() < hit_chance as u8 {
+    if hit_chance > 0 && rnd_t() < hit_chance as u8 {
         let damage = if dist < 2 {
             rnd_t() >> 2   
         } else if dist < 4 {
@@ -952,4 +1203,8 @@ fn t_shoot(k: ObjKey, _: u64, level_state: &mut LevelState, game_state: &mut Gam
     }
 
     // TODO Play fire sounds!
+}
+
+fn a_death_scream(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
+    // TODO play death sounds
 }

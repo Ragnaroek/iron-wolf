@@ -618,6 +618,23 @@ derive_from!{
         SSS1 = 140, SSS2 = 141, SSS3 = 142, SSS4 = 143,
         SSS5 = 144, SSS6 = 145, SSS7 = 146, SSS8 = 147,
 
+        SSW11 = 148, SSW12 = 149, SSW13 = 150, SSW14 = 151,
+		SSW15 = 152, SSW16 = 153, SSW17 = 154, SSW18 = 155,
+
+		SSW21 = 156, SSW22 = 157, SSW23 = 158, SSW24 = 159,
+		SSW25 = 160, SSW26 = 161, SSW27 = 162, SSW28 = 163,
+
+        SSW31 = 164, SSW32 = 165, SSW33 = 166, SSW34 = 167,
+		SSW35 = 168, SSW36 = 169, SSW37 = 170, SSW38 = 171,
+
+		SSW41 = 172, SSW42 = 173, SSW4 = 174, SSW44 = 175,
+		SSW45 = 176, SSW46 = 177, SSW47 = 178, SSW48 = 179,
+
+		SSPAIN1 = 180, SSDIE1 = 181, SSDIE2 = 182, SSDIE3 = 183,
+		SSPAIN2 = 184, SSDEAD = 185,
+
+        SSSHOOT1 = 186, SSSHOOT2 = 187, SSSHOOT3 = 188,
+
         // mutant
         MutantS1 = 189, MutantS2 = 190, MutantS3 = 191, MutantS4 = 192,
         MutantS5 = 193, MutantS6 = 194, MutantS7 = 195, MutantS8 = 196,

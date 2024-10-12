@@ -2,7 +2,7 @@ profile:
 	sudo -E cargo flamegraph --bench core_loop -- --bench
 
 build-sdl:
-	cargo build --features sdl
+	cargo build --release --features sdl
 
 run-sdl:
 	cargo run --features sdl
