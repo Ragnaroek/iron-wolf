@@ -10,7 +10,7 @@ use crate::act1::move_doors;
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::{three_d_refresh, init_ray_cast};
 use crate::vga_render::Renderer;
-use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty};
+use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty, FL_NONMARK, FL_NEVERMARK, At};
 use crate::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
 use crate::input;
 use crate::time;
@@ -208,6 +208,12 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
 
     //TODO A lot to do here (clear palette, poll controls, prepare world)
     loop {
+        // TODO replace this very inefficient calc_tic function. It waits
+        // for a tic to happen which burns a lot of cycles on fast CPU.
+        // Completely get rid of the tick thread and compute ticks through
+        // timings from the rendering loop.
+        // Also make rendering independent from everything that is based on tics!!
+        // (call poll_controls and do_actors only with 70Hz!)
         let tics = ticker.calc_tics();
 
         poll_controls(control_state, tics, input);
@@ -219,12 +225,9 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
 
         move_doors(level_state, tics);
 
-        let start = Instant::now();
         for i in 0..level_state.actors.len() {
-            do_actor(ObjKey(i), ticker, level_state, control_state, prj);
+            do_actor(ObjKey(i), tics, level_state, control_state, prj);
         }
-        let end = Instant::now();
-        println!("do actors took: {:?}", end-start);
         
 	    three_d_refresh(game_state, level_state, &mut rc, rdr, prj, assets);
 
@@ -236,16 +239,83 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
     }
 }
 
-fn do_actor(k: ObjKey, ticker: &time::Ticker, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
-    //TODO do ob->ticcount part from DoActor here
-    let may_think = level_state.obj(k).state.think;
-    if let Some(think) = may_think {
-        think(k, level_state, ticker, control_state, prj)
+fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
+
+    // TODO areabyplayer check here!
+
+    if level_state.obj(k).flags & (FL_NONMARK|FL_NEVERMARK) == 0 {
+        let (tilex, tiley) = {
+            let obj = level_state.obj(k);
+            (obj.tilex, obj.tilex)
+        };
+        level_state.actor_at[tilex][tiley] = At::Nothing;
     }
 
-    //TODO remove obj if state becomes None??
-    //TODO return if flag = FL_NEVERMARK (the player obj always has this flag)
-    //TODO Impl think for player = T_Player function and supply the corret (mutable) args
+    // non transitional object
+
+    if level_state.obj(k).tic_count == 0 {
+        if let Some(think) = level_state.obj(k).state.expect("state").think {
+            think(k, level_state, tics, control_state, prj);
+            if level_state.obj(k).state.is_none() {
+                return;
+            } 
+        }
+
+        let (tilex, tiley, flags) = {
+            let obj = level_state.obj(k);
+            (obj.tilex, obj.tiley, obj.flags)
+        };
+        if flags & FL_NEVERMARK != 0 {
+            return;
+        }
+        if flags & FL_NONMARK != 0 && level_state.actor_at[tilex][tiley] != At::Nothing {
+            return;
+        }
+        level_state.actor_at[tilex][tiley] = At::Obj(k);
+        return;
+    }
+
+    // transitional object
+
+    level_state.update_obj(k, |obj| obj.tic_count -= tics as u32);
+    while level_state.obj(k).tic_count <= 0 {
+        if let Some(action) = level_state.obj(k).state.expect("state").action {
+            action(k, level_state, tics, control_state, prj);
+            if level_state.obj(k).state.is_none() {
+                return;
+            } 
+        }
+
+        level_state.update_obj(k, |obj| obj.state = obj.state.expect("state").next);
+        if level_state.obj(k).state.is_none() {
+            return;
+        }
+
+        if level_state.obj(k).state.expect("state").tic_time == 0 {
+            level_state.update_obj(k, |obj| obj.tic_count = 0);
+            break; // think a last time below
+        }
+        level_state.update_obj(k, |obj| obj.tic_count += obj.state.expect("state").tic_time);
+    }
+
+    if let Some(think) = level_state.obj(k).state.expect("state").think {
+        think(k, level_state, tics, control_state, prj);
+        if level_state.obj(k).state.is_none() {
+            return;
+        } 
+    }
+
+    let (tilex, tiley, flags) = {
+        let obj = level_state.obj(k);
+        (obj.tilex, obj.tiley, obj.flags)
+    };
+    if flags & FL_NEVERMARK != 0 {
+        return;
+    }
+    if flags & FL_NONMARK != 0 && level_state.actor_at[tilex][tiley] != At::Nothing {
+        return;
+    }
+    level_state.actor_at[tilex][tiley] = At::Obj(k);
 }
 
 fn draw_play_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {

@@ -1,8 +1,7 @@
 use crate::act1::open_door;
-use crate::def::{ObjType, StateType, Sprite, StateNext, DirType, EnemyType, SPD_PATROL, ObjKey, LevelState, ControlState, FL_SHOOTABLE, ClassType, DoorAction, TILEGLOBAL, TILESHIFT};
+use crate::def::{ObjType, StateType, Sprite, DirType, EnemyType, SPD_PATROL, ObjKey, LevelState, ControlState, FL_SHOOTABLE, ClassType, DoorAction, TILEGLOBAL, TILESHIFT};
 use crate::state::{spawn_new_obj, new_state, sight_player, check_line, select_dodge_dir, select_chase_dir, move_obj};
 use crate::play::ProjectionConfig;
-use crate::time;
 use crate::user::rnd_t;
 
 // guards
@@ -13,7 +12,7 @@ pub static S_GRDSTAND : StateType = StateType {
     tic_time: 0,
     think: Some(t_stand),
     action: None,
-    next: StateNext::Next(&S_GRDSTAND),
+    next: Some(&S_GRDSTAND),
 };
 
 pub static S_GRDSHOOT1 : StateType = StateType {
@@ -22,7 +21,7 @@ pub static S_GRDSHOOT1 : StateType = StateType {
     tic_time: 20,
     think: None,
     action: None,
-    next: StateNext::Next(&S_GRDSHOOT2),
+    next: Some(&S_GRDSHOOT2),
 };
 
 pub static S_GRDSHOOT2 : StateType = StateType {
@@ -31,7 +30,7 @@ pub static S_GRDSHOOT2 : StateType = StateType {
     tic_time: 20,
     think: None,
     action: Some(t_shoot),
-    next: StateNext::Next(&S_GRDSHOOT3),
+    next: Some(&S_GRDSHOOT3),
 };
 
 pub static S_GRDSHOOT3 : StateType = StateType {
@@ -40,7 +39,7 @@ pub static S_GRDSHOOT3 : StateType = StateType {
     tic_time: 20,
     think: None,
     action: None,
-    next: StateNext::Next(&S_GRDCHASE1),
+    next: Some(&S_GRDCHASE1),
 };
 
 pub static S_GRDCHASE1 : StateType = StateType {
@@ -49,7 +48,7 @@ pub static S_GRDCHASE1 : StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: None,
-    next: StateNext::Next(&S_GRDCHASE1S),
+    next: Some(&S_GRDCHASE1S),
 };
 
 pub static S_GRDCHASE1S : StateType = StateType {
@@ -58,7 +57,7 @@ pub static S_GRDCHASE1S : StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
-    next: StateNext::Next(&S_GRDCHASE2),
+    next: Some(&S_GRDCHASE2),
 };
 
 pub static S_GRDCHASE2 : StateType = StateType {
@@ -67,7 +66,7 @@ pub static S_GRDCHASE2 : StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
-    next: StateNext::Next(&S_GRDCHASE3),
+    next: Some(&S_GRDCHASE3),
 };
 
 pub static S_GRDCHASE3 : StateType = StateType {
@@ -76,7 +75,7 @@ pub static S_GRDCHASE3 : StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: None,
-    next: StateNext::Next(&S_GRDCHASE3S),
+    next: Some(&S_GRDCHASE3S),
 };
 
 pub static S_GRDCHASE3S : StateType = StateType {
@@ -85,7 +84,7 @@ pub static S_GRDCHASE3S : StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
-    next: StateNext::Next(&S_GRDCHASE4),
+    next: Some(&S_GRDCHASE4),
 };
 
 pub static S_GRDCHASE4 : StateType = StateType {
@@ -94,7 +93,7 @@ pub static S_GRDCHASE4 : StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
-    next: StateNext::Next(&S_GRDCHASE1),
+    next: Some(&S_GRDCHASE1),
 };
 
 // S_GRDCHASE4.next = StateNext::Next(&S_GRDCHASE1)
@@ -105,7 +104,7 @@ pub static S_GRDDIE4 : StateType = StateType{
     tic_time: 0,
     think: None,
     action: None,
-    next: StateNext::Next(&S_GRDDIE4),
+    next: Some(&S_GRDDIE4),
 };
 
 // officers
@@ -116,7 +115,7 @@ pub static S_OFCSTAND : StateType = StateType {
     tic_time: 0,
     think: Some(t_stand),
     action: None,
-    next: StateNext::Next(&S_OFCSTAND),
+    next: Some(&S_OFCSTAND),
 };
 
 // mutant
@@ -127,7 +126,7 @@ pub static S_MUTSTAND : StateType = StateType {
     tic_time: 0,
     think: Some(t_stand),
     action: None,
-    next: StateNext::Next(&S_MUTSTAND),
+    next: Some(&S_MUTSTAND),
 };
 
 // SS
@@ -138,20 +137,18 @@ pub static S_SSSTAND : StateType = StateType {
     tic_time: 0,
     think: Some(t_stand),
     action: None,
-    next: StateNext::Next(&S_SSSTAND),   
+    next: Some(&S_SSSTAND),   
 };
 
-fn t_stand(k: ObjKey, level_state: &mut LevelState, ticker: &time::Ticker, control_state: &mut ControlState, prj: &ProjectionConfig) {
-    sight_player(k, level_state, ticker);
+fn t_stand(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &mut ControlState, prj: &ProjectionConfig) {
+    sight_player(k, level_state, tics);
 }
 
-fn t_chase(k: ObjKey, level_state: &mut LevelState, ticker: &time::Ticker, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn t_chase(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &mut ControlState, prj: &ProjectionConfig) {
     let (player_tile_x, player_tile_y) = {
         let player = level_state.player();
         (player.tilex, player.tiley)
     };
-
-    let tics = ticker.calc_tics();
 
     // TODO check gamestate.victoryflag
 
@@ -169,6 +166,7 @@ fn t_chase(k: ObjKey, level_state: &mut LevelState, ticker: &time::Ticker, contr
         };
 
         if (rnd_t() as usize) < chance {
+            println!("attack frame!!");
             // go into attack frame
             let state_change = match obj.class {
                 ClassType::Guard => Some(&S_GRDSHOOT1),
@@ -283,6 +281,6 @@ fn dir_from_tile(tile_dir: u16) -> DirType {
 
 // FIGHT
 
-fn t_shoot(k: ObjKey) {
+fn t_shoot(k: ObjKey, level_state: &mut LevelState, tics: u64, control_state: &mut ControlState, prj: &ProjectionConfig) {
     panic!("impl t_shoot");
 }

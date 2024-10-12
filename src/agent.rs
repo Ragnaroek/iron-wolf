@@ -1,8 +1,7 @@
 use crate::act1::operate_door;
 use crate::play::ProjectionConfig;
-use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, StateNext, FL_NEVERMARK, DirType, ClassType};
+use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType};
 use crate::fixed::{new_fixed_i32, fixed_by_frac};
-use crate::time;
 
 const ANGLE_SCALE : i32 = 20;
 const MOVE_SCALE : i32 = 150;
@@ -14,10 +13,10 @@ pub static S_PLAYER : StateType = StateType{
     tic_time: 0,
     think: Some(t_player),
     action: None,
-    next: StateNext::None,
+    next: None,
 };
 
-fn t_player(k: ObjKey, level_state: &mut LevelState, _: &time::Ticker, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn t_player(k: ObjKey, level_state: &mut LevelState, _: u64, control_state: &mut ControlState, prj: &ProjectionConfig) {
     if control_state.button_state[Button::Use as usize] {
         cmd_use(level_state, control_state);
     }
@@ -88,7 +87,7 @@ pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
         temp1: 0,
         temp2: 0,
         temp3: 0,
-        state: &S_PLAYER,
+        state: Some(&S_PLAYER),
     };
 
     //TODO init_areas

@@ -2,6 +2,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::cell::Cell;
 use std::thread;
+use std::time::Instant;
 
 pub const TICK_BASE : u64 = 70; //Hz
 const TARGET_NANOS : u128 = 1_000_000_000 / TICK_BASE as u128;
@@ -51,7 +52,6 @@ impl Ticker {
     }
 
     pub fn calc_tics(&self) -> u64 {
-        
         let last_time_count = self.last_count.get();
         if last_time_count > get_count(&self.time_count) { // if the game was paused a LONG time
             set_count(&self.time_count, last_time_count);
