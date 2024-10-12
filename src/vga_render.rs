@@ -31,6 +31,7 @@ pub trait Renderer {
 	fn set_buffer_offset(&self, offset: usize);
 	fn buffer_offset(&self) -> usize;
     fn activate_buffer(&self, offset: usize);
+    fn write_mem(&self, offset: usize, v_in: u8);
 
 	fn bar(&self, x: usize, y: usize, width: usize, height: usize, color: u8);
 	fn pic(&self, x: usize, y: usize, picnum: GraphicNum);
@@ -105,6 +106,10 @@ impl Renderer for VGARenderer {
         self.vga.set_crt_data(CRTReg::StartAdressHigh, addr_parts[1]);
 
         wait_vsync(&self.vga);
+    }
+
+    fn write_mem(&self, offset: usize, v_in: u8) {
+        self.vga.write_mem(offset, v_in)
     }
 
 	fn bar(&self, x: usize, y: usize, width: usize, height: usize, color: u8) {

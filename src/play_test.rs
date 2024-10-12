@@ -1,9 +1,9 @@
-use super::new_projection_config;
+use super::calc_projection;
 use super::new_fixed_i32;
 
 #[test]
 fn test_calc_sines() {
-    let prj = new_projection_config(19);
+    let prj = calc_projection(19);
     
     assert_eq!(prj.sin(0), new_fixed_i32(0));
     assert_eq!(prj.sin(360), new_fixed_i32(-2147483648));

@@ -2,7 +2,27 @@
 #[path = "./draw_test.rs"]
 mod draw_test;
 
-use super::def::{Fixed, new_fixed_u16, new_fixed_i32, MIN_DIST};
+use libiw::gamedata::Texture;
+
+use super::def::{Fixed, Assets, new_fixed_u16, new_fixed_i32, MIN_DIST};
+use super::play::RayCast;
+use super::vga_render::{Renderer, SCREENBWIDE};
+
+pub struct ScalerState {
+    last_side: bool,
+    post_x: usize,
+    post_width: usize,
+    texture_ix: usize,
+}
+
+pub fn initial_scaler_state() -> ScalerState {
+    ScalerState { 
+        last_side: false,
+        post_x: 0,
+        post_width: 1,
+        texture_ix: 0,
+     }
+}
 
 pub fn fixed_by_frac(a_f: Fixed, b_f: Fixed) -> Fixed {
     let a = a_f.to_i32();
@@ -60,4 +80,68 @@ pub fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, vi
     }
 
     height_numerator/(nx >> 8)
+}
+
+pub fn scale_post(scaler_state: &ScalerState, height: i32, view_height: usize, rdr: &dyn Renderer, assets: &Assets) {
+    let texture = &assets.textures[scaler_state.texture_ix];
+
+    // TODO lookup "compiled" scaler here
+    //full_scale(height, view_height, texture, rdr)
+}
+
+/*
+fn draw_scaled(x: usize, post_src: i32, height: i32, view_height: i32, texture: Option<&Texture>, rdr: &dyn Renderer) {
+    //TODO use the exact copy statements as the compiled scalers do! (compare scaling code in the original with this => step_size and clamping)
+    let line_height = if height > 512 {
+        view_height
+    } else {
+        (height as f64 / 512.0 * view_height as f64) as i32
+    };
+    let step = TEXTURE_HEIGHT as f64 / line_height as f64;
+   
+    let y = view_height/2 - line_height/2;
+
+    let mut src = post_src as f64;
+    for y_draw in y..(y+line_height) {
+        let pixel = if let Some(tex) = texture {
+            tex.bytes[src as usize]
+        } else {
+            0x50
+        };
+        // TODO replace this with a faster? buffered draw
+        rdr.plot(x, y_draw as usize, pixel);
+        src += step;
+    }
+}*/
+
+pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &RayCast, pixx: usize, height: i32, view_height: usize, rdr: &dyn Renderer, assets: &Assets) {
+    let post_source = 0xFC0 - ((rc.x_intercept>>4) & 0xFC0);
+
+    if scaler_state.last_side {
+        scale_post(scaler_state, height, view_height, rdr, assets)
+    }
+    scaler_state.last_side = true;
+    scaler_state.post_x = pixx;
+    scaler_state.post_width = 1;
+    scaler_state.texture_ix = 49; //TODO only for testing!
+}
+
+pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &RayCast, pixx: usize, height: i32) {
+
+}
+
+pub fn hit_horiz_door() {
+
+}
+
+pub fn hit_vert_door() {
+
+}
+
+pub fn hit_horiz_pwall() {
+
+}
+
+pub fn hit_vert_pwall() {
+
 }

@@ -7,6 +7,7 @@ pub mod game;
 pub mod input;
 pub mod play;
 pub mod time;
+pub mod scale;
 pub mod user;
 pub mod util;
 pub mod vga_render;
@@ -51,7 +52,9 @@ fn main() -> Result<(), String> {
 
     init_game(&vga);
 
-    let prj = play::new_projection_config(config.viewsize as usize);
+    // TODO calc_projection and setup_scaling have to be re-done if view size changes in config
+    let prj = play::calc_projection(config.viewsize as usize);
+    let scaler = scale::setup_scaling((prj.view_width as f32 * 1.5) as usize, prj.view_height);
 
     let input_monitoring = vgaemu::input::new_input_monitoring();
 
