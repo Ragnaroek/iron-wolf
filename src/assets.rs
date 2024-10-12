@@ -1,7 +1,7 @@
-use std::fs::{File};
+use std::fs::File;
 
 use libiw::map::{load_map, load_map_headers, load_map_offsets, MapType, MapFileType, MapData};
-use libiw::gamedata::{GamedataHeaders, Texture};
+use libiw::gamedata::GamedataHeaders;
 
 use super::def::{WeaponType, Assets, IWConfig};
 use super::util;
@@ -114,6 +114,7 @@ pub fn num_pic(n: usize) -> GraphicNum {
 
 pub fn weapon_pic(w: WeaponType) -> GraphicNum {
 	match w {
+		WeaponType::None => GraphicNum::N0PIC,
 		WeaponType::Knife => GraphicNum::KNIFEPIC,
 		WeaponType::Pistol => GraphicNum::GUNPIC,
 		WeaponType::MachineGun => GraphicNum::MACHINEGUNPIC,
@@ -324,22 +325,21 @@ pub fn load_gamedata(config: &IWConfig) -> Result<(Vec<u8>, GamedataHeaders), St
     Ok((header_bytes, headers))
 }
 
-pub fn load_all_textures(config: &IWConfig, headers: &GamedataHeaders) -> Result<Vec<Texture>, String> {
-    let mut file = File::open(&config.wolf3d_data.join(GAMEDATA)).expect("opening gamedata file failed");
-    libiw::gamedata::load_all_textures(&mut file, headers)
-}
-
 // loads all assets for the game into memory
 pub fn load_assets(iw_config: IWConfig) -> Result<Assets, String> {
     let (map_offsets, map_headers) = load_map_headers_from_config(&iw_config)?;
 
     let (_, headers) = load_gamedata(&iw_config)?;
-    let textures = load_all_textures(&iw_config, &headers)?;
 
-    Ok(Assets {
+	let mut gamedata_file: File = File::open(&iw_config.wolf3d_data.join(GAMEDATA)).expect("opening gamedata file failed");
+    let textures = libiw::gamedata::load_all_textures(&mut gamedata_file, &headers)?;
+	let sprites = libiw::gamedata::load_all_sprites(&mut gamedata_file, &headers)?;
+    
+	Ok(Assets {
         map_headers,
         map_offsets,
         iw_config,
         textures,
+		sprites,
     })
 }

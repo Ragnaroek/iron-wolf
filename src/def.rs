@@ -1,7 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use libiw::map::{MapType, MapFileType};
-use libiw::gamedata::Texture;
+use libiw::gamedata::{TextureData, SpriteData};
 
 use crate::play::ProjectionConfig;
 
@@ -20,9 +20,12 @@ pub const FINE_ANGLES : usize = 3600;
 pub const MAX_DOORS : usize = 64;
 
 pub const NUM_BUTTONS : usize = 8;
+pub const NUM_WEAPONS : usize = 5;
 
 #[derive(Copy, Clone)]
+#[repr(usize)]
 pub enum WeaponType {
+    None,
 	Knife,
 	Pistol,
 	MachineGun,
@@ -119,6 +122,7 @@ pub struct GameState {
 	pub ammo: usize,
 	pub keys: usize,
 	pub weapon: WeaponType,
+    pub weapon_frame: usize,
 
 	pub face_frame: usize,
 
@@ -166,7 +170,8 @@ pub struct Assets {
 	pub iw_config: IWConfig, // put here for convenience (mabye only put assets path here?)
 	pub map_headers: Vec<MapType>,
 	pub map_offsets: MapFileType,
-    pub textures: Vec<Texture>,
+    pub textures: Vec<TextureData>,
+    pub sprites: Vec<SpriteData>,
 }
 
 type Think = fn(k: ObjKey, level_state: &mut LevelState, &mut ControlState, prj: &ProjectionConfig); 
@@ -175,4 +180,16 @@ type Think = fn(k: ObjKey, level_state: &mut LevelState, &mut ControlState, prj:
 pub struct StateType {
     pub think: Option<Think>,
     pub next: Option<&'static StateType>
+}
+
+#[repr(usize)]
+#[derive(Clone, Copy)]
+pub enum Sprite {
+
+    None = 0,
+
+    KnifeReady = 416, KnifeAtk1 = 417, KnifeAtk2 = 418, KnifeAtk3 = 419, KnifeAtk4 = 420, 
+    PistolReady = 421, PistolAtk1 = 422, PistolAtk2 = 423, PistolAtk3 = 424, PistolAtk4 = 425,  
+    MachinegunReady = 426, MachinegunAtk1 = 427, MachinegunAtk2 = 428, MachinegunAtk3 = 429, MachinegunAtk4 = 430,
+    ChainReady = 431, ChainAtk1 = 432, ChainAtk2 = 433, ChainAtk3 = 434, ChainAtk4 = 435,  
 }

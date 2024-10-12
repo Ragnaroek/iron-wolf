@@ -70,6 +70,7 @@ pub fn new_game_state() -> GameState {
 		ammo: 8,
 		keys: 0,
 		weapon: WeaponType::Pistol,
+        weapon_frame: 0,
 		face_frame: 0,
 		episode: 0
 	}
