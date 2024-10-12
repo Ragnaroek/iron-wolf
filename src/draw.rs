@@ -217,14 +217,14 @@ impl RayCast {
         self.y_intercept = fixed_by_frac(new_fixed_i32(self.y_step), new_fixed_i32(self.x_partial)).to_i32();
         self.y_intercept += consts.view_y;
         self.dx = self.y_intercept >> 16;
-
+        
         self.si = consts.focal_tx+self.x_tilestep;
         self.x_tile = self.si;
         self.si <<= 6;
         self.si += self.dx;
 
         self.y_tile = 0;
-
+        
         self.x_intercept = fixed_by_frac(new_fixed_i32(self.x_step), new_fixed_i32(self.y_partial)).to_i32();
         self.x_intercept += consts.view_x;
         self.dx = self.x_intercept >> 16;
@@ -261,7 +261,7 @@ impl RayCast {
                     let (hit, tile) = hit(&level_state.level, self.si.try_into().unwrap());
                     if hit {
                         self.tile_hit = tile;
-                        let mut do_break = false;
+                        let do_break;
                         if tile & 0x80 != 0 { // vertdoor
                             self.x_tile = self.bx; // save off live register variables
                             self.y_intercept = self.y_intercept & 0xFFFF | self.dx << 16;
@@ -289,7 +289,11 @@ impl RayCast {
                                     do_break = true;
                                     self.hit = Hit::VerticalDoor
                                 }
-                            } //else continue with tracing in passvert    
+                            } else { //else continue with tracing in passvert
+                                self.bx = self.x_tile;
+                                self.dx = ic;
+                                do_break = false 
+                            } 
                         } else {
                             do_break = true;
                             self.hit = Hit::VerticalWall;
@@ -321,7 +325,7 @@ impl RayCast {
                     if hit {
                         //hithoriz:
                         self.tile_hit = tile;
-                        let mut do_break: bool = false;
+                        let do_break;
                         if tile & 0x80 != 0 {
                             self.x_tile = self.bx; // save off live register variables
                             self.y_intercept = self.y_intercept & 0xFFFF | self.dx << 16;
@@ -333,15 +337,14 @@ impl RayCast {
                             let door_num = (self.tile_hit & 0x7f) as usize;
                             let x_0 = self.x_step >> 1;
                             let x = x_0 + self.x_intercept;
-                            let dx = (x >> 16) & 0xFFFF;
-                            let ic = (self.x_intercept >> 16) & 0xFFFF;
-                            if ic == dx { // is it still in the same tile?
+                            self.dx = (x >> 16) & 0xFFFF;
+                            if self.cx == self.dx { // is it still in the same tile?
                                 //hithmid
                                 let door_pos = level_state.doors[door_num].position;
                                 let ax = (x & 0xFFFF) as u16;
                                 if ax < door_pos {
                                     self.bx = self.x_tile;
-                                    self.dx = ic;
+                                    self.dx = (self.y_intercept >> 16) & 0xFFFF;
                                     do_break = false //continue with passhoriz
                                 } else { //draw the door
                                     self.x_intercept = (self.x_intercept & (0xFFFF << 16)) | ax as i32; 
@@ -349,7 +352,11 @@ impl RayCast {
                                     do_break = true;
                                     self.hit = Hit::HorizontalDoor
                                 }
-                            } //else continue with tracing in passhoriz
+                            } else { //else continue with tracing in passhoriz
+                                self.bx = self.x_tile;
+                                self.dx = (self.y_intercept >> 16) & 0xFFFF;
+                                do_break = false
+                            } 
                         } else {
                             do_break = true;
                             self.hit = Hit::HorizontalWall;
