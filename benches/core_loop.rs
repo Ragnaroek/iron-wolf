@@ -43,7 +43,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
 
     let player = level_state.player();
     let mut rc = init_ray_cast(prj.view_width);
-    let consts = init_ray_cast_consts(&prj, player);
+    let consts = init_ray_cast_consts(&prj, player, 0);
 
     b.iter(|| {
         for _ in 0..1000 {

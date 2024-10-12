@@ -247,8 +247,8 @@ pub struct GameState {
     pub pal_shifted : bool,
     pub fizzle_in : bool,
     // push wall states
-    pub push_wall_state : bool, // push wall animation going on
-    pub push_wall_pos: u8, // amount a pushable wall has been moved (0-63)
+    pub push_wall_state : u64, // push wall animation going on
+    pub push_wall_pos: i32, // amount a pushable wall has been moved (0-63)
     pub push_wall_x: usize,
     pub push_wall_y: usize,
     pub push_wall_dir: Dir,

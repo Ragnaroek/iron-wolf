@@ -14,7 +14,7 @@ fn test_cast_angle_63() -> Result<(), String>{
     prj.fine_tangents[898] = prj.fine_tangents[898]+2; 
     let mut level_state = mock_level_state(); 
     level_state.mut_player().angle = 63; // an interesting angle in the start level
-    let consts = init_ray_cast_consts(&prj, level_state.player());
+    let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
     let mut rc = init_ray_cast(prj.view_width);
     
     assert_eq!(consts.x_partialup, 42879);
@@ -32,7 +32,7 @@ fn test_cast_angle_63() -> Result<(), String>{
             _ => () /* no check */,
         }
         
-        rc.cast(&mut level_state);
+        rc.cast(&consts,&mut level_state);
         match pixx {
             0 => check_cast_pixx_0(&rc),
             1 => check_cast_pixx_1(&rc),
@@ -161,7 +161,7 @@ fn test_cast_angle_353() -> Result<(), String>{
     let prj = play::calc_projection(19);
     let mut level_state = mock_level_state(); 
     level_state.mut_player().angle = 353;
-    let consts = init_ray_cast_consts(&prj, level_state.player());
+    let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
     let mut rc = init_ray_cast(prj.view_width);
 
     assert_eq!(level_state.player().x, 1933312);
@@ -178,7 +178,7 @@ fn test_cast_angle_353() -> Result<(), String>{
     //Do one ray cast with the const vars
     for pixx in 0..prj.view_width {
         rc.init_cast(&prj, pixx, &consts);
-        rc.cast(&mut level_state);
+        rc.cast(&consts, &mut level_state);
     }
     Ok(())
 }
@@ -188,7 +188,7 @@ fn test_cast_angle_26() -> Result<(), String>{
     let prj = play::calc_projection(19);
     let mut level_state = mock_level_state();
     level_state.mut_player().angle = 26; 
-    let consts = init_ray_cast_consts(&prj, level_state.player());
+    let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
     let mut rc = init_ray_cast(prj.view_width);
     
     assert_eq!(consts.x_partialup, 52785);
@@ -203,7 +203,7 @@ fn test_cast_angle_26() -> Result<(), String>{
             _ => () /* no check */,
         }
         
-        rc.cast(&mut level_state);
+        rc.cast(&consts, &mut level_state);
         match pixx {
             0 => check_cast_angle_26_pixx_0(&rc),
             _ => () /* no check */,
@@ -245,7 +245,7 @@ fn test_cast_angle_288() -> Result<(), String>{
     let prj = play::calc_projection(19);
     let mut level_state = mock_level_state();
     level_state.mut_player().angle = 288; 
-    let consts = init_ray_cast_consts(&prj, level_state.player());
+    let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
     let mut rc = init_ray_cast(prj.view_width);
     
     assert_eq!(consts.x_partialup, 39650);
@@ -260,7 +260,7 @@ fn test_cast_angle_288() -> Result<(), String>{
             _ => () /* no check */,
         }
         
-        rc.cast(&mut level_state);
+        rc.cast(&consts, &mut level_state);
         match pixx {
             274 => check_cast_angle_288_pixx_274(&rc),
             _ => () /* no check */,
@@ -303,7 +303,7 @@ fn test_init_ray_cast_consts() {
     let prj = play::calc_projection(19);
     let mut player = test_player();
     player.angle = 63;
-    let consts = init_ray_cast_consts(&prj, &player);
+    let consts = init_ray_cast_consts(&prj, &player, 0);
     assert_eq!(consts.view_x, 1923201);
     assert_eq!(consts.view_y, 3788164);
 }
@@ -314,7 +314,7 @@ fn test_calc_height() {
     let mut player = test_player();
     player.angle = 63;
 
-    let consts = init_ray_cast_consts(&prj, &player);
+    let consts = init_ray_cast_consts(&prj, &player, 0);
     assert_eq!(
         calc_height(prj.height_numerator, 1904384, 3670016, &consts),
         562,

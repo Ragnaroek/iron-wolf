@@ -45,6 +45,8 @@ pub enum Hit {
     HorizontalWall,
     VerticalDoor,
     HorizontalDoor,
+    VerticalPushWall,
+    HorizontalPushWall,
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -68,6 +70,7 @@ pub struct RayCastConsts {
     pub x_partialup: i32,
     pub y_partialdown: i32,
     pub y_partialup: i32,
+    pub push_wall_pos: i32,
 }
 pub struct RayCast {
     pub tile_hit: u16,
@@ -129,7 +132,7 @@ fn hit(level: &Level, x: usize, y: usize) -> (bool, u16) {
     ((tile & 0xFF) != 0, tile)
 }
 
-pub fn init_ray_cast_consts(prj: &ProjectionConfig, player: &ObjType) -> RayCastConsts {
+pub fn init_ray_cast_consts(prj: &ProjectionConfig, player: &ObjType, push_wall_pos: i32) -> RayCastConsts {
     let view_sin = prj.sin(player.angle as usize);
     let view_cos = prj.cos(player.angle as usize);
     let view_x = player.x - fixed_by_frac(new_fixed_i32(FOCAL_LENGTH), view_cos).to_i32();
@@ -152,7 +155,8 @@ pub fn init_ray_cast_consts(prj: &ProjectionConfig, player: &ObjType) -> RayCast
         x_partialdown,
         x_partialup,
         y_partialdown,
-        y_partialup, 
+        y_partialup,
+        push_wall_pos,
     }
 }
 
@@ -247,7 +251,7 @@ impl RayCast {
         self.dx = self.y_intercept >> 16;
     }
 
-    fn cast(&mut self, level_state: &mut LevelState) {
+    fn cast(&mut self, consts: &RayCastConsts, level_state: &mut LevelState) {
         let mut check = DirCheck::VertCheck;
         let mut dir : DirJmp;
         
@@ -274,13 +278,19 @@ impl RayCast {
                             self.y_intercept = self.y_intercept & 0xFFFF | self.dx << 16;
 
                             if tile & 0x40 != 0 {
-                                //TOOD handle vertpushwall here
-
-                                panic!("push vert");
-
-                                self.bx = self.x_tile;
-                                self.dx = (self.y_intercept >> 16) & 0xFFFF;
-                                do_break = false 
+                                let y_pos = ((self.y_step * consts.push_wall_pos) / 64) + self.y_intercept;
+                                if (self.y_intercept >> 16) & 0xFFFF == y_pos >> 16 & 0xFFFF { // is it still in the same tile?
+                                    self.y_intercept = y_pos;
+                                    self.bx = self.x_tile;
+                                    self.x_intercept = self.x_tile << 16;
+                                    do_break = true;
+                                    self.hit = Hit::VerticalPushWall;
+                                } else {
+                                    // no, it hit the side, continuevert
+                                    self.bx = self.x_tile;
+                                    self.dx = (self.y_intercept >> 16) & 0xFFFF;
+                                    do_break = false 
+                                }
                             } else {
                                 let door_num = (self.tile_hit & 0x7f) as usize;
                                 let x_0 = self.y_step >> 1;
@@ -345,15 +355,18 @@ impl RayCast {
                             self.y_intercept = self.y_intercept & 0xFFFF | self.dx << 16;
 
                             if tile & 0x40 != 0 {
-                                //TOOD handle horizpushwall here
-
-                                panic!("horiz pushwall!");
-
-                                
-                                //continuehoriz:
-                                self.bx = self.x_tile;
-                                self.dx = (self.y_intercept >> 16) & 0xFFFF;
-                                do_break = false
+                                let x_pos = ((self.x_step * consts.push_wall_pos) / 64) + self.x_intercept; 
+                                if (self.x_intercept >> 16) & 0xFFFF == x_pos >> 16 & 0xFFFF { // is it still in the same tile? 
+                                    self.x_intercept = x_pos;
+                                    self.y_intercept = self.bp << 16;
+                                    do_break = true;
+                                    self.hit = Hit::HorizontalPushWall;
+                                } else {
+                                   // no, it hit the side, continuevert
+                                   self.bx = self.x_tile;
+                                   self.dx = (self.y_intercept >> 16) & 0xFFFF;
+                                   do_break = false 
+                                }
                             } else {
                                 let door_num = (self.tile_hit & 0x7f) as usize;
                                 let x_0 = self.x_step >> 1;
@@ -459,15 +472,16 @@ pub fn wall_refresh(level_state: &mut LevelState, rc: &mut RayCast, consts: &Ray
 
     //asm_refresh / ray casting core loop
     for pixx in 0..prj.view_width {
-        rc.init_cast(prj, pixx, &consts);
-        rc.cast(level_state);
+        rc.init_cast(prj, pixx, consts);
+        rc.cast(consts, level_state);
 
         match rc.hit {
             Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, rc, &consts, pixx, prj, rdr, &level_state.level, assets),
             Hit::HorizontalWall|Hit::HorizontalBorder => hit_horiz_wall(&mut scaler_state, rc, &consts, pixx, prj, rdr, &level_state.level, assets),
             Hit::VerticalDoor => hit_vert_door(&mut scaler_state, rc, &consts, pixx, prj, rdr, &level_state, assets),
             Hit::HorizontalDoor => hit_horiz_door(&mut scaler_state, rc, &consts, pixx, prj, rdr, &level_state, assets),
-            // TODO hit other things (pwall)
+            Hit::VerticalPushWall => hit_vert_push_wall(&mut scaler_state, rc, &consts, pixx, prj, rdr, &level_state, assets),
+            Hit::HorizontalPushWall => hit_horiz_push_wall(&mut scaler_state, rc, &consts, pixx, prj, rdr, &level_state, assets),
         }
     }
 }
@@ -476,7 +490,7 @@ pub async fn three_d_refresh(ticker: &time::Ticker, game_state: &mut GameState, 
     rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
 
     let player = level_state.player();
-    let consts = init_ray_cast_consts(prj, player);
+    let consts = init_ray_cast_consts(prj, player, game_state.push_wall_pos);
 
 	clear_screen(game_state, rdr, prj);
     wall_refresh(level_state, rc, &consts, rdr, prj, assets);
@@ -656,10 +670,50 @@ pub fn hit_vert_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts:
     scaler_state.texture_ix = 98; //TODO take texture based on lock state of door
 }
 
-pub fn hit_horiz_pwall() {
+pub fn hit_horiz_push_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &VGARenderer, level_state: &LevelState, assets: &Assets) {
+    let mut post_source = 0xFC0 - ((rc.x_intercept>>4) & 0xFC0);
+    let offset = consts.push_wall_pos << 10;
+    if rc.y_tilestep == -1 {
+        rc.y_intercept += TILEGLOBAL-offset;
+    } else {
+        post_source = 0xFC0-post_source;
+        rc.y_intercept += offset;
+    }
+
+    let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, consts);
+    rc.wall_height[pixx] = height;
+
+    let texture_ix = horiz_wall(rc.tile_hit as usize & 63);
+    scaler_state.last_side = true;
+    scaler_state.post_x = pixx;
+    scaler_state.post_width = 1;
+    scaler_state.post_source = post_source as usize;
+    scaler_state.texture_ix = texture_ix;
 }
 
-pub fn hit_vert_pwall() {
+pub fn hit_vert_push_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &VGARenderer, level_state: &LevelState, assets: &Assets) {
+    let mut post_source = 0xFC0 - ((rc.y_intercept>>4) & 0xFC0);
+    let offset = consts.push_wall_pos << 10;
+    if rc.x_tilestep == -1 {
+        post_source = 0xFC0-post_source;
+        rc.x_intercept += TILEGLOBAL-offset;
+    } else {
+        rc.x_intercept += offset;
+    }
+
+    let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, consts);
+    rc.wall_height[pixx] = height;
+
+    if scaler_state.last_side {
+        scale_post(scaler_state, height, prj, rdr, assets);
+    }
+
+    let texture_ix = vert_wall(rc.tile_hit as usize & 63);
+    scaler_state.last_side = true;
+    scaler_state.post_x = pixx;
+    scaler_state.post_width = 1;
+    scaler_state.post_source = post_source as usize;
+    scaler_state.texture_ix = texture_ix;
 }
 
 fn horiz_wall(i: usize) -> usize {
