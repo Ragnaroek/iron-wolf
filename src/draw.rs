@@ -3,6 +3,7 @@
 mod draw_test;
 
 use crate::agent::get_bonus;
+use crate::{game, time};
 use crate::play::ProjectionConfig;
 use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS, FL_VISABLE, ClassType, DIR_ANGLE, WeaponType };
 use crate::scale::{simple_scale_shape, scale_shape, MAP_MASKS_1};
@@ -457,7 +458,7 @@ pub fn wall_refresh(level_state: &mut LevelState, rc: &mut RayCast, consts: &Ray
     }
 }
 
-pub async fn three_d_refresh(game_state: &mut GameState, level_state: &mut LevelState, rc: &mut RayCast, rdr: &VGARenderer, prj: &ProjectionConfig, assets: &Assets) {
+pub async fn three_d_refresh(ticker: &time::Ticker, game_state: &mut GameState, level_state: &mut LevelState, rc: &mut RayCast, rdr: &VGARenderer, prj: &ProjectionConfig, assets: &Assets) {
     rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
 
     let player = level_state.player();
@@ -468,6 +469,12 @@ pub async fn three_d_refresh(game_state: &mut GameState, level_state: &mut Level
 
     draw_scaleds(level_state, game_state, &rc.wall_height, &consts, rdr, prj, assets);
     draw_player_weapon(game_state, rdr, prj, assets);
+
+    if game_state.fizzle_in {
+        rdr.fizzle_fade(ticker, rdr.buffer_offset(), rdr.active_buffer()+prj.screenofs, prj.view_width, prj.view_height, 20, false).await;
+        game_state.fizzle_in = false;
+        ticker.clear_count(); // don't make a big tic count
+    }
 
 	rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
     rdr.activate_buffer(rdr.buffer_offset()).await;
