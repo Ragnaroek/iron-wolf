@@ -28,6 +28,11 @@ pub struct MapType {
 	pub name: String,
 }
 
+pub struct MapFileType {
+	pub rlew_tag: u16,
+	pub header_offsets: Vec<i32>,
+}
+
 // iron-wolf specific configuration
 pub struct IWConfig {
 	pub wolf3d_data: &'static Path,
@@ -37,5 +42,6 @@ pub struct IWConfig {
 // All assets that need to be accessed in the game loop
 pub struct Assets {
 	pub iw_config: IWConfig, // put here for convenience (mabye only put assets path here?)
-	pub map_headers: Vec<MapType>
+	pub map_headers: Vec<MapType>,
+	pub map_offsets: MapFileType,
 }
