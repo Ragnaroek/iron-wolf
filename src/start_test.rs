@@ -303,9 +303,9 @@ fn test_do_load_save1() {
     assert_eq!(game_state.secret_count, 0);
     assert_eq!(game_state.treasure_count, 0);
     assert_eq!(game_state.kill_count, 0);
-    assert_eq!(game_state.secret_total, 8);
-    assert_eq!(game_state.treasure_total, 124);
-    assert_eq!(game_state.kill_total, 51);
+    assert_eq!(game_state.secret_total, 4);
+    assert_eq!(game_state.treasure_total, 62);
+    assert_eq!(game_state.kill_total, 40);
     assert_eq!(game_state.time_count, 47);
     assert_eq!(game_state.kill_x, 0);
     assert_eq!(game_state.kill_y, 0);

@@ -157,6 +157,9 @@ impl Loader for WebLoader {
     fn load_save_game(&self, which: usize) -> Result<Vec<u8>, String> {
         todo!("save game loading not implemented yet for web");
     }
+    fn save_save_game(&self, which: usize, bytes: &[u8]) -> Result<(), String> {
+        todo!("save game saving not implemented yet for web");
+    }
 }
 
 // Assets
