@@ -3,9 +3,9 @@ use crate::{loader::Loader, assets::WolfFile};
 
 use super::user;
 use super::def::IWConfig;
+use super::util;
 
 use vga::input::{NumCode, to_numcode};
-use libiw::util as iwutil;
 
 pub static CONFIG_DATA: &'static str = "CONFIG.WL6";
 pub const MAX_SCORES : usize = 7;
@@ -65,7 +65,7 @@ pub struct WolfConfig {
 
 pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
     let data = loader.load_file(WolfFile::ConfigData);
-    let mut reader = iwutil::new_data_reader(&data);
+    let mut reader = util::new_data_reader(&data);
 
     let mut high_scores = Vec::with_capacity(MAX_SCORES);
     

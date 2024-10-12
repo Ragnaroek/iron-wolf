@@ -1,8 +1,7 @@
 use std::path::PathBuf;
 
-use libiw::map::{MapType, MapFileType};
-use libiw::gamedata::{TextureData, SpriteData};
-
+use crate::map::{MapType, MapFileType};
+use crate::gamedata::{TextureData, SpriteData};
 use crate::fixed::Fixed;
 use crate::play::ProjectionConfig;
 use crate::vga_render::{PAGE_1_START, PAGE_2_START, PAGE_3_START, VGARenderer};

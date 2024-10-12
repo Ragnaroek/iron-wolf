@@ -4,6 +4,7 @@ use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{dead_guard, stand};
 use crate::agent::{spawn_player, thrust};
 use crate::play::ProjectionConfig;
+use crate::map;
 
 pub const AREATILE : u16 = 107;
 
@@ -82,7 +83,7 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &GameState, assets: 
 }
 
 // By convention the first element in the returned actors vec is the player
-fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>, difficulty: Difficulty) -> (Vec<ObjType>, Vec<StaticType>) {
+fn scan_info_plane(map_data: &map::MapData, actor_at : &mut Vec<Vec<At>>, difficulty: Difficulty) -> (Vec<ObjType>, Vec<StaticType>) {
 	let mut player = None;
 	let mut statics = Vec::new();
 	let mut actors = Vec::new();
