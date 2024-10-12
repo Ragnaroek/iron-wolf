@@ -7,7 +7,7 @@ use super::time;
 use super::config;
 use super::vga_render;
 
-const MIN_DIST : i32 = 0x4000;
+const MIN_DIST : i32 = 0x5800;
 
 const STATUS_LINES : usize = 40;
 const HEIGHT_RATIO : f32 = 0.5;
@@ -99,20 +99,21 @@ pub fn new_projection_config(config: &config::WolfConfig) -> ProjectionConfig {
 	let view_width = ((config.viewsize * 16) & !15) as usize;
 	let view_height = ((((config.viewsize * 16) as f32 * HEIGHT_RATIO) as u16) & !1) as usize;
 	let screenofs = (200-STATUS_LINES-view_height)/2*SCREEN_WIDTH+(320-view_width)/8;
-
+    let half_view = view_width/2;
     let projection_fov = VIEW_GLOBAL as f64;
-    let face_dist = 2.0 * FOCAL_LENGTH as f64 + 0x100 as f64;
 
-	let pixelangle = calc_pixelangle(view_width, projection_fov, face_dist);
+    let face_dist = FOCAL_LENGTH + MIN_DIST;
+
+	let pixelangle = calc_pixelangle(view_width, projection_fov, face_dist as f64);
     let fine_sines = calc_fine_sines();
     let fine_tangents = calc_fine_tangents();
 
     let center_x = view_width/2-1;
     let y_aspect = fixed_mul((320<<FRAC_BITS)/200, ((SCREEN_HEIGHT_PIXEL<<FRAC_BITS)/SCREEN_WIDTH_PIXEL) as i32);
     let focal_length_y = center_x as i32 * y_aspect/fine_tangents[FINE_ANGLES/2+(ANGLE_45 >> ANGLE_TO_FINE_SHIFT) as usize];
+    let scale = half_view as i32 * face_dist/(VIEW_GLOBAL as i32/2);
 
-    let scale = (view_width as f64 *face_dist/projection_fov) as i32;
-    let height_numerator = fixed_mul((TILEGLOBAL*scale)>>6, y_aspect);
+    let height_numerator = (TILEGLOBAL*scale)>>6;
 
 	ProjectionConfig {
 		view_width,
@@ -209,10 +210,11 @@ pub fn game_loop(state: &GameState, rdr: &dyn Renderer, input: &input::Input, pr
 fn play_loop(state: &GameState, level: &mut Level, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
 	//TODO A lot to do here (clear palette, poll controls, prepare world)
     loop {
-        //level.player.angle += 0.025;
-        //if level.player.angle > 2.0 * std::f64::consts::PI {
-        //    level.player.angle = 0.0;
-        //}
+        /*
+        level.player.angle += (ANG90/90) as u32;
+        if level.player.angle > ANG360 as u32 {
+            level.player.angle = 0;
+        }*/
 	    three_d_refresh(state, level, rdr, prj, assets);
 
         let offset_prev = rdr.buffer_offset();
@@ -453,7 +455,7 @@ fn wall_refresh(level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig, asset
             x_partial=x_partialup;
             y_partial=y_partialup;
         }
-        rc.y_intercept = fixed_mul(rc.y_step,x_partial)+view_y;
+        rc.y_intercept = fixed_mul(rc.y_step, x_partial) + view_y;
         rc.x_tile = focal_tx+rc.x_tilestep;
         rc.x_spot[0] = rc.x_tile;
         rc.x_spot[1] = rc.y_intercept >> 16;
@@ -466,7 +468,7 @@ fn wall_refresh(level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig, asset
         rc.cast(level);
         
         let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, view_x, view_y, view_cos, view_sin);
-       
+
         let side = match rc.hit {
             Hit::HorizontalBorder|Hit::HorizontalWall => 0,
             Hit::VerticalBorder|Hit::VerticalWall => 1,
