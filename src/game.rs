@@ -1,7 +1,7 @@
 
 use crate::def::MAX_DOORS;
 
-use super::def::{Assets, ObjType, Level, LevelState, Control, At, MAP_SIZE, PLAYER_KEY, ANGLES};
+use super::def::{Assets, ObjType, Level, LevelState, At, MAP_SIZE, PLAYER_KEY};
 use super::assets::load_map_from_assets;
 use super::act1::{spawn_door};
 use super::agent::{spawn_player, thrust};
@@ -75,8 +75,6 @@ pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) 
         actor_at,
 		doors,
 		door_position,
-        control: Control{x:0, y:0},
-        angle_frac: 0,
 	};
 
     thrust(PLAYER_KEY, &mut level_state, prj, 0, 0); // set some variables

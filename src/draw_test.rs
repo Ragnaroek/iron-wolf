@@ -366,8 +366,6 @@ fn mock_level_state() -> LevelState {
         actor_at: Vec::with_capacity(0),
         doors: mock_doors(),
         door_position: vec![0;22],
-        control: Control{x:0, y:0},
-        angle_frac: 0,
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::play::ProjectionConfig;
-use crate::def::{StateType, ObjType, ObjKey, LevelState, At, ANGLES, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT};
+use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, At, ANGLES, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT};
 use crate::fixed::{new_fixed_i32, fixed_by_frac};
 
 const ANGLE_SCALE : i32 = 20;
@@ -11,8 +11,11 @@ pub const S_PLAYER : StateType = StateType{
     next: None,
 };
 
-fn t_player(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig) {
-    control_movement(k, level_state, prj);
+fn t_player(k: ObjKey, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
+
+    //TODO Cmd_use here
+
+    control_movement(k, level_state, control_state, prj);
 }
 
 pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
@@ -31,18 +34,17 @@ pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
     r
 }
 
-fn control_movement(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig) {
+fn control_movement(k: ObjKey, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
     // side to side move
-    let control_x = level_state.control.x;
-    let control_y = level_state.control.y;
+    let control_x = control_state.control.x;
+    let control_y = control_state.control.y;
     
-    level_state.angle_frac += control_x;
-    let angle_units = level_state.angle_frac / ANGLE_SCALE;
-    level_state.angle_frac -= angle_units*ANGLE_SCALE;
+    control_state.angle_frac += control_x;
+    let angle_units = control_state.angle_frac / ANGLE_SCALE;
+    control_state.angle_frac -= angle_units*ANGLE_SCALE;
 
     {
         let mut ob = level_state.mut_obj(k);
-        //println!("ob.angle={}", ob.angle);
         ob.angle -= angle_units;
         if ob.angle >= ANGLES as i32 {
             ob.angle -= ANGLES as i32;
@@ -55,7 +57,6 @@ fn control_movement(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionCon
     // forward/backwards move
     let ob = level_state.obj(k);
     if control_y < 0 {
-        println!("control_y={}", control_y);
         thrust(k, level_state, prj, ob.angle, -control_y*MOVE_SCALE)
     } else if control_y > 0 {
         let mut angle = ob.angle + ANGLES as i32 /2;
