@@ -199,9 +199,11 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
         game_state.god_mode = true;
         if game_state.episode == 0 && game_state.map_on == 0 {
             let player = level_state.mut_player();
+            /*
             player.x = 1465555;
             player.y = 3112211;
             player.angle = 0;
+            */ 
         }
         /*
         if game_state.episode == 0 && game_state.map_on == 1 {
