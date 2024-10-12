@@ -1,0 +1,31 @@
+# This is the config that is used if no `iw_config.toml` is provided
+# to iw. You can use this file a start for your own impl
+
+[data]
+# Path to the Wolf3D original data files:
+# AUDIOHED.XXX, AUDIOT.XXX, CONFIG.XXX, GAMEMAPS.XXX, MAPHEAD.XXX,
+# VGADICT.XXX, VGAGRAPH.XXX, VGAHEAD.XXX, VSWAP.XXX
+# The default is look for the files in the current working directory.
+wolf3d_data = "./"
+
+# Path to the patch file folder.
+# Omit this config to omit patching assets.
+# patch_data = "./path/to/patch/folder"
+
+[options]
+# Forces the disablement of all mods and all other options.
+# You will get the most possible experience to the 1992 original
+# if this is enabled.
+vanilla = true
+
+# disable some waits on launch
+no_wait = false
+
+# disable the (fake) psyched animation that simulates
+# the original experience 
+fast_psyched = false
+
+[mods]
+# nothing yet, planned:
+# - brutal mod
+# - map overlay

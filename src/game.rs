@@ -1,7 +1,7 @@
 use vga::VGA;
 
 use crate::agent::{draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_weapon};
-use crate::def::{Assets, At, ControlState, Difficulty, DoorLock, EnemyType, GameState, Level, LevelState, ObjType, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState, AMBUSH_TILE, ANGLES, MAP_SIZE, MAX_DOORS, MAX_STATS, PLAYER_KEY};
+use crate::def::{Assets, At, ControlState, Difficulty, DoorLock, EnemyType, GameState, IWConfig, Level, LevelState, ObjType, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState, AMBUSH_TILE, ANGLES, MAP_SIZE, MAX_DOORS, MAX_STATS, PLAYER_KEY};
 use crate::assets::load_map_from_assets;
 use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{spawn_dead_guard, spawn_patrol, spawn_stand};
@@ -30,7 +30,7 @@ pub const DEATH_ROTATE : u64 = 2;
 
 static ELEVATOR_BACK_TO : [usize; 6]= [1, 1, 7, 3, 5, 3];
 
-pub async fn game_loop(ticker: &time::Ticker, game_state: &mut GameState, vga: &VGA, rdr: &VGARenderer, input: &Input, prj: &ProjectionConfig, assets: &Assets, win_state: &mut WindowState) {
+pub async fn game_loop(ticker: &time::Ticker, iw_config: &IWConfig, game_state: &mut GameState, vga: &VGA, rdr: &VGARenderer, input: &Input, prj: &ProjectionConfig, assets: &Assets, win_state: &mut WindowState) {
     let mut control_state : ControlState = new_control_state();
     
     draw_play_screen(&game_state, rdr, prj).await;
@@ -44,7 +44,7 @@ pub async fn game_loop(ticker: &time::Ticker, game_state: &mut GameState, vga: &
 		//TODO PreloadGraphics
 
 		if !game_state.died {
-			preload_graphics(ticker, &game_state, prj, input, rdr).await;
+			preload_graphics(ticker, iw_config, &game_state, prj, input, rdr).await;
 		} else {
 			game_state.died = false;
 		}

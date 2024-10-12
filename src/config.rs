@@ -1,28 +1,40 @@
-use std::path::PathBuf;
+#[cfg(test)]
+#[path = "./config_test.rs"]
+mod config_test;
+
+use std::fs;
+use std::path::{Path, PathBuf};
 use crate::{assets::{WolfFile, WolfVariant}, loader::Loader};
 
 use super::user;
 use super::def::IWConfig;
 use super::util;
 
+use toml;
 use vga::input::{NumCode, to_numcode};
 
-pub static CONFIG_DATA: &'static str = "CONFIG.WL6";
+pub const IW_CONFIG_FILE_NAME: &str = "iw_config.toml";
+pub const CONFIG_DATA: &'static str = "CONFIG.WL6";
 pub const MAX_SCORES : usize = 7;
 
-pub fn default_iw_config() -> IWConfig {
-    //TODO load from a toml file
-    let mut path_data = PathBuf::new();
-    path_data.push("/Users/michaelbohn/_w3d/w3d_data");
-
-    let mut path_patch = PathBuf::new();
-    path_patch.push("/Users/michaelbohn/pprojects/iron-wolf/patch/w3d");
-
-    IWConfig {
-        wolf3d_data: path_data,
-        patch_data: Some(path_patch),
-        no_wait: false,
+// Load the config from the config file if it exists.
+// Returns the default config (vanila mode) if no config
+// file can be found.
+// Checks the current working dir for the presence of a
+// iw_config.toml file.
+pub fn read_iw_config() -> Result<IWConfig, String> {
+    let conf_file = Path::new(IW_CONFIG_FILE_NAME);
+    if conf_file.exists() {
+        let content = fs::read_to_string(conf_file).map_err(|e|e.to_string())?;
+        let config : IWConfig = toml::from_str(&content).map_err(|e|e.to_string())?;
+        Ok(config)
+    } else {
+        default_iw_config()
     }
+}
+
+pub fn default_iw_config() -> Result<IWConfig, String> {
+    toml::from_str("vanilla = true").map_err(|e|e.to_string())
 }
 
 pub enum SDMode {

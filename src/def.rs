@@ -5,6 +5,8 @@ use crate::fixed::Fixed;
 use crate::play::ProjectionConfig;
 use crate::vga_render::{PAGE_1_START, PAGE_2_START, PAGE_3_START, VGARenderer};
 
+use serde::Deserialize;
+
 pub const MAX_STATS	: usize = 400;	
 pub const MAX_DOORS : usize = 64;
 
@@ -538,10 +540,40 @@ pub struct StaticType {
 }
 
 // iron-wolf specific configuration
+#[derive(Deserialize, Debug)]
 pub struct IWConfig {
+    #[serde(default = "default_vanilla")]
+    pub vanilla: bool,
+
+    #[serde(default)]
+    pub data: IWConfigData,
+    #[serde(default)]
+    pub options: IWConfigOptions,
+}
+
+#[derive(Deserialize, Debug, Default)]
+pub struct IWConfigData {
+    #[serde(default = "default_path")]
 	pub wolf3d_data: PathBuf,
     pub patch_data: Option<PathBuf>,
+}
+
+#[derive(Deserialize, Debug, Default)]
+pub struct IWConfigOptions {
+    #[serde(default)]
     pub no_wait: bool,
+    #[serde(default)]
+    pub fast_psyched: bool,
+}
+
+fn default_path() -> PathBuf {
+    let mut path = PathBuf::new();
+    path.push("./");
+    path
+}
+
+fn default_vanilla() -> bool {
+    true
 }
 
 // All assets that need to be accessed in the game loop

@@ -25,7 +25,7 @@ pub fn iw_init(upload_id: &str) {
 
 #[wasm_bindgen]
 pub fn iw_start_web(loader: &WebLoader) -> Result<(), String> {
-    let iw_config = config::default_iw_config();
+    let iw_config = config::default_iw_config()?;
     iw_start(loader, iw_config)
 }
 
