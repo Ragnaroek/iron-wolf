@@ -6,8 +6,15 @@ authors = ["Michael Bohn <spaceodyssey@gmx.de>"]
 description = "Iron-Wolf a Wolfenstein 3D source port"
 
 [features]
-sdl = ["vga-emu/sdl"]
-web = ["vga-emu/web", "dep:wasm-bindgen", "dep:console_error_panic_hook", "dep:web-sys", "dep:js-sys", "dep:wasm-timer"]
+sdl = ["vga-emu/sdl", "opl-emu/sdl"]
+web = [
+    "vga-emu/web",
+    "dep:wasm-bindgen",
+    "dep:console_error_panic_hook",
+    "dep:web-sys",
+    "dep:js-sys",
+    "dep:wasm-timer",
+]
 
 [lib]
 name = "iw"
@@ -22,25 +29,28 @@ serde = { version = "1.0.203", features = ["derive"] }
 cfg-if = "1.0"
 async-std = { version = "1.12.0", features = ["unstable"] }
 futures = "0.3.30"
-vga-emu = "0.6.1" # { path="../vga-emu/" }
+vga-emu = "0.6.1"                                           # { path="../vga-emu/" }
+opl-emu = "0.1.2"                                           # { path = "../opl-emu/" }
 toml = "0.8.14"
 # feature web
-wasm-bindgen = { version = "0.2.92", optional = true, features = ["serde-serialize"]}
+wasm-bindgen = { version = "0.2.92", optional = true, features = [
+    "serde-serialize",
+] }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 js-sys = { version = "0.3.69", optional = true }
 web-sys = { version = "0.3.69", optional = true, features = [
-  'Document',
-  'Window',
-  'HtmlInputElement',
-  'MouseEvent',
-  'File',
-  'FileList',
-  'FileReader',
-  'Blob',
-  'Performance',
-  'console'
-]}
-wasm-timer = {version = "0.2.5", optional = true }
+    'Document',
+    'Window',
+    'HtmlInputElement',
+    'MouseEvent',
+    'File',
+    'FileList',
+    'FileReader',
+    'Blob',
+    'Performance',
+    'console',
+] }
+wasm-timer = { version = "0.2.5", optional = true }
 
 [profile.bench]
 debug = true
