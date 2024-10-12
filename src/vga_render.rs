@@ -4,7 +4,7 @@ use std::sync::atomic::AtomicUsize;
 use vga::{CRTReg, SCReg, VGA};
 use vga::util;
 
-use crate::assets::{STARTPICS, Font};
+use crate::assets::{STARTPICS, Font, TileData};
 use crate::time;
 
 use super::assets::{Graphic, GraphicNum, GAMEPAL};
@@ -16,6 +16,7 @@ pub const SCREEN_SIZE: usize = SCREENBWIDE * 208;
 pub const PAGE_1_START: usize = 0;
 pub const PAGE_2_START: usize = SCREEN_SIZE;
 pub const PAGE_3_START: usize = SCREEN_SIZE*2;
+pub const FREE_START: usize = SCREEN_SIZE*3;
 
 static PIXMASKS: [u8; 4] = [1, 2, 4, 8];
 static LEFTMASKS: [u8; 4]	= [15, 14, 12, 8];
@@ -28,9 +29,10 @@ pub struct VGARenderer {
 	displayofs: AtomicUsize,
 	graphics: Vec<Graphic>,
 	pub fonts: Vec<Font>,
+	pub tiles: TileData, 
 }
 
-pub fn init(vga: Arc<VGA>, graphics: Vec<Graphic>, fonts: Vec<Font>) -> VGARenderer {
+pub fn init(vga: Arc<VGA>, graphics: Vec<Graphic>, fonts: Vec<Font>, tiles: TileData) -> VGARenderer {
 	VGARenderer {
 		vga,
 		linewidth: 80,
@@ -38,6 +40,7 @@ pub fn init(vga: Arc<VGA>, graphics: Vec<Graphic>, fonts: Vec<Font>) -> VGARende
 		displayofs: AtomicUsize::new(PAGE_1_START),
 		graphics,
 		fonts,
+		tiles,
 	}
 }
 

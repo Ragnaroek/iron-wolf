@@ -24,9 +24,10 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
 	let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
 	vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
-    let (graphics, fonts) = assets::load_all_graphics(loader)?;
+    let (graphics, fonts, tiles) = assets::load_all_graphics(loader)?;
     let assets = assets::load_assets(loader)?;
 
+    // TODO don't latch the tile data (no advantage of the source port of it!)
     let mut user_state = init_game(&vga);
 
     // TODO calc_projection and setup_scaling have to be re-done if view size changes in config
@@ -36,7 +37,7 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
 
     let vga_screen = Arc::new(vga);
     let vga_loop = vga_screen.clone();
-    let render = vga_render::init(vga_screen.clone(), graphics, fonts);
+    let render = vga_render::init(vga_screen.clone(), graphics, fonts, tiles);
     let ticker = time::new_ticker();
     let input = input::init(ticker.time_count.clone(), input_monitoring.clone());
 
@@ -50,6 +51,14 @@ pub fn iw_start(loader: &dyn Loader, iw_config: IWConfig) -> Result<(), String> 
 		..Default::default()
 	};
     vga_screen.start(options).unwrap();
+    /*
+    vga_screen.start_debug_planar_mode(
+        1300,
+        700,
+        options, 
+    ).unwrap();
+    */
+
     Ok(())
 }
 
@@ -67,6 +76,9 @@ fn finish_signon() -> UserState {
         window_y: 0,
         window_w: 320,
         window_h: 160,
+        font_color: 0,
+        font_number: 0,
+        debug_ok: false,
     }
 }
 
