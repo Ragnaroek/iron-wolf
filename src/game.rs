@@ -7,7 +7,7 @@ use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{spawn_dead_guard, spawn_patrol, spawn_stand};
 use crate::agent::{spawn_player, thrust};
 use crate::draw::{RayCast, init_ray_cast, three_d_refresh};
-use crate::inter::{check_highscore, level_completed};
+use crate::inter::{check_highscore, level_completed, preload_graphics};
 use crate::play::{draw_play_screen, finish_palette_shifts, play_loop, ProjectionConfig, new_control_state};
 use crate::vh::vw_fade_out;
 use crate::{map, time};
@@ -42,7 +42,13 @@ pub async fn game_loop(ticker: &time::Ticker, game_state: &mut GameState, vga: &
 
 		//TODO StartMusic
 		//TODO PreloadGraphics
-		
+
+		if !game_state.died {
+			preload_graphics(ticker, &game_state, prj, input, rdr).await;
+		} else {
+			game_state.died = false;
+		}
+
 		game_state.fizzle_in = true;
 		draw_level(&game_state, rdr);
 		

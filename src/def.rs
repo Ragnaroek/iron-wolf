@@ -233,6 +233,7 @@ pub struct LevelRatio {
 
 /// State across the whole game
 pub struct GameState {
+    pub died: bool,
     pub difficulty: Difficulty,
 	pub map_on: usize,
     pub old_score: i32,
@@ -294,6 +295,7 @@ pub fn new_game_state() -> GameState {
     }
 
 	GameState {
+        died: false,
 		map_on: 0,
         difficulty: Difficulty::Hard,
         old_score: 0,

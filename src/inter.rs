@@ -1,6 +1,6 @@
 use std::ascii::Char;
 
-use crate::{agent::{draw_score, give_points}, assets::{num_pic, GraphicNum}, def::{GameState, WindowState, STATUS_LINES}, input::Input, menu::{clear_ms_screen, draw_stripes}, play::{draw_all_play_border, ProjectionConfig}, vga_render::VGARenderer};
+use crate::{agent::{draw_level, draw_score, give_points}, assets::{num_pic, GraphicNum}, def::{GameState, WindowState, STATUS_LINES}, input::Input, menu::{clear_ms_screen, draw_stripes}, play::{draw_all_play_border, ProjectionConfig}, vga_render::VGARenderer, vh::BLACK};
 use crate::time;
 
 static ALPHA : [GraphicNum; 43] = [
@@ -437,5 +437,42 @@ impl BjBreather {
             self.time_start = ticker.get_count();
             self.max = 35;
         }
+    }
+}
+
+pub async fn preload_graphics(ticker: &time::Ticker, state: &GameState, prj: &ProjectionConfig, input: &Input, rdr: &VGARenderer) {
+    draw_level(state, rdr);
+    // TODO ClearSplitVWB() (is there split screen support?)
+
+    rdr.bar(0, 0, 320, 200-STATUS_LINES, 127);
+    rdr.pic((20-14)*8, 80-3*8, GraphicNum::GETPSYCHEDPIC);
+
+    rdr.fade_in().await;
+
+    preload(ticker, rdr).await;
+
+    input.wait_user_input(70).await;
+    rdr.fade_out().await;
+
+    draw_all_play_border(rdr, prj);
+}
+
+// Only fakes the pre-load since in iw all graphics are already loaded into
+// memory. Simulates the thermometer update on the Get Psyched Screen only.
+async fn preload(ticker: &time::Ticker, rdr: &VGARenderer) {
+    let x = 160-14*8;
+    let y = 80-3*8;
+    let width = 28*8;
+    let height = 48;
+    let total = 100;
+    for current in 0..total {
+        let w = width - 10; 
+        rdr.bar(x+5, y+height-3, w, 2, BLACK);
+        let w = (w * current) / total;
+        if w > 0 {
+            rdr.bar(x+5, y+height - 3, w, 2, 0x37); //SECONDCOLOR
+            rdr.bar(x+5, y + height - 3, w-1, 1, 0x32);
+        }
+        ticker.tics(1).await;
     }
 }
