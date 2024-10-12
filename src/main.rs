@@ -35,6 +35,8 @@ fn main() -> Result<(), String> {
 
     let config = config::load_wolf_config(&iw_config);
 
+    let prj = game::new_projection_config(&config);
+
     let input_monitoring = vgaemu::input::new_input_monitoring();
 
     let vga_screen = Arc::new(vga);
@@ -43,7 +45,7 @@ fn main() -> Result<(), String> {
     let input = input::init(Arc::new(time), input_monitoring.clone());
 
 	thread::spawn(move || { 
-        demo_loop(&render, &input);
+        demo_loop(&render, &input, &prj);
     });
 
 	let options: screen::Options = vgaemu::screen::Options {
@@ -60,7 +62,7 @@ fn init_game(vga: &vgaemu::VGA) {
     signon_screen(vga);
 }
 
-fn demo_loop(rdr: &dyn Renderer, input: &input::Input) {
+fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionConfig) {
     pg_13(rdr, input);
 
     loop {
@@ -83,7 +85,7 @@ fn demo_loop(rdr: &dyn Renderer, input: &input::Input) {
             //TODO PlayDemo() here
         }
 
-        game::game_loop(rdr, input);
+        game::game_loop(rdr, input, prj);
         rdr.fade_out();
     }
 }
