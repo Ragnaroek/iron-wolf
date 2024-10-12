@@ -244,7 +244,6 @@ fn do_actor(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig) {
 }
 
 fn three_d_refresh(game_state: &GameState, level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
-
     rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
 
 	clear_screen(game_state, rdr, prj);
@@ -490,8 +489,8 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
         let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, view_x, view_y, view_cos, view_sin);
 
         match rc.hit {
-            Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, &rc, pixx, height, prj, rdr, assets),
-            Hit::HorizontalWall|Hit::HorizontalBorder => hit_horiz_wall(&mut scaler_state, &rc, pixx, height),
+            Hit::VerticalWall|Hit::VerticalBorder => hit_vert_wall(&mut scaler_state, &mut rc, pixx, height, prj, rdr, assets),
+            Hit::HorizontalWall|Hit::HorizontalBorder => hit_horiz_wall(&mut scaler_state, &mut rc, pixx, height, prj, rdr, assets),
             // TODO hit other things (door, pwall)
         }
 
@@ -516,9 +515,6 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
         draw_scaled(pixx, post_src, height, prj.view_height as i32, texture, rdr);
         */
     }
-
-    panic!("term first frame");
-
 }
 
 // Clears the screen and already draws the bottom and ceiling

@@ -4,6 +4,7 @@ use super::{setup_scaling};
 fn test_setup_scaling() {
     let compiled = setup_scaling(456, 152);
     assert_eq!(compiled.scalers.len(), 126);
+    assert_eq!(compiled.max_scale_shl2, 908);
     {
         let scaler_2 = &compiled.scalers[0];
         assert_eq!(scaler_2.for_height, 2);
