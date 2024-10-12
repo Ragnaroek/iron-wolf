@@ -1,15 +1,17 @@
-use crate::def::ObjType;
+#[cfg(test)]
+#[path = "./play_test.rs"]
+mod play_test;
 
 use super::vga_render::Renderer;
-use super::def::{GameState, WeaponType, Assets, Level, ObjKey, LevelState, Control, MAP_SIZE};
+use super::def::{GameState, WeaponType, Assets, Level, ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, MAP_SIZE, ANGLES, ANGLE_QUAD};
 use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
 use libiw::gamedata::Texture;
 use vgaemu::input::NumCode;
 use super::input;
 use super::time;
-use super::config;
 use super::vga_render;
-use super::game::{setup_game_level, TILESHIFT, TILEGLOBAL, ANGLE_45, ANGLE_180, ANGLES};
+use super::game::{setup_game_level, TILESHIFT, ANGLE_45, ANGLE_180};
+use super::wolf_hack::fixed_mul;
 
 //TODO separate draw.c stuff from play.c stuff in here
 
@@ -61,15 +63,24 @@ static VGA_CEILING : [u8; 60] = [
 ];
 
 pub struct ProjectionConfig {
-	view_size: usize,
 	view_width: usize,
 	view_height: usize,
 	screenofs: usize,
     height_numerator: i32,
 	pixelangle: Vec<i32>,
-    fine_sines: Vec<i32>,
+    sines: Vec<i32>,
     fine_tangents: [i32; NUM_FINE_TANGENTS],
     focal_length_y: i32,
+}
+
+impl ProjectionConfig {
+    pub fn sin(&self, ix: usize) -> i32 {
+        self.sines[ix]
+    }
+
+    pub fn cos(&self, ix: usize) -> i32 {
+        self.sines[ix+ANGLE_QUAD as usize]
+    }
 }
 
 pub fn new_game_state() -> GameState {
@@ -86,9 +97,9 @@ pub fn new_game_state() -> GameState {
 	}
 }
 
-pub fn new_projection_config(config: &config::WolfConfig) -> ProjectionConfig {
-	let view_width = ((config.viewsize * 16) & !15) as usize;
-	let view_height = ((((config.viewsize * 16) as f32 * HEIGHT_RATIO) as u16) & !1) as usize;
+pub fn new_projection_config(view_size: usize) -> ProjectionConfig {
+	let view_width = (view_size * 16) & !15;
+	let view_height = ((((view_size * 16) as f32 * HEIGHT_RATIO) as u16) & !1) as usize;
 	let screenofs = (200-STATUS_LINES-view_height)/2*SCREEN_WIDTH+(320-view_width)/8;
     let half_view = view_width/2;
     let projection_fov = VIEW_GLOBAL as f64;
@@ -96,7 +107,7 @@ pub fn new_projection_config(config: &config::WolfConfig) -> ProjectionConfig {
     let face_dist = FOCAL_LENGTH + MIN_DIST;
 
 	let pixelangle = calc_pixelangle(view_width, projection_fov, face_dist as f64);
-    let fine_sines = calc_fine_sines();
+    let sines = calc_sines();
     let fine_tangents = calc_fine_tangents();
 
     let center_x = view_width/2-1;
@@ -109,11 +120,10 @@ pub fn new_projection_config(config: &config::WolfConfig) -> ProjectionConfig {
 	ProjectionConfig {
 		view_width,
 		view_height,
-		view_size: config.viewsize as usize,
 		screenofs,
         height_numerator,
 		pixelangle,
-        fine_sines,
+        sines,
         fine_tangents,
         focal_length_y,
 	}
@@ -155,21 +165,22 @@ fn calc_pixelangle(view_width: usize, projection_fov: f64, face_dist: f64) -> Ve
 	pixelangles
 }
 
-fn calc_fine_sines() -> Vec<i32> {
-	let mut angle : f32 = 0.0;
-	let angle_step = PI/2.0/ANG90 as f32;
+fn calc_sines() -> Vec<i32> {
+    //TODO_VANILLA +1?? Bug in the original? does it write outside they array there in the original?
+    let mut sines: Vec<i32> = vec![0; ANGLES+ANGLE_QUAD+1]; 
 
-    let mut fine_sines = vec![0; FINE_ANGLES+FINE_ANGLES/4];
-
-    for i in 0..FINE_ANGLES {
-        fine_sines[i]= (FRAC_UNIT as f32 * angle.sin()) as i32;
-        angle += angle_step;
+    let mut angle : f32 = 0.0;
+    let angle_step = PI/2.0/ANGLE_QUAD as f32;
+    for i in 0..=ANGLE_QUAD {
+        let value : u32 = (GLOBAL1 as f32 * angle.sin()) as u32;
+        sines[i] = value as i32;
+        sines[i+ANGLES] = value as i32;
+        sines[ANGLES/2-i] = value as i32;
+        sines[ANGLES-i] = (value | 0x80000000u32) as i32;
+        sines[ANGLES/2+i] = (value | 0x80000000u32) as i32;
+        angle += angle_step;   
     }
-    //copy cosine value into the Vec (cosines are represented as a shift in the sine table)
-    for i in 0..(FINE_ANGLES/4) {
-        fine_sines[i+FINE_ANGLES] = fine_sines[i];
-    }
-    fine_sines
+    sines
 }
 
 pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
@@ -178,7 +189,7 @@ pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input
     
     draw_play_screen(&game_state, rdr, prj);
 	
-	let mut level = setup_game_level(game_state.map_on, assets).unwrap();
+	let mut level = setup_game_level(prj, game_state.map_on, assets).unwrap();
 
 	//TODO StartMusic
 	//TODO PreloadGraphics
@@ -200,7 +211,7 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
         level_state.control = poll_controls(ticker, input);
 
         for i in 0..level_state.actors.len() {
-            do_actor(ObjKey(i), level_state);
+            do_actor(ObjKey(i), level_state, prj);
         }
         
 	    three_d_refresh(game_state, level_state, rdr, prj, assets);
@@ -213,11 +224,11 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
     }
 }
 
-fn do_actor(k: ObjKey, level_state: &mut LevelState) {
+fn do_actor(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig) {
     //TODO do ob->ticcount part from DoActor here
     let may_think = level_state.obj(k).state.think;
     if let Some(think) = may_think {
-        think(k, level_state)
+        think(k, level_state, prj)
     }
 
     //TODO remove obj if state becomes None
@@ -252,7 +263,7 @@ enum Hit {
 }
 
 struct RayCast {
-    tile_hit: u8,
+    tile_hit: u16,
     hit: Hit, 
     y_tile: i32,
     x_tile: i32,
@@ -387,8 +398,8 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
     let player = level_state.player();
     let view_angle = player.angle;
     let mid_angle = view_angle * (FINE_ANGLES as i32/ANGLES as i32);
-    let view_sin = prj.fine_sines[(view_angle >> ANGLE_TO_FINE_SHIFT) as usize];
-    let view_cos = prj.fine_sines[((view_angle >> ANGLE_TO_FINE_SHIFT) + ANG90 as i32) as usize ];
+    let view_sin = prj.sin((view_angle >> ANGLE_TO_FINE_SHIFT) as usize);
+    let view_cos = prj.cos((view_angle >> ANGLE_TO_FINE_SHIFT) as usize);
     let view_x = player.x - fixed_mul(FOCAL_LENGTH as i32, view_cos);
     let view_y = player.y + fixed_mul(FOCAL_LENGTH as i32, view_sin);
     
@@ -520,10 +531,6 @@ fn calc_height(height_numerator: i32, x_intercept: i32, y_intercept: i32, view_x
          z = MIN_DIST;
     }
     (height_numerator << 8) / z
-}
-
-fn fixed_mul(a: i32, b: i32) -> i32 {
-    ((a as i64 * b as i64) + 0x8000 >> 16) as i32
 }
 
 // Clears the screen and already draws the bottom and ceiling
@@ -687,7 +694,9 @@ fn poll_controls(ticker: &time::Ticker, input: &input::Input) -> Control {
     } else if control.y < min {
         control.y  = min;
     }
-
+    if control.x != 0 || control.y != 0 {
+        println!("control={:?}", control);
+    }
     control
 }
 
@@ -700,6 +709,7 @@ fn poll_keyboard_move(control: &mut Control, input: &input::Input, tics: i32) {
     };
 
     if input.key_pressed(NumCode::UpArrow) {
+        println!("tics={}", tics);
         control.y -= move_factor;
     }
     if input.key_pressed(NumCode::DownArrow) {

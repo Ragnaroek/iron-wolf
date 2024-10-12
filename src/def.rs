@@ -1,11 +1,65 @@
+#[cfg(test)]
+#[path = "./def_test.rs"]
+mod draw_test;
+
 use std::path::Path;
+use std::fmt;
 
 use libiw::map::{MapType, MapFileType};
 use libiw::gamedata::Texture;
 
+use crate::play::ProjectionConfig;
+
+pub const GLOBAL1 : i32	= 1<<16;
+
 pub const MAP_SIZE : usize = 64;
 
-pub const ANGLES : i32 = 360; //must be divisable by 4
+pub const MIN_DIST : i32 = 0x5800;
+pub const PLAYER_SIZE : i32 = MIN_DIST;
+
+pub const ANGLES : usize = 360; //must be divisable by 4
+pub const ANGLE_QUAD : usize = ANGLES/4;
+
+pub const TILEGLOBAL : i32 = 1<<16;
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct Fixed(i32); //16:16 fixed point
+
+pub fn new_fixed_i16(int_part: i16, frac_part: i16) -> Fixed {
+    new_fixed(int_part as i32, frac_part as i32)
+}
+
+pub fn new_fixed(int_part: i32, frac_part: i32) -> Fixed {
+    Fixed(int_part << 16 | frac_part)
+}
+
+pub fn new_fixed_raw(raw: i32) -> Fixed {
+    Fixed(raw)
+}
+
+pub fn new_fixed_raw_u32(raw: u32) -> Fixed {
+    Fixed(raw as i32)
+}
+
+impl Fixed {
+    pub fn to_i32(&self) -> i32 {
+        self.0
+    }
+}
+
+impl fmt::Display for Fixed {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}.{}", self.0 >> 16, self.0 & 0xFFFF)
+    }
+}
+
+impl fmt::Debug for Fixed {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let i = self.0 >> 16;
+        let frac = self.0 & 0xFFFF;
+        write!(f, "{:#04x}.{:#04x}({}.{})", i, frac, i, frac)
+    }
+}
 
 #[derive(Copy, Clone)]
 pub enum WeaponType {
@@ -17,8 +71,7 @@ pub enum WeaponType {
 
 /// static level data (map and actors)
 pub struct Level {
-	pub tile_map: [[u8;MAP_SIZE]; MAP_SIZE],
-	pub actor_at: [[Option<ObjType>;MAP_SIZE]; MAP_SIZE], //XXX should not contain ObjTyp (ObjKey????)
+	pub tile_map: Vec<Vec<u16>>
 }
 
 #[derive(Debug)]
@@ -27,9 +80,17 @@ pub struct Control {
     pub y: i32,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum At {
+    Nothing,
+    Wall(u16),
+    Obj(ObjKey),
+}
+
 /// State for one level
 pub struct LevelState {
     pub level: Level,
+    pub actor_at: Vec<Vec<At>>,
     pub actors: Vec<ObjType>,
     
     /// Player stuff (TODO maybe move to own state?)
@@ -39,9 +100,11 @@ pub struct LevelState {
     pub angle_frac: i32,
 }
 
-// This is the key of the actor in the LevelState
-#[derive(Clone, Copy)]
+// This is the key of the actor in the LevelState actors[] array
+#[derive(Debug, Clone, Copy)]
 pub struct ObjKey(pub usize);
+
+pub const PLAYER_KEY : ObjKey = ObjKey(0); // The player is always at position 0
 
 impl LevelState {
     pub fn mut_player(&mut self) -> &mut ObjType {
@@ -101,7 +164,7 @@ pub struct Assets {
     pub textures: Vec<Texture>,
 }
 
-type Think = fn(k: ObjKey, level_state: &mut LevelState); 
+type Think = fn(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig); 
 
 pub struct StateType {
     pub think: Option<Think>,

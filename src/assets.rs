@@ -319,7 +319,7 @@ pub fn load_map_headers_from_config(config: &IWConfig) -> Result<(MapFileType, V
 // gamedata stuff
 
 pub fn load_gamedata(config: &IWConfig) -> Result<(Vec<u8>, GamedataHeaders), String> {
-    let mut header_bytes = util::load_file(&config.wolf3d_data.join(GAMEDATA));
+    let header_bytes = util::load_file(&config.wolf3d_data.join(GAMEDATA));
     let headers = libiw::gamedata::load_gamedata_headers(&header_bytes)?;
     Ok((header_bytes, headers))
 }

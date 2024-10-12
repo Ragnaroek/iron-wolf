@@ -2,6 +2,7 @@ pub mod agent;
 pub mod assets;
 pub mod config;
 pub mod def;
+pub mod draw;
 pub mod game;
 pub mod input;
 pub mod play;
@@ -10,6 +11,7 @@ pub mod user;
 pub mod util;
 pub mod vga_render;
 pub mod vl;
+pub mod wolf_hack;
 
 use std::sync::Arc;
 use std::io::prelude::*;
@@ -17,12 +19,11 @@ use std::fs::File;
 use std::thread;
 
 use vgaemu::screen;
-use vgaemu::{SCReg};
-use libiw::assets::{GAMEPAL};
+use vgaemu::SCReg;
+use libiw::assets::GAMEPAL;
 
-use def::{Assets};
-use assets::{GraphicNum};
-use play::{new_game_state};
+use def::Assets;
+use assets::GraphicNum;
 use vga_render::Renderer;
 
 fn main() -> Result<(), String> {
@@ -38,7 +39,7 @@ fn main() -> Result<(), String> {
     let graphics = assets::load_all_graphics(&iw_config)?;
     let (map_offsets, map_headers) = assets::load_map_headers_from_config(&iw_config)?;
 
-    let (gamedata, headers) = assets::load_gamedata(&iw_config)?;
+    let (_, headers) = assets::load_gamedata(&iw_config)?;
     let textures = assets::load_all_textures(&iw_config, &headers)?;
 
     let assets = Assets {
@@ -50,15 +51,14 @@ fn main() -> Result<(), String> {
 
     init_game(&vga);
 
-    let prj = play::new_projection_config(&config);
+    let prj = play::new_projection_config(config.viewsize as usize);
 
     let input_monitoring = vgaemu::input::new_input_monitoring();
 
     let vga_screen = Arc::new(vga);
     let render = vga_render::init(vga_screen.clone(), graphics);
-    let time = time::new_time_count();
-    let ticker = time::new_ticker(time.clone());
-    let input = input::init(time.clone(), input_monitoring.clone());
+    let ticker = time::new_ticker();
+    let input = input::init(ticker.time_count.clone(), input_monitoring.clone());
 
 	thread::spawn(move || { 
         demo_loop(ticker, &render, &input, &prj, &assets);
@@ -67,7 +67,6 @@ fn main() -> Result<(), String> {
 	let options: screen::Options = vgaemu::screen::Options {
 		show_frame_rate: true,
         input_monitoring: Some(input_monitoring),
-        frame_count: time.clone(),
 		..Default::default()
 	};
 	screen::start(vga_screen, options).unwrap();
