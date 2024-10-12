@@ -320,7 +320,7 @@ pub fn load_map(assets: &Assets, mapnum: usize) -> Result<MapData, String> {
 	for plane in 0..MAP_PLANES {
 		let pos = assets.map_headers[mapnum].plane_start[plane];
 		let compressed = assets.map_headers[mapnum].plane_length[plane];
-		
+
 		let mut buf = vec![0; compressed as usize];
 		file.seek(SeekFrom::Start(pos as u64)).expect("map seek failed");
 		file.read_exact(&mut buf).expect("map read failed");
@@ -328,17 +328,12 @@ pub fn load_map(assets: &Assets, mapnum: usize) -> Result<MapData, String> {
 		let mut reader = util::new_data_reader(&buf);
 		let expanded_len = reader.read_u16();		
 
-		//let expanded = carmack_expand(reader.unread_bytes(), expanded_len as usize);
-		//println!("expanded map = {}", expanded.len());
-		//TODO carmackexpand
-		//TODO RLEWexpand
-
-		println!("pos = {}, compressed = {}, expanded = {}", pos, compressed, expanded_len);
+		let expanded = carmack_expand(reader.unread_bytes(), expanded_len as usize);
+		// TODO RLEWexpand
 	}
 
 
-	Ok(MapData{})
-	//Return value??
+	Ok(MapData{}) // TODO return uncompressed map value
 }
 
 const NEARTAG : u8 = 0xa7;
@@ -383,9 +378,9 @@ pub fn carmack_expand(data: &[u8], len: usize) -> Vec<u8> {
 				let offset_high = data[in_ptr];
 				in_ptr += 1;
 
-				let mut offset = offset_low as usize;
-				offset  <<= 8;
-				offset |= offset_high as usize;
+				let mut offset = offset_high as usize;
+				offset <<= 8;
+				offset |= offset_low as usize;
 
 				let mut copy_ptr = (offset-1) * 2; 
 				length -= word_count as usize;
