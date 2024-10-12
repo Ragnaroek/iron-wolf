@@ -56,7 +56,7 @@ pub async fn game_loop(ticker: &time::Ticker, game_state: &mut GameState, vga: &
 				draw_keys(&game_state, rdr);
 				vw_fade_out(vga).await;
 
-				level_completed(ticker, vga, rdr, input, game_state, win_state).await;
+				level_completed(ticker, rdr, input, game_state, win_state).await;
 
 				game_state.old_score = game_state.score;
 

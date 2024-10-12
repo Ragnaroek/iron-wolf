@@ -1,5 +1,4 @@
-use serde_derive::Deserialize;
-use toml;
+use serde::Deserialize;
 use std::{fs, path::Path};
 
 #[derive(Deserialize)]

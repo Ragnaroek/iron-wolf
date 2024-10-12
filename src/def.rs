@@ -225,6 +225,13 @@ pub enum Difficulty {
     Hard,
 }
 
+pub struct LevelRatio {
+    pub kill: i32,
+    pub secret: i32,
+    pub treasure: i32,
+    pub time: i32, // in seconds
+}
+
 /// State across the whole game
 pub struct GameState {
     pub difficulty: Difficulty,
@@ -277,9 +284,16 @@ pub struct GameState {
     pub push_wall_x: usize,
     pub push_wall_y: usize,
     pub push_wall_dir: Dir,
+
+    pub level_ratios: Vec<LevelRatio>,
 }
 
 pub fn new_game_state() -> GameState {
+    let mut level_ratios = Vec::with_capacity(20);
+    for _ in 0..20 {
+        level_ratios.push(LevelRatio{kill: 0, secret: 0, treasure: 0, time: 0});
+    }
+
 	GameState {
 		map_on: 0,
         difficulty: Difficulty::Hard,
@@ -320,6 +334,7 @@ pub fn new_game_state() -> GameState {
         push_wall_x: 0,
         push_wall_y: 0,
         push_wall_dir: crate::def::Dir::North,
+        level_ratios,
 	}
 }
 

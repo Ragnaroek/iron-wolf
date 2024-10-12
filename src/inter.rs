@@ -1,9 +1,6 @@
-use core::{ascii, num};
 use std::ascii::Char;
 
-use vga::VGA;
-
-use crate::{assets::{num_pic, GraphicNum}, def::{GameState, WindowState, STATUS_LINES}, input::Input, menu::{clear_ms_screen, draw_stripes}, vga_render::VGARenderer, vh::vw_fade_in};
+use crate::{agent::{draw_score, give_points}, assets::{num_pic, GraphicNum}, def::{GameState, WindowState, STATUS_LINES}, input::Input, menu::{clear_ms_screen, draw_stripes}, vga_render::VGARenderer};
 use crate::time;
 
 static ALPHA : [GraphicNum; 43] = [
@@ -21,6 +18,8 @@ struct ParTime {
 }
 
 const PAR_AMOUNT : i32 = 500;
+const RATIO_XX : usize = 37;
+const PERCENT_100_AMT : i32 = 10000;
 
 static PAR_TIMES : [ParTime; 60] = [
 	 // Episode One Par Times
@@ -126,19 +125,21 @@ pub fn draw_high_scores(rdr: &VGARenderer) {
 /// Still in split screen mode with the status bar
 ///
 /// Exit with the screen faded out
-pub async fn level_completed(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, input: &Input, game_state: &GameState, win_state: &mut WindowState) {
+pub async fn level_completed(ticker: &time::Ticker, rdr: &VGARenderer, input: &Input, game_state: &mut GameState, win_state: &mut WindowState) {
     rdr.set_buffer_offset(rdr.active_buffer());
 
     clear_split_vwb(win_state);
     rdr.bar(0, 0, 320, 200-STATUS_LINES, 127);
     // TODO StartCPMusic(ENDLEVEL_MUS)
 
+    input.clear_keys_down();
+    input.start_ack();
+
     // do the intermission
     rdr.set_buffer_offset(rdr.active_buffer());
     rdr.pic(0, 16, GraphicNum::LGUYPIC);
 
     let mut bj_breather = new_bj_breather();
-
     if game_state.map_on < 8 {
         // CURR: Imple write function and write "floor\ncompleted"!!!
         write(rdr, 14, 2, "floor\ncompleted");
@@ -180,51 +181,186 @@ pub async fn level_completed(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer
         rdr.fade_in().await;
 
         // FIGURE RATIOS OUT BEFOREHAND
-        let kr = if game_state.kill_total > 0 {
+        let kill_ratio = if game_state.kill_total > 0 {
             (game_state.kill_count * 100) / game_state.kill_total
         } else {
             0
         };
-        let sr = if game_state.secret_total > 0 {
+        let secret_ratio = if game_state.secret_total > 0 {
             (game_state.secret_count * 100) / game_state.secret_total
         } else {
             0
         };
-        let tr = if game_state.treasure_total > 0 {
+        let treasure_ratio = if game_state.treasure_total > 0 {
             (game_state.treasure_total * 100) / game_state.treasure_total
         } else {
             0
         };
 
         // PRINT TIME BONUS
-        let bonus = time_left * PAR_AMOUNT;
+        let mut bonus = time_left * PAR_AMOUNT;
         if bonus > 0 {
-            for i in 0..time_left {
+            for i in 0..=time_left {
               let str = (i*PAR_AMOUNT).to_string();
               let x = 36 - str.len() * 2;
               write(rdr, x, 7, &str);
-              // TODO PlaySound(ENDBONUS1SND)
-              // TODO Breath while sound is playing
-              // TODO check for key press to skip animation
+              if i%(PAR_AMOUNT/10) == 0 {
+                // TODO PlaySound(ENDBONUS1SND)
+                // TODO Breath while sound is playing, code is a dummy implementation
+                fake_sound_breathe(ticker, rdr, &mut bj_breather);
+              }
+
+             if input.check_ack() {
+                return done_normal_level_complete(ticker, rdr, input, game_state, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
+             }
             }
 
             // TODO PlaySound(ENDBONUS2SND)
-            // TODO Breath while sound is playing
+            fake_sound_breathe(ticker, rdr, &mut bj_breather);
         }
 
-    } else {
-        // TODO secret floot completed
+        // KILL RATIO
+        for i in 0..=kill_ratio {
+            let str = i.to_string();
+            let x = RATIO_XX - str.len() * 2;
+            write(rdr, x, 14, &str);
+            if i%10 == 0 {
+                fake_sound_breathe(ticker, rdr, &mut bj_breather);
+            }
+
+            if input.check_ack() {
+                return done_normal_level_complete(ticker, rdr, input, game_state, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
+            }
+        } 
+        if kill_ratio == 100 {
+            bonus += PERCENT_100_AMT;
+            let str = bonus.to_string();
+            let x = (RATIO_XX - 1) - str.len() * 2;
+            write(rdr, x, 7, &str);
+            // TODO SD_PlaySound(PERCENT100SND)
+        } else if kill_ratio == 0 {
+            // TODO SD_StopSound()
+            // TODO SD_PlaySound(NOBONUSSND)
+        } else {
+            // TODO SD_PlaySound(ENDBONUS2SND)
+        }
+        fake_sound_breathe(ticker, rdr, &mut bj_breather);
+
+        // SECRET RATIO
+        for i in 0..=secret_ratio {
+            let str = i.to_string();
+            let x = RATIO_XX - str.len() * 2;
+            write(rdr, x, 16, &str);
+            if i%10 == 0 {
+                fake_sound_breathe(ticker, rdr, &mut bj_breather);
+            }
+            if input.check_ack() {
+                return done_normal_level_complete(ticker, rdr, input, game_state, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
+            }
+        }
+        if secret_ratio == 100 {
+            bonus += PERCENT_100_AMT;
+            let str = bonus.to_string();
+            let x = (RATIO_XX - 1) - str.len() * 2;
+            write(rdr, x, 7, &str);
+            // TODO SD_PlaySound(PERCENT100SND)
+        } else if secret_ratio == 0 {
+            // TODO SD_StopSound()
+            // TODO SD_PlaySound(NOBONUSSND)
+        } else {
+            // TODO SD_PlaySound(ENDBONUS2SND)
+        }
+
+        // TREASURE RATIO
+        for i in 0..=treasure_ratio {
+            let str = i.to_string();
+            let x = RATIO_XX - str.len() * 2;
+            write(rdr, x, 18, &str);
+            if i%10 == 0 {
+                fake_sound_breathe(ticker, rdr, &mut bj_breather);
+            }
+            if input.check_ack() {
+                return done_normal_level_complete(ticker, rdr, input, game_state, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
+            }
+        }
+        if treasure_ratio == 100 {
+            bonus += PERCENT_100_AMT;
+            let str = bonus.to_string();
+            let x = (RATIO_XX - 1) - str.len() * 2;
+            write(rdr, x, 7, &str);
+            // TODO SD_PlaySound(PERCENT100SND) 
+        } else if treasure_ratio == 0 {
+            // TODO SD_StopSound()
+            // TODO SD_PlaySound(NOBONUSSND) 
+        } 
+        return done_normal_level_complete(ticker, rdr, input, game_state, time_left, kill_ratio, secret_ratio, treasure_ratio, &mut bj_breather).await;
     }
 
-    //rdr.pic(0, 110, GraphicNum::LGUY2PIC);
+    // secret floor completed
+    write(rdr, 14, 4, "secret floor\n completed!");
+    write(rdr, 10, 16, "15000 bonus!");
+    rdr.fade_in().await;
 
-    // TODO write level complete data into screen
+    give_points(game_state, rdr, 15000);
 
-    vw_fade_in(vga).await;
+    return finish_level_complete(ticker, rdr, input, game_state, &mut bj_breather).await;
+        
+}
+
+// placeholder for starting a sound, waiting for it to complete
+// and letting BJ breathe.
+fn fake_sound_breathe(ticker: &time::Ticker, rdr: &VGARenderer, bj_breather: &mut BjBreather) {
+    let start = ticker.get_count();
+    while (ticker.get_count() - start) < 50 {
+        bj_breather.poll_breathe(ticker, rdr);
+    }
+}
+
+async fn done_normal_level_complete(ticker: &time::Ticker, rdr: &VGARenderer, input: &Input, game_state: &mut GameState, time_left: i32, kill_ratio: i32, secret_ratio: i32, treasure_ratio: i32, bj_breather: &mut BjBreather) {
+    let str = kill_ratio.to_string();
+    let x = RATIO_XX - str.len() * 2;
+    write(rdr, x, 14, &str);
+
+    let str = secret_ratio.to_string();
+    let x = RATIO_XX - str.len() * 2;
+    write(rdr, x, 16, &str); 
+
+    let str = treasure_ratio.to_string();
+    let x = RATIO_XX - str.len() * 2;
+    write(rdr, x, 18, &str);
+
+    let mut bonus = time_left * PAR_AMOUNT;
+    if kill_ratio == 100 {
+        bonus += PERCENT_100_AMT;
+    }
+    if secret_ratio == 100 {
+        bonus += PERCENT_100_AMT;
+    }
+    if treasure_ratio == 100 {
+        bonus += PERCENT_100_AMT;
+    }
+
+    let str = bonus.to_string();
+    let x = 36 - str.len()*2;
+    write(rdr, x, 7, &str);
+
+    give_points(game_state, rdr, bonus);
+
+    // SAVE RATIO INFORMATION FOR ENDGAME
+    game_state.level_ratios[game_state.map_on].kill = kill_ratio;
+    game_state.level_ratios[game_state.map_on].secret = secret_ratio;
+    game_state.level_ratios[game_state.map_on].treasure = treasure_ratio;
+    game_state.level_ratios[game_state.map_on].time = (game_state.time_count/70) as i32;
+
+    finish_level_complete(ticker, rdr, input, game_state, bj_breather).await;
+}
+
+async fn finish_level_complete(ticker: &time::Ticker, rdr: &VGARenderer, input: &Input, game_state: &mut GameState, bj_breather: &mut BjBreather) {
+    draw_score(game_state, rdr);
 
     input.start_ack();
     while !input.check_ack() {
-        bj_breather.breathe(ticker, rdr).await;
+        bj_breather.poll_breathe(ticker, rdr);
     }
 }
 
@@ -276,27 +412,26 @@ fn write(rdr: &VGARenderer, x: usize, y: usize, str: &str) {
 
 struct BjBreather {
     which : bool,
-    max: u64
+    max: u64,
+
+    time_start: u64,
 }
 
 fn new_bj_breather() -> BjBreather {
-    BjBreather{which: true, max: 10}
+    BjBreather{which: true, max: 10, time_start: 0}
 }
 
 impl BjBreather {
-    // Breathe Mr. BJ!!!
-    async fn breathe(&mut self, ticker: &time::Ticker, rdr: &VGARenderer) {
-        println!("breath = {}", self.which);
-        ticker.tics(self.max).await;
-
-        self.which = !self.which;
-        if self.which {
-            println!("PIC1 {}", GraphicNum::LGUYPIC as usize);
-            rdr.pic(0, 16, GraphicNum::LGUYPIC);
-        } else {
-            println!("PIC2 {}", GraphicNum::LGUY2PIC as usize);
-            rdr.pic(0, 16, GraphicNum::LGUY2PIC);
+    fn poll_breathe(&mut self, ticker: &time::Ticker, rdr: &VGARenderer) {
+        if ticker.get_count() > (self.time_start + self.max) {
+            self.which = !self.which;
+            if self.which {
+                rdr.pic(0, 16, GraphicNum::LGUYPIC);
+            } else {
+                rdr.pic(0, 16, GraphicNum::LGUY2PIC);
+            }
+            self.time_start = ticker.get_count();
+            self.max = 35;
         }
-        self.max = 35;
     }
 }
