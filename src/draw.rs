@@ -115,9 +115,9 @@ pub fn init_scaler_state() -> ScalerState {
      }
 }
 
-fn hit(level: &Level, linear_offset: i32) -> (bool, u16) {
-    let x = linear_offset as usize/MAP_SIZE;
-    let y = linear_offset as usize - x*MAP_SIZE;
+fn hit(level: &Level, linear_offset: usize) -> (bool, u16) {
+    let x = linear_offset/MAP_SIZE;
+    let y = linear_offset - x*MAP_SIZE;
     let tile = level.tile_map[x][y];
     ((tile & 0xFF) != 0, tile)
 }
@@ -125,8 +125,8 @@ fn hit(level: &Level, linear_offset: i32) -> (bool, u16) {
 fn init_ray_cast_consts(prj: &ProjectionConfig, player: &ObjType) -> RayCastConsts {
     let view_sin = prj.sin(player.angle as usize);
     let view_cos = prj.cos(player.angle as usize);
-    let view_x = player.x - fixed_mul(new_fixed_i32(FOCAL_LENGTH), view_cos).to_i32();
-    let view_y = player.y + fixed_mul(new_fixed_i32(FOCAL_LENGTH), view_sin).to_i32();
+    let view_x = player.x - fixed_by_frac(new_fixed_i32(FOCAL_LENGTH), view_cos).to_i32();
+    let view_y = player.y + fixed_by_frac(new_fixed_i32(FOCAL_LENGTH), view_sin).to_i32();
 
     let x_partialdown = view_x&(TILEGLOBAL-1);
     let x_partialup = TILEGLOBAL-x_partialdown;
@@ -256,7 +256,7 @@ impl RayCast {
 
             match dir {
                 DirJmp::VertEntry => {
-                    let (hit, tile) = hit(level, self.si);
+                    let (hit, tile) = hit(level, self.si.try_into().unwrap());
                     if hit {
                         self.tile_hit = tile;
                         // TODO check for door
@@ -281,7 +281,7 @@ impl RayCast {
                     check = DirCheck::VertCheck;
                 },
                 DirJmp::HorizEntry => {
-                    let (hit, tile) = hit(level, self.di);
+                    let (hit, tile) = hit(level, self.di.try_into().unwrap());
                     if hit {
                         //hithoriz:
                         self.tile_hit = tile;
