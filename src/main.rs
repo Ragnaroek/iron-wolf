@@ -45,7 +45,7 @@ fn main() -> Result<(), String> {
     let input = input::init(Arc::new(time), input_monitoring.clone());
 
 	thread::spawn(move || { 
-        demo_loop(&render, &input, &prj);
+        demo_loop(&render, &input, &prj, &iw_config);
     });
 
 	let options: screen::Options = vgaemu::screen::Options {
@@ -62,11 +62,13 @@ fn init_game(vga: &vgaemu::VGA) {
     signon_screen(vga);
 }
 
-fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionConfig) {
-    pg_13(rdr, input);
+fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionConfig, iw_config: &config::IWConfig) {
+    if !iw_config.no_wait {
+        pg_13(rdr, input);
+    }
 
     loop {
-        loop { // title screen & demo loop
+        while !iw_config.no_wait { // title screen & demo loop
             rdr.pic(0, 0, GraphicNum::TITLEPIC);
             rdr.fade_in();
             if input.user_input(time::TICK_BASE*15) {
