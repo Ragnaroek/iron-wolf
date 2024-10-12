@@ -216,7 +216,7 @@ pub async fn level_completed(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer
         // TODO secret floot completed
     }
 
-    rdr.pic(0, 110, GraphicNum::LGUY2PIC);
+    //rdr.pic(0, 110, GraphicNum::LGUY2PIC);
 
     // TODO write level complete data into screen
 

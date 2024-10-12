@@ -7,13 +7,13 @@ use std::io::Cursor;
 
 use wasm_bindgen::prelude::*;
 
-use super::start::iw_start;
-use super::assets;
-use super::assets::{WolfFile, file_name};
-use super::loader::Loader;
-use super::config;
-use super::map;
-use super::gamedata;
+use crate::start::iw_start;
+use crate::assets::{self, WolfFile, WolfVariant, file_name};
+use crate::loader::Loader;
+use crate::config;
+use crate::map;
+use crate::gamedata;
+use crate::patch::PatchConfig;
 
 #[wasm_bindgen]
 pub fn iw_init(upload_id: &str) {
@@ -116,9 +116,17 @@ fn handle_load(event: web_sys::Event, name: String, loader: Rc<RefCell<WebLoader
 }
 
 impl Loader for WebLoader {
-    fn load_file(&self, file: WolfFile) -> Vec<u8> {
-        let buffer = self.files.get(file_name(file)).expect(&format!("file {} not found", file_name(file)));
+    fn load_wolf_file(&self, file: WolfFile, variant: &WolfVariant) -> Vec<u8> {
+        let buffer = self.files.get(&file_name(file, variant)).expect(&format!("file {} not found", file_name(file, variant)));
         buffer.clone()
+    }
+
+    fn load_patch_config_file(&self) -> Option<PatchConfig> {
+        todo!("patch file loading not implemented for web");
+    }
+    // panics, if patch path is not set
+    fn load_patch_data_file(&self, name: String) -> Vec<u8> {
+        todo!("patch file data loading not implemented for web");
     }
 }
 

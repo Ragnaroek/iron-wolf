@@ -4,7 +4,7 @@ use std::sync::atomic::AtomicUsize;
 use vga::{CRTReg, SCReg, VGA};
 use vga::util;
 
-use crate::assets::{STARTPICS, Font, TileData};
+use crate::assets::{Font, TileData, WolfVariant};
 use crate::time;
 
 use super::assets::{Graphic, GraphicNum, GAMEPAL};
@@ -30,9 +30,10 @@ pub struct VGARenderer {
 	graphics: Vec<Graphic>,
 	pub fonts: Vec<Font>,
 	pub tiles: TileData, 
+	variant: &'static WolfVariant,
 }
 
-pub fn init(vga: Arc<VGA>, graphics: Vec<Graphic>, fonts: Vec<Font>, tiles: TileData) -> VGARenderer {
+pub fn init(vga: Arc<VGA>, graphics: Vec<Graphic>, fonts: Vec<Font>, tiles: TileData, variant: &'static WolfVariant) -> VGARenderer {
 	VGARenderer {
 		vga,
 		linewidth: 80,
@@ -41,6 +42,7 @@ pub fn init(vga: Arc<VGA>, graphics: Vec<Graphic>, fonts: Vec<Font>, tiles: Tile
 		graphics,
 		fonts,
 		tiles,
+		variant,
 	}
 }
 
@@ -189,7 +191,7 @@ impl VGARenderer {
 	}
 
 	pub fn pic(&self, x: usize, y: usize, graph_num: GraphicNum) {
-		let pic_num = graph_num as usize - STARTPICS;
+		let pic_num = graph_num as usize - self.variant.start_pics;
 		let graphic = &self.graphics[pic_num as usize];
 		self.mem_to_screen(&graphic.data, graphic.width, graphic.height, x & !7, y);
 	}

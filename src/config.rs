@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use crate::{loader::Loader, assets::WolfFile};
+use crate::{assets::{WolfFile, WolfVariant}, loader::Loader};
 
 use super::user;
 use super::def::IWConfig;
@@ -12,10 +12,15 @@ pub const MAX_SCORES : usize = 7;
 
 pub fn default_iw_config() -> IWConfig {
     //TODO load from a toml file
-    let mut path = PathBuf::new();
-    path.push("/Users/michaelbohn/_w3d/w3d_data");
+    let mut path_data = PathBuf::new();
+    path_data.push("/Users/michaelbohn/_w3d/w3d_data");
+
+    let mut path_patch = PathBuf::new();
+    path_patch.push("/Users/michaelbohn/pprojects/iron-wolf/patch/w3d");
+
     IWConfig {
-        wolf3d_data: path,
+        wolf3d_data: path_data,
+        patch_data: Some(path_patch),
         no_wait: false,
     }
 }
@@ -63,8 +68,8 @@ pub struct WolfConfig {
 
 // TODO write a test with load/write roundtrip (once write is there) 
 
-pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
-    let data = loader.load_file(WolfFile::ConfigData);
+pub fn load_wolf_config(loader: &dyn Loader, variant: &WolfVariant) -> WolfConfig {
+    let data = loader.load_wolf_file(WolfFile::ConfigData, variant);
     let mut reader = util::new_data_reader(&data);
 
     let mut high_scores = Vec::with_capacity(MAX_SCORES);

@@ -24,18 +24,20 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
 
     let iw_config = IWConfig {
         wolf3d_data: path,
+        patch_data: None,
         no_wait: true,
     };
     let loader = DiskLoader{
         data_path: iw_config.wolf3d_data.clone(),
+        patch_path: iw_config.patch_data,
     };
-    let assets = assets::load_assets(&loader)?;
+    let assets = assets::load_assets(&loader, &assets::W3D)?;
     let prj = play::calc_projection(19);
-    let (graphics, fonts, tiles) = assets::load_all_graphics(&loader)?;
+    let (graphics, fonts, tiles) = assets::load_all_graphics(&loader, &assets::W3D, &None)?;
 
     let vga = vga::new(0x13);
     let vga_screen = Arc::new(vga);
-    let render = vga_render::init(vga_screen.clone(), graphics, fonts, tiles);
+    let render = vga_render::init(vga_screen.clone(), graphics, fonts, tiles, &assets::W3D);
 
     let mut game_state = new_game_state();
 

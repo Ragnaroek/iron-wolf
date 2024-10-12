@@ -513,6 +513,7 @@ pub struct StaticType {
 // iron-wolf specific configuration
 pub struct IWConfig {
 	pub wolf3d_data: PathBuf,
+    pub patch_data: Option<PathBuf>,
     pub no_wait: bool,
 }
 

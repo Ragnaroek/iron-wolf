@@ -1,0 +1,2 @@
+[graphics]
+43 = "guypic.vga" # to fix the intermission screen BJ not breathing bug, extract the correct picture from the SOD data with iw-extract: cargo run -- <path/to/spear-of-destiny/data> -p 36 > guypic.vga

@@ -6,18 +6,19 @@ use crate::map::{load_map, load_map_headers, load_map_offsets, MapType, MapFileT
 use crate::loader::Loader;
 use crate::def::{WeaponType, Assets};
 use crate::gamedata;
+use crate::patch::{graphic_patch, PatchConfig};
 use crate::util::new_data_reader;
 
 pub static GAMEPAL: &'static [u8] = include_bytes!("../assets/gamepal.bin");
 pub static SIGNON: &'static [u8] = include_bytes!("../assets/signon.bin");
 
-pub const GRAPHIC_DICT: &'static str = "VGADICT.WL6";
-pub const GRAPHIC_HEAD: &'static str = "VGAHEAD.WL6";
-pub const GRAPHIC_DATA: &'static str = "VGAGRAPH.WL6";
-pub const MAP_HEAD: &'static str = "MAPHEAD.WL6";
-pub const GAME_MAPS: &'static str = "GAMEMAPS.WL6";
-pub const GAMEDATA: &'static str = "VSWAP.WL6";
-pub const CONFIG_DATA: &'static str = "CONFIG.WL6";
+pub const GRAPHIC_DICT: &'static str = "VGADICT";
+pub const GRAPHIC_HEAD: &'static str = "VGAHEAD";
+pub const GRAPHIC_DATA: &'static str = "VGAGRAPH";
+pub const MAP_HEAD: &'static str = "MAPHEAD";
+pub const GAME_MAPS: &'static str = "GAMEMAPS";
+pub const GAMEDATA: &'static str = "VSWAP";
+pub const CONFIG_DATA: &'static str = "CONFIG";
 
 const BLOCK : usize = 64;
 const MASKBLOCK : usize = 128;
@@ -32,6 +33,28 @@ pub enum WolfFile {
 	GameData,
 	ConfigData,
 }
+
+// Contains everything from the generated header from the original.
+pub struct WolfVariant {
+	pub file_ending: &'static str,	
+	pub num_pics: usize,
+	pub start_pics: usize,
+}
+
+// TODO Put this behind conditional compilation (once Spear of Destiny support is started)
+
+// TODO Demo file support WL1 and WL3??
+pub static W3D : WolfVariant = WolfVariant {
+	file_ending: "WL6",
+	num_pics: 132,
+	start_pics: 3,
+};
+
+pub static SOD : WolfVariant = WolfVariant {
+	file_ending: "SOD",
+	num_pics: 147,
+	start_pics: 3,
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct RGB {
@@ -49,8 +72,8 @@ pub fn gamepal_color(ix: usize) -> RGB {
     }
 }
 
-pub fn file_name(file: WolfFile) -> &'static str {
-	match file {
+pub fn file_name(file: WolfFile, variant: &WolfVariant) -> String {
+	let f = match file {
 		WolfFile::GraphicDict => GRAPHIC_DICT,
 		WolfFile::GraphicHead => GRAPHIC_HEAD,
 		WolfFile::GraphicData => GRAPHIC_DATA,
@@ -58,7 +81,8 @@ pub fn file_name(file: WolfFile) -> &'static str {
 		WolfFile::GameMaps => GAME_MAPS,
 		WolfFile::GameData => GAMEDATA,
 		WolfFile::ConfigData => CONFIG_DATA,
-	}
+	};
+	f.to_owned() + "." + variant.file_ending
 }
 
 // num values are chunk offsets. They need to be translated to
@@ -261,12 +285,10 @@ const NUMTILE8 : usize = 72;
 
 const STARTFONT: usize = 1;
 const STRUCTPIC: usize = 0;
-pub const STARTPICS: usize = 3;
 const STARTTILE8: usize = 135;
 const STARTTILE8M: usize = 136;
 const STARTEXTERNS: usize = 136;
 const NUM_FONT: usize = 2;
-const NUM_PICS: usize = 132;
 
 pub struct Graphic {
 	pub data: Vec<u8>,
@@ -291,14 +313,14 @@ pub struct Huffnode {
 	bit1: u16,
 }
 
-pub fn load_all_graphics(loader: &dyn Loader) -> Result<(Vec<Graphic>, Vec<Font>, TileData), String> {
-	let grhuffman_bytes = loader.load_file(WolfFile::GraphicDict); 
+pub fn load_all_graphics(loader: &dyn Loader, variant: &WolfVariant, patch_config: &Option<PatchConfig>) -> Result<(Vec<Graphic>, Vec<Font>, TileData), String> {
+	let grhuffman_bytes = loader.load_wolf_file(WolfFile::GraphicDict, variant); 
 	let grhuffman = to_huffnodes(grhuffman_bytes);
 
-	let grstarts = loader.load_file(WolfFile::GraphicHead);
-	let grdata = loader.load_file(WolfFile::GraphicData);
+	let grstarts = loader.load_wolf_file(WolfFile::GraphicHead, variant);
+	let grdata = loader.load_wolf_file(WolfFile::GraphicData, variant);
 
-	let picsizes = extract_picsizes(&grdata, &grstarts, &grhuffman);
+	let picsizes = extract_picsizes(&grdata, &grstarts, &grhuffman, variant);
 
 	let mut fonts = Vec::with_capacity(NUM_FONT);
 	for i in STARTFONT..(STARTFONT+NUM_FONT) {
@@ -306,15 +328,26 @@ pub fn load_all_graphics(loader: &dyn Loader) -> Result<(Vec<Graphic>, Vec<Font>
 		fonts.push(font);
 	}
 	
-	let mut graphics = Vec::with_capacity(NUM_PICS);
-	for i in STARTPICS..(STARTPICS+NUM_PICS) {
-		let g = load_graphic(
-			i,
-			&grstarts,
-			&grdata,
-			&grhuffman,
-			&picsizes
-		)?;
+	let mut graphics = Vec::with_capacity(variant.num_pics);
+	for i in variant.start_pics..(variant.start_pics+variant.num_pics) {
+		let g = if let Some(patch_file) = graphic_patch(patch_config, i) {
+			let data = loader.load_patch_data_file(patch_file);
+			let (w, h) = picsizes[i-variant.start_pics];
+			Graphic {
+				data,
+				width: w,
+				height: h,
+			}
+		} else {
+			load_graphic(
+				i,
+				&grstarts,
+				&grdata,
+				&grhuffman,
+				&picsizes,
+				variant
+			)?
+		};
 		graphics.push(g);
 	}
 
@@ -323,14 +356,14 @@ pub fn load_all_graphics(loader: &dyn Loader) -> Result<(Vec<Graphic>, Vec<Font>
 	Ok((graphics, fonts, TileData{tile8}))
 }
 
-fn extract_picsizes(grdata: &Vec<u8>, grstarts: &Vec<u8>, grhuffman: &Vec<Huffnode>) -> Vec<(usize, usize)> {
+fn extract_picsizes(grdata: &Vec<u8>, grstarts: &Vec<u8>, grhuffman: &Vec<Huffnode>, variant: &WolfVariant) -> Vec<(usize, usize)> {
 	let (complen, explen) = gr_chunk_length(STRUCTPIC, grdata, grstarts);
 	let f_offset = (grfilepos(STRUCTPIC, grstarts) + 4) as usize;
 	let expanded = huff_expand(&grdata[f_offset..(f_offset+complen)], explen, grhuffman);
 	
-	assert_eq!(explen/4, NUM_PICS); // otherwise the data file may not match the code
+	assert_eq!(explen/4, variant.num_pics); // otherwise the data file may not match the code
 
-	let mut picsizes = Vec::with_capacity(NUM_PICS);
+	let mut picsizes = Vec::with_capacity(variant.num_pics);
 	let mut offset = 0;
 
 	// TODO Write util functions for from_le_bytes()..try_into.unwrap noise
@@ -408,10 +441,11 @@ fn load_graphic(
 	grdata: &Vec<u8>,
 	grhuffman: &Vec<Huffnode>,
 	picsizes: &Vec<(usize, usize)>,
+	variant: &WolfVariant
 ) -> Result<Graphic, String> {
 	let (pos, compressed) = data_sizes(chunk, grstarts)?;
 	let source = &grdata[pos..(pos + compressed)];
-	Ok(expand_graphic(chunk, source, grhuffman, picsizes))
+	Ok(expand_graphic(chunk, source, grhuffman, picsizes, variant))
 }
 
 fn load_tile8(grstarts: &Vec<u8>, grdata: &Vec<u8>, grhuffman: &Vec<Huffnode>) -> Result<Vec<Vec<u8>>, String> {
@@ -470,9 +504,9 @@ fn expand_chunk(chunk: usize, data_in: &[u8], grhuffman: &Vec<Huffnode>) -> Vec<
 	huff_expand(data, expanded, grhuffman)
 }
 
-fn expand_graphic(chunk: usize, data: &[u8], grhuffman: &Vec<Huffnode>, picsizes: &Vec<(usize, usize)>) -> Graphic {
+fn expand_graphic(chunk: usize, data: &[u8], grhuffman: &Vec<Huffnode>, picsizes: &Vec<(usize, usize)>, variant: &WolfVariant) -> Graphic {
 	let expanded = expand_chunk(chunk, data, grhuffman);
-	let size = picsizes[chunk-STARTPICS];
+	let size = picsizes[chunk-variant.start_pics];
 	return Graphic {
 		data: expanded,
 		width: size.0,
@@ -533,9 +567,9 @@ pub fn load_map_from_assets(assets: &Assets, mapnum: usize) -> Result<MapData, S
 	load_map(&mut cursor, &assets.map_headers, &assets.map_offsets, mapnum)
 }
 
-pub fn load_map_headers_from_config(loader: &dyn Loader) -> Result<(MapFileType, Vec<MapType>), String> {
-	let offset_bytes = loader.load_file(WolfFile::MapHead); 
-	let map_bytes = loader.load_file(WolfFile::GameMaps); 
+pub fn load_map_headers_from_config(loader: &dyn Loader, variant: &WolfVariant) -> Result<(MapFileType, Vec<MapType>), String> {
+	let offset_bytes = loader.load_wolf_file(WolfFile::MapHead, variant); 
+	let map_bytes = loader.load_wolf_file(WolfFile::GameMaps, variant); 
 	let offsets = load_map_offsets(&offset_bytes)?;
 	load_map_headers(&map_bytes, offsets)
 }
@@ -543,10 +577,10 @@ pub fn load_map_headers_from_config(loader: &dyn Loader) -> Result<(MapFileType,
 // gamedata stuff
 
 // loads all assets for the game into memory
-pub fn load_assets(loader: &dyn Loader) -> Result<Assets, String> {
-    let (map_offsets, map_headers) = load_map_headers_from_config(loader)?;
+pub fn load_assets(loader: &dyn Loader, variant: &WolfVariant) -> Result<Assets, String> {
+    let (map_offsets, map_headers) = load_map_headers_from_config(loader, variant)?;
 
-	let gamedata_bytes = loader.load_file(WolfFile::GameData);
+	let gamedata_bytes = loader.load_wolf_file(WolfFile::GameData, variant);
 	let headers = gamedata::load_gamedata_headers(&gamedata_bytes)?; 
 
 	//let mut gamedata_file: File = File::open(&iw_config.wolf3d_data.join(GAMEDATA)).expect("opening gamedata file failed");
@@ -554,7 +588,7 @@ pub fn load_assets(loader: &dyn Loader) -> Result<Assets, String> {
 	let textures = gamedata::load_all_textures(&mut gamedata_cursor, &headers)?;
 	let sprites = gamedata::load_all_sprites(&mut gamedata_cursor, &headers)?;
 	
-	let game_maps = loader.load_file(WolfFile::GameMaps);
+	let game_maps = loader.load_wolf_file(WolfFile::GameMaps, variant);
 
 	Ok(Assets {
         map_headers,
