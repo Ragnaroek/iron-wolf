@@ -15,7 +15,6 @@ use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::{RayCast, three_d_refresh};
 use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC, EXTRA_POINTS};
 use crate::assets::{GraphicNum, GAMEPAL};
-use crate::game;
 use crate::input;
 use crate::inter::clear_split_vwb;
 use crate::menu::message;
