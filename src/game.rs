@@ -1,6 +1,6 @@
 
 use super::vga_render::Renderer;
-use super::def::{GameState, WeaponType};
+use super::def::{GameState, WeaponType, Assets};
 use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
 use super::input;
 use super::time;
@@ -9,6 +9,8 @@ use super::vga_render;
 
 const STATUS_LINES : usize = 40;
 const HEIGHT_RATIO : f32 = 0.5;
+
+const MAP_SIZE : usize = 64;
 
 static SCREENLOC : [usize; 3] = [vga_render::PAGE_1_START, vga_render::PAGE_2_START, vga_render::PAGE_3_START];
 
@@ -20,7 +22,7 @@ pub struct ProjectionConfig {
 
 pub fn new_game_state() -> GameState {
 	GameState {
-		mapon: 0,
+		map_on: 0,
 		score: 0,
 		lives: 3,
 		health: 100,
@@ -42,17 +44,45 @@ pub fn new_projection_config(config: &config::WolfConfig) -> ProjectionConfig {
 	}
 }
 
-pub fn game_loop(state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig) {
-	draw_play_screen(state, rdr, prj);
+#[derive(Copy, Clone)] // Keep this just for init of array with default??
+struct Objstruct {
 
+}
+
+struct Level {
+	tile_map: [[u8;MAP_SIZE]; MAP_SIZE],
+	actor_at: [[Objstruct;MAP_SIZE]; MAP_SIZE],
+}
+
+pub fn game_loop(state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+	draw_play_screen(state, rdr, prj);
+	
+	let level = setup_game_level(state, assets);
 	//TODO SetupGameLevel
 	//TODO StartMusic
 	//TODO PreloadGraphics
 	//TODO DrawLevel
 	//TODO PlayLoop
 
+	//TODO Go to next level (gamestate.map_on+=1)
+
 	rdr.fade_in();
 	input.user_input(time::TICK_BASE*1000);
+}
+
+fn setup_game_level(state: &GameState, assets: &Assets) -> Level {
+
+	let map = &assets.map_headers[state.map_on];
+	if map.width != 64 || map.height != 64 {
+		panic!("Map not 64*64!");
+	}
+
+	let tile_map = [[0;MAP_SIZE];MAP_SIZE];
+	let actor_at = [[Objstruct{};MAP_SIZE];MAP_SIZE];
+	Level {
+		tile_map,
+		actor_at,
+	}
 }
 
 fn draw_play_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
@@ -121,7 +151,7 @@ fn draw_lives(state: &GameState, rdr: &dyn Renderer) {
 }
 
 fn draw_level(state: &GameState, rdr: &dyn Renderer) {
-	latch_number(rdr, 2, 16, 2, state.mapon+1);
+	latch_number(rdr, 2, 16, 2, state.map_on+1);
 }
 
 fn draw_ammo(state: &GameState, rdr: &dyn Renderer) {

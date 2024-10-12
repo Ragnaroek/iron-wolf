@@ -17,6 +17,7 @@ use std::thread;
 use vgaemu::screen;
 use vgaemu::{SCReg};
 
+use def::{Assets};
 use assets::{GraphicNum};
 use game::{new_game_state};
 use vga_render::Renderer;
@@ -33,9 +34,9 @@ fn main() -> Result<(), String> {
     let graphics = assets::load_all_graphics(&iw_config)?;
     let map_headers = assets::load_map_headers(&iw_config)?;
 
-    for i in 0..60 {
-        println!("map: {}", map_headers[i].name);
-    }
+    let assets = Assets {
+        map_headers: map_headers,
+    };
 
     init_game(&vga);
 
@@ -51,7 +52,7 @@ fn main() -> Result<(), String> {
     let input = input::init(Arc::new(time), input_monitoring.clone());
 
 	thread::spawn(move || { 
-        demo_loop(&render, &input, &prj, &iw_config);
+        demo_loop(&render, &input, &prj, &assets, &iw_config);
     });
 
 	let options: screen::Options = vgaemu::screen::Options {
@@ -68,7 +69,7 @@ fn init_game(vga: &vgaemu::VGA) {
     signon_screen(vga);
 }
 
-fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionConfig, iw_config: &config::IWConfig) {
+fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionConfig, assets: &Assets, iw_config: &config::IWConfig) {
     if !iw_config.no_wait {
         pg_13(rdr, input);
     }
@@ -95,7 +96,7 @@ fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionCon
             //TODO PlayDemo() here
         }
 
-        game::game_loop(&game_state, rdr, input, prj);
+        game::game_loop(&game_state, rdr, input, prj, assets);
         rdr.fade_out();
     }
 }

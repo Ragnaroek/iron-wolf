@@ -1,4 +1,4 @@
-use super::def::{WeaponType};
+use super::def::{WeaponType, MapType};
 use super::util;
 use super::config::IWConfig;
 
@@ -299,18 +299,9 @@ fn huff_expand(data: &[u8], len: usize, grhuffman: &Vec<Huffnode>) -> Vec<u8> {
 	expanded
 }
 
-
-pub struct MapFileType {
+struct MapFileType {
 	pub rlew_tag: u16,
 	pub header_offsets: Vec<i32>,
-}
-
-pub struct MapType {
-	pub plane_start: [i32; 3],
-	pub plane_length: [u16; 3],
-	pub width: u16,
-	pub height: u16,
-	pub name: String,
 }
 
 pub fn load_map_headers(config: &IWConfig) -> Result<Vec<MapType>, String> {
