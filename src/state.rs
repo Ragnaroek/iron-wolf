@@ -8,12 +8,15 @@ use crate::act2::{
     S_SSPAIN, S_SSPAIN1,
 };
 use crate::agent::{give_points, take_damage};
+use crate::assets::SoundName;
 use crate::def::{
     Assets, At, ClassType, DirType, GameState, LevelState, ObjKey, ObjType, StateType, StaticKind,
-    WeaponType, FL_AMBUSH, FL_ATTACKMODE, FL_FIRSTATTACK, FL_NONMARK, FL_SHOOTABLE, MIN_ACTOR_DIST,
-    TILEGLOBAL, TILESHIFT, UNSIGNEDSHIFT,
+    WeaponType, FL_AMBUSH, FL_ATTACKMODE, FL_FIRSTATTACK, FL_NONMARK, FL_SHOOTABLE, MAP_SIZE,
+    MIN_ACTOR_DIST, TILEGLOBAL, TILESHIFT, UNSIGNEDSHIFT,
 };
 use crate::fixed::new_fixed_i32;
+use crate::game::AREATILE;
+use crate::map::MapSegs;
 use crate::sd::Sound;
 use crate::user::rnd_t;
 use crate::vga_render::VGARenderer;
@@ -139,15 +142,21 @@ static DIAGONAL: [[DirType; 9]; 9] = [
 pub const MIN_SIGHT: i32 = 0x18000;
 
 pub fn spawn_new_obj(
+    map_data: &MapSegs,
     tile_x: usize,
     tile_y: usize,
     state: &'static StateType,
     class: ClassType,
 ) -> ObjType {
-    // TODO set areanumber
-
     let tic_count = if state.tic_time > 0 {
         rnd_t() as u32 % state.tic_time
+    } else {
+        0
+    };
+
+    let tile = map_data.segs[0][tile_y * MAP_SIZE + tile_x];
+    let area_number = if tile >= AREATILE {
+        (tile - AREATILE) as usize
     } else {
         0
     };
@@ -157,7 +166,7 @@ pub fn spawn_new_obj(
         active: crate::def::ActiveType::Yes,
         tic_count,
         distance: 0,
-        area_number: 0,
+        area_number,
         flags: 0,
         angle: 0,
         pitch: 0,
@@ -686,7 +695,13 @@ pub fn move_obj(
 /// it's combat frame and true is returned.
 ///
 /// Incorporates a random reaction delay
-pub fn sight_player(k: ObjKey, level_state: &mut LevelState, tics: u64) -> bool {
+pub fn sight_player(
+    k: ObjKey,
+    level_state: &mut LevelState,
+    sound: &mut Sound,
+    assets: &Assets,
+    tics: u64,
+) -> bool {
     let obj = level_state.obj(k);
 
     if obj.flags & FL_ATTACKMODE != 0 {
@@ -752,18 +767,18 @@ pub fn sight_player(k: ObjKey, level_state: &mut LevelState, tics: u64) -> bool 
         return false;
     }
 
-    first_sighting(k, level_state);
+    first_sighting(k, level_state, sound, assets);
     true
 }
 
 /// Puts an actor into attack mode and possibly reverses the direction
 /// if the player is behind it
-pub fn first_sighting(k: ObjKey, level_state: &mut LevelState) {
+pub fn first_sighting(k: ObjKey, level_state: &mut LevelState, sound: &mut Sound, assets: &Assets) {
     // react to the player
     let obj = level_state.mut_obj(k);
     match obj.class {
         ClassType::Guard => {
-            // TODO PlaySoundLocActor(HALTSND,ob);
+            sound.play_sound_loc_actor(SoundName::HALT, assets, obj);
             new_state(obj, &S_GRDCHASE1);
             obj.speed *= 3; // go faster when chasing player
         }
@@ -995,7 +1010,7 @@ pub fn damage_actor(
         kill_actor(k, level_state, game_state, rdr, sound, assets);
     } else {
         if level_state.obj(k).flags & FL_ATTACKMODE == 0 {
-            first_sighting(k, level_state); // put into combat mode
+            first_sighting(k, level_state, sound, assets); // put into combat mode
         }
 
         let obj = level_state.mut_obj(k);

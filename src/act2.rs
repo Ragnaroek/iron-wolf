@@ -6,6 +6,7 @@ use crate::def::{
     ICON_ARROWS, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, RUN_SPEED, SPD_DOG, SPD_PATROL, TILEGLOBAL,
     TILESHIFT,
 };
+use crate::map::MapSegs;
 use crate::play::ProjectionConfig;
 use crate::sd::Sound;
 use crate::state::{
@@ -794,13 +795,13 @@ fn t_path(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut Sound,
+    sound: &mut Sound,
     rdr: &VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
-    _: &Assets,
+    assets: &Assets,
 ) {
-    if sight_player(k, level_state, tics) {
+    if sight_player(k, level_state, sound, assets, tics) {
         return;
     }
 
@@ -1003,13 +1004,13 @@ fn t_stand(
     tics: u64,
     level_state: &mut LevelState,
     _: &mut GameState,
-    _: &mut Sound,
+    sound: &mut Sound,
     _: &VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
-    _: &Assets,
+    assets: &Assets,
 ) {
-    sight_player(k, level_state, tics);
+    sight_player(k, level_state, sound, assets, tics);
 }
 
 fn t_chase(
@@ -1117,16 +1118,18 @@ fn t_chase(
 }
 
 pub fn spawn_dead_guard(
+    map_data: &MapSegs,
     actors: &mut Vec<ObjType>,
     actor_at: &mut Vec<Vec<At>>,
     x_tile: usize,
     y_tile: usize,
 ) {
-    let obj = spawn_new_obj(x_tile, y_tile, &S_GRDDIE4, ClassType::Inert);
+    let obj = spawn_new_obj(map_data, x_tile, y_tile, &S_GRDDIE4, ClassType::Inert);
     spawn(actors, actor_at, obj)
 }
 
 pub fn spawn_stand(
+    map_data: &MapSegs,
     which: EnemyType,
     actors: &mut Vec<ObjType>,
     actor_at: &mut Vec<Vec<At>>,
@@ -1136,10 +1139,14 @@ pub fn spawn_stand(
     difficulty: Difficulty,
 ) {
     let mut stand = match which {
-        EnemyType::Guard => spawn_new_obj(x_tile, y_tile, &S_GRDSTAND, ClassType::Guard),
-        EnemyType::Officer => spawn_new_obj(x_tile, y_tile, &S_OFCSTAND, ClassType::Officer),
-        EnemyType::Mutant => spawn_new_obj(x_tile, y_tile, &S_MUTSTAND, ClassType::Mutant),
-        EnemyType::SS => spawn_new_obj(x_tile, y_tile, &S_SSSTAND, ClassType::SS),
+        EnemyType::Guard => spawn_new_obj(map_data, x_tile, y_tile, &S_GRDSTAND, ClassType::Guard),
+        EnemyType::Officer => {
+            spawn_new_obj(map_data, x_tile, y_tile, &S_OFCSTAND, ClassType::Officer)
+        }
+        EnemyType::Mutant => {
+            spawn_new_obj(map_data, x_tile, y_tile, &S_MUTSTAND, ClassType::Mutant)
+        }
+        EnemyType::SS => spawn_new_obj(map_data, x_tile, y_tile, &S_SSSTAND, ClassType::SS),
         _ => {
             panic!("illegal stand enemy type: {:?}", which)
         }
@@ -1157,6 +1164,7 @@ pub fn spawn_stand(
 }
 
 pub fn spawn_patrol(
+    map_data: &MapSegs,
     which: EnemyType,
     actors: &mut Vec<ObjType>,
     actor_at: &mut Vec<Vec<At>>,
@@ -1168,7 +1176,7 @@ pub fn spawn_patrol(
 ) {
     let mut patrol = match which {
         EnemyType::Guard => {
-            let mut obj = spawn_new_obj(x_tile, y_tile, &S_GRDPATH1, ClassType::Guard);
+            let mut obj = spawn_new_obj(map_data, x_tile, y_tile, &S_GRDPATH1, ClassType::Guard);
             obj.speed = SPD_PATROL;
             if !game_state.loaded_game {
                 game_state.kill_total += 1;
@@ -1187,7 +1195,7 @@ pub fn spawn_patrol(
             */
         }
         EnemyType::SS => {
-            let mut obj = spawn_new_obj(x_tile, y_tile, &S_SSPATH1, ClassType::SS);
+            let mut obj = spawn_new_obj(map_data, x_tile, y_tile, &S_SSPATH1, ClassType::SS);
             obj.speed = SPD_PATROL;
             // TODO check loadedgame
             if !game_state.loaded_game {
@@ -1208,7 +1216,7 @@ pub fn spawn_patrol(
             */
         }
         EnemyType::Dog => {
-            let mut obj = spawn_new_obj(x_tile, y_tile, &S_DOGPATH1, ClassType::Dog);
+            let mut obj = spawn_new_obj(map_data, x_tile, y_tile, &S_DOGPATH1, ClassType::Dog);
             obj.speed = SPD_DOG;
             if !game_state.loaded_game {
                 game_state.kill_total += 1;

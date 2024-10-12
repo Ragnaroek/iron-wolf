@@ -492,6 +492,7 @@ fn door_opening(
         } else {
             horiz_door_areas(level_state, door.tile_x, door.tile_y)
         };
+
         level_state.area_connect[area1][area2] += 1;
         level_state.area_connect[area2][area1] += 1;
 
