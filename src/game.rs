@@ -2,6 +2,7 @@ use super::vga_render::Renderer;
 use super::def::{GameState, WeaponType, Assets, ObjType};
 use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic, load_map_from_assets};
 use libiw::gamedata::Texture;
+use vgaemu::input::NumCode;
 use super::input;
 use super::time;
 use super::config;
@@ -200,14 +201,36 @@ pub fn game_loop(state: &GameState, rdr: &dyn Renderer, input: &input::Input, pr
     
     rdr.fade_in();
 
-	play_loop(state, &mut level, rdr, prj, assets);
+	play_loop(&mut level, state, rdr, input, prj, assets);
 
 	//TODO Go to next level (gamestate.map_on+=1)
 
-	input.user_input(time::TICK_BASE*1000);
+	input.wait_user_input(time::TICK_BASE*1000);
 }
 
-fn play_loop(state: &GameState, level: &mut Level, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
+//super akward to use since movement is in map space, not player space
+fn simple_move(input: &input::Input) -> (i32, i32) {
+    let mut xmove = 0;
+    if input.input_monitoring.key_pressed(NumCode::RightArrow) {
+        xmove += 2000;
+    }
+    if input.input_monitoring.key_pressed(NumCode::LeftArrow) {
+        xmove -= 2000;
+    }
+
+    let mut ymove = 0;
+    if input.input_monitoring.key_pressed(NumCode::UpArrow) {
+        ymove += 2000;
+    }
+    if input.input_monitoring.key_pressed(NumCode::DownArrow) {
+        ymove -= 2000;
+    }
+
+    input.input_monitoring.clear_keyboard();
+    (xmove, ymove)
+}
+
+fn play_loop(level: &mut Level, state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
 	//TODO A lot to do here (clear palette, poll controls, prepare world)
     loop {
         /*
@@ -215,6 +238,10 @@ fn play_loop(state: &GameState, level: &mut Level, rdr: &dyn Renderer, prj: &Pro
         if level.player.angle > ANG360 as u32 {
             level.player.angle = 0;
         }*/
+        let (xmove, ymove) = simple_move(input);
+        level.player.x += xmove;
+        level.player.y += ymove;
+
 	    three_d_refresh(state, level, rdr, prj, assets);
 
         let offset_prev = rdr.buffer_offset();
@@ -491,8 +518,12 @@ fn wall_refresh(level: &Level, rdr: &dyn Renderer, prj: &ProjectionConfig, asset
 }
 
 fn draw_scaled(x: usize, post_src: i32, height: i32, view_height: i32, texture: Option<&Texture>, rdr: &dyn Renderer) {
-    //TODO use the exact copy statements as the compiled scalers do!
-    let line_height = (height as f64 / 512.0 * view_height as f64) as i32;
+    //TODO use the exact copy statements as the compiled scalers do! (compare scaling code in the original with this => step_size and clamping)
+    let line_height = if height > 512 {
+        view_height
+    } else {
+        (height as f64 / 512.0 * view_height as f64) as i32
+    };
     let step = TEXTURE_HEIGHT as f64 / line_height as f64;
    
     let y = view_height/2 - line_height/2;
