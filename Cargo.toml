@@ -1,0 +1,9 @@
+[package]
+name = "iron-wolf"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+sdl2 = "0.34.5"
+vga-emu = {path = "../vga-emu"}
+
