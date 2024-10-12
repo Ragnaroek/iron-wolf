@@ -6,6 +6,9 @@ use crate::loader::Loader;
 
 use super::def::{WeaponType, Assets };
 
+pub static SIGNON: &'static [u8] = include_bytes!("../assets/signon.bin");
+
+#[derive(Clone, Copy)]
 pub enum WolfFile {
 	GraphicDict,
 	GraphicHead,
@@ -16,13 +19,13 @@ pub enum WolfFile {
 	ConfigData,
 }
 
-pub static GRAPHIC_DICT: &'static str = "VGADICT.WL6";
-pub static GRAPHIC_HEAD: &'static str = "VGAHEAD.WL6";
-pub static GRAPHIC_DATA: &'static str = "VGAGRAPH.WL6";
-pub static MAP_HEAD: &'static str = "MAPHEAD.WL6";
-pub static GAME_MAPS: &'static str = "GAMEMAPS.WL6";
-pub static GAMEDATA: &'static str = "VSWAP.WL6";
-pub static CONFIG_DATA: &'static str = "CONFIG.WL6";
+pub const GRAPHIC_DICT: &'static str = "VGADICT.WL6";
+pub const GRAPHIC_HEAD: &'static str = "VGAHEAD.WL6";
+pub const GRAPHIC_DATA: &'static str = "VGAGRAPH.WL6";
+pub const MAP_HEAD: &'static str = "MAPHEAD.WL6";
+pub const GAME_MAPS: &'static str = "GAMEMAPS.WL6";
+pub const GAMEDATA: &'static str = "VSWAP.WL6";
+pub const CONFIG_DATA: &'static str = "CONFIG.WL6";
 
 pub fn file_name(file: WolfFile) -> &'static str {
 	match file {

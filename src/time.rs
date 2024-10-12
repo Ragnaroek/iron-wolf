@@ -1,7 +1,9 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use std::cell::Cell;
-use std::thread;
+
+use async_std::task;
+
+use vga::util;
 
 pub const TICK_BASE : u64 = 70; //Hz
 const TARGET_NANOS : u128 = 1_000_000_000 / TICK_BASE as u128;
@@ -23,35 +25,35 @@ pub fn set_count(count: &TimeCount, new_val: u64) {
 
 pub struct Ticker {
     pub time_count: TimeCount,
-    pub last_count: Cell<u64>,
+    pub last_count: AtomicU64,
 }
 
 pub fn new_ticker() -> Ticker {
     let time_count = new_time_count();
     let time_t = time_count.clone();
-    thread::spawn(move || { 
-		let mut last_tick = std::time::Instant::now();
+
+    util::spawn_task(async move {
+		let mut last_tick = now();
 		loop {
 			let last_duration = last_tick.elapsed().as_nanos();
 			let overlap = (last_duration as i128 - TARGET_NANOS as i128).clamp(0, TARGET_NANOS as i128);    
 		
-			last_tick = std::time::Instant::now();
-			thread::sleep(std::time::Duration::from_nanos((TARGET_NANOS - overlap as u128) as u64));
+			last_tick = now();
+			task::sleep(std::time::Duration::from_nanos((TARGET_NANOS - overlap as u128) as u64)).await;
 			time_t.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 		}
     });
 
-    Ticker{time_count, last_count: Cell::new(0)}
+    Ticker{time_count, last_count: AtomicU64::new(0)}
 }
 
 impl Ticker {
-
     pub fn get_count(&self) -> u64 {
         get_count(&self.time_count)
     }
 
     pub fn calc_tics(&self) -> u64 {
-        let last_time_count = self.last_count.get();
+        let last_time_count = self.last_count.load(Ordering::Relaxed);
         if last_time_count > get_count(&self.time_count) { // if the game was paused a LONG time
             set_count(&self.time_count, last_time_count);
         }
@@ -65,12 +67,34 @@ impl Ticker {
                 break;
             }
         }
-        self.last_count.set(new_time);
+        self.last_count.store(new_time, Ordering::Relaxed);
 
         if tics > MAX_TICS {
             set_count(&self.time_count, get_count(&self.time_count) - (tics - MAX_TICS));
             tics = MAX_TICS
         }
         tics
+    }
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "web")] {
+        struct WebInstant(u128);
+
+        fn now() -> WebInstant {
+            let millis = web_sys::window().expect("window context").performance().expect("performance").now();
+            WebInstant((millis * 1_000_000.0) as u128)
+        }
+
+        impl WebInstant {
+            fn elapsed(&self) -> std::time::Duration {
+                let t_now = now();
+                std::time::Duration::from_nanos((t_now.0 - self.0) as u64)
+            }
+        }
+    } else {
+        fn now() -> std::time::Instant {
+            std::time::Instant::now()
+        }
     }
 }

@@ -4,20 +4,21 @@ mod play_test;
 
 use libiw::assets::GAMEPAL;
 use vga::input::NumCode;
+use vga::util;
 use vga::VGA;
 
 use crate::act1::move_doors;
 use crate::agent::{draw_health, draw_level, draw_face, draw_lives, draw_ammo, draw_keys, draw_weapon, draw_score};
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::{three_d_refresh, init_ray_cast};
-use crate::vga_render::Renderer;
 use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC, EXTRA_POINTS};
 use crate::assets::GraphicNum;
 use crate::input;
 use crate::time;
 use crate::game::setup_game_level;
 use crate::scale::{CompiledScaler, setup_scaling};
-use crate::vl::{set_palette, wait_vsync};
+use crate::vga_render::VGARenderer;
+use crate::vl::set_palette;
 
 //TODO separate draw.c stuff from play.c stuff in here
 
@@ -204,11 +205,11 @@ fn calc_sines() -> Vec<Fixed> {
     sines
 }
 
-pub fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let mut game_state = new_game_state();
     let mut control_state : ControlState = new_control_state();
     
-    draw_play_screen(&game_state, rdr, prj);
+    draw_play_screen(&game_state, rdr, prj).await;
 
 	let mut level_state = setup_game_level(prj, &game_state, assets).unwrap();
 
@@ -217,16 +218,16 @@ pub fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &dyn Renderer, input: &i
     
 	draw_level(&game_state, rdr);
     
-    rdr.fade_in();
+    rdr.fade_in().await;
 
-	play_loop(ticker, &mut level_state, &mut game_state, &mut control_state, vga, rdr, input, prj, assets);
+	play_loop(ticker, &mut level_state, &mut game_state, &mut control_state, vga, rdr, input, prj, assets).await;
 
 	//TODO Go to next level (gamestate.map_on+=1)
 
 	input.wait_user_input(time::TICK_BASE*1000);
 }
 
-fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState, vga: &VGA, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState, vga: &VGA, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let mut rc = init_ray_cast(prj.view_width);
     let shifts = init_colour_shifts();
 
@@ -262,9 +263,9 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &m
             do_actor(ObjKey(i), tics, level_state, game_state, rdr, control_state, prj);
         }
 
-        update_palette_shifts(game_state, vga, &shifts, tics);
+        update_palette_shifts(game_state, vga, &shifts, tics).await;
         
-	    three_d_refresh(game_state, level_state, &mut rc, rdr, prj, assets);
+	    three_d_refresh(game_state, level_state, &mut rc, rdr, prj, assets).await;
 
         let offset_prev = rdr.buffer_offset();
         for i in 0..3 {
@@ -274,7 +275,7 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &m
     }
 }
 
-fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
 
     // TODO areabyplayer check here!
 
@@ -353,8 +354,8 @@ fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
     level_state.actor_at[tilex][tiley] = At::Obj(k);
 }
 
-fn draw_play_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
-	rdr.fade_out();
+async fn draw_play_screen(state: &GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {
+	rdr.fade_out().await;
 
 	let offset_prev = rdr.buffer_offset();
 	for i in 0..3 {
@@ -374,7 +375,7 @@ fn draw_play_screen(state: &GameState, rdr: &dyn Renderer, prj: &ProjectionConfi
 	draw_score(state, rdr);
 }
 
-fn draw_play_border(rdr: &dyn Renderer, prj: &ProjectionConfig) {
+fn draw_play_border(rdr: &VGARenderer, prj: &ProjectionConfig) {
 	//clear the background:
 	rdr.bar(0, 0, 320, 200-STATUS_LINES, 127);
 
@@ -393,11 +394,11 @@ fn draw_play_border(rdr: &dyn Renderer, prj: &ProjectionConfig) {
 	rdr.plot(xl-1, yl+prj.view_height, 124);
 }
 
-fn hlin(rdr: &dyn Renderer, x: usize, z: usize, y: usize, c: u8) {
+fn hlin(rdr: &VGARenderer, x: usize, z: usize, y: usize, c: u8) {
 	rdr.hlin(x, y, (z-x)+1, c)
 }
 
-fn vlin(rdr: &dyn Renderer, y: usize, z: usize, x: usize, c: u8) {
+fn vlin(rdr: &VGARenderer, y: usize, z: usize, x: usize, c: u8) {
 	rdr.vlin(x, y, (z-y)+1, c)
 }
 
@@ -520,7 +521,7 @@ fn clear_palette_shifts(game_state: &mut GameState) {
     game_state.damage_count = 0;
 }
 
-fn update_palette_shifts(game_state: &mut GameState, vga: &VGA, shifts: &ColourShifts, tics: u64) {
+async fn update_palette_shifts(game_state: &mut GameState, vga: &VGA, shifts: &ColourShifts, tics: u64) {
     let mut white;
     if game_state.bonus_count != 0 {
         white = game_state.bonus_count / WHITE_TICS + 1;
@@ -551,15 +552,15 @@ fn update_palette_shifts(game_state: &mut GameState, vga: &VGA, shifts: &ColourS
     }
 
     if red != 0 {
-        wait_vsync(vga);
+        util::vsync(vga).await;
         set_palette(vga, &shifts.red_shifts[red as usize - 1]);
         game_state.pal_shifted = true;
     } else if white != 0 {
-        wait_vsync(vga);
+        util::vsync(vga).await;
         set_palette(vga, &shifts.white_shifts[white as usize - 1]);
         game_state.pal_shifted = true;
     } else if game_state.pal_shifted {
-        wait_vsync(vga);
+        util::vsync(vga).await;
         set_palette(vga, &GAMEPAL); // back to normal
         game_state.pal_shifted = false;
     }

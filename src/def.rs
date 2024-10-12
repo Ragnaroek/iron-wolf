@@ -5,7 +5,7 @@ use libiw::gamedata::{TextureData, SpriteData};
 
 use crate::fixed::Fixed;
 use crate::play::ProjectionConfig;
-use crate::vga_render::{Renderer, self};
+use crate::vga_render::{PAGE_1_START, PAGE_2_START, PAGE_3_START, VGARenderer};
 
 pub const GLOBAL1 : i32	= 1<<16;
 pub const MAP_SIZE : usize = 64;
@@ -46,7 +46,7 @@ pub const FL_NONMARK: u8 = 128;
 pub const SPD_PATROL : i32 = 512;
 
 pub const STATUS_LINES : usize = 40;
-pub static SCREENLOC : [usize; 3] = [vga_render::PAGE_1_START, vga_render::PAGE_2_START, vga_render::PAGE_3_START];
+pub static SCREENLOC : [usize; 3] = [PAGE_1_START, PAGE_2_START, PAGE_3_START];
 
 pub static DIR_ANGLE : [usize; 9] = [0, ANGLES/8, 2*ANGLES/8, 3*ANGLES/8, 4*ANGLES/8, 5*ANGLES/8, 6*ANGLES/8, 7*ANGLES/8, ANGLES];
 
@@ -404,8 +404,8 @@ pub struct Assets {
     pub game_maps: Vec<u8>,
 }
 
-type Think = fn(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig); 
-type Action = fn(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig);
+type Think = fn(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig); 
+type Action = fn(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig);
 
 #[derive(Debug)]
 pub struct StateType {

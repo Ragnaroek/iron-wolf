@@ -6,16 +6,22 @@
   </head>
   <body>
     <script type="module">
-      import init, { iw_start_web } from "./pkg/iw.js";
+      import init, { WebLoader, iw_init, register_loader } from "./pkg/iw.js";
       async function run() {
         await init();
-        iw_start_web();
+        iw_init("upload");
+        
+        //let loader = new WebLoader();
+        //register_loader("upload", loader);
+        // TODO register click handler here ++ trigger iw_start_web
+        // after files are uploaded!!!!
+        //iw_start_web(loader);
       }
 
       run();
     </script>
 
   <canvas id="vga" style="border: 1px solid black;"></canvas>
-
+  <input id="upload" type="file" multiple />
   </body>
 </html>

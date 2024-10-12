@@ -1,9 +1,5 @@
-use std::thread;
-use std::time;
-use vga::{ColorReg, GeneralReg, VGA};
-
-const VSYNC_MASK: u8 = 0x08;
-const POLL_WAIT_MICROS : u64 = 500;
+use vga::{ColorReg, VGA};
+use vga::util;
 
 pub fn set_palette(vga: &VGA, palette: &[u8]) {
 	debug_assert_eq!(palette.len(), 768);
@@ -31,18 +27,8 @@ fn fill_palette(vga: &VGA, red: u8, green: u8, blue: u8) {
     }
 }
 
-pub fn wait_vsync(vga: &VGA) {
-    loop {
-        let in1 = vga.get_general_reg(GeneralReg::InputStatus1);
-        if in1 & VSYNC_MASK != 0 {
-            break;
-        }
-        thread::sleep(time::Duration::from_micros(POLL_WAIT_MICROS));
-    }
-}
-
-pub fn fade_out(vga: &VGA, start: usize, end: usize, red: u8, green: u8, blue: u8, steps: usize) {
-    wait_vsync(vga);
+pub async fn fade_out(vga: &VGA, start: usize, end: usize, red: u8, green: u8, blue: u8, steps: usize) {
+    util::vsync(vga).await;
     let palette_orig = get_palette(vga);
     let mut palette_new = palette_orig.clone();
 
@@ -65,15 +51,15 @@ pub fn fade_out(vga: &VGA, start: usize, end: usize, red: u8, green: u8, blue: u
             ix += 1;
         }
 
-        wait_vsync(vga);
+        util::vsync(vga).await;
         set_palette(vga, &palette_new);
     }
 
     fill_palette(vga, red, green, blue);
 }
 
-pub fn fade_in(vga: &VGA, start: usize, end: usize, palette: &[u8], steps: usize) {
-    wait_vsync(vga);
+pub async fn fade_in(vga: &VGA, start: usize, end: usize, palette: &[u8], steps: usize) {
+    util::vsync(vga).await;
     let palette1 = get_palette(vga);
     let mut palette2 = palette1.clone();
 
@@ -88,7 +74,7 @@ pub fn fade_in(vga: &VGA, start: usize, end: usize, palette: &[u8], steps: usize
             palette2[j] = add;         
         }
 
-        wait_vsync(vga);
+        util::vsync(vga).await;
         set_palette(vga, &palette2);
 
     }
