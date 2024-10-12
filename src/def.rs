@@ -313,7 +313,6 @@ pub struct GameState {
 
     pub pal_shifted : bool,
     pub fizzle_in : bool,
-    pub in_game: bool,
     // push wall states
     pub push_wall_state : u64, // push wall animation going on
     pub push_wall_pos: i32, // amount a pushable wall has been moved (0-63)
@@ -325,8 +324,8 @@ pub struct GameState {
 }
 
 pub fn new_game_state() -> GameState {
-    let mut level_ratios = Vec::with_capacity(20);
-    for _ in 0..20 {
+    let mut level_ratios = Vec::with_capacity(8);
+    for _ in 0..8 {
         level_ratios.push(LevelRatio{kill: 0, secret: 0, treasure: 0, time: 0});
     }
 
@@ -369,7 +368,6 @@ pub fn new_game_state() -> GameState {
         bonus_count: 0,
         pal_shifted: false,
         fizzle_in: false,
-        in_game: false,
         push_wall_state: 0,
         push_wall_pos: 0,
         push_wall_x: 0,
@@ -406,6 +404,8 @@ pub struct WindowState {
     pub back_color: u8,
 
     pub debug_ok : bool,
+
+    pub in_game: bool,
 }
 
 impl WindowState {

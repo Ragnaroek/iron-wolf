@@ -57,7 +57,7 @@ pub async fn game_loop(
 		let mut level_state = setup_game_level(prj, game_state, assets).unwrap();
 		let mut rc = init_ray_cast(prj.view_width);
 
-		game_state.in_game = true;
+		win_state.in_game = true;
 
 		//TODO StartMusic
 		//TODO PreloadGraphics
@@ -76,7 +76,7 @@ pub async fn game_loop(
 		play_loop(ticker, &mut level_state, game_state, win_state, menu_state, &mut control_state, vga, &mut rc, rdr, input, prj, assets, loader, save_load).await;
 		save_load = None;
 
-		game_state.in_game = false;
+		win_state.in_game = false;
 
 		match game_state.play_state {
 			PlayState::Completed|PlayState::SecretLevel => {

@@ -17,7 +17,6 @@ pub enum ControlDirection {
     None,
 }
 
-
 pub struct ControlInfo {
     pub dir: ControlDirection,
 }
@@ -71,16 +70,31 @@ impl Input {
     }
 
 	pub fn clear_keys_down(&self) {
-		// TODO set LastScan to None
-		// TODO set LastASCII to None
         let mut mon = self.input_monitoring.lock().unwrap();
 		mon.clear_keyboard();
-        mon.keyboard.last_scan = NumCode::None
+        mon.keyboard.last_scan = NumCode::None;
+        mon.keyboard.last_ascii = '\0';
 	}
+
+    pub fn clear_last_scan(&self) {
+        let mut mon = self.input_monitoring.lock().unwrap();
+        mon.keyboard.last_scan = NumCode::None;
+    }
 
     pub fn last_scan(&self) -> NumCode {
         let mon = self.input_monitoring.lock().unwrap();
         mon.keyboard.last_scan
+    }
+
+    pub fn clear_last_ascii(&self) {
+        let mut mon = self.input_monitoring.lock().unwrap();
+        mon.keyboard.last_ascii = '\0';
+    }
+
+    // Returns the 0 char if nothing is set
+    pub fn last_ascii(&self) -> char {
+        let mon = self.input_monitoring.lock().unwrap();
+        mon.keyboard.last_ascii
     }
 }
 
