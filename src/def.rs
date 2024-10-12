@@ -16,6 +16,8 @@ pub const TILESHIFT : i32 = 16;
 pub const FOCAL_LENGTH : i32 = 0x5700;
 pub const FINE_ANGLES : usize = 3600;
 
+pub const MAX_DOORS : usize = 64;
+
 #[derive(Copy, Clone)]
 pub enum WeaponType {
 	Knife,
@@ -45,10 +47,12 @@ pub enum At {
 /// State for one level
 pub struct LevelState {
     pub level: Level,
+    /// Player stuff
     pub actor_at: Vec<Vec<At>>,
     pub actors: Vec<ObjType>,
-    
-    /// Player stuff (TODO maybe move to own state?)
+    /// Door stuff
+    pub doors: Vec<DoorType>, 
+    pub door_position: Vec<u16>,
     
     /// Control diff from last frame for player
     pub control: Control,
@@ -103,6 +107,22 @@ pub struct ObjType {
 	pub x: i32,
 	pub y: i32,
     pub state: &'static StateType,
+}
+
+pub enum DoorAction {
+    Open,
+    Closed,
+    Opening,
+    Closing
+}
+
+pub struct DoorType {
+    pub tile_x: usize,
+	pub tile_y: usize,
+    pub vertical: bool,
+    pub lock: u16,
+    pub action: DoorAction,
+    pub tic_count: u32,
 }
 
 // iron-wolf specific configuration

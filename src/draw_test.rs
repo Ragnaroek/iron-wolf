@@ -1,4 +1,4 @@
-use crate::def::{ObjType, LevelState, Level, Control, MAP_SIZE};
+use crate::def::{ObjType, LevelState, Level, Control, MAP_SIZE, DoorType, DoorAction};
 use crate::draw::{Op, Hit, init_ray_cast, init_ray_cast_consts, calc_height};
 use crate::fixed::new_fixed_i32;
 use crate::play;
@@ -32,7 +32,7 @@ fn test_cast_angle_63() -> Result<(), String>{
             _ => () /* no check */,
         }
         
-        rc.cast(&level_state.level);
+        rc.cast(&level_state);
         match pixx {
             0 => check_cast_pixx_0(&rc),
             1 => check_cast_pixx_1(&rc),
@@ -178,7 +178,7 @@ fn test_cast_angle_353() -> Result<(), String>{
     //Do one ray cast with the const vars
     for pixx in 0..prj.view_width {
         rc.init_cast(&prj, pixx, &consts);
-        rc.cast(&level_state.level);
+        rc.cast(&level_state);
     }
     Ok(())
 }
@@ -203,7 +203,7 @@ fn test_cast_angle_26() -> Result<(), String>{
             _ => () /* no check */,
         }
         
-        rc.cast(&level_state.level);
+        rc.cast(&level_state);
         match pixx {
             0 => check_cast_angle_26_pixx_0(&rc),
             _ => () /* no check */,
@@ -260,7 +260,7 @@ fn test_cast_angle_288() -> Result<(), String>{
             _ => () /* no check */,
         }
         
-        rc.cast(&level_state.level);
+        rc.cast(&level_state);
         match pixx {
             274 => check_cast_angle_288_pixx_274(&rc),
             _ => () /* no check */,
@@ -364,7 +364,24 @@ fn mock_level_state() -> LevelState {
             state: &S_PLAYER,
         }],
         actor_at: Vec::with_capacity(0),
+        doors: mock_doors(),
+        door_position: vec![0;22],
         control: Control{x:0, y:0},
         angle_frac: 0,
     }
+}
+
+fn mock_doors() -> Vec<DoorType>{
+    let mut doors = Vec::with_capacity(22);
+    for _ in 0..22 {
+        doors.push(DoorType{
+            tile_x: 0,
+            tile_y: 0,
+            vertical: true,
+            lock: 0,
+            action: DoorAction::Closed,
+            tic_count: 0,
+        });
+    }
+    return doors;
 }

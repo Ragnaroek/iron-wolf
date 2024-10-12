@@ -4,7 +4,7 @@ mod play_test;
 
 use vgaemu::input::NumCode;
 
-use crate::fixed::{Fixed, new_fixed, new_fixed_u32, fixed_mul};
+use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::three_d_refresh;
 use crate::vga_render::Renderer;
 use crate::def::{GameState, WeaponType, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH};
@@ -12,7 +12,7 @@ use crate::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
 use crate::input;
 use crate::time;
 use crate::vga_render;
-use crate::game::{setup_game_level, ANGLE_45};
+use crate::game::{setup_game_level};
 use crate::scale::{CompiledScaler, setup_scaling};
 
 //TODO separate draw.c stuff from play.c stuff in here
@@ -22,12 +22,6 @@ const MIN_DIST : i32 = 0x5800;
 const STATUS_LINES : usize = 40;
 const HEIGHT_RATIO : f32 = 0.5;
 const SCREEN_WIDTH : usize = 80;
-
-const SCREEN_WIDTH_PIXEL : usize = 640;
-const SCREEN_HEIGHT_PIXEL : usize = 480;
-
-const FRAC_BITS : usize = 16;
-const FRAC_UNIT : usize = 1<<FRAC_BITS;
 
 const PI : f32 = 3.141592657;
 
