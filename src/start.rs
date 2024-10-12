@@ -1,3 +1,4 @@
+use std::process::exit;
 use std::sync::Arc;
 
 use vga::SCReg;
@@ -181,4 +182,10 @@ async fn pg_13(rdr: &VGARenderer, input: &input::Input) {
     rdr.fade_in().await;
     input.wait_user_input(time::TICK_BASE*7).await;
     rdr.fade_out().await;
+}
+
+pub fn quit(err: Option<&str>) {
+    // TODO print error screen, wait for button press and the exit(0)
+    println!("TODO draw exit screen, err = {:?}", err);
+    exit(0)
 }
