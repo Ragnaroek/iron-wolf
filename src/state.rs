@@ -2,7 +2,7 @@
 #[path = "./state_test.rs"]
 mod state_test;
 
-use crate::{def::{ObjType, TILESHIFT, TILEGLOBAL, StateType, DirType, ClassType, FL_ATTACKMODE, FL_AMBUSH, LevelState, ObjKey, UNSIGNEDSHIFT, FL_FIRSTATTACK, MIN_ACTOR_DIST, At, FL_SHOOTABLE, GameState}, fixed::new_fixed_i32, time, user::rnd_t, act2::S_GRDCHASE1, agent::take_damage, act1::open_door, game::AREATILE, vga_render::Renderer};
+use crate::{def::{ObjType, TILESHIFT, TILEGLOBAL, StateType, DirType, ClassType, FL_ATTACKMODE, FL_AMBUSH, LevelState, ObjKey, UNSIGNEDSHIFT, FL_FIRSTATTACK, MIN_ACTOR_DIST, At, FL_SHOOTABLE, GameState, FL_NONMARK, StaticType, StaticKind}, fixed::new_fixed_i32, time, user::rnd_t, act2::{S_GRDCHASE1, S_GRDPAIN, S_GRDPAIN1, S_GRDDIE1}, agent::{take_damage, draw_score, give_points}, act1::{open_door, place_item_type}, game::{AREATILE, self}, vga_render::Renderer};
 
 static OPPOSITE: [DirType; 9] = [DirType::West, DirType::SouthWest, DirType::South, DirType::SouthEast, DirType::East, DirType::NorthEast, DirType::North, DirType::NorthWest, DirType::NoDir];
 
@@ -52,6 +52,7 @@ pub fn spawn_new_obj(tile_x: usize, tile_y: usize, state: &'static StateType, cl
         temp2: 0,
         temp3: 0,
         state: Some(state),
+        hitpoints: 0,
     }
 }
 
@@ -786,4 +787,111 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
     }
 
     true
+}
+
+pub fn damage_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, damage_param: usize) {
+    game_state.made_noise = true;    
+
+    let mut damage = damage_param;
+    // do double damage if shooting a non attack mode actor
+    if level_state.obj(k).flags & FL_ATTACKMODE == 0 {
+        damage <<= 1;
+    }
+
+    level_state.update_obj(k, |obj|  obj.hitpoints -= damage as i32);
+    if level_state.obj(k).hitpoints <= 0 {
+        kill_actor(k, level_state, game_state, rdr);
+    } else {
+        if level_state.obj(k).flags & FL_ATTACKMODE == 0 {
+            first_sighting(k, level_state); // put into combat mode
+        }
+
+        let obj = level_state.mut_obj(k);
+        match obj.class {
+            ClassType::Guard => {
+                if obj.hitpoints & 1 != 0 {
+                    new_state(obj, &S_GRDPAIN);
+                } else {
+                    new_state(obj, &S_GRDPAIN1);
+                }
+            },
+            ClassType::Officer => {
+                panic!("damage officer");
+            },
+            ClassType::Mutant => {
+                panic!("damage mutant");
+            },
+            ClassType::SS => {
+                panic!("damage SS");
+            },
+            _ => {/* do nothing */}
+        }
+    }
+}
+
+fn kill_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer) {
+    {
+        let obj = level_state.mut_obj(k);
+        let tile_x = (obj.x >> TILESHIFT) as usize;
+        let tile_y = (obj.y >> TILESHIFT) as usize;
+        obj.tilex = tile_x;
+        obj.tiley = tile_y;
+
+        match obj.class {
+            ClassType::Guard => {
+            give_points(game_state, rdr, 100);  
+            new_state(obj, &S_GRDDIE1);
+            place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
+            },
+            ClassType::Officer => {
+                panic!("kill officer");
+            },
+            ClassType::Mutant => {
+                panic!("kill mutant");
+            },
+            ClassType::SS => {
+                panic!("kill SS");
+            },
+            ClassType::Dog => {
+                panic!("kill dog");
+            },
+            ClassType::Boss => {
+                panic!("kill boss");
+            },
+            ClassType::Gretel => {
+                panic!("kill gretel");
+            },
+            ClassType::Gift => {
+                panic!("kill gift");   
+            },
+            ClassType::Fat => {
+                panic!("kill fat");
+            },
+            ClassType::Schabb => {
+                panic!("kill schabb");
+            },
+            ClassType::Fake => {
+                panic!("kill fake");
+            },
+            ClassType::MechaHitler => {
+                panic!("kill mecha hitler");
+            },
+            ClassType::RealHitler => {
+                panic!("kill real hitler");
+            },
+            _ => {
+                /* ignore kill on this class of obj */
+            }
+        }
+    }
+
+    game_state.kill_count += 1;
+    let (tile_x, tile_y) = {
+        let obj = level_state.mut_obj(k);
+        obj.flags &= !FL_SHOOTABLE;
+        obj.flags |= FL_NONMARK;
+        (obj.tilex, obj.tiley)
+    };
+
+    level_state.actor_at[tile_x][tile_y] = At::Nothing;
 }

@@ -1,10 +1,117 @@
 use crate::act1::open_door;
 use crate::agent::take_damage;
-use crate::def::{ObjType, StateType, Sprite, DirType, EnemyType, SPD_PATROL, ObjKey, LevelState, ControlState, FL_SHOOTABLE, ClassType, DoorAction, TILEGLOBAL, TILESHIFT, RUN_SPEED, FL_VISABLE, GameState};
+use crate::def::{ObjType, StateType, Sprite, DirType, EnemyType, SPD_PATROL, ObjKey, LevelState, ControlState, FL_SHOOTABLE, ClassType, DoorAction, TILEGLOBAL, TILESHIFT, RUN_SPEED, FL_VISABLE, GameState, NUM_ENEMIES, Difficulty};
 use crate::state::{spawn_new_obj, new_state, sight_player, check_line, select_dodge_dir, select_chase_dir, move_obj};
 use crate::play::ProjectionConfig;
 use crate::user::rnd_t;
 use crate::vga_render::Renderer;
+
+static START_HITPOINTS : [[i32; NUM_ENEMIES]; 4] = [
+     [ // BABY MODE	
+        25,	// guards
+        50,	// officer
+        100,	// SS
+        1,	// dogs
+        850,	// Hans
+        850,	// Schabbs
+        200,	// fake hitler
+        800,	// mecha hitler
+        45,	// mutants
+        25,	// ghosts
+        25,	// ghosts
+        25,	// ghosts
+        25,	// ghosts
+   
+        850,	// Gretel
+        850,	// Gift
+        850,	// Fat
+        5,	// en_spectre,
+        1450,	// en_angel,
+        850,	// en_trans,
+        1050,	// en_uber,
+        950,	// en_will,
+        1250	// en_death
+     ],
+     [ // DON'T HURT ME MODE
+        25,	// guards
+        50,	// officer
+        100,	// SS
+        1,	// dogs
+        950,	// Hans
+        950,	// Schabbs
+        300,	// fake hitler
+        950,	// mecha hitler
+        55,	// mutants
+        25,	// ghosts
+        25,	// ghosts
+        25,	// ghosts
+        25,	// ghosts
+   
+        950,	// Gretel
+        950,	// Gift
+        950,	// Fat
+        10,	// en_spectre,
+        1550,	// en_angel,
+        950,	// en_trans,
+        1150,	// en_uber,
+        1050,	// en_will,
+        1350	// en_death
+    ],
+    [ // BRING 'EM ON MODE
+        25,	// guards
+        50,	// officer
+        100,	// SS
+        1,	// dogs
+   
+        1050,	// Hans
+        1550,	// Schabbs
+        400,	// fake hitler
+        1050,	// mecha hitler
+   
+        55,	// mutants
+        25,	// ghosts
+        25,	// ghosts
+        25,	// ghosts
+        25,	// ghosts
+   
+        1050,	// Gretel
+        1050,	// Gift
+        1050,	// Fat
+        15,	// en_spectre,
+        1650,	// en_angel,
+        1050,	// en_trans,
+        1250,	// en_uber,
+        1150,	// en_will,
+        1450	// en_death
+    ],
+    [ // DEATH INCARNATE MODE
+        25,	// guards
+        50,	// officer
+        100,	// SS
+        1,	// dogs
+   
+        1200,	// Hans
+        2400,	// Schabbs
+        500,	// fake hitler
+        1200,	// mecha hitler
+   
+        65,	// mutants
+        25,	// ghosts
+        25,	// ghosts
+        25,	// ghosts
+        25,	// ghosts
+   
+        1200,	// Gretel
+        1200,	// Gift
+        1200,	// Fat
+        25,	// en_spectre,
+        2000,	// en_angel,
+        1200,	// en_trans,
+        1400,	// en_uber,
+        1300,	// en_will,
+        1600	// en_death
+    ]
+];
 
 // guards
 
@@ -15,6 +122,26 @@ pub static S_GRDSTAND : StateType = StateType {
     think: Some(t_stand),
     action: None,
     next: Some(&S_GRDSTAND),
+};
+
+// TODO S_GRDPATH*
+
+pub static S_GRDPAIN : StateType = StateType {
+    rotate: 2,
+    sprite: Some(Sprite::GuardPain1),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_GRDCHASE1),
+};
+
+pub static S_GRDPAIN1 : StateType = StateType {
+    rotate: 2,
+    sprite: Some(Sprite::GuardPain2),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_GRDCHASE1),
 };
 
 pub static S_GRDSHOOT1 : StateType = StateType {
@@ -98,7 +225,32 @@ pub static S_GRDCHASE4 : StateType = StateType {
     next: Some(&S_GRDCHASE1),
 };
 
-// S_GRDCHASE4.next = StateNext::Next(&S_GRDCHASE1)
+pub static S_GRDDIE1 : StateType = StateType{
+    rotate: 0,
+    sprite: Some(Sprite::GuardDie1),
+    tic_time: 15,
+    think: None,
+    action: None, //TODO A_DeathScream
+    next: Some(&S_GRDDIE2),
+};
+
+pub static S_GRDDIE2 : StateType = StateType{
+    rotate: 0,
+    sprite: Some(Sprite::GuardDie2),
+    tic_time: 15,
+    think: None,
+    action: None, 
+    next: Some(&S_GRDDIE3),
+};
+
+pub static S_GRDDIE3 : StateType = StateType{
+    rotate: 0,
+    sprite: Some(Sprite::GuardDie3),
+    tic_time: 15,
+    think: None,
+    action: None, 
+    next: Some(&S_GRDDIE4),
+};
 
 pub static S_GRDDIE4 : StateType = StateType{
     rotate: 0,
@@ -168,7 +320,6 @@ fn t_chase(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut 
         };
 
         if (rnd_t() as usize) < chance {
-            println!("attack frame!!");
             // go into attack frame
             let state_change = match obj.class {
                 ClassType::Guard => Some(&S_GRDSHOOT1),
@@ -243,7 +394,7 @@ pub fn dead_guard(x_tile: usize, y_tile: usize) -> ObjType {
     spawn_new_obj(x_tile, y_tile, &S_GRDDIE4, ClassType::Inert)
 }
 
-pub fn stand(which: EnemyType, x_tile: usize, y_tile: usize, tile_dir: u16) -> ObjType {
+pub fn stand(which: EnemyType, x_tile: usize, y_tile: usize, tile_dir: u16, difficulty: Difficulty) -> ObjType {
     let mut stand = match which {
         EnemyType::Guard => spawn_new_obj(x_tile, y_tile, &S_GRDSTAND, ClassType::Guard),
         EnemyType::Officer => spawn_new_obj(x_tile, y_tile, &S_OFCSTAND, ClassType::Officer),
@@ -260,7 +411,7 @@ pub fn stand(which: EnemyType, x_tile: usize, y_tile: usize, tile_dir: u16) -> O
     // TODO: update ambush info
 
     // TODO: set hitpoints
-
+    stand.hitpoints = START_HITPOINTS[difficulty as usize][which as usize];
     stand.dir = dir_from_tile(tile_dir*2);
     stand.flags |= FL_SHOOTABLE;
     stand

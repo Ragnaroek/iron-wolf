@@ -1,8 +1,11 @@
 use crate::act1::operate_door;
 use crate::assets::{GraphicNum, num_pic, weapon_pic, face_pic};
+use crate::game;
 use crate::play::ProjectionConfig;
-use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType, GameState, Difficulty, PlayState, SCREENLOC, STATUS_LINES};
+use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType, GameState, Difficulty, PlayState, SCREENLOC, STATUS_LINES, FL_SHOOTABLE, FL_VISABLE, WeaponType, EXTRA_POINTS};
 use crate::fixed::{new_fixed_i32, fixed_by_frac};
+use crate::state::{check_line, damage_actor};
+use crate::user::rnd_t;
 use crate::vga_render::Renderer;
 
 const ANGLE_SCALE : i32 = 20;
@@ -18,12 +21,177 @@ pub static S_PLAYER : StateType = StateType{
     next: None,
 };
 
-fn t_player(k: ObjKey, _: u64, level_state: &mut LevelState, _: &mut GameState, _: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
+pub static S_ATTACK : StateType = StateType {
+    rotate: 0,
+    sprite: None,
+    tic_time: 0,
+    think: Some(t_attack),
+    action: None,
+    next: None,
+};
+
+struct AttackInfo {
+    tics: i32,
+    attack: i32, // TODO: use enum here
+    frame: usize,
+}
+
+static ATTACK_INFO : [[AttackInfo; 4]; 4] = [
+    [AttackInfo{tics: 6, attack: 0, frame: 1}, AttackInfo{tics: 6, attack: 2, frame: 2}, AttackInfo{tics: 6, attack: 0, frame: 3}, AttackInfo{tics: 6, attack: -1, frame: 4}],
+    [AttackInfo{tics: 6, attack: 0, frame: 1}, AttackInfo{tics: 6, attack: 1, frame: 2}, AttackInfo{tics: 6, attack: 0, frame: 3}, AttackInfo{tics: 6, attack: -1, frame: 4}],
+    [AttackInfo{tics: 6, attack: 0, frame: 1}, AttackInfo{tics: 6, attack: 1, frame: 2}, AttackInfo{tics: 6, attack: 3, frame: 3}, AttackInfo{tics: 6, attack: -1, frame: 4}],
+    [AttackInfo{tics: 6, attack: 0, frame: 1}, AttackInfo{tics: 6, attack: 1, frame: 2}, AttackInfo{tics: 6, attack: 4, frame: 3} ,AttackInfo{tics: 6, attack: -1, frame: 4}],
+];
+
+fn t_attack(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
+    
+    update_face(tics, game_state, rdr);
+    
+    if game_state.victory_flag {
+        // TODO victory_spin()!
+        return;
+    }
+
+    if control_state.button_state[Button::Use as usize] && !control_state.button_held[Button::Use as usize] {
+        control_state.button_state[Button::Use as usize] = false;
+    }
+
+    if control_state.button_state[Button::Attack as usize] && !control_state.button_held[Button::Attack as usize] {
+        control_state.button_state[Button::Attack as usize] = false;
+    }
+
+    control_movement(k, level_state, control_state, prj);
+    
+    if game_state.victory_flag {
+        return;
+    }
+    {
+        let player = level_state.mut_player();
+        player.tilex = (player.x >> TILESHIFT) as usize;
+        player.tiley = (player.y >> TILESHIFT) as usize;
+    }
+
+    game_state.attack_count -= tics as i32;
+    while game_state.attack_count <= 0 {
+        let cur = &ATTACK_INFO[game_state.weapon as usize][game_state.attack_frame];
+        match cur.attack {
+            -1 => {
+                level_state.update_obj(k, |obj| obj.state = Some(&S_PLAYER));
+                if game_state.ammo <= 0 {
+                    game_state.weapon = WeaponType::Knife;
+                    draw_weapon(&game_state, rdr);
+                } else {
+                    if game_state.weapon != game_state.chosen_weapon {
+                        game_state.weapon = game_state.chosen_weapon;
+                        draw_weapon(&game_state, rdr);
+                    }
+                }
+                game_state.attack_frame = 0;
+                game_state.weapon_frame = 0;
+                return;
+            },
+            4 => { panic!("attack 4")},
+            1 => {
+                if game_state.ammo == 0 {
+                    // can only happen with chain gun
+                    game_state.attack_frame += 1;
+                    break;
+                }
+                gun_attack(level_state, game_state, rdr, prj);
+                game_state.ammo -= 1;
+                draw_ammo(&game_state, rdr);
+            },
+            2 => {panic!("attack 2")},
+            3 => {
+                if game_state.ammo != 0 && control_state.button_state[Button::Attack as usize] {
+                    game_state.attack_frame -= 2;
+                }
+            },
+            _ => {/* do nothing */}
+        }
+
+        game_state.attack_count += cur.tics;
+        game_state.attack_frame += 1;
+        game_state.weapon_frame = ATTACK_INFO[game_state.weapon as usize][game_state.attack_frame].frame;
+    }
+}
+
+fn gun_attack(level_state: &mut LevelState, game_state: &mut GameState, rdr: &dyn Renderer, prj: &ProjectionConfig) {
+
+    //TODO play weapon sound!
+
+    game_state.made_noise = true;
+
+    let mut view_dist = 0x7fffffff;
+
+    let mut closest = None;
+    loop {
+        for i in 1..level_state.actors.len() {
+            let check = &level_state.actors[i];
+            if check.flags & FL_SHOOTABLE != 0 &&
+                check.flags & FL_VISABLE != 0 &&
+                check.view_x.abs_diff(prj.center_x as i32) < prj.shoot_delta as u32 {
+                    if check.trans_x.to_i32() < view_dist {
+                        view_dist = check.trans_x.to_i32();
+                        closest = Some(ObjKey(i));
+                    }
+                } 
+        }
+        if closest.is_none() {
+            return; // no more targets, all missed
+        }
+
+        let obj = level_state.obj(closest.expect("closest enemy"));
+        // trace a line from player to enemy
+        if check_line(level_state, obj) {
+            break;
+        }
+    }
+
+    // hit something
+
+    let k = closest.expect("closest enemy");
+    let obj = level_state.obj(k);
+
+    let dx = obj.tilex.abs_diff(level_state.player().tilex);
+    let dy = obj.tiley.abs_diff(level_state.player().tiley);
+    let dist = dx.max(dy);
+
+    let damage;
+    if dist < 2 {
+        damage = rnd_t() / 4;
+    } else if dist < 4 {
+        damage = rnd_t() / 6;
+    } else {
+        if rnd_t() as usize / 12 < dist { // missed
+            return;
+        }
+        damage = rnd_t() / 6;
+    }
+
+    damage_actor(k, level_state, game_state, rdr, damage as usize);
+}
+
+fn t_player(k: ObjKey, _: u64, level_state: &mut LevelState, game_state: &mut GameState, _: &dyn Renderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
     if control_state.button_state[Button::Use as usize] {
         cmd_use(level_state, control_state);
     }
 
+    if control_state.button_state[Button::Attack as usize] && !control_state.button_held[Button::Attack as usize] {
+        cmd_fire(level_state, game_state, control_state);
+    }
+
     control_movement(k, level_state, control_state, prj);
+}
+
+fn cmd_fire(level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState) {
+    control_state.button_held[Button::Attack as usize] = true;
+
+    level_state.mut_player().state = Some(&S_ATTACK);
+
+    game_state.attack_frame = 0;
+    game_state.attack_count = ATTACK_INFO[game_state.weapon as usize][game_state.attack_frame].tics;
+    game_state.weapon_frame = ATTACK_INFO[game_state.weapon as usize][game_state.attack_frame].frame;
 }
 
 fn cmd_use(level_state: &mut LevelState, control_state: &mut ControlState) {
@@ -90,6 +258,7 @@ pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
         temp2: 0,
         temp3: 0,
         state: Some(&S_PLAYER),
+        hitpoints: 0, // player hitpoints are maintained in GameState::health
     };
 
     //TODO init_areas
@@ -187,6 +356,23 @@ pub fn thrust(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig, a
     obj.tiley = obj.y as usize >> TILESHIFT;    
 }
 
+pub fn give_points(game_state: &mut GameState, rdr: &dyn Renderer, points: i32) {
+    game_state.score += points;
+    while game_state.score >= game_state.next_extra {
+        game_state.next_extra += EXTRA_POINTS;
+        give_extra_man(game_state, rdr);
+    }
+    draw_score(&game_state, rdr)
+}
+
+pub fn give_extra_man(game_state: &mut GameState, rdr: &dyn Renderer) {
+    if game_state.lives < 9 {
+        game_state.lives += 1;
+    }
+    draw_lives(game_state, rdr);
+    // TODO PlaySound(BONUS1UPSND);
+}
+
 fn clip_move(k : ObjKey, level_state: &mut LevelState, x_move: i32, y_move: i32) {
     let (base_x, base_y) = {
         let ob = level_state.obj(k);
@@ -269,6 +455,21 @@ pub fn draw_face(state: &GameState, rdr: &dyn Renderer) {
 		// TODO draw mutant face if last attack was needleobj
 		status_draw_pic(rdr, 17, 4, GraphicNum::FACE8APIC)
 	}
+}
+
+/// Calls draw face if time to change
+fn update_face(tics: u64, state: &mut GameState, rdr: &dyn Renderer) {
+    // TODO Check if GETGATLINGSND is playing
+
+    state.face_count += tics;
+    if state.face_count > rnd_t() as u64 {
+        state.face_frame = rnd_t() as usize >> 6;
+        if state.face_frame == 3 {
+            state.face_frame = 1;
+        }
+        state.face_count = 0;
+        draw_face(state, rdr);
+    }
 }
 
 pub fn draw_keys(state: &GameState, rdr: &dyn Renderer) {
