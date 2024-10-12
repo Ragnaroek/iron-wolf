@@ -1,9 +1,9 @@
 
-use crate::def::MAX_DOORS;
+use crate::def::{Sprite, StaticType, VisObj, MAX_STATS, MAX_DOORS};
 
 use super::def::{Assets, ObjType, Level, LevelState, At, MAP_SIZE, PLAYER_KEY};
 use super::assets::load_map_from_assets;
-use super::act1::{spawn_door};
+use super::act1::{spawn_door, spawn_static};
 use super::agent::{spawn_player, thrust};
 use super::play::ProjectionConfig;
 
@@ -62,7 +62,7 @@ pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) 
 		}
 	}
 
-	let player = scan_info_plane( &map_data);
+	let (player, statics) = scan_info_plane(&map_data, &mut actor_at);
     let actors = init_actors(player);
 
     let mut level_state = LevelState{
@@ -72,6 +72,9 @@ pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) 
         actors,
         actor_at,
 		doors,
+		statics,
+		spotvis: vec![vec![false; MAP_SIZE]; MAP_SIZE],
+		vislist: vec![VisObj{view_x: 0, view_height: 0, sprite: Sprite::None}; MAX_STATS],
 	};
 
     thrust(PLAYER_KEY, &mut level_state, prj, 0, 0); // set some variables
@@ -87,8 +90,9 @@ fn init_actors(player: ObjType) -> Vec<ObjType> {
 }
 
 //Returns the player object
-fn scan_info_plane(map_data: &libiw::map::MapData) -> ObjType {
+fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>) -> (ObjType, Vec<StaticType>) {
 	let mut player = None;
+	let mut statics = Vec::new();
 
 	let mut map_ptr = 0;
 	for y in 0..MAP_SIZE {
@@ -97,6 +101,12 @@ fn scan_info_plane(map_data: &libiw::map::MapData) -> ObjType {
 			map_ptr += 1;
 			match tile {
 				19..=22 => player = Some(spawn_player(x, y, NORTH+(tile-19)as i32)),
+				23..=74 => {
+					if statics.len() >= MAX_STATS {
+						panic!("Too many static objects!")
+					}
+					statics.push(spawn_static(actor_at, x, y, (tile-23) as usize));
+				},
 				_ => {},
 			}
 		}
@@ -106,6 +116,6 @@ fn scan_info_plane(map_data: &libiw::map::MapData) -> ObjType {
 		panic!("No player start position in map");
 	}
 
-	player.unwrap()
+	(player.unwrap(), statics)
 }
 

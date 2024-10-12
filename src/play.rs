@@ -6,7 +6,7 @@ use vgaemu::input::NumCode;
 
 use crate::act1::move_doors;
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
-use crate::draw::three_d_refresh;
+use crate::draw::{three_d_refresh, init_ray_cast};
 use crate::vga_render::Renderer;
 use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS};
 use crate::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
@@ -43,11 +43,13 @@ static BUTTON_SCAN : [NumCode; NUM_BUTTONS] = [NumCode::Control, NumCode::Alt, N
 pub struct ProjectionConfig {
 	pub view_width: usize,
 	pub view_height: usize,
+    pub center_x: usize,
 	pub screenofs: usize,
     pub height_numerator: i32,
 	pub pixelangle: Vec<i32>,
     pub sines: Vec<Fixed>,
     pub fine_tangents: [i32; NUM_FINE_TANGENTS],
+    pub scale : i32,
     pub scaler: CompiledScaler,
 }
 
@@ -88,6 +90,7 @@ pub fn new_control_state() -> ControlState {
 pub fn calc_projection(view_size: usize) -> ProjectionConfig {
 	let view_width = (view_size * 16) & !15;
 	let view_height = ((((view_size * 16) as f32 * HEIGHT_RATIO) as u16) & !1) as usize;
+    let center_x : usize = view_width/2 - 1;
 	let screenofs = (200-STATUS_LINES-view_height)/2*SCREEN_WIDTH+(320-view_width)/8;
     let half_view = view_width/2;
 
@@ -105,11 +108,13 @@ pub fn calc_projection(view_size: usize) -> ProjectionConfig {
 	ProjectionConfig {
 		view_width,
 		view_height,
+        center_x,
 		screenofs,
         height_numerator,
 		pixelangle,
         sines,
         fine_tangents,
+        scale,
         scaler,
 	}
 }
@@ -189,7 +194,16 @@ pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input
 }
 
 fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &GameState, control_state: &mut ControlState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
-	//TODO A lot to do here (clear palette, poll controls, prepare world)
+    let mut rc = init_ray_cast(prj.view_width);
+
+    {
+        let player = level_state.mut_player();
+        player.x = 1859846;
+        player.y = 3768320;
+        player.angle = 0;
+    }
+
+    //TODO A lot to do here (clear palette, poll controls, prepare world)
     loop {
         let tics = ticker.calc_tics();
 
@@ -206,7 +220,7 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
             do_actor(ObjKey(i), level_state, control_state, prj);
         }
         
-	    three_d_refresh(game_state, level_state, rdr, prj, assets);
+	    three_d_refresh(game_state, level_state, &mut rc, rdr, prj, assets);
 
         let offset_prev = rdr.buffer_offset();
         for i in 0..3 {

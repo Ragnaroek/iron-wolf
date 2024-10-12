@@ -32,7 +32,7 @@ fn test_cast_angle_63() -> Result<(), String>{
             _ => () /* no check */,
         }
         
-        rc.cast(&level_state);
+        rc.cast(&mut level_state);
         match pixx {
             0 => check_cast_pixx_0(&rc),
             1 => check_cast_pixx_1(&rc),
@@ -178,7 +178,7 @@ fn test_cast_angle_353() -> Result<(), String>{
     //Do one ray cast with the const vars
     for pixx in 0..prj.view_width {
         rc.init_cast(&prj, pixx, &consts);
-        rc.cast(&level_state);
+        rc.cast(&mut level_state);
     }
     Ok(())
 }
@@ -203,7 +203,7 @@ fn test_cast_angle_26() -> Result<(), String>{
             _ => () /* no check */,
         }
         
-        rc.cast(&level_state);
+        rc.cast(&mut level_state);
         match pixx {
             0 => check_cast_angle_26_pixx_0(&rc),
             _ => () /* no check */,
@@ -260,7 +260,7 @@ fn test_cast_angle_288() -> Result<(), String>{
             _ => () /* no check */,
         }
         
-        rc.cast(&level_state);
+        rc.cast(&mut level_state);
         match pixx {
             274 => check_cast_angle_288_pixx_274(&rc),
             _ => () /* no check */,
@@ -365,6 +365,9 @@ fn mock_level_state() -> LevelState {
         }],
         actor_at: Vec::with_capacity(0),
         doors: mock_doors(),
+        statics: Vec::with_capacity(0),
+        spotvis: vec![vec![false; MAP_SIZE]; MAP_SIZE],
+        vislist: Vec::with_capacity(0),
     }
 }
 

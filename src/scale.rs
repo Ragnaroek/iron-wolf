@@ -38,12 +38,13 @@ pub struct PixelScale {
 pub struct Scaler {
     pub for_height: usize,
     pub width: Vec<usize>,
-    pub pixel_scalers: Vec<PixelScale>,
+    pub pixel_scalers: Vec<Option<PixelScale>>,
 }
 
 pub struct CompiledScaler {
     pub scalers : Vec<Scaler>,
     pub scale_call: Vec<usize>, //jump table into the pixel_scalers
+    pub max_scale: usize,
 }
 
 pub fn setup_scaling(scaler_height: usize, view_height: usize) -> CompiledScaler {
@@ -76,7 +77,11 @@ pub fn setup_scaling(scaler_height: usize, view_height: usize) -> CompiledScaler
     } 
     scale_call[0] = 1;
 
-    CompiledScaler { scalers, scale_call }
+    CompiledScaler { 
+        scalers,
+        scale_call,
+        max_scale: max_scale_height - 1,
+     }
 }
 
 fn build_comp_scale(scaler_height: usize, view_height: usize) -> Scaler {
@@ -84,10 +89,12 @@ fn build_comp_scale(scaler_height: usize, view_height: usize) -> Scaler {
 
     let top_pix = (view_height as i32 - scaler_height as i32)/2; 
     let mut fix : i32 = 0;
+    let mut pix_scaler_init = Vec::new();
+    pix_scaler_init.resize_with(64, Default::default);
     let mut scaler = Scaler{
         for_height: scaler_height,
         width: Vec::with_capacity(64),
-        pixel_scalers: Vec::new(),
+        pixel_scalers: pix_scaler_init,
     };
 
     for src  in 0..=(64 as usize) {
@@ -120,15 +127,154 @@ fn build_comp_scale(scaler_height: usize, view_height: usize) -> Scaler {
 
             scale.mem_dests.push(pix * SCREENBWIDE as i32);
         }
-        scaler.pixel_scalers.push(scale);
+        scaler.pixel_scalers[src] = Some(scale);
     }
     scaler
+}
+
+pub fn scale_shape(rdr: &dyn Renderer, wall_height: &Vec<i32>, prj: &ProjectionConfig, x_center: usize, sprite: &SpriteData, height: usize) {
+    let scale = height >> 3;
+    if scale == 0 || scale > prj.scaler.max_scale {
+        return;
+    }
+    let scaler = &prj.scaler.scalers[prj.scaler.scale_call[scale]];
+
+    // scale to the left (from pixel 31 to sprite.left_pix)
+    let mut line_x = x_center;
+    let mut src_x = 31;
+    let mut stop_x = sprite.left_pix;
+    let mut cmd_ptr = 31 - stop_x as i64;    
+    while src_x >= stop_x && line_x > 0 {
+        let posts = &sprite.posts[cmd_ptr as usize];
+        cmd_ptr -= 1;
+        let mut slinewidth = scaler.width[src_x];
+        src_x -= 1;
+        if slinewidth == 0 {
+            continue;
+        }
+        
+        // handle single pixel line
+        if slinewidth == 1 {
+            line_x -= 1;
+            if line_x < prj.view_width {
+                if wall_height[line_x] >= height as i32 {
+                    continue; // obscured by closer wall
+                }
+                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth);
+            }
+            continue;
+        }
+
+        if line_x > prj.view_width {
+            line_x -= slinewidth;
+            slinewidth = prj.view_width.saturating_sub(line_x);
+            if slinewidth == 0 {
+                continue;
+            }
+        } else {
+            if slinewidth > line_x {
+                slinewidth = line_x;
+            }
+            line_x -= slinewidth;
+        }
+
+        let left_vis = wall_height[line_x] < height as i32;
+        let right_vis = wall_height[line_x + slinewidth - 1] < height as i32;      
+
+        if left_vis {
+            if right_vis {
+                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth); 
+            } else {
+                // find first visible line from the right
+                while wall_height[line_x+slinewidth-1] >= height as i32 {
+                    slinewidth -= 1;
+                }
+                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth); 
+            }
+        } else {
+            if !right_vis {
+                continue; // totally obscured
+            }
+            // find first visible line from the left
+            while wall_height[line_x] >= height as i32 {
+                line_x += 1;
+                slinewidth -= 1;
+            }
+            scale_line(rdr, scaler, sprite, posts, line_x, slinewidth); 
+            break; // the rest of the left part of the shape is gone
+        }
+    }
+
+    // scale to the right
+    line_x = x_center;
+    stop_x = sprite.right_pix;
+    if sprite.left_pix < 31 {
+        src_x = 31;
+        cmd_ptr = 32 - sprite.left_pix as i64;
+    } else {
+        src_x = sprite.left_pix - 1;
+        cmd_ptr = 0;
+    }
+    src_x += 1;
+    
+    let mut slinewidth = 0;
+    while src_x <= stop_x {
+        line_x += slinewidth;
+        if line_x >= prj.view_width {
+            break; // right part of sprite is out of view
+        }
+
+        let posts = &sprite.posts[cmd_ptr as usize];
+        cmd_ptr += 1;
+        slinewidth = scaler.width[src_x];
+        src_x += 1;
+        
+        // handle single pixe lines
+        if slinewidth == 1 {
+            if wall_height[line_x] < height as i32 {
+                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth);
+            }
+            continue;
+        }
+
+        // handle multi pixel lines
+        if (line_x + slinewidth) > prj.view_width {
+            slinewidth = prj.view_width - line_x;
+        }
+        if slinewidth == 0 {
+            continue;
+        }
+
+        let left_vis = wall_height[line_x] < height as i32;
+        let right_vis = wall_height[line_x + slinewidth - 1] < height as i32;
+        if left_vis {
+            if right_vis {
+                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth); 
+            } else {
+                while wall_height[line_x + slinewidth - 1] >= height as i32 {
+                    slinewidth -= 1;
+                }
+                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth); 
+                break; // the rest of the shape is gone 
+            }
+        } else {
+            if right_vis {
+                while wall_height[line_x] >= height as i32 {
+                    line_x += 1;
+                    slinewidth -= 1;
+                }
+                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth); 
+            } else {
+                continue; // totally obscurred
+            }
+        }
+    } 
 }
 
 // simple = no clipping
 pub fn simple_scale_shape(rdr: &dyn Renderer, prj: &ProjectionConfig, x_center: usize, sprite: &SpriteData, height: usize) {
     let scaler = &prj.scaler.scalers[prj.scaler.scale_call[height >> 1]];
-    
+
     // scale to the left (from pixel 31 to sprite.left_pix)
     let mut line_x = x_center;
     let mut src_x = 31;
@@ -142,7 +288,7 @@ pub fn simple_scale_shape(rdr: &dyn Renderer, prj: &ProjectionConfig, x_center: 
         if slinewidth == 0 {
             continue;
         }
-
+        
         line_x -= slinewidth;
         scale_line(rdr, scaler, sprite, posts, line_x, slinewidth);
     }
@@ -199,10 +345,11 @@ fn scale(rdr: &dyn Renderer, scaler: &Scaler, sprite: &SpriteData, posts: &Vec<S
     for post in posts {
         let mut of = post.pixel_offset;
         for p in post.start..post.end {
-            let pix_scaler = &scaler.pixel_scalers[p as usize];
-            let pix = sprite.pixel_pool[of];
-            for mem_dest in &pix_scaler.mem_dests {
-                rdr.write_mem(mem_offset + *mem_dest as usize, pix)
+            if let Some(pix_scaler) = &scaler.pixel_scalers[p]  {
+                let pix = sprite.pixel_pool[of];
+                for mem_dest in &pix_scaler.mem_dests {
+                    rdr.write_mem(mem_offset + *mem_dest as usize, pix)
+                }
             }
             of += 1;
         }
