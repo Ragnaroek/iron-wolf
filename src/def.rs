@@ -16,6 +16,8 @@ pub const ANGLES_I32 : i32 = ANGLES as i32;
 pub const ANGLE_QUAD : usize = ANGLES/4;
 pub const TILEGLOBAL : i32 = 1<<16;
 
+pub const MIN_ACTOR_DIST : i32 = 0x10000;
+
 pub const TILESHIFT : i32 = 16;
 pub const UNSIGNEDSHIFT : i32 =	8;
 
@@ -145,6 +147,12 @@ impl LevelState {
     {
         f(&mut self.actors[k.0])
     }
+
+    pub fn update<F>(&mut self, f: F) 
+    where F: FnOnce(&mut LevelState)
+    {
+        f(self)
+    }
 }
 
 pub enum Dir {
@@ -203,7 +211,7 @@ pub struct GameState {
 }
 
 #[repr(usize)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DirType {
     East = 0,
     NorthEast = 1,
@@ -279,17 +287,20 @@ pub enum ClassType {
 #[derive(Debug, Clone, Copy)] //XXX do not make this Clone, fix actor_at (also takes a ObjKey instead ObjType???)
 pub struct ObjType {
     pub active: bool,
+    pub tic_count: u32,
     pub class: ClassType,
     pub state: &'static StateType,
     
     pub flags: u8,
 
+    pub distance: i32,
     pub dir: DirType,
 
     pub x: i32,
 	pub y: i32,
 	pub tilex: usize,
 	pub tiley: usize,
+    pub area_number: u16,
     
     pub view_x: i32,
     pub view_height: i32,
@@ -356,7 +367,7 @@ type Action = fn(k: ObjKey);
 pub struct StateType {
     pub rotate: usize,
     pub sprite: Option<Sprite>, // None means get from obj->temp1
-    pub tic_count: u32,
+    pub tic_time: u32,
     pub think: Option<Think>,
     pub action: Option<Action>,
     pub next: StateNext,
@@ -366,7 +377,6 @@ pub struct StateType {
 pub enum StateNext {
     None,
     Next(&'static StateType),
-    Cycle, // use same state again
 }
 
 derive_from!{
@@ -397,8 +407,19 @@ derive_from!{
         GuardS1 = 50, GuardS2 = 51, GuardS3 = 52, GuardS4 = 53,
         GuardS5 = 54, GuardS6 = 55, GuardS7 = 56, GuardS8 = 57,
 
+		GuardW11 = 58, GuardW12 = 59, GuardW13 = 60, GuardW14 = 61,
+		GuardW15 = 62, GuardW16 = 63, GuardW17 = 64, GuardW18 = 65,
+
+        GuardW21 = 66, GuardW22 = 67, GuardW23 = 68, GuardW24 = 69,
+
+        GuardW31 = 74 ,GuardW32 = 75, GuardW33 = 76, GuardW34 = 77,
+
+		GuardW41 = 82, GuardW42 = 83, GuardW43 = 84, GuardW44 = 85,
+
         GuardPain1 = 90, GuardDie1 = 91, GuardDie2 = 92, GuardDie3 = 93,
         GuardPain2 = 94, GuardDead = 95,
+
+        GuardShoot1 = 96, GuardShoot2 = 97, GuardShoot3 = 98,
 
         // SS
         SSS1 = 140, SSS2 = 141, SSS3 = 142, SSS4 = 143,

@@ -8,10 +8,10 @@ const ANGLE_SCALE : i32 = 20;
 const MOVE_SCALE : i32 = 150;
 const BACKMOVE_SCALE : i32 = 100;
 
-pub const S_PLAYER : StateType = StateType{
+pub static S_PLAYER : StateType = StateType{
     rotate: 0,
     sprite: None,
-    tic_count: 0,
+    tic_time: 0,
     think: Some(t_player),
     action: None,
     next: StateNext::None,
@@ -68,7 +68,10 @@ fn cmd_use(level_state: &mut LevelState, control_state: &mut ControlState) {
 pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
 	let r = ObjType{
         class: ClassType::Player,
+        distance: 0,
+        area_number: 0,
         active: true,
+        tic_count: 0,
 		angle: (1-dir)*90,
         flags: FL_NEVERMARK, 
         pitch: 0,
@@ -91,6 +94,10 @@ pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
     //TODO init_areas
 
     r
+}
+
+pub fn take_damage(attacker: &ObjType, points: u64) {
+    panic!("take damage not implemented")
 }
 
 fn control_movement(k: ObjKey, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {

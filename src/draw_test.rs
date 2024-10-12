@@ -373,6 +373,9 @@ fn mock_doors() -> Vec<DoorType>{
 fn test_player() -> ObjType {
     ObjType{
         class: ClassType::Player,
+        tic_count: 0,
+        distance: 0,
+        area_number: 0,
         flags: FL_NEVERMARK,
         view_height: 0,
         view_x: 0,
