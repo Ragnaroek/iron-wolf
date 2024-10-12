@@ -4,7 +4,6 @@ extern crate test;
 extern crate iw;
 
 use std::path::PathBuf;
-use std::env;
 use std::sync::Arc;
 use iw::config::default_iw_config;
 use iw::loader::DiskLoader;
@@ -19,12 +18,11 @@ use iw::play;
 
 #[bench]
 fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
-    let w3d_path = env::var("W3D_DATA").unwrap();
-    let mut path = PathBuf::new();
-    path.push(&w3d_path);
+    let mut data_path = PathBuf::new();
+    data_path.push("./testdata/shareware_data");
 
     let mut iw_config = default_iw_config()?;
-    iw_config.data.wolf3d_data = path;
+    iw_config.data.wolf3d_data = data_path;
 
     let loader = DiskLoader{
         variant: &assets::W3D1,
