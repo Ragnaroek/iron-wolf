@@ -1,6 +1,7 @@
 
-use super::def::{Assets, ObjType, Level, LevelState, MAP_SIZE};
+use super::def::{Assets, ObjType, Level, LevelState, Control, MAP_SIZE};
 use super::assets::{load_map_from_assets};
+use super::agent::{S_PLAYER};
 
 pub const TILESHIFT : i32 = 16;
 pub const TILEGLOBAL : i32 = 1<<16;
@@ -58,6 +59,8 @@ pub fn setup_game_level(map_on: usize, assets: &Assets) -> Result<LevelState, St
 		    actor_at,
         },
         actors,
+        control: Control{x:0, y:0},
+        angle_frac: 0,
 	})
 }
 
@@ -91,21 +94,14 @@ fn scan_info_plane(map_data: &libiw::map::MapData) -> ObjType {
 }
 
 fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
-    let mut angle = (1-dir)*90;
-    if angle == 0 {
-        angle = 360
-    }
-    if angle < 0 {
-        angle += ANGLES;
-    }
-
 	let r = ObjType{
-		angle: angle as u32 * ANGLE_1, 
+		angle: (1-dir)*90, 
         pitch: 0,
 		tilex,
 		tiley,
 		x: ((tilex as i32) << TILESHIFT) + TILEGLOBAL / 2,
 		y: ((tiley as i32) << TILESHIFT) + TILEGLOBAL / 2,
+        state: &S_PLAYER,
 	};
     r
 }

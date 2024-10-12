@@ -1,5 +1,7 @@
+use crate::def::ObjType;
+
 use super::vga_render::Renderer;
-use super::def::{GameState, WeaponType, Assets, Level, LevelState, MAP_SIZE};
+use super::def::{GameState, WeaponType, Assets, Level, ObjKey, LevelState, Control, MAP_SIZE};
 use super::assets::{GraphicNum, face_pic, num_pic, weapon_pic};
 use libiw::gamedata::Texture;
 use vgaemu::input::NumCode;
@@ -57,11 +59,6 @@ static VGA_CEILING : [u8; 60] = [
 	0x7d,0x1d,0x2d,0x2d,0xdd,0xd7,0x1d,0x1d,0x1d,0x2d,
 	0x1d,0x1d,0x1d,0x1d,0xdd,0xdd,0x7d,0xdd,0xdd,0xdd
 ];
-
-pub struct Control {
-    pub x: i32,
-    pub y: i32,
-}
 
 pub struct ProjectionConfig {
 	view_size: usize,
@@ -177,7 +174,7 @@ fn calc_fine_sines() -> Vec<i32> {
 
 pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
 	
-    let mut game_state = new_game_state();
+    let game_state = new_game_state();
     
     draw_play_screen(&game_state, rdr, prj);
 	
@@ -200,15 +197,11 @@ pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input
 fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &GameState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
 	//TODO A lot to do here (clear palette, poll controls, prepare world)
     loop {
-        {
-            let mut player = level_state.mut_player();
-            player.angle = 0;
-            let control = poll_controls(ticker, input);
-            player.x += control.x; //TODO movement still in map space
-            player.y += control.y;
-        }
+        level_state.control = poll_controls(ticker, input);
 
-        // TODO DoActor loop
+        for i in 0..level_state.actors.len() {
+            do_actor(ObjKey(i), level_state);
+        }
         
 	    three_d_refresh(game_state, level_state, rdr, prj, assets);
 
@@ -218,6 +211,18 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
         } 
         rdr.set_buffer_offset(offset_prev);
     }
+}
+
+fn do_actor(k: ObjKey, level_state: &mut LevelState) {
+    //TODO do ob->ticcount part from DoActor here
+    let may_think = level_state.obj(k).state.think;
+    if let Some(think) = may_think {
+        think(k, level_state)
+    }
+
+    //TODO remove obj if state becomes None
+    //TODO return if flag = FL_NEVERMARK (the player obj always has this flag)
+    //TODO Impl think for player = T_Player function and supply the corret (mutable) args
 }
 
 fn three_d_refresh(game_state: &GameState, level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
@@ -381,9 +386,9 @@ impl RayCast {
 fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionConfig, assets: &Assets) {
     let player = level_state.player();
     let view_angle = player.angle;
-    let mid_angle = view_angle * (FINE_ANGLES as u32/ANGLES as u32);
+    let mid_angle = view_angle * (FINE_ANGLES as i32/ANGLES as i32);
     let view_sin = prj.fine_sines[(view_angle >> ANGLE_TO_FINE_SHIFT) as usize];
-    let view_cos = prj.fine_sines[((view_angle >> ANGLE_TO_FINE_SHIFT) + ANG90 as u32) as usize ];
+    let view_cos = prj.fine_sines[((view_angle >> ANGLE_TO_FINE_SHIFT) + ANG90 as i32) as usize ];
     let view_x = player.x - fixed_mul(FOCAL_LENGTH as i32, view_cos);
     let view_y = player.y + fixed_mul(FOCAL_LENGTH as i32, view_sin);
     
@@ -474,7 +479,7 @@ fn wall_refresh(level_state: &LevelState, rdr: &dyn Renderer, prj: &ProjectionCo
             Hit::VerticalBorder|Hit::VerticalWall => (rc.y_intercept>>4)&0xFC0,
         };
 
-        let texture = if rc.tile_hit < 50 {
+        let texture = if rc.tile_hit < 50 && rc.tile_hit > 0 {
             Some(&assets.textures[((rc.tile_hit - 1) * 2 + side) as usize])
         } else {
             //TODO totally only for test
