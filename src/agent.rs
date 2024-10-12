@@ -1,17 +1,26 @@
 use crate::act1::{operate_door, push_wall};
-use crate::assets::{GraphicNum, n_pic, weapon_pic, face_pic};
-use crate::play::{ProjectionConfig, start_bonus_flash, start_damage_flash};
-use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType, GameState, Difficulty, PlayState, SCREENLOC, STATUS_LINES, FL_SHOOTABLE, FL_VISABLE, WeaponType, EXTRA_POINTS, StaticKind, Sprite, StaticType, PUSHABLE_TILE, ELEVATOR_TILE, ALT_ELEVATOR_TILE};
-use crate::fixed::{new_fixed_i32, fixed_by_frac};
+use crate::assets::{face_pic, n_pic, weapon_pic, GraphicNum, SoundName};
+use crate::def::{
+    Assets, At, Button, ClassType, ControlState, Difficulty, Dir, DirType, GameState, LevelState,
+    ObjKey, ObjType, PlayState, Sprite, StateType, StaticKind, StaticType, WeaponType,
+    ALT_ELEVATOR_TILE, ANGLES, ANGLES_I32, ELEVATOR_TILE, EXTRA_POINTS, FL_NEVERMARK, FL_SHOOTABLE,
+    FL_VISABLE, MIN_DIST, PLAYER_SIZE, PUSHABLE_TILE, SCREENLOC, STATUS_LINES, TILEGLOBAL,
+    TILESHIFT,
+};
+use crate::fixed::{fixed_by_frac, new_fixed_i32};
+use crate::play::{start_bonus_flash, start_damage_flash, ProjectionConfig};
+use crate::sd::play_sound;
 use crate::state::{check_line, damage_actor};
 use crate::user::rnd_t;
 use crate::vga_render::VGARenderer;
 
-const ANGLE_SCALE : i32 = 20;
-const MOVE_SCALE : i32 = 150;
-const BACKMOVE_SCALE : i32 = 100;
+use opl::OPL;
 
-pub static S_PLAYER : StateType = StateType{
+const ANGLE_SCALE: i32 = 20;
+const MOVE_SCALE: i32 = 150;
+const BACKMOVE_SCALE: i32 = 100;
+
+pub static S_PLAYER: StateType = StateType {
     rotate: 0,
     sprite: None,
     tic_time: 0,
@@ -20,7 +29,7 @@ pub static S_PLAYER : StateType = StateType{
     next: None,
 };
 
-pub static S_ATTACK : StateType = StateType {
+pub static S_ATTACK: StateType = StateType {
     rotate: 0,
     sprite: None,
     tic_time: 0,
@@ -35,32 +44,129 @@ struct AttackInfo {
     frame: usize,
 }
 
-static ATTACK_INFO : [[AttackInfo; 4]; 4] = [
-    [AttackInfo{tics: 6, attack: 0, frame: 1}, AttackInfo{tics: 6, attack: 2, frame: 2}, AttackInfo{tics: 6, attack: 0, frame: 3}, AttackInfo{tics: 6, attack: -1, frame: 4}],
-    [AttackInfo{tics: 6, attack: 0, frame: 1}, AttackInfo{tics: 6, attack: 1, frame: 2}, AttackInfo{tics: 6, attack: 0, frame: 3}, AttackInfo{tics: 6, attack: -1, frame: 4}],
-    [AttackInfo{tics: 6, attack: 0, frame: 1}, AttackInfo{tics: 6, attack: 1, frame: 2}, AttackInfo{tics: 6, attack: 3, frame: 3}, AttackInfo{tics: 6, attack: -1, frame: 4}],
-    [AttackInfo{tics: 6, attack: 0, frame: 1}, AttackInfo{tics: 6, attack: 1, frame: 2}, AttackInfo{tics: 6, attack: 4, frame: 3} ,AttackInfo{tics: 6, attack: -1, frame: 4}],
+static ATTACK_INFO: [[AttackInfo; 4]; 4] = [
+    [
+        AttackInfo {
+            tics: 6,
+            attack: 0,
+            frame: 1,
+        },
+        AttackInfo {
+            tics: 6,
+            attack: 2,
+            frame: 2,
+        },
+        AttackInfo {
+            tics: 6,
+            attack: 0,
+            frame: 3,
+        },
+        AttackInfo {
+            tics: 6,
+            attack: -1,
+            frame: 4,
+        },
+    ],
+    [
+        AttackInfo {
+            tics: 6,
+            attack: 0,
+            frame: 1,
+        },
+        AttackInfo {
+            tics: 6,
+            attack: 1,
+            frame: 2,
+        },
+        AttackInfo {
+            tics: 6,
+            attack: 0,
+            frame: 3,
+        },
+        AttackInfo {
+            tics: 6,
+            attack: -1,
+            frame: 4,
+        },
+    ],
+    [
+        AttackInfo {
+            tics: 6,
+            attack: 0,
+            frame: 1,
+        },
+        AttackInfo {
+            tics: 6,
+            attack: 1,
+            frame: 2,
+        },
+        AttackInfo {
+            tics: 6,
+            attack: 3,
+            frame: 3,
+        },
+        AttackInfo {
+            tics: 6,
+            attack: -1,
+            frame: 4,
+        },
+    ],
+    [
+        AttackInfo {
+            tics: 6,
+            attack: 0,
+            frame: 1,
+        },
+        AttackInfo {
+            tics: 6,
+            attack: 1,
+            frame: 2,
+        },
+        AttackInfo {
+            tics: 6,
+            attack: 4,
+            frame: 3,
+        },
+        AttackInfo {
+            tics: 6,
+            attack: -1,
+            frame: 4,
+        },
+    ],
 ];
 
-fn t_attack(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
-    
+fn t_attack(
+    k: ObjKey,
+    tics: u64,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    opl: &mut OPL,
+    rdr: &VGARenderer,
+    control_state: &mut ControlState,
+    prj: &ProjectionConfig,
+    assets: &Assets,
+) {
     update_face(tics, game_state, rdr);
-    
+
     if game_state.victory_flag {
         // TODO victory_spin()!
         return;
     }
 
-    if control_state.button_state[Button::Use as usize] && !control_state.button_held[Button::Use as usize] {
+    if control_state.button_state[Button::Use as usize]
+        && !control_state.button_held[Button::Use as usize]
+    {
         control_state.button_state[Button::Use as usize] = false;
     }
 
-    if control_state.button_state[Button::Attack as usize] && !control_state.button_held[Button::Attack as usize] {
+    if control_state.button_state[Button::Attack as usize]
+        && !control_state.button_held[Button::Attack as usize]
+    {
         control_state.button_state[Button::Attack as usize] = false;
     }
 
     control_movement(k, level_state, control_state, prj);
-    
+
     if game_state.victory_flag {
         return;
     }
@@ -72,7 +178,8 @@ fn t_attack(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
 
     game_state.attack_count -= tics as i32;
     while game_state.attack_count <= 0 {
-        let cur = &ATTACK_INFO[game_state.weapon.expect("weapon") as usize][game_state.attack_frame];
+        let cur =
+            &ATTACK_INFO[game_state.weapon.expect("weapon") as usize][game_state.attack_frame];
         match cur.attack {
             -1 => {
                 level_state.update_obj(k, |obj| obj.state = Some(&S_PLAYER));
@@ -80,7 +187,9 @@ fn t_attack(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
                     game_state.weapon = Some(WeaponType::Knife);
                     draw_weapon(&game_state, rdr);
                 } else {
-                    if game_state.weapon.is_some() && game_state.weapon.unwrap() != game_state.chosen_weapon {
+                    if game_state.weapon.is_some()
+                        && game_state.weapon.unwrap() != game_state.chosen_weapon
+                    {
                         game_state.weapon = Some(game_state.chosen_weapon);
                         draw_weapon(&game_state, rdr);
                     }
@@ -88,83 +197,109 @@ fn t_attack(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
                 game_state.attack_frame = 0;
                 game_state.weapon_frame = 0;
                 return;
-            },
-            4 => { 
+            }
+            4 => {
                 if game_state.ammo == 0 {
                     break;
                 }
                 if control_state.button_state[Button::Attack as usize] {
                     game_state.attack_frame -= 2;
                 }
-            },
+            }
             1 => {
                 if game_state.ammo == 0 {
                     // can only happen with chain gun
                     game_state.attack_frame += 1;
                     break;
                 }
-                gun_attack(level_state, game_state, rdr, prj);
+                gun_attack(level_state, game_state, opl, rdr, prj, assets);
                 game_state.ammo -= 1;
                 draw_ammo(&game_state, rdr);
-            },
+            }
             2 => {
                 knife_attack(level_state, game_state, rdr, prj);
-            },
+            }
             3 => {
                 if game_state.ammo != 0 && control_state.button_state[Button::Attack as usize] {
                     game_state.attack_frame -= 2;
                 }
-            },
-            _ => {/* do nothing */}
+            }
+            _ => { /* do nothing */ }
         }
 
         game_state.attack_count += cur.tics;
         game_state.attack_frame += 1;
-        game_state.weapon_frame = ATTACK_INFO[game_state.weapon.unwrap() as usize][game_state.attack_frame].frame;
+        game_state.weapon_frame =
+            ATTACK_INFO[game_state.weapon.unwrap() as usize][game_state.attack_frame].frame;
     }
 }
 
-fn knife_attack(level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {
+fn knife_attack(
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    rdr: &VGARenderer,
+    prj: &ProjectionConfig,
+) {
     // TODO SD_PlaySound(ATKKNIFESND)
 
     let mut dist = 0x7fffffff;
     let mut closest = None;
     for i in 1..level_state.actors.len() {
         let check = &level_state.actors[i];
-        if check.flags & FL_SHOOTABLE != 0 &&
-            check.flags & FL_VISABLE != 0 &&
-            check.view_x.abs_diff(prj.center_x as i32) < prj.shoot_delta as u32 {
-                if check.trans_x.to_i32() < dist {
-                    dist = check.trans_x.to_i32();
-                    closest = Some(ObjKey(i));
-                }
-            } 
+        if check.flags & FL_SHOOTABLE != 0
+            && check.flags & FL_VISABLE != 0
+            && check.view_x.abs_diff(prj.center_x as i32) < prj.shoot_delta as u32
+        {
+            if check.trans_x.to_i32() < dist {
+                dist = check.trans_x.to_i32();
+                closest = Some(ObjKey(i));
+            }
+        }
     }
 
     if closest.is_none() || dist > 0x18000 {
         return; //missed
     }
-    damage_actor(closest.expect("closest enemy"), level_state, game_state, rdr, (rnd_t() >> 4) as usize)
+    damage_actor(
+        closest.expect("closest enemy"),
+        level_state,
+        game_state,
+        rdr,
+        (rnd_t() >> 4) as usize,
+    )
 }
 
-fn gun_attack(level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {
-
+fn gun_attack(
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    opl: &mut OPL,
+    rdr: &VGARenderer,
+    prj: &ProjectionConfig,
+    assets: &Assets,
+) {
     //TODO play weapon sound!
-
+    match game_state.weapon {
+        Some(WeaponType::Pistol) => play_sound(SoundName::ATKPISTOL, opl, assets),
+        Some(WeaponType::MachineGun) => play_sound(SoundName::ATKMACHINEGUN, opl, assets),
+        Some(WeaponType::ChainGun) => play_sound(SoundName::ATKGATLING, opl, assets),
+        _ => { /* ignore anything else */ }
+    }
     game_state.made_noise = true;
+
     let mut view_dist = 0x7fffffff;
     let mut closest = None;
     loop {
         for i in 1..level_state.actors.len() {
             let check = &level_state.actors[i];
-            if check.flags & FL_SHOOTABLE != 0 &&
-                check.flags & FL_VISABLE != 0 &&
-                check.view_x.abs_diff(prj.center_x as i32) < prj.shoot_delta as u32 {
-                    if check.trans_x.to_i32() < view_dist {
-                        view_dist = check.trans_x.to_i32();
-                        closest = Some(ObjKey(i));
-                    }
-                } 
+            if check.flags & FL_SHOOTABLE != 0
+                && check.flags & FL_VISABLE != 0
+                && check.view_x.abs_diff(prj.center_x as i32) < prj.shoot_delta as u32
+            {
+                if check.trans_x.to_i32() < view_dist {
+                    view_dist = check.trans_x.to_i32();
+                    closest = Some(ObjKey(i));
+                }
+            }
         }
         if closest.is_none() {
             return; // no more targets, all missed
@@ -192,7 +327,8 @@ fn gun_attack(level_state: &mut LevelState, game_state: &mut GameState, rdr: &VG
     } else if dist < 4 {
         damage = rnd_t() / 6;
     } else {
-        if rnd_t() as usize / 12 < dist { // missed
+        if rnd_t() as usize / 12 < dist {
+            // missed
             return;
         }
         damage = rnd_t() / 6;
@@ -201,19 +337,35 @@ fn gun_attack(level_state: &mut LevelState, game_state: &mut GameState, rdr: &VG
     damage_actor(k, level_state, game_state, rdr, damage as usize);
 }
 
-fn t_player(k: ObjKey, _: u64, level_state: &mut LevelState, game_state: &mut GameState, _: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn t_player(
+    k: ObjKey,
+    _: u64,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    _: &mut OPL,
+    _: &VGARenderer,
+    control_state: &mut ControlState,
+    prj: &ProjectionConfig,
+    _: &Assets,
+) {
     if control_state.button_state[Button::Use as usize] {
         cmd_use(level_state, game_state, control_state);
     }
 
-    if control_state.button_state[Button::Attack as usize] && !control_state.button_held[Button::Attack as usize] {
+    if control_state.button_state[Button::Attack as usize]
+        && !control_state.button_held[Button::Attack as usize]
+    {
         cmd_fire(level_state, game_state, control_state);
     }
 
     control_movement(k, level_state, control_state, prj);
 }
 
-fn cmd_fire(level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState) {
+fn cmd_fire(
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    control_state: &mut ControlState,
+) {
     control_state.button_held[Button::Attack as usize] = true;
 
     level_state.mut_player().state = Some(&S_ATTACK);
@@ -225,31 +377,35 @@ fn cmd_fire(level_state: &mut LevelState, game_state: &mut GameState, control_st
     }
 }
 
-fn cmd_use(level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState) {
+fn cmd_use(
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    control_state: &mut ControlState,
+) {
     let check_x;
     let check_y;
     let dir;
     let elevator_ok;
     // find which cardinal direction the player is facing
     let player = level_state.player();
-    if player.angle < ANGLES_I32/8 || player.angle > 7*ANGLES_I32/8 {
-        check_x = player.tilex+1;
+    if player.angle < ANGLES_I32 / 8 || player.angle > 7 * ANGLES_I32 / 8 {
+        check_x = player.tilex + 1;
         check_y = player.tiley;
         dir = Dir::East;
         elevator_ok = true;
-    } else if player.angle < 3*ANGLES_I32/8 {
+    } else if player.angle < 3 * ANGLES_I32 / 8 {
         check_x = player.tilex;
-        check_y = player.tiley-1;
+        check_y = player.tiley - 1;
         dir = Dir::North;
         elevator_ok = false;
-    } else if player.angle < 5*ANGLES_I32/8 {
-        check_x = player.tilex-1;
+    } else if player.angle < 5 * ANGLES_I32 / 8 {
+        check_x = player.tilex - 1;
         check_y = player.tiley;
         dir = Dir::West;
         elevator_ok = true;
     } else {
         check_x = player.tilex;
-        check_y = player.tiley+1;
+        check_y = player.tiley + 1;
         dir = Dir::South;
         elevator_ok = false;
     }
@@ -263,14 +419,14 @@ fn cmd_use(level_state: &mut LevelState, game_state: &mut GameState, control_sta
     if !control_state.button_held(Button::Use) && doornum == ELEVATOR_TILE && elevator_ok {
         // use elevator
         control_state.set_button_held(Button::Use, true);
-        
+
         if level_state.level.tile_map[player.tilex][player.tiley] == ALT_ELEVATOR_TILE {
             game_state.play_state = PlayState::SecretLevel;
         } else {
             game_state.play_state = PlayState::Completed;
         }
         level_state.level.tile_map[check_x][check_y] += 1; // flip switch [to animate the lever to move up]
-        // TODO SD_PlaySound(LEVELDONESND) && WaitSoundDone
+                                                           // TODO SD_PlaySound(LEVELDONESND) && WaitSoundDone
     }
 
     if !control_state.button_held(Button::Use) && doornum & 0x80 != 0 {
@@ -282,23 +438,23 @@ fn cmd_use(level_state: &mut LevelState, game_state: &mut GameState, control_sta
 }
 
 pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
-	let r = ObjType{
+    let r = ObjType {
         class: ClassType::Player,
         distance: 0,
         area_number: 0,
         active: crate::def::ActiveType::Yes,
         tic_count: 0,
-		angle: (1-dir)*90,
-        flags: FL_NEVERMARK, 
+        angle: (1 - dir) * 90,
+        flags: FL_NEVERMARK,
         pitch: 0,
-		tilex,
-		tiley,
+        tilex,
+        tiley,
         view_x: 0,
         view_height: 0,
         trans_x: new_fixed_i32(0),
         trans_y: new_fixed_i32(0),
-		x: ((tilex as i32) << TILESHIFT) + TILEGLOBAL / 2,
-		y: ((tiley as i32) << TILESHIFT) + TILEGLOBAL / 2,
+        x: ((tilex as i32) << TILESHIFT) + TILEGLOBAL / 2,
+        y: ((tiley as i32) << TILESHIFT) + TILEGLOBAL / 2,
         speed: 0,
         dir: DirType::NoDir,
         temp1: 0,
@@ -313,7 +469,13 @@ pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
     r
 }
 
-pub fn take_damage(attacker: ObjKey, points_param: i32, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer) {
+pub fn take_damage(
+    attacker: ObjKey,
+    points_param: i32,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    rdr: &VGARenderer,
+) {
     let mut points = points_param;
 
     level_state.last_attacker = Some(attacker);
@@ -343,19 +505,23 @@ pub fn take_damage(attacker: ObjKey, points_param: i32, level_state: &mut LevelS
     // TODO SPEAR make eyes bug on major damage
 }
 
-fn control_movement(k: ObjKey, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
-    
-    level_state.thrustspeed = 0;    
+fn control_movement(
+    k: ObjKey,
+    level_state: &mut LevelState,
+    control_state: &mut ControlState,
+    prj: &ProjectionConfig,
+) {
+    level_state.thrustspeed = 0;
 
     // TODO Impl strafing
-    
+
     // side to side move
     let control_x = control_state.control.x;
     let control_y = control_state.control.y;
-    
+
     control_state.angle_frac += control_x;
     let angle_units = control_state.angle_frac / ANGLE_SCALE;
-    control_state.angle_frac -= angle_units*ANGLE_SCALE;
+    control_state.angle_frac -= angle_units * ANGLE_SCALE;
 
     {
         let ob = level_state.mut_obj(k);
@@ -371,24 +537,29 @@ fn control_movement(k: ObjKey, level_state: &mut LevelState, control_state: &mut
     // forward/backwards move
     let ob = level_state.obj(k);
     if control_y < 0 {
-        thrust(k, level_state, prj, ob.angle, -control_y*MOVE_SCALE)
+        thrust(k, level_state, prj, ob.angle, -control_y * MOVE_SCALE)
     } else if control_y > 0 {
-        let mut angle = ob.angle + ANGLES as i32 /2;
+        let mut angle = ob.angle + ANGLES as i32 / 2;
         if angle >= ANGLES as i32 {
             angle -= ANGLES as i32;
         }
-        thrust(k, level_state, prj, angle, control_y*BACKMOVE_SCALE);
+        thrust(k, level_state, prj, angle, control_y * BACKMOVE_SCALE);
     }
 }
 
-pub fn thrust(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig, angle: i32, speed_param: i32) {
-    
+pub fn thrust(
+    k: ObjKey,
+    level_state: &mut LevelState,
+    prj: &ProjectionConfig,
+    angle: i32,
+    speed_param: i32,
+) {
     //TODO reset funnyticount (only for Spear?)
 
     level_state.thrustspeed += speed_param;
-    
-    let speed = new_fixed_i32(if speed_param >= MIN_DIST*2 {
-        MIN_DIST*2-1
+
+    let speed = new_fixed_i32(if speed_param >= MIN_DIST * 2 {
+        MIN_DIST * 2 - 1
     } else {
         speed_param
     });
@@ -400,7 +571,7 @@ pub fn thrust(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig, a
 
     let obj = level_state.mut_obj(k);
     obj.tilex = obj.x as usize >> TILESHIFT;
-    obj.tiley = obj.y as usize >> TILESHIFT;    
+    obj.tiley = obj.y as usize >> TILESHIFT;
 }
 
 pub fn give_points(game_state: &mut GameState, rdr: &VGARenderer, points: i32) {
@@ -428,67 +599,67 @@ pub fn get_bonus(game_state: &mut GameState, rdr: &VGARenderer, check: &mut Stat
             }
             // TODO SD_PlaySound(HEALTH2SND);
             heal_self(game_state, rdr, 25);
-        },
-        StaticKind::BoKey1|StaticKind::BoKey2|StaticKind::BoKey3|StaticKind::BoKey4 => {
+        }
+        StaticKind::BoKey1 | StaticKind::BoKey2 | StaticKind::BoKey3 | StaticKind::BoKey4 => {
             panic!("get key");
-        },
+        }
         StaticKind::BoCross => {
             // TODO SD_PlaySound(BONUS1SND)
             give_points(game_state, rdr, 100);
             game_state.treasure_count += 1;
-        },
+        }
         StaticKind::BoChalice => {
             // TODO SD_PlaySound(BONUS2SND)
             give_points(game_state, rdr, 500);
             game_state.treasure_count += 1;
-        },
+        }
         StaticKind::BoBible => {
             // TODO SD_PlaySound(BONUS2SND)
             give_points(game_state, rdr, 1000);
             game_state.treasure_count += 1;
-        },
+        }
         StaticKind::BoClip => {
             if game_state.ammo == 99 {
                 return;
             }
             // TODO PlaySound(GETAMMOSND);
             give_ammo(game_state, rdr, 8);
-        },
+        }
         StaticKind::BoClip2 => {
             if game_state.ammo == 99 {
                 return;
             }
             // TODO PlaySound(GETAMMOSND)
             give_ammo(game_state, rdr, 4);
-        },
+        }
         StaticKind::BoMachinegun => {
             // TODO SD_PlaySound(GETMACHINESND);
             give_weapon(game_state, rdr, WeaponType::MachineGun);
-        },
+        }
         StaticKind::BoChaingun => {
             panic!("get chaingun");
-        },
+        }
         StaticKind::BoFullheal => {
             // TODO SD_PlaySound (BONUS1UPSND);
             heal_self(game_state, rdr, 99);
             give_ammo(game_state, rdr, 25);
             give_extra_man(game_state, rdr);
             game_state.treasure_count += 1;
-        },
+        }
         StaticKind::BoFood => {
             if game_state.health == 100 {
                 return;
             }
             // TODO PlaySound(HEALTH1SND)
             heal_self(game_state, rdr, 10);
-        },
+        }
         StaticKind::BoGibs => {
             panic!("get gibs");
-        },
+        }
         StaticKind::BoSpear => {
             panic!("get spear");
-        },
-        _ => { /* ignore all other static kinds */}
+        }
+        _ => { /* ignore all other static kinds */ }
     }
     start_bonus_flash(game_state);
     check.sprite = Sprite::None; // remove from list
@@ -500,7 +671,7 @@ fn heal_self(game_state: &mut GameState, rdr: &VGARenderer, points: i32) {
         game_state.health = 100;
     }
     draw_health(&game_state, rdr);
-    // TODO set gotgatgun to 0 
+    // TODO set gotgatgun to 0
     draw_face(&game_state, rdr);
 }
 
@@ -515,7 +686,8 @@ fn give_weapon(game_state: &mut GameState, rdr: &VGARenderer, weapon: WeaponType
 }
 
 fn give_ammo(game_state: &mut GameState, rdr: &VGARenderer, ammo: i32) {
-    if game_state.ammo <= 0 { // knife was out
+    if game_state.ammo <= 0 {
+        // knife was out
         if game_state.attack_frame <= 0 {
             game_state.weapon = Some(game_state.chosen_weapon);
             draw_weapon(&game_state, rdr)
@@ -528,13 +700,13 @@ fn give_ammo(game_state: &mut GameState, rdr: &VGARenderer, ammo: i32) {
     draw_ammo(game_state, rdr);
 }
 
-fn clip_move(k : ObjKey, level_state: &mut LevelState, x_move: i32, y_move: i32) {
+fn clip_move(k: ObjKey, level_state: &mut LevelState, x_move: i32, y_move: i32) {
     let (base_x, base_y) = {
         let ob = level_state.obj(k);
         (ob.x, ob.y)
     };
 
-    set_move(k, level_state, base_x+x_move, base_y+y_move);
+    set_move(k, level_state, base_x + x_move, base_y + y_move);
     if try_move(k, level_state) {
         return;
     }
@@ -542,12 +714,12 @@ fn clip_move(k : ObjKey, level_state: &mut LevelState, x_move: i32, y_move: i32)
 
     // TODO Play HITWALLSND sound here
 
-    set_move(k, level_state, base_x+x_move, base_y);
+    set_move(k, level_state, base_x + x_move, base_y);
     if try_move(k, level_state) {
         return;
     }
 
-    set_move(k, level_state, base_x, base_y+y_move);
+    set_move(k, level_state, base_x, base_y + y_move);
     if try_move(k, level_state) {
         return;
     }
@@ -555,14 +727,14 @@ fn clip_move(k : ObjKey, level_state: &mut LevelState, x_move: i32, y_move: i32)
     set_move(k, level_state, base_x, base_y);
 }
 
-fn try_move(k : ObjKey, level_state: &mut LevelState) -> bool {
+fn try_move(k: ObjKey, level_state: &mut LevelState) -> bool {
     let ob = level_state.obj(k);
 
     let xl = (ob.x - PLAYER_SIZE) >> TILESHIFT;
     let yl = (ob.y - PLAYER_SIZE) >> TILESHIFT;
     let xh = (ob.x + PLAYER_SIZE) >> TILESHIFT;
     let yh = (ob.y + PLAYER_SIZE) >> TILESHIFT;
-    
+
     // check for solid walls
     for y in yl..=yh {
         for x in xl..=xh {
@@ -571,13 +743,13 @@ fn try_move(k : ObjKey, level_state: &mut LevelState) -> bool {
                 _ => false,
             } {
                 return false;
-            } 
+            }
         }
     }
 
     // TODO check for actors
 
-    return true
+    return true;
 }
 
 fn set_move(k: ObjKey, level_state: &mut LevelState, dx: i32, dy: i32) {
@@ -587,28 +759,33 @@ fn set_move(k: ObjKey, level_state: &mut LevelState, dx: i32, dy: i32) {
 }
 
 pub fn draw_health(state: &GameState, rdr: &VGARenderer) {
-	latch_number(rdr, 21, 16, 3, state.health);
+    latch_number(rdr, 21, 16, 3, state.health);
 }
 
 pub fn draw_lives(state: &GameState, rdr: &VGARenderer) {
-	latch_number(rdr, 14, 16, 1, state.lives);
+    latch_number(rdr, 14, 16, 1, state.lives);
 }
 
 pub fn draw_level(state: &GameState, rdr: &VGARenderer) {
-	latch_number(rdr, 2, 16, 2, state.map_on as i32 + 1);
+    latch_number(rdr, 2, 16, 2, state.map_on as i32 + 1);
 }
 
 pub fn draw_ammo(state: &GameState, rdr: &VGARenderer) {
-	latch_number(rdr, 27, 16, 2, state.ammo);
+    latch_number(rdr, 27, 16, 2, state.ammo);
 }
 
 pub fn draw_face(state: &GameState, rdr: &VGARenderer) {
-	if state.health > 0 {
-		status_draw_pic(rdr, 17, 4, face_pic(3*((100-state.health as usize)/16)+state.face_frame));
-	} else {
-		// TODO draw mutant face if last attack was needleobj
-		status_draw_pic(rdr, 17, 4, GraphicNum::FACE8APIC)
-	}
+    if state.health > 0 {
+        status_draw_pic(
+            rdr,
+            17,
+            4,
+            face_pic(3 * ((100 - state.health as usize) / 16) + state.face_frame),
+        );
+    } else {
+        // TODO draw mutant face if last attack was needleobj
+        status_draw_pic(rdr, 17, 4, GraphicNum::FACE8APIC)
+    }
 }
 
 /// Calls draw face if time to change
@@ -627,45 +804,49 @@ fn update_face(tics: u64, state: &mut GameState, rdr: &VGARenderer) {
 }
 
 pub fn draw_keys(state: &GameState, rdr: &VGARenderer) {
-	if state.keys & 1 != 0 {
-		status_draw_pic(rdr, 30, 4, GraphicNum::GOLDKEYPIC);
-	} else {
-		status_draw_pic(rdr, 30, 4, GraphicNum::NOKEYPIC)
-	}
+    if state.keys & 1 != 0 {
+        status_draw_pic(rdr, 30, 4, GraphicNum::GOLDKEYPIC);
+    } else {
+        status_draw_pic(rdr, 30, 4, GraphicNum::NOKEYPIC)
+    }
 
-	if state.keys & 2 != 0 {
-		status_draw_pic(rdr, 30, 20, GraphicNum::SILVERKEYPIC);
-	} else {
-		status_draw_pic(rdr, 30, 20, GraphicNum::NOKEYPIC);
-	}
+    if state.keys & 2 != 0 {
+        status_draw_pic(rdr, 30, 20, GraphicNum::SILVERKEYPIC);
+    } else {
+        status_draw_pic(rdr, 30, 20, GraphicNum::NOKEYPIC);
+    }
 }
 
 pub fn draw_weapon(state: &GameState, rdr: &VGARenderer) {
-	status_draw_pic(rdr, 32, 8, weapon_pic(state.weapon))
+    status_draw_pic(rdr, 32, 8, weapon_pic(state.weapon))
 }
 
 pub fn draw_score(state: &GameState, rdr: &VGARenderer) {
-	latch_number(rdr, 6, 16, 6, state.score);
+    latch_number(rdr, 6, 16, 6, state.score);
 }
 
 fn latch_number(rdr: &VGARenderer, x_start: usize, y: usize, width: usize, num: i32) {
-	let str = num.to_string();
-	let mut w_cnt = width;
-	let mut x = x_start;
-	while str.len() < w_cnt {
-		status_draw_pic(rdr, x, y, GraphicNum::NBLANKPIC);
-		x += 1;
-		w_cnt -= 1;
-	}
+    let str = num.to_string();
+    let mut w_cnt = width;
+    let mut x = x_start;
+    while str.len() < w_cnt {
+        status_draw_pic(rdr, x, y, GraphicNum::NBLANKPIC);
+        x += 1;
+        w_cnt -= 1;
+    }
 
-	let mut c = if str.len() <= w_cnt {0} else {str.len()-w_cnt};
-	let mut chars = str.chars();
-	while c<str.len() {
-		let ch = chars.next().unwrap();
-		status_draw_pic(rdr, x, y, n_pic(ch.to_digit(10).unwrap() as usize));
-		x += 1;
-		c += 1;
-	}
+    let mut c = if str.len() <= w_cnt {
+        0
+    } else {
+        str.len() - w_cnt
+    };
+    let mut chars = str.chars();
+    while c < str.len() {
+        let ch = chars.next().unwrap();
+        status_draw_pic(rdr, x, y, n_pic(ch.to_digit(10).unwrap() as usize));
+        x += 1;
+        c += 1;
+    }
 }
 
 /// x in bytes
@@ -673,8 +854,8 @@ fn status_draw_pic(rdr: &VGARenderer, x: usize, y: usize, pic: GraphicNum) {
     let offset_prev = rdr.buffer_offset();
     for i in 0..3 {
         rdr.set_buffer_offset(SCREENLOC[i]);
-        let y_status = (200-STATUS_LINES) + y;
-        rdr.pic(x*8, y_status, pic);  
-    } 
+        let y_status = (200 - STATUS_LINES) + y;
+        rdr.pic(x * 8, y_status, pic);
+    }
     rdr.set_buffer_offset(offset_prev);
 }

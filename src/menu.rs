@@ -1338,18 +1338,11 @@ pub fn start_cp_music(opl: &mut OPL, track: Music, assets: &Assets, loader: &dyn
     let variant = loader.variant();
     let trackno = track as usize;
     let offset = assets.audio_headers[variant.start_music + trackno];
-    let len = (assets.audio_headers[variant.start_music + trackno + 1] - offset);
+    let len = assets.audio_headers[variant.start_music + trackno + 1] - offset;
 
     let track_data = loader
         .load_wolf_file_slice(WolfFile::AudioData, (offset + 2) as u64, (len - 2) as usize)
         .expect("Audio file");
 
-    opl.play(
-        track_data,
-        opl::OPLSettings {
-            mixer_rate: 49716,
-            imf_clock_rate: 0,
-        },
-    )
-    .expect("start song play");
+    opl.play_imf(track_data).expect("start song play");
 }
