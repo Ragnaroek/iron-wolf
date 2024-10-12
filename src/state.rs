@@ -4,7 +4,7 @@ mod state_test;
 
 use crate::fixed::new_fixed_i32;
 use crate::user::rnd_t;
-use crate::act2::{S_GRDCHASE1, S_GRDPAIN, S_GRDPAIN1, S_GRDDIE1};
+use crate::act2::{S_DOGCHASE1, S_DOGDIE1, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1};
 use crate::agent::{take_damage, give_points};
 use crate::act1::{open_door, place_item_type};
 use crate::def::{ObjType, TILESHIFT, TILEGLOBAL, StateType, DirType, ClassType, FL_ATTACKMODE, FL_AMBUSH, LevelState, ObjKey, UNSIGNEDSHIFT, FL_FIRSTATTACK, MIN_ACTOR_DIST, At, FL_SHOOTABLE, GameState, FL_NONMARK, StaticKind};
@@ -70,7 +70,7 @@ pub fn spawn_new_obj(tile_x: usize, tile_y: usize, state: &'static StateType, cl
 =============================================================================
 */
 
-fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
+pub fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
     let mut door_num : i32 = -1;
     if level_state.obj(k).class == ClassType::Inert {
         level_state.update_obj(k, |obj| {
@@ -141,6 +141,7 @@ fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
             DirType::East => {
                 if obj.class == ClassType::Dog || obj.class == ClassType::Fake {
                     if !check_diag(level_state, obj.tilex+1, obj.tiley) {
+                        println!("check diag dog = false, actor_at = {:?}", level_state.actor_at[obj.tilex+1][obj.tiley]);
                         return false;
                     } 
                 } else {
@@ -619,10 +620,12 @@ pub fn first_sighting(k: ObjKey, level_state: &mut LevelState) {
     let obj = level_state.mut_obj(k);
     match obj.class {
         ClassType::Guard => {
-            //level_state.update_obj(k, |obj| {
-                new_state(obj, &S_GRDCHASE1);
-                obj.speed *= 3; // go faster when chasing player
-            //} )
+            new_state(obj, &S_GRDCHASE1);
+            obj.speed *= 3; // go faster when chasing player
+        },
+        ClassType::Dog => {
+            new_state(obj, &S_DOGCHASE1);
+            obj.speed *= 2; // go faster when chasing player 
         },
         _ => panic!("first sight for class type not implemented: {:?}", obj.class)
     }
@@ -852,9 +855,9 @@ fn kill_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameStat
 
         match obj.class {
             ClassType::Guard => {
-            give_points(game_state, rdr, 100);  
-            new_state(obj, &S_GRDDIE1);
-            place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
+                give_points(game_state, rdr, 100);  
+                new_state(obj, &S_GRDDIE1);
+                place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
             },
             ClassType::Officer => {
                 panic!("kill officer");
@@ -866,7 +869,8 @@ fn kill_actor(k: ObjKey, level_state: &mut LevelState, game_state: &mut GameStat
                 panic!("kill SS");
             },
             ClassType::Dog => {
-                panic!("kill dog");
+                give_points(game_state, rdr, 200);
+                new_state (obj,&S_DOGDIE1);
             },
             ClassType::Boss => {
                 panic!("kill boss");
