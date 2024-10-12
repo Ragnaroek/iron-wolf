@@ -7,6 +7,10 @@ pub static GAMEPAL: &'static [u8] = include_bytes!("../assets/gamepal.bin");
 pub static GRAPHIC_DICT: &'static str = "VGADICT.WL6";
 pub static GRAPHIC_HEAD: &'static str = "VGAHEAD.WL6";
 pub static GRAPHIC_DATA: &'static str = "VGAGRAPH.WL6";
+pub static MAP_HEAD: &'static str = "MAPHEAD.WL6";
+pub static GAME_MAPS: &'static str = "GAMEMAPS.WL6";
+
+pub const NUM_MAPS: usize = 60;
 
 pub enum GraphicNum {
 	STATUSBARPIC = 86,
@@ -293,4 +297,68 @@ fn huff_expand(data: &[u8], len: usize, grhuffman: &Vec<Huffnode>) -> Vec<u8> {
 		panic!("implement expand 64k data");
 	}
 	expanded
+}
+
+
+pub struct MapFileType {
+	pub rlew_tag: u16,
+	pub header_offsets: Vec<i32>,
+}
+
+pub struct MapType {
+	pub plane_start: [i32; 3],
+	pub plane_length: [u16; 3],
+	pub width: u16,
+	pub height: u16,
+	pub name: String,
+}
+
+pub fn load_map_headers(config: &IWConfig) -> Result<Vec<MapType>, String> {
+	let offsets = load_map_offsets(config)?;
+
+	let bytes = util::load_file(&config.wolf3d_data.join(GAME_MAPS));
+	let mut headers = Vec::with_capacity(NUM_MAPS);
+	for i in 0..NUM_MAPS {
+		let pos = offsets.header_offsets[i];
+		if pos < 0 {
+			// skip sparse maps
+			continue;
+		}
+
+		let mut reader = util::new_data_reader_with_offset(&bytes, pos as usize);
+
+		let mut plane_start = [0; 3];
+		for j in 0..3 {
+			plane_start[j] = reader.read_i32();
+		}
+
+		let mut plane_length = [0; 3];
+		for j in 0..3 {
+			plane_length[j] = reader.read_u16();
+		}
+
+		let width = reader.read_u16();
+		let height = reader.read_u16();
+		let mut name = reader.read_utf8_string(16);
+		name.retain(|c| c != '\0');
+
+		headers.push(MapType{plane_start, plane_length, width, height, name});
+	}
+	Ok(headers)
+}
+
+fn load_map_offsets(config: &IWConfig) -> Result<MapFileType, String> {
+	let bytes = util::load_file(&config.wolf3d_data.join(MAP_HEAD));
+	let mut reader = util::new_data_reader(&bytes);
+
+	let rlew_tag = reader.read_u16();
+	
+	let mut header_offsets = Vec::with_capacity(100);
+	for _ in 0..100 {
+		header_offsets.push(reader.read_i32());
+	}
+	Ok(MapFileType {
+		rlew_tag,
+		header_offsets,
+	})
 }

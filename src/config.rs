@@ -66,7 +66,7 @@ pub struct WolfConfig {
 
 pub fn load_wolf_config(config: &IWConfig) -> WolfConfig {
     let data = util::load_file(&config.wolf3d_data.join(CONFIG_DATA));
-    let mut reader = util::new_data_reader(data);
+    let mut reader = util::new_data_reader(&data);
 
     let mut high_scores = Vec::with_capacity(MAX_SCORES);
     

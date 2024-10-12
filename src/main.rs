@@ -31,6 +31,11 @@ fn main() -> Result<(), String> {
 	vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
     let graphics = assets::load_all_graphics(&iw_config)?;
+    let map_headers = assets::load_map_headers(&iw_config)?;
+
+    for i in 0..60 {
+        println!("map: {}", map_headers[i].name);
+    }
 
     init_game(&vga);
 
@@ -68,7 +73,7 @@ fn demo_loop(rdr: &dyn Renderer, input: &input::Input, prj: &game::ProjectionCon
         pg_13(rdr, input);
     }
 
-    let mut game_state = new_game_state();
+    let game_state = new_game_state();
 
     loop {
         while !iw_config.no_wait { // title screen & demo loop
