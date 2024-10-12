@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use vgaemu::{SCReg};
 
-use super::assets::{Graphic, GraphicNum};
+use super::assets::{Graphic, GraphicNum, GAMEPAL};
+use super::vl;
 
 const MAXSCANLINES: usize = 200;
 const PAGE_0_START: usize = 0;
@@ -11,6 +12,8 @@ const PAGE_1_START: usize = MAXSCANLINES;
 pub trait Renderer {
 	fn bar(&self, x: usize, y: usize, width: usize, height: usize, color: u8);
 	fn pic(&self, x: usize, y: usize, picnum: GraphicNum);
+	fn fade_out(&self);
+	fn fade_in(&self);
 }
 
 pub struct VGARenderer {
@@ -99,6 +102,16 @@ impl Renderer for VGARenderer {
 		let graphic = &self.graphics[picnum as usize];
 		self.mem_to_screen(&graphic.data, graphic.width, graphic.height, x & !7, y);
 	}
+
+	fn fade_out(&self) {
+		vl::fade_out(&self.vga, 0, 255, 0, 0, 0, 30)
+	}
+
+	fn fade_in(&self) {
+		vl::fade_in(&self.vga,0, 255, GAMEPAL, 30);
+	}
 }
+
+
 
 
