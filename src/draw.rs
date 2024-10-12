@@ -5,7 +5,7 @@ mod draw_test;
 use crate::agent::get_bonus;
 use crate::time;
 use crate::play::ProjectionConfig;
-use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS, FL_VISABLE, ClassType, DIR_ANGLE, WeaponType };
+use crate::def::{Assets, ClassType, DoorLock, DoorType, GameState, Level, LevelState, ObjType, Sprite, StaticType, VisObj, WeaponType, ANGLES, DIR_ANGLE, FINE_ANGLES, FL_BONUS, FL_VISABLE, FOCAL_LENGTH, MAP_SIZE, MIN_DIST, NUM_WEAPONS, TILEGLOBAL, TILESHIFT };
 use crate::scale::{simple_scale_shape, scale_shape, MAP_MASKS_1};
 use crate::vga_render::{self, VGARenderer};
 use crate::fixed::{Fixed, fixed_by_frac, new_fixed_i32};
@@ -585,8 +585,7 @@ pub fn hit_vert_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts:
     let texture_ix = if rc.tile_hit & 0x040 != 0 {
         rc.y_tile = rc.y_intercept >> TILESHIFT;
         if level.tile_map[(rc.x_tile-rc.x_tilestep) as usize][rc.y_tile as usize]&0x80 != 0 {
-            // TODO replace 106 constant with value loaded from assets/level
-            (106 - 8)+3
+            door_wall(assets)+3
         } else {
             vert_wall(rc.tile_hit as usize & !0x40)
         }
@@ -621,7 +620,7 @@ pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts
         rc.x_tile = rc.x_intercept >> TILESHIFT;
         if level.tile_map[rc.x_tile as usize][(rc.y_tile-rc.y_tilestep) as usize] & 0x80 != 0 {
             // TODO replace 106 constant with value loaded from assets/level
-            (106 - 8)+2
+            door_wall(assets)+2
         } else {
             horiz_wall(rc.tile_hit as usize & !0x40)
         }
@@ -638,8 +637,8 @@ pub fn hit_horiz_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts
 
 pub fn hit_horiz_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &VGARenderer, level_state: &LevelState, assets: &Assets) {
     let doornum = rc.tile_hit & 0x7F;
-    let doorpos = level_state.doors[doornum as usize].position as i32;
-    let post_source = (rc.x_intercept - doorpos ) >> 4 & 0xFC0;
+    let door = &level_state.doors[doornum as usize]; 
+    let post_source = ((rc.x_intercept - door.position as i32) >> 4) & 0xFC0;
     let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, consts);
     rc.wall_height[pixx] = height;
     if scaler_state.last_side {
@@ -650,13 +649,13 @@ pub fn hit_horiz_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts
     scaler_state.post_x = pixx;
     scaler_state.post_width = 1;
     scaler_state.post_source = post_source as usize;
-    scaler_state.texture_ix = 98; //TODO take texture based on lock state of door 
+    scaler_state.texture_ix = door_texture(door, assets); 
 }
 
 pub fn hit_vert_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &VGARenderer, level_state: &LevelState, assets: &Assets) {
     let doornum = rc.tile_hit & 0x7F;
-    let doorpos = level_state.doors[doornum as usize].position as i32;
-    let post_source = (rc.y_intercept - doorpos ) >> 4 & 0xFC0;
+    let door = &level_state.doors[doornum as usize]; 
+    let post_source = ((rc.y_intercept - door.position as i32) >> 4) & 0xFC0;
     let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, consts);
     rc.wall_height[pixx] = height;
     if scaler_state.last_side {
@@ -667,7 +666,20 @@ pub fn hit_vert_door(scaler_state : &mut ScalerState, rc : &mut RayCast, consts:
     scaler_state.post_x = pixx;
     scaler_state.post_width = 1;
     scaler_state.post_source = post_source as usize;
-    scaler_state.texture_ix = 98; //TODO take texture based on lock state of door
+    scaler_state.texture_ix = door_texture(door, assets)+1; 
+}
+
+fn door_wall(assets: &Assets) -> usize {
+    (assets.gamedata_headers.sprite_start-8) as usize 
+}
+
+fn door_texture(door: &DoorType, assets: &Assets) -> usize {
+    let door_wall = door_wall(assets);
+    match door.lock {
+        DoorLock::Normal => door_wall,
+        DoorLock::Lock1|DoorLock::Lock2|DoorLock::Lock3|DoorLock::Lock4 => door_wall + 6,
+        DoorLock::Elevator => door_wall + 4,
+    }
 }
 
 pub fn hit_horiz_push_wall(scaler_state : &mut ScalerState, rc : &mut RayCast, consts: &RayCastConsts, pixx: usize, prj: &ProjectionConfig, rdr: &VGARenderer, level_state: &LevelState, assets: &Assets) {

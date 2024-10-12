@@ -1,4 +1,4 @@
-use crate::def::{ObjType, LevelState, Level, MAP_SIZE, DoorType, DoorAction, FL_NEVERMARK, DirType, ClassType};
+use crate::def::{ClassType, DirType, DoorAction, DoorLock, DoorType, Level, LevelState, ObjType, FL_NEVERMARK, MAP_SIZE};
 use crate::draw::{Op, Hit, init_ray_cast, init_ray_cast_consts, calc_height};
 use crate::fixed::new_fixed_i32;
 use crate::play;
@@ -364,7 +364,7 @@ fn mock_doors() -> Vec<DoorType>{
             tile_x: 0,
             tile_y: 0,
             vertical: true,
-            lock: 0,
+            lock: DoorLock::Normal,
             action: DoorAction::Closed,
             tic_count: 0,
             position: 0,
