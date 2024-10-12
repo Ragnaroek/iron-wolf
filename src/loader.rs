@@ -5,20 +5,31 @@ use crate::assets::{file_name, WolfFile, WolfVariant};
 use crate::patch::{self, PatchConfig};
 
 // TODO Improve err handling by returning a Result
-pub trait Loader {
-    fn load_wolf_file(&self, file: WolfFile, variant: &WolfVariant) -> Vec<u8>;
+pub trait Loader: Sync + Send {
+    fn variant(&self) -> &'static WolfVariant;
+
+    fn load_wolf_file(&self, file: WolfFile) -> Vec<u8>;
     fn load_patch_config_file(&self) -> Option<PatchConfig>;
     fn load_patch_data_file(&self, name: String) -> Vec<u8>;
+
+    /// Read the first 32 bytes of a save game file
+    fn load_save_game_head(&self, which: usize) -> Result<Vec<u8>, String>;
+    // TODO Load full save game
 }
 
 pub struct DiskLoader {
+    pub variant: &'static WolfVariant,
     pub data_path: PathBuf,
     pub patch_path: Option<PathBuf>,
 }
 
 impl Loader for DiskLoader {
-    fn load_wolf_file(&self, file: WolfFile, variant: &WolfVariant) -> Vec<u8> {
-        let name = file_name(file, variant);
+    fn variant(&self) -> &'static WolfVariant {
+        return self.variant;
+    }
+
+    fn load_wolf_file(&self, file: WolfFile) -> Vec<u8> {
+        let name = file_name(file, &self.variant);
         load_file(&self.data_path.join(name))
     }
     fn load_patch_config_file(&self) -> Option<PatchConfig> {
@@ -30,6 +41,18 @@ impl Loader for DiskLoader {
     // panics, if patch path is not set
     fn load_patch_data_file(&self, name: String) -> Vec<u8> {
         load_file(&self.patch_path.as_ref().expect("no patch path configured").join(name))
+    }
+
+    fn load_save_game_head(&self, which: usize) -> Result<Vec<u8>, String> {
+        let path = &self.data_path.join(format!("SAVEGAM{}.{}", which, self.variant.file_ending));
+        let file_result = File::open(path);
+        if file_result.is_err() {
+            return Err(format!("savegame {:?} not found", path))
+        }
+        let mut file = file_result.unwrap();
+        let mut result = vec![0; 32];
+        file.read_exact(result.as_mut_slice()).expect("savegame file header read");
+        return Ok(result);
     }
 }
 

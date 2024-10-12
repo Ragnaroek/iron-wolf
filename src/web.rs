@@ -19,12 +19,18 @@ use crate::patch::PatchConfig;
 pub fn iw_init(upload_id: &str) {
     console_error_panic_hook::set_once(); 
 
-    let loader = WebLoader::new();
+    let variant = &assets::W3D;
+
+    let loader = WebLoader{
+        variant,
+        files : HashMap::new(),
+    };
+
     register_loader(upload_id, loader);
 }
 
 #[wasm_bindgen]
-pub fn iw_start_web(loader: &WebLoader) -> Result<(), String> {
+pub fn iw_start_web(loader: WebLoader) -> Result<(), String> {
     let iw_config = config::default_iw_config()?;
     iw_start(loader, iw_config)
 }
@@ -46,18 +52,21 @@ extern "C" {
 }
 
 #[wasm_bindgen]
+#[derive(Debug)]
 pub struct WebLoader {
+    variant: &'static WolfVariant,
     files: HashMap<String, Vec<u8>>,
 }
 
 #[wasm_bindgen]
 impl WebLoader {
-    #[wasm_bindgen(constructor)]
-    pub fn new() -> WebLoader {
+    /*#[wasm_bindgen(constructor)]
+    pub fn new(variant: WolfVariant) -> WebLoader {
         WebLoader{
+            variant: &variant,
             files : HashMap::new(),
         }
-    }
+    }*/
 
     pub fn load(&mut self, file: String, data: Vec<u8>) {
         self.files.insert(file, data);
@@ -105,19 +114,33 @@ fn handle_upload(event: web_sys::Event, loader: WebLoader) {
 fn handle_load(event: web_sys::Event, name: String, loader: Rc<RefCell<WebLoader>>) {
     let reader = event.target().expect("reader target").dyn_into::<web_sys::FileReader>().expect("file reader");
     let vec_data = js_sys::Uint8Array::new(&reader.result().expect("buffer")).to_vec();
-    {
-        loader.borrow_mut().load(name.to_string(), vec_data);
+    let all_loaded = {
+        let mut l = loader.borrow_mut();
+        l.load(name.to_string(), vec_data);
+        l.all_files_loaded()
+    };
+
+    if all_loaded {
+        let l = Rc::<RefCell<WebLoader>>::try_unwrap(loader).unwrap().into_inner();
+        iw_start_web(l).expect("iw start");
     }
-    
+
+    /*
+    let l = loader.unwrap();
+
     let loader_borrow = &loader.borrow();
-    if loader_borrow.all_files_loaded() {
-        iw_start_web(loader_borrow).expect("iw start");
-    }
+    if l.all_files_loaded() {
+        iw_start_web(loader).expect("iw start");
+    }*/
 }
 
 impl Loader for WebLoader {
-    fn load_wolf_file(&self, file: WolfFile, variant: &WolfVariant) -> Vec<u8> {
-        let buffer = self.files.get(&file_name(file, variant)).expect(&format!("file {} not found", file_name(file, variant)));
+    fn variant(&self) -> &'static WolfVariant {
+        return self.variant;
+    }
+
+    fn load_wolf_file(&self, file: WolfFile) -> Vec<u8> {
+        let buffer = self.files.get(&file_name(file, &self.variant)).expect(&format!("file {} not found", file_name(file, &self.variant)));
         buffer.clone()
     }
 
@@ -127,6 +150,9 @@ impl Loader for WebLoader {
     // panics, if patch path is not set
     fn load_patch_data_file(&self, name: String) -> Vec<u8> {
         todo!("patch file data loading not implemented for web");
+    }
+    fn load_save_game_head(&self, which: usize) -> Result<Vec<u8>, String> {
+        todo!("save game loading not implemented yet for web");
     }
 }
 
@@ -164,7 +190,6 @@ pub fn load_texture(gamedata_js: &Buffer, header_js: &JsValue) -> JsValue {
 	let result = gamedata::load_texture(&mut Cursor::new(gamedata), &header).unwrap();
 	JsValue::from_serde(&result).unwrap()
 }
-
 
 // Map
 

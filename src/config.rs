@@ -4,7 +4,7 @@ mod config_test;
 
 use std::fs;
 use std::path::Path;
-use crate::{assets::{WolfFile, WolfVariant}, loader::Loader};
+use crate::{assets::WolfFile, loader::Loader};
 
 use super::user;
 use super::def::IWConfig;
@@ -79,8 +79,8 @@ pub struct WolfConfig {
 
 // TODO write a test with load/write roundtrip (once write is there) 
 
-pub fn load_wolf_config(loader: &dyn Loader, variant: &WolfVariant) -> WolfConfig {
-    let data = loader.load_wolf_file(WolfFile::ConfigData, variant);
+pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
+    let data = loader.load_wolf_file(WolfFile::ConfigData);
     let mut reader = util::new_data_reader(&data);
 
     let mut high_scores = Vec::with_capacity(MAX_SCORES);

@@ -17,6 +17,7 @@ use crate::def::{GameState, ControlState, Button, Assets,ObjKey, LevelState, Con
 use crate::assets::{GraphicNum, GAMEPAL};
 use crate::input;
 use crate::inter::clear_split_vwb;
+use crate::loader::Loader;
 use crate::menu::control_panel;
 use crate::menu::message;
 use crate::menu::Menu;
@@ -183,7 +184,19 @@ fn calc_sines() -> Vec<Fixed> {
     sines
 }
 
-pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &mut GameState, win_state: &mut WindowState, menu_state: &mut MenuState, control_state: &mut ControlState, vga: &VGA, rc: &mut RayCast, rdr: &VGARenderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
+pub async fn play_loop(
+    ticker: &time::Ticker,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+    control_state: &mut ControlState,
+    vga: &VGA, rc: &mut RayCast,
+    rdr: &VGARenderer,
+    input: &input::Input, 
+    prj: &ProjectionConfig,
+    assets: &Assets,
+    loader: &dyn Loader) {
     let shifts = init_colour_shifts();
 
     game_state.play_state = PlayState::StillPlaying;
@@ -247,7 +260,7 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
         
 	    three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
 
-        check_keys(ticker, rdr, win_state, menu_state, game_state, level_state.player(), input, prj).await;
+        check_keys(ticker, rdr, win_state, menu_state, game_state, level_state.player(), input, prj, loader).await;
 
         game_state.time_count += tics;
 
@@ -422,7 +435,16 @@ pub fn center_window(rdr: &VGARenderer, win_state: &mut WindowState, width: usiz
     draw_window(rdr, win_state, ((320/8)-width) / 2, ((160/8)-height)/2, width, height);
 }
 
-async fn check_keys(ticker: &time::Ticker, rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState, game_state: &mut GameState, player: &ObjType, input: &input::Input, prj: &ProjectionConfig) {
+async fn check_keys(
+    ticker: &time::Ticker,
+    rdr: &VGARenderer,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+    game_state: &mut GameState,
+    player: &ObjType,
+    input: &input::Input,
+    prj: &ProjectionConfig,
+    loader: &dyn Loader) {
     if input.key_pressed(NumCode::BackSpace) && 
     input.key_pressed(NumCode::LShift) && 
     input.key_pressed(NumCode::Alt) &&
@@ -444,7 +466,7 @@ async fn check_keys(ticker: &time::Ticker, rdr: &VGARenderer, win_state: &mut Wi
         menu_state.select_menu(Menu::Top);
         let prev_buffer = rdr.buffer_offset();
         rdr.set_buffer_offset(rdr.active_buffer());
-        control_panel(ticker, game_state, rdr, input, win_state, menu_state, scan).await;
+        control_panel(ticker, game_state, rdr, input, win_state, menu_state, loader, scan).await;
         rdr.set_buffer_offset(prev_buffer);
 
         win_state.set_font_color(0, 15);
