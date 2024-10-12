@@ -11,6 +11,7 @@ use crate::act1::{move_doors, move_push_walls};
 use crate::agent::{
     draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_score, draw_weapon,
 };
+use crate::assets::Music;
 use crate::assets::{GraphicNum, GAMEPAL};
 use crate::debug::debug_keys;
 use crate::def::ActiveType;
@@ -78,6 +79,88 @@ static BUTTON_SCAN: [NumCode; NUM_BUTTONS] = [
     NumCode::Num2,
     NumCode::Num3,
     NumCode::Num4,
+];
+
+// LIST OF SONGS FOR EACH VERSION
+pub static SONGS: [Music; 6 * 10] = [
+    //
+    // Episode One
+    //
+    Music::GETTHEM,
+    Music::SEARCHN,
+    Music::POW,
+    Music::SUSPENSE,
+    Music::GETTHEM,
+    Music::SEARCHN,
+    Music::POW,
+    Music::SUSPENSE,
+    Music::WARMARCH, // Boss level
+    Music::CORNER,   // Secret level
+    //
+    // Episode Two
+    //
+    Music::NAZIOMI,
+    Music::PREGNANT,
+    Music::GOINGAFT,
+    Music::HEADACHE,
+    Music::NAZIOMI,
+    Music::PREGNANT,
+    Music::HEADACHE,
+    Music::GOINGAFT,
+    Music::WARMARCH, // Boss level
+    Music::DUNGEON,  // Secret level
+    //
+    // Episode Three
+    //
+    Music::INTROCW3,
+    Music::NAZIRAP,
+    Music::TWELFTH,
+    Music::ZEROHOUR,
+    Music::INTROCW3,
+    Music::NAZIRAP,
+    Music::TWELFTH,
+    Music::ZEROHOUR,
+    Music::ULTIMATE, // Boss level
+    Music::PACMAN,   // Secret level
+    //
+    // Episode Four
+    //
+    Music::GETTHEM,
+    Music::SEARCHN,
+    Music::POW,
+    Music::SUSPENSE,
+    Music::GETTHEM,
+    Music::SEARCHN,
+    Music::POW,
+    Music::SUSPENSE,
+    Music::WARMARCH, // Boss level
+    Music::CORNER,   // Secret level
+    //
+    // Episode Five
+    //
+    Music::NAZIOMI,
+    Music::PREGNANT,
+    Music::GOINGAFT,
+    Music::HEADACHE,
+    Music::NAZIOMI,
+    Music::PREGNANT,
+    Music::HEADACHE,
+    Music::GOINGAFT,
+    Music::WARMARCH, // Boss level
+    Music::DUNGEON,  // Secret level
+    //
+    // Episode Six
+    //
+    Music::INTROCW3,
+    Music::NAZIRAP,
+    Music::TWELFTH,
+    Music::ZEROHOUR,
+    Music::INTROCW3,
+    Music::NAZIRAP,
+    Music::TWELFTH,
+    Music::ZEROHOUR,
+    Music::ULTIMATE, // Boss level
+    Music::FUNKYOU,  // Secret level
 ];
 
 // TODO red/and whiteshifts as static array that is initialised in main?

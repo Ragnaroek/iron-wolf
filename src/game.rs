@@ -9,7 +9,7 @@ use crate::agent::{
     draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_weapon,
 };
 use crate::agent::{spawn_player, thrust};
-use crate::assets::load_map_from_assets;
+use crate::assets::{load_map_from_assets, Music};
 use crate::def::{
     Assets, At, ControlState, Difficulty, DoorLock, EnemyType, GameState, IWConfig, Level,
     LevelState, ObjType, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState,
@@ -19,9 +19,9 @@ use crate::draw::{init_ray_cast, three_d_refresh, RayCast};
 use crate::input::Input;
 use crate::inter::{check_highscore, level_completed, preload_graphics};
 use crate::loader::Loader;
-use crate::menu::{MenuState, SaveLoadGame};
+use crate::menu::{start_cp_music, MenuState, SaveLoadGame};
 use crate::play::{
-    draw_play_screen, finish_palette_shifts, new_control_state, play_loop, ProjectionConfig,
+    draw_play_screen, finish_palette_shifts, new_control_state, play_loop, ProjectionConfig, SONGS,
 };
 use crate::vga_render::VGARenderer;
 use crate::vh::vw_fade_out;
@@ -69,8 +69,10 @@ pub async fn game_loop(
 
         win_state.in_game = true;
 
-        //TODO StartMusic
-        //TODO PreloadGraphics
+        let track = SONGS[game_state.map_on + game_state.episode * 10];
+        start_cp_music(opl, track, assets, loader);
+
+        //TODO PreloadGraphics?
 
         if !game_state.died {
             preload_graphics(ticker, iw_config, &game_state, prj, input, rdr).await;

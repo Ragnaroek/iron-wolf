@@ -108,6 +108,7 @@ pub fn file_name(file: WolfFile, variant: &WolfVariant) -> String {
 }
 
 #[repr(usize)]
+#[derive(Clone, Copy)]
 pub enum Music {
     CORNER,   // 0
     DUNGEON,  // 1
@@ -129,7 +130,7 @@ pub enum Music {
     GOINGAFT, // 17
     PREGNANT, // 18
     ULTIMATE, // 19
-    NAZI,     // 20
+    NAZIRAP,  // 20
     ZEROHOUR, // 21
     TWELFTH,  // 22
     ROSTER,   // 23
