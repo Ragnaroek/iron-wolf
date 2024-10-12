@@ -287,9 +287,18 @@ pub struct WindowState {
 
     pub font_number: usize,
     pub font_color: u8,
+    pub back_color: u8,
 
     pub debug_ok : bool,
 }
+
+impl WindowState {
+    pub fn set_font_color(&mut self, f: u8, b: u8) {
+        self.font_color = f;
+        self.back_color = b;
+    }
+}
+
 
 #[derive(Debug, PartialEq)]
 pub enum PlayState {

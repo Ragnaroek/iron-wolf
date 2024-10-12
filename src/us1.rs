@@ -13,6 +13,29 @@ pub fn print(rdr: &VGARenderer, win_state: &mut WindowState, str: &str) {
     }
 }
 
+/// Prints a string in the current window. Newlines are
+/// supported.
+pub fn c_print(rdr: &VGARenderer, win_state: &mut WindowState, str: &str) {
+    let lines = str.split("\n");
+    for line in lines {
+        c_print_line(rdr, win_state, line);
+    }
+}
+
+/// Prints a string centered on the current line and
+/// advances to the next line. Newlines are not supported.
+pub fn c_print_line(rdr: &VGARenderer, win_state: &mut WindowState, str: &str) {
+    let font = &rdr.fonts[win_state.font_number];
+    let (w, h) = measure_string(font, str);
+    if w > win_state.window_w {
+        panic!("c_print_line - String exceeds width")
+    }
+    let px = win_state.window_x + ((win_state.window_w - w) / 2);
+    let py = win_state.print_y;
+    draw_string(rdr, font, str, px, py, win_state.font_color);
+    win_state.print_y += h;
+}
+
 /// Prints a string centered in the current window.
 pub fn print_centered(rdr: &VGARenderer, win_state: &mut WindowState, str: &str) {
     let font = &rdr.fonts[win_state.font_number];
