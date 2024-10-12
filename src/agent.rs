@@ -1,5 +1,5 @@
 use crate::act1::{operate_door, push_wall};
-use crate::assets::{GraphicNum, num_pic, weapon_pic, face_pic};
+use crate::assets::{GraphicNum, n_pic, weapon_pic, face_pic};
 use crate::play::{ProjectionConfig, start_bonus_flash, start_damage_flash};
 use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType, GameState, Difficulty, PlayState, SCREENLOC, STATUS_LINES, FL_SHOOTABLE, FL_VISABLE, WeaponType, EXTRA_POINTS, StaticKind, Sprite, StaticType, PUSHABLE_TILE, ELEVATOR_TILE, ALT_ELEVATOR_TILE};
 use crate::fixed::{new_fixed_i32, fixed_by_frac};
@@ -631,7 +631,7 @@ fn latch_number(rdr: &VGARenderer, x_start: usize, y: usize, width: usize, num: 
 	let mut chars = str.chars();
 	while c<str.len() {
 		let ch = chars.next().unwrap();
-		status_draw_pic(rdr, x, y, num_pic(ch.to_digit(10).unwrap() as usize));
+		status_draw_pic(rdr, x, y, n_pic(ch.to_digit(10).unwrap() as usize));
 		x += 1;
 		c += 1;
 	}

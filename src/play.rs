@@ -230,6 +230,11 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
 
         check_keys(rdr, win_state, game_state, level_state.player(), input).await;
 
+        game_state.time_count += tics;
+
+        // TODO SD_Poll() ?
+        // TODO UpdateSoundLoc
+
         let offset_prev = rdr.buffer_offset();
         for i in 0..3 {
             rdr.set_buffer_offset(SCREENLOC[i]);
