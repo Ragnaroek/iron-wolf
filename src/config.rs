@@ -2,19 +2,19 @@
 #[path = "./config_test.rs"]
 mod config_test;
 
+use crate::{assets::WolfFile, loader::Loader};
 use std::fs;
 use std::path::Path;
-use crate::{assets::WolfFile, loader::Loader};
 
-use super::user;
 use super::def::IWConfig;
+use super::user;
 use super::util;
 
-use vga::input::{NumCode, to_numcode};
+use vga::input::{to_numcode, NumCode};
 
 pub const IW_CONFIG_FILE_NAME: &str = "iw_config.toml";
 pub const CONFIG_DATA: &'static str = "CONFIG.WL6";
-pub const MAX_SCORES : usize = 7;
+pub const MAX_SCORES: usize = 7;
 
 // Load the config from the config file if it exists.
 // Returns the default config (vanila mode) if no config
@@ -24,8 +24,8 @@ pub const MAX_SCORES : usize = 7;
 pub fn read_iw_config() -> Result<IWConfig, String> {
     let conf_file = Path::new(IW_CONFIG_FILE_NAME);
     if conf_file.exists() {
-        let content = fs::read_to_string(conf_file).map_err(|e|e.to_string())?;
-        let config : IWConfig = toml::from_str(&content).map_err(|e|e.to_string())?;
+        let content = fs::read_to_string(conf_file).map_err(|e| e.to_string())?;
+        let config: IWConfig = toml::from_str(&content).map_err(|e| e.to_string())?;
         Ok(config)
     } else {
         default_iw_config()
@@ -33,7 +33,7 @@ pub fn read_iw_config() -> Result<IWConfig, String> {
 }
 
 pub fn default_iw_config() -> Result<IWConfig, String> {
-    toml::from_str("vanilla = true").map_err(|e|e.to_string())
+    toml::from_str("vanilla = true").map_err(|e| e.to_string())
 }
 
 pub enum SDMode {
@@ -45,7 +45,7 @@ pub enum SDMode {
 pub enum SMMode {
     Off = 0,
     AdLib = 1,
-} 
+}
 
 pub enum SDSMode {
     Off = 0,
@@ -56,12 +56,12 @@ pub enum SDSMode {
 
 // the original Wolf3D Config
 pub struct WolfConfig {
-    pub high_scores : Vec<user::HighScore>,
-    
+    pub high_scores: Vec<user::HighScore>,
+
     pub sd_mode: SDMode,
     pub sm_mode: SMMode,
     pub sds_mode: SDSMode,
-    
+
     pub mouse_enabled: bool,
     pub joystick_enabled: bool,
     pub joypad_enabled: bool,
@@ -77,23 +77,23 @@ pub struct WolfConfig {
     pub mouse_adjustment: u16,
 }
 
-// TODO write a test with load/write roundtrip (once write is there) 
+// TODO write a test with load/write roundtrip (once write is there)
 
 pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
     let data = loader.load_wolf_file(WolfFile::ConfigData);
     let mut reader = util::new_data_reader(&data);
 
     let mut high_scores = Vec::with_capacity(MAX_SCORES);
-    
+
     for _ in 0..MAX_SCORES {
         let mut name = reader.read_utf8_string(58);
         name.retain(|c| c != '\0');
 
-        let score = reader.read_u32(); 
-        let completed = reader.read_u16(); 
-        let episode = reader.read_u16(); 
+        let score = reader.read_u32();
+        let completed = reader.read_u16();
+        let episode = reader.read_u16();
 
-        high_scores.push(user::HighScore{
+        high_scores.push(user::HighScore {
             name,
             score,
             completed,
@@ -113,7 +113,7 @@ pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
 
     let mut dirscan = [NumCode::None; 4];
     for i in 0..4 {
-        dirscan[i] = to_numcode(reader.read_u16() as u8); 
+        dirscan[i] = to_numcode(reader.read_u16() as u8);
     }
     let mut buttonscan = [NumCode::None; 8];
     for i in 0..8 {
@@ -146,7 +146,7 @@ pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
         buttonmouse,
         buttonjoy,
         viewsize,
-        mouse_adjustment
+        mouse_adjustment,
     }
 }
 

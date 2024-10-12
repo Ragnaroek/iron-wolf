@@ -5,7 +5,7 @@ use crate::fixed::new_fixed_i32;
 #[test]
 fn test_calc_sines() {
     let prj = calc_projection(19);
-    
+
     assert_eq!(prj.sin(0), new_fixed_i32(0));
     assert_eq!(prj.sin(360), new_fixed_i32(-2147483648));
     assert_eq!(prj.sin(180), new_fixed_i32(-2147483648));
@@ -31,8 +31,6 @@ fn test_calc_sines() {
     assert_eq!(prj.sin(90), new_fixed_i32(65535), "sin(90)");
     assert_eq!(prj.sin(450), new_fixed_i32(65535), "sin(450)");
     assert_eq!(prj.sin(270), new_fixed_i32(-2147418113), "sin(270)");
-
-
 }
 
 #[test]
@@ -57,5 +55,3 @@ fn test_calc_pixelangles() {
     assert_eq!(angles[0], 360);
     assert_eq!(angles[303], -360);
 }
-
-

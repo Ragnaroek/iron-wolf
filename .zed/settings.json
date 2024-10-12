@@ -12,5 +12,6 @@
       }
     }
   },
-  "preferred_line_length": 150
+  "preferred_line_length": 150,
+  "formatter": "language_server"
 }

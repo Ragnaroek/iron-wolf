@@ -1,11 +1,14 @@
 use crate::act2::spawn_stand;
-use crate::def::{At, ClassType, Difficulty, DirType, EnemyType, Level, LevelState, ObjKey, ObjType, FL_NEVERMARK, FL_SHOOTABLE, MAP_SIZE};
-use crate::fixed::new_fixed_i32;
 use crate::agent::S_PLAYER;
+use crate::def::{
+    At, ClassType, Difficulty, DirType, EnemyType, Level, LevelState, ObjKey, ObjType,
+    FL_NEVERMARK, FL_SHOOTABLE, MAP_SIZE,
+};
+use crate::fixed::new_fixed_i32;
 use crate::map::MapSegs;
 use crate::state::check_side;
 
-use super::{check_line, check_diag};
+use super::{check_diag, check_line};
 
 #[test]
 fn test_check_line_1() {
@@ -15,7 +18,15 @@ fn test_check_line_1() {
     player.x = 1970056;
     player.y = 3768320;
     let mut level_state = mock_level_state(player);
-    spawn_stand(EnemyType::Guard, &mut level_state.actors, &mut level_state.actor_at, 29, 30, 3, Difficulty::Baby);
+    spawn_stand(
+        EnemyType::Guard,
+        &mut level_state.actors,
+        &mut level_state.actor_at,
+        29,
+        30,
+        3,
+        Difficulty::Baby,
+    );
     let obj = level_state.obj(ObjKey(1));
     assert!(check_line(&level_state, obj));
 }
@@ -28,7 +39,15 @@ fn test_check_line_2() {
     player.x = 2106529;
     player.y = 3768320;
     let mut level_state = mock_level_state(player);
-    spawn_stand(EnemyType::Guard, &mut level_state.actors, &mut level_state.actor_at, 39, 61, 2, Difficulty::Baby);
+    spawn_stand(
+        EnemyType::Guard,
+        &mut level_state.actors,
+        &mut level_state.actor_at,
+        39,
+        61,
+        2,
+        Difficulty::Baby,
+    );
     let obj = level_state.obj(ObjKey(1));
     assert!(check_line(&level_state, obj));
 }
@@ -37,7 +56,15 @@ fn test_check_line_2() {
 fn test_check_diag() {
     let mut level_state = mock_level_state_with_actor_at();
     //level state contains a completely empty map without any walls or objects
-    spawn_stand(EnemyType::Guard, &mut level_state.actors, &mut level_state.actor_at, 4, 3, 1, Difficulty::Baby); 
+    spawn_stand(
+        EnemyType::Guard,
+        &mut level_state.actors,
+        &mut level_state.actor_at,
+        4,
+        3,
+        1,
+        Difficulty::Baby,
+    );
     // spawn uses wrong ObjKey since player already in the actors vec. Fix it up:
     level_state.actor_at[4][3] = At::Obj(ObjKey(1));
 
@@ -47,11 +74,11 @@ fn test_check_diag() {
     assert!(!check_diag(&level_state, 1, 2));
 
     level_state.actor_at[1][3] = At::Wall(1); // Blocked
-    assert!(!check_diag(&level_state, 1, 3)); 
+    assert!(!check_diag(&level_state, 1, 3));
 
     level_state.update_obj(ObjKey(1), |obj| obj.flags = 0);
     assert!(check_diag(&level_state, 4, 3));
-    
+
     let obj = level_state.mut_obj(ObjKey(1));
     obj.flags = FL_SHOOTABLE;
     assert!(!check_diag(&level_state, 4, 3));
@@ -60,7 +87,15 @@ fn test_check_diag() {
 #[test]
 fn test_check_side() {
     let mut level_state = mock_level_state_with_actor_at();
-    spawn_stand(EnemyType::Guard, &mut level_state.actors, &mut level_state.actor_at, 4, 3, 1, Difficulty::Baby); 
+    spawn_stand(
+        EnemyType::Guard,
+        &mut level_state.actors,
+        &mut level_state.actor_at,
+        4,
+        3,
+        1,
+        Difficulty::Baby,
+    );
     // spawn uses wrong ObjKey since player already in the actors vec. Fix it up:
     level_state.actor_at[4][3] = At::Obj(ObjKey(1));
 
@@ -86,7 +121,7 @@ fn test_check_side() {
     level_state.update_obj(ObjKey(1), |obj| obj.flags = 0);
     let (free, door) = check_side(&level_state, 4, 3);
     assert!(free);
-    assert_eq!(door, -1); 
+    assert_eq!(door, -1);
 }
 
 // helper
@@ -98,10 +133,12 @@ fn mock_level_state_with_actor_at() -> LevelState {
 }
 
 fn mock_level_state(player: ObjType) -> LevelState {
-    let tile_map = vec![vec![0; MAP_SIZE]; MAP_SIZE];     
+    let tile_map = vec![vec![0; MAP_SIZE]; MAP_SIZE];
     LevelState {
         level: Level {
-            map_segs: MapSegs{segs: [Vec::with_capacity(0), Vec::with_capacity(0)]},
+            map_segs: MapSegs {
+                segs: [Vec::with_capacity(0), Vec::with_capacity(0)],
+            },
             info_map: Vec::with_capacity(0),
             tile_map,
         },
@@ -120,7 +157,7 @@ fn mock_level_state(player: ObjType) -> LevelState {
 }
 
 fn test_player() -> ObjType {
-    ObjType{
+    ObjType {
         class: ClassType::Player,
         tic_count: 0,
         distance: 0,

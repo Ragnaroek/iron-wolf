@@ -1,8 +1,8 @@
-use vga::{ColorReg, VGA};
 use vga::util;
+use vga::{ColorReg, VGA};
 
 pub fn set_palette(vga: &VGA, palette: &[u8]) {
-	debug_assert_eq!(palette.len(), 768);
+    debug_assert_eq!(palette.len(), 768);
     vga.set_color_reg(ColorReg::AddressWriteMode, 0);
     for i in 0..768 {
         vga.set_color_reg(ColorReg::Data, palette[i]);
@@ -27,7 +27,15 @@ fn fill_palette(vga: &VGA, red: u8, green: u8, blue: u8) {
     }
 }
 
-pub async fn fade_out(vga: &VGA, start: usize, end: usize, red: u8, green: u8, blue: u8, steps: usize) {
+pub async fn fade_out(
+    vga: &VGA,
+    start: usize,
+    end: usize,
+    red: u8,
+    green: u8,
+    blue: u8,
+    steps: usize,
+) {
     util::vsync(vga).await;
     let palette_orig = get_palette(vga);
     let mut palette_new = palette_orig.clone();
@@ -70,14 +78,12 @@ pub async fn fade_in(vga: &VGA, start: usize, end: usize, palette: &[u8], steps:
         for j in start..end {
             let (sub, _) = palette[j].overflowing_sub(palette1[j]);
             let delta = sub as usize;
-            let (add, _) = palette1[j].overflowing_add((delta * i / steps) as u8);   
-            palette2[j] = add;         
+            let (add, _) = palette1[j].overflowing_add((delta * i / steps) as u8);
+            palette2[j] = add;
         }
 
         util::vsync(vga).await;
         set_palette(vga, &palette2);
-
     }
     set_palette(vga, palette);
 }
-
