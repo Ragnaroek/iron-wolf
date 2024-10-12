@@ -1,3 +1,5 @@
+use std::path::Path;
+
 #[derive(Copy, Clone)]
 pub enum WeaponType {
 	Knife,
@@ -26,7 +28,14 @@ pub struct MapType {
 	pub name: String,
 }
 
+// iron-wolf specific configuration
+pub struct IWConfig {
+	pub wolf3d_data: &'static Path,
+    pub no_wait: bool,
+}
+
 // All assets that need to be accessed in the game loop
 pub struct Assets {
+	pub iw_config: IWConfig, // put here for convenience (mabye only put assets path here?)
 	pub map_headers: Vec<MapType>
 }
