@@ -1,7 +1,7 @@
 use vga::VGA;
 
 use crate::agent::{draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_weapon};
-use crate::def::{ANGLES, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, PlayState, WeaponType, Sprite, StaticType, VisObj, ObjKey, Assets, ObjType, Level, LevelState, At, EnemyType, GameState, Difficulty, ControlState};
+use crate::def::{ANGLES, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, PlayState, WeaponType, Sprite, StaticType, VisObj, ObjKey, Assets, ObjType, Level, LevelState, At, EnemyType, GameState, Difficulty, ControlState, AMBUSH_TILE};
 use crate::assets::load_map_from_assets;
 use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{dead_guard, stand};
@@ -227,7 +227,28 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &GameState, assets: 
 	}
 
 	let (actors, statics, info_map) = scan_info_plane(&map_data, &mut actor_at, game_state.difficulty);
-    let mut level_state = LevelState{
+
+	// take out the ambush markers
+	map_ptr = 0;
+	for y in 0..MAP_SIZE {
+		for x in 0..MAP_SIZE {
+			let tile = map_data.segs[0][map_ptr];
+			map_ptr += 1;
+
+			if tile == AMBUSH_TILE {
+				tile_map[x][y] = 0;
+				if let At::Wall(tile) = actor_at[x][y] {
+					if tile == AMBUSH_TILE {
+						actor_at[x][y] = At::Nothing;
+					}
+				}
+
+				// TODO something with AREATILEs has to happen here
+			}
+		}
+	}
+	
+	let mut level_state = LevelState{
         level: Level {
 			info_map,
 		    tile_map,
@@ -244,7 +265,6 @@ pub fn setup_game_level(prj: &ProjectionConfig, game_state: &GameState, assets: 
 
     thrust(PLAYER_KEY, &mut level_state, prj, 0, 0); // set some variables
 
-	//TODO ambush markers
 	Ok(level_state)
 }
 
