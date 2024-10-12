@@ -1,7 +1,7 @@
-use crate::act1::operate_door;
+use crate::act1::{operate_door, push_wall};
 use crate::assets::{GraphicNum, num_pic, weapon_pic, face_pic};
 use crate::play::{ProjectionConfig, start_bonus_flash, start_damage_flash};
-use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType, GameState, Difficulty, PlayState, SCREENLOC, STATUS_LINES, FL_SHOOTABLE, FL_VISABLE, WeaponType, EXTRA_POINTS, StaticKind, Sprite, StaticType};
+use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, FL_NEVERMARK, DirType, ClassType, GameState, Difficulty, PlayState, SCREENLOC, STATUS_LINES, FL_SHOOTABLE, FL_VISABLE, WeaponType, EXTRA_POINTS, StaticKind, Sprite, StaticType, PUSHABLE_TILE};
 use crate::fixed::{new_fixed_i32, fixed_by_frac};
 use crate::state::{check_line, damage_actor};
 use crate::user::rnd_t;
@@ -173,7 +173,7 @@ fn gun_attack(level_state: &mut LevelState, game_state: &mut GameState, rdr: &VG
 
 fn t_player(k: ObjKey, _: u64, level_state: &mut LevelState, game_state: &mut GameState, _: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
     if control_state.button_state[Button::Use as usize] {
-        cmd_use(level_state, control_state);
+        cmd_use(level_state, game_state, control_state);
     }
 
     if control_state.button_state[Button::Attack as usize] && !control_state.button_held[Button::Attack as usize] {
@@ -193,9 +193,9 @@ fn cmd_fire(level_state: &mut LevelState, game_state: &mut GameState, control_st
     game_state.weapon_frame = ATTACK_INFO[game_state.weapon as usize][game_state.attack_frame].frame;
 }
 
-fn cmd_use(level_state: &mut LevelState, control_state: &mut ControlState) {
+fn cmd_use(level_state: &mut LevelState, game_state: &mut GameState, control_state: &mut ControlState) {
 
-    //TODO pushable wall, elevator
+    //TODO elevator
 
     let check_x;
     let check_y;
@@ -224,6 +224,11 @@ fn cmd_use(level_state: &mut LevelState, control_state: &mut ControlState) {
         check_y = player.tiley+1;
         dir = Dir::South;
         elevator_ok = false;
+    }
+
+    if level_state.level.info_map[check_x][check_y] == PUSHABLE_TILE {
+        push_wall(level_state, game_state, check_x, check_y, dir);
+        return;
     }
 
     let doornum = level_state.level.tile_map[check_x][check_y];

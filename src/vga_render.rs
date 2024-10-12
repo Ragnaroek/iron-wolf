@@ -4,7 +4,7 @@ use std::sync::atomic::AtomicUsize;
 use vga::{CRTReg, SCReg, VGA};
 use vga::util;
 
-use crate::{time, draw};
+use crate::time;
 
 use super::assets::{Graphic, GraphicNum, GAMEPAL};
 use super::vl;

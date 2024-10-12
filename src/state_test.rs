@@ -101,6 +101,7 @@ fn mock_level_state(player: ObjType) -> LevelState {
     let tile_map = vec![vec![0; MAP_SIZE]; MAP_SIZE];     
     LevelState {
         level: Level {
+            info_map: Vec::with_capacity(0),
             tile_map,
         },
         actors: vec![player],

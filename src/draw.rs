@@ -3,7 +3,7 @@
 mod draw_test;
 
 use crate::agent::get_bonus;
-use crate::{game, time};
+use crate::time;
 use crate::play::ProjectionConfig;
 use crate::def::{GameState, Assets, Level, LevelState, ObjType, MIN_DIST, MAP_SIZE, TILEGLOBAL, TILESHIFT, ANGLES, FOCAL_LENGTH, FINE_ANGLES, Sprite, NUM_WEAPONS, VisObj, StaticType, FL_BONUS, FL_VISABLE, ClassType, DIR_ANGLE, WeaponType };
 use crate::scale::{simple_scale_shape, scale_shape, MAP_MASKS_1};
@@ -275,32 +275,38 @@ impl RayCast {
 
                             if tile & 0x40 != 0 {
                                 //TOOD handle vertpushwall here
-                            }
 
-                            let door_num = (self.tile_hit & 0x7f) as usize;
-                            let x_0 = self.y_step >> 1;
-                            let x = x_0 + self.y_intercept;
-                            let dx = (x >> 16) & 0xFFFF;
-                            let ic = (self.y_intercept >> 16) & 0xFFFF;
-                            if ic == dx { // is it still in the same tile?
-                                //hitvmid
-                                let door_pos = level_state.doors[door_num].position;
-                                let ax = (x & 0xFFFF) as u16;
-                                if ax < door_pos {
+                                panic!("push vert");
+
+                                self.bx = self.x_tile;
+                                self.dx = (self.y_intercept >> 16) & 0xFFFF;
+                                do_break = false 
+                            } else {
+                                let door_num = (self.tile_hit & 0x7f) as usize;
+                                let x_0 = self.y_step >> 1;
+                                let x = x_0 + self.y_intercept;
+                                let dx = (x >> 16) & 0xFFFF;
+                                let ic = (self.y_intercept >> 16) & 0xFFFF;
+                                if ic == dx { // is it still in the same tile?
+                                    //hitvmid
+                                    let door_pos = level_state.doors[door_num].position;
+                                    let ax = (x & 0xFFFF) as u16;
+                                    if ax < door_pos {
+                                        self.bx = self.x_tile;
+                                        self.dx = ic;
+                                        do_break = false //continue with passvert
+                                    } else { //draw the door
+                                        self.y_intercept = (self.y_intercept & (0xFFFF << 16)) | ax as i32; 
+                                        self.x_intercept = (self.x_tile & 0xFFFF as i32) << 16 | 0x8000;
+                                        do_break = true;
+                                        self.hit = Hit::VerticalDoor
+                                    }
+                                } else { //else continue with tracing in passvert
                                     self.bx = self.x_tile;
                                     self.dx = ic;
-                                    do_break = false //continue with passvert
-                                } else { //draw the door
-                                    self.y_intercept = (self.y_intercept & (0xFFFF << 16)) | ax as i32; 
-                                    self.x_intercept = (self.x_tile & 0xFFFF as i32) << 16 | 0x8000;
-                                    do_break = true;
-                                    self.hit = Hit::VerticalDoor
+                                    do_break = false 
                                 }
-                            } else { //else continue with tracing in passvert
-                                self.bx = self.x_tile;
-                                self.dx = ic;
-                                do_break = false 
-                            } 
+                            }
                         } else {
                             do_break = true;
                             self.hit = Hit::VerticalWall;
@@ -340,31 +346,39 @@ impl RayCast {
 
                             if tile & 0x40 != 0 {
                                 //TOOD handle horizpushwall here
-                            }
 
-                            let door_num = (self.tile_hit & 0x7f) as usize;
-                            let x_0 = self.x_step >> 1;
-                            let x = x_0 + self.x_intercept;
-                            self.dx = (x >> 16) & 0xFFFF;
-                            if self.cx == self.dx { // is it still in the same tile?
-                                //hithmid
-                                let door_pos = level_state.doors[door_num].position;
-                                let ax = (x & 0xFFFF) as u16;
-                                if ax < door_pos {
-                                    self.bx = self.x_tile;
-                                    self.dx = (self.y_intercept >> 16) & 0xFFFF;
-                                    do_break = false //continue with passhoriz
-                                } else { //draw the door
-                                    self.x_intercept = (self.x_intercept & (0xFFFF << 16)) | ax as i32; 
-                                    self.y_intercept = (self.bp & 0xFFFF as i32) << 16 | 0x8000;
-                                    do_break = true;
-                                    self.hit = Hit::HorizontalDoor
-                                }
-                            } else { //else continue with tracing in passhoriz
+                                panic!("horiz pushwall!");
+
+                                
+                                //continuehoriz:
                                 self.bx = self.x_tile;
                                 self.dx = (self.y_intercept >> 16) & 0xFFFF;
                                 do_break = false
-                            } 
+                            } else {
+                                let door_num = (self.tile_hit & 0x7f) as usize;
+                                let x_0 = self.x_step >> 1;
+                                let x = x_0 + self.x_intercept;
+                                self.dx = (x >> 16) & 0xFFFF;
+                                if self.cx == self.dx { // is it still in the same tile?
+                                    //hithmid
+                                    let door_pos = level_state.doors[door_num].position;
+                                    let ax = (x & 0xFFFF) as u16;
+                                    if ax < door_pos {
+                                        self.bx = self.x_tile;
+                                        self.dx = (self.y_intercept >> 16) & 0xFFFF;
+                                        do_break = false //continue with passhoriz
+                                    } else { //draw the door
+                                        self.x_intercept = (self.x_intercept & (0xFFFF << 16)) | ax as i32; 
+                                        self.y_intercept = (self.bp & 0xFFFF as i32) << 16 | 0x8000;
+                                        do_break = true;
+                                        self.hit = Hit::HorizontalDoor
+                                    }
+                                } else { //else continue with tracing in passhoriz
+                                    self.bx = self.x_tile;
+                                    self.dx = (self.y_intercept >> 16) & 0xFFFF;
+                                    do_break = false
+                                } 
+                            }
                         } else {
                             do_break = true;
                             self.hit = Hit::HorizontalWall;
