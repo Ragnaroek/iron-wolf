@@ -782,12 +782,12 @@ pub fn first_sighting(k: ObjKey, level_state: &mut LevelState, sound: &mut Sound
             obj.speed *= 3; // go faster when chasing player
         }
         ClassType::Dog => {
-            // TODO PlaySoundLocActor(SPIONSND,ob);
+            sound.play_sound_loc_actor(SoundName::SPION, assets, obj);
             new_state(obj, &S_DOGCHASE1);
             obj.speed *= 2; // go faster when chasing player
         }
         ClassType::SS => {
-            // TODO PlaySoundLocActor(SCHUTZADSND,ob);
+            sound.play_sound_loc_actor(SoundName::SCHUTZAD, assets, obj);
             new_state(obj, &S_SSCHASE1);
             obj.speed *= 4;
         }

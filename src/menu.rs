@@ -1,7 +1,7 @@
 use std::{ascii, collections::HashMap, str};
 use vga::input::NumCode;
 
-use crate::assets::{is_sod, GraphicNum, Music, WolfFile, WolfVariant};
+use crate::assets::{is_sod, GraphicNum, Music, SoundName, WolfFile, WolfVariant};
 use crate::def::{difficulty, Assets, GameState, WindowState};
 use crate::input::{read_control, ControlDirection, ControlInfo, Input};
 use crate::loader::Loader;
@@ -473,22 +473,35 @@ pub async fn control_panel(
         let menu_opt = menu_stack.last();
         if let Some(menu) = menu_opt {
             let handle = match menu {
-                Menu::Top => cp_main_menu(ticker, rdr, input, win_state, menu_state).await,
+                Menu::Top => {
+                    cp_main_menu(ticker, rdr, sound, assets, input, win_state, menu_state).await
+                }
                 Menu::MainMenu(item) => match item {
                     MainMenuItem::NewGame => {
-                        cp_new_game(ticker, game_state, rdr, input, win_state, menu_state).await
+                        cp_new_game(
+                            ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
+                        )
+                        .await
                     }
                     MainMenuItem::LoadGame => {
-                        cp_load_game(ticker, rdr, input, win_state, menu_state, loader).await
+                        cp_load_game(
+                            ticker, rdr, sound, assets, input, win_state, menu_state, loader,
+                        )
+                        .await
                     }
                     MainMenuItem::SaveGame => {
-                        cp_save_game(ticker, rdr, input, win_state, menu_state, loader).await
+                        cp_save_game(
+                            ticker, rdr, sound, assets, input, win_state, menu_state, loader,
+                        )
+                        .await
                     }
                     _ => todo!("implement other menu selects"),
                 },
                 Menu::DifficultySelect => {
-                    cp_difficulty_select(ticker, game_state, rdr, input, win_state, menu_state)
-                        .await
+                    cp_difficulty_select(
+                        ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
+                    )
+                    .await
                 }
             };
             match handle {
@@ -510,6 +523,8 @@ pub async fn control_panel(
 async fn cp_main_menu(
     ticker: &Ticker,
     rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
     input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
@@ -517,7 +532,17 @@ async fn cp_main_menu(
     draw_main_menu(rdr, win_state, menu_state);
     rdr.fade_in().await;
 
-    let handle = handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
+    let handle = handle_menu(
+        ticker,
+        rdr,
+        sound,
+        assets,
+        input,
+        win_state,
+        menu_state,
+        no_op_routine,
+    )
+    .await;
     if handle == MenuHandle::Selected(MainMenuItem::NewGame.pos()) {
         return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::NewGame));
     } else if handle == MenuHandle::Selected(MainMenuItem::LoadGame.pos()) {
@@ -542,6 +567,8 @@ async fn cp_new_game(
     ticker: &Ticker,
     game_state: &mut GameState,
     rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
     input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
@@ -549,8 +576,17 @@ async fn cp_new_game(
     loop {
         draw_new_episode(rdr, win_state, menu_state).await;
 
-        let episode_handle =
-            handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
+        let episode_handle = handle_menu(
+            ticker,
+            rdr,
+            sound,
+            assets,
+            input,
+            win_state,
+            menu_state,
+            no_op_routine,
+        )
+        .await;
         if let MenuHandle::Selected(episode_selected) = episode_handle {
             //TODO SD_PlaySound(SHOOTSND)
             //TODO confirm dialog if already in a game
@@ -568,6 +604,8 @@ async fn cp_new_game(
 async fn cp_load_game(
     ticker: &Ticker,
     rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
     input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
@@ -577,8 +615,17 @@ async fn cp_load_game(
     let state = read_save_game_state(loader);
     draw_load_save_screen(rdr, win_state, menu_state, &state, false).await;
     loop {
-        let load_handle =
-            handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
+        let load_handle = handle_menu(
+            ticker,
+            rdr,
+            sound,
+            assets,
+            input,
+            win_state,
+            menu_state,
+            no_op_routine,
+        )
+        .await;
         if let MenuHandle::Selected(which) = load_handle {
             if state[which].available {
                 draw_ls_action(rdr, win_state, false);
@@ -595,6 +642,8 @@ async fn cp_load_game(
 async fn cp_save_game(
     ticker: &Ticker,
     rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
     input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
@@ -604,8 +653,17 @@ async fn cp_save_game(
     let state = read_save_game_state(loader);
     draw_load_save_screen(rdr, win_state, menu_state, &state, true).await;
     loop {
-        let save_handle =
-            handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
+        let save_handle = handle_menu(
+            ticker,
+            rdr,
+            sound,
+            assets,
+            input,
+            win_state,
+            menu_state,
+            no_op_routine,
+        )
+        .await;
         if let MenuHandle::Selected(which) = save_handle {
             // TODO Check overwrite existing game
 
@@ -791,6 +849,8 @@ async fn cp_difficulty_select(
     ticker: &Ticker,
     game_state: &mut GameState,
     rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
     input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
@@ -799,6 +859,8 @@ async fn cp_difficulty_select(
     let handle = handle_menu(
         ticker,
         rdr,
+        sound,
+        assets,
         input,
         win_state,
         menu_state,
@@ -960,12 +1022,17 @@ async fn confirm(
 async fn handle_menu(
     ticker: &Ticker,
     rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
     input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     routine: MenuRoutine,
 ) -> MenuHandle {
-    let handle = handle_menu_loop(ticker, rdr, input, win_state, menu_state, routine).await;
+    let handle = handle_menu_loop(
+        ticker, rdr, sound, assets, input, win_state, menu_state, routine,
+    )
+    .await;
 
     input.clear_keys_down();
 
@@ -978,6 +1045,8 @@ async fn handle_menu(
 async fn handle_menu_loop(
     ticker: &Ticker,
     rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
     input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
@@ -1024,7 +1093,7 @@ async fn handle_menu_loop(
 
                 if which_pos > 0 && selected.items[which_pos - 1].active != ItemActivity::Deactive {
                     y -= 6;
-                    draw_half_step(ticker, rdr, x, y).await;
+                    draw_half_step(ticker, rdr, sound, assets, x, y).await;
                 }
 
                 loop {
@@ -1038,7 +1107,9 @@ async fn handle_menu_loop(
                         break;
                     }
                 }
-                y = draw_gun(rdr, win_state, selected, x, y, which_pos, base_y, routine);
+                y = draw_gun(
+                    rdr, sound, assets, win_state, selected, x, y, which_pos, base_y, routine,
+                );
 
                 // WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
                 tic_delay(ticker, input, 20).await;
@@ -1050,7 +1121,7 @@ async fn handle_menu_loop(
                     && selected.items[which_pos + 1].active != ItemActivity::Deactive
                 {
                     y += 6;
-                    draw_half_step(ticker, rdr, x, y).await;
+                    draw_half_step(ticker, rdr, sound, assets, x, y).await;
                 }
 
                 loop {
@@ -1064,7 +1135,9 @@ async fn handle_menu_loop(
                         break;
                     }
                 }
-                y = draw_gun(rdr, win_state, selected, x, y, which_pos, base_y, routine);
+                y = draw_gun(
+                    rdr, sound, assets, win_state, selected, x, y, which_pos, base_y, routine,
+                );
 
                 // WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
                 tic_delay(ticker, input, 20).await;
@@ -1095,9 +1168,16 @@ async fn tic_delay(ticker: &Ticker, input: &Input, count: u64) {
     }
 }
 
-async fn draw_half_step(ticker: &Ticker, rdr: &VGARenderer, x: usize, y: usize) {
+async fn draw_half_step(
+    ticker: &Ticker,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+    x: usize,
+    y: usize,
+) {
     rdr.pic(x, y, GraphicNum::CCURSOR1PIC);
-    // TODO SD_PlaySound(MOVEGUN1SND)
+    sound.play_sound(SoundName::MOVEGUN1, assets);
 
     ticker.tics(8).await;
 }
@@ -1120,6 +1200,8 @@ fn erase_gun(
 
 fn draw_gun(
     rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
     win_state: &mut WindowState,
     selected: &MenuStateEntry,
     x: usize,
@@ -1139,7 +1221,8 @@ fn draw_gun(
 
     routine(rdr, which_pos);
 
-    // TODO PlaySound(MOVEGUN2SND)
+    sound.play_sound(SoundName::MOVEGUN2, assets);
+
     new_y
 }
 
