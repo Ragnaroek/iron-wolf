@@ -4,10 +4,11 @@ use crate::def::{
     Assets, At, Button, ClassType, ControlState, Difficulty, Dir, DirType, GameState, LevelState,
     ObjKey, ObjType, PlayState, Sprite, StateType, StaticKind, StaticType, WeaponType,
     ALT_ELEVATOR_TILE, ANGLES, ANGLES_I32, ELEVATOR_TILE, EXTRA_POINTS, FL_NEVERMARK, FL_SHOOTABLE,
-    FL_VISABLE, MIN_DIST, PLAYER_SIZE, PUSHABLE_TILE, SCREENLOC, STATUS_LINES, TILEGLOBAL,
-    TILESHIFT,
+    FL_VISABLE, MAP_SIZE, MIN_DIST, PLAYER_SIZE, PUSHABLE_TILE, SCREENLOC, STATUS_LINES,
+    TILEGLOBAL, TILESHIFT,
 };
 use crate::fixed::{fixed_by_frac, new_fixed_i32};
+use crate::game::AREATILE;
 use crate::play::{start_bonus_flash, start_damage_flash, ProjectionConfig};
 use crate::sd::Sound;
 use crate::state::{check_line, damage_actor};
@@ -215,7 +216,7 @@ fn t_attack(
                 draw_ammo(&game_state, rdr);
             }
             2 => {
-                knife_attack(level_state, game_state, rdr, prj);
+                knife_attack(level_state, game_state, rdr, prj, sound, assets);
             }
             3 => {
                 if game_state.ammo != 0 && control_state.button_state[Button::Attack as usize] {
@@ -237,8 +238,10 @@ fn knife_attack(
     game_state: &mut GameState,
     rdr: &VGARenderer,
     prj: &ProjectionConfig,
+    sound: &mut Sound,
+    assets: &Assets,
 ) {
-    // TODO SD_PlaySound(ATKKNIFESND)
+    sound.play_sound(SoundName::ATKKNIFE, assets);
 
     let mut dist = 0x7fffffff;
     let mut closest = None;
@@ -263,6 +266,8 @@ fn knife_attack(
         level_state,
         game_state,
         rdr,
+        sound,
+        assets,
         (rnd_t() >> 4) as usize,
     )
 }
@@ -332,7 +337,15 @@ fn gun_attack(
         damage = rnd_t() / 6;
     }
 
-    damage_actor(k, level_state, game_state, rdr, damage as usize);
+    damage_actor(
+        k,
+        level_state,
+        game_state,
+        rdr,
+        sound,
+        assets,
+        damage as usize,
+    );
 }
 
 fn t_player(
@@ -340,14 +353,14 @@ fn t_player(
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut Sound,
+    sound: &mut Sound,
     _: &VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
-    _: &Assets,
+    assets: &Assets,
 ) {
     if control_state.button_state[Button::Use as usize] {
-        cmd_use(level_state, game_state, control_state);
+        cmd_use(level_state, game_state, sound, assets, control_state);
     }
 
     if control_state.button_state[Button::Attack as usize]
@@ -378,6 +391,8 @@ fn cmd_fire(
 fn cmd_use(
     level_state: &mut LevelState,
     game_state: &mut GameState,
+    sound: &mut Sound,
+    assets: &Assets,
     control_state: &mut ControlState,
 ) {
     let check_x;
@@ -429,7 +444,7 @@ fn cmd_use(
 
     if !control_state.button_held(Button::Use) && doornum & 0x80 != 0 {
         control_state.set_button_held(Button::Use, true);
-        operate_door((doornum & !0x80) as usize, level_state);
+        operate_door((doornum & !0x80) as usize, level_state, sound, assets);
     } else {
         // TODO SD_PlaySound(DONOTHINGSND)
     }
@@ -567,26 +582,44 @@ pub fn thrust(
 
     clip_move(k, level_state, x_move.to_i32(), y_move.to_i32());
 
-    let obj = level_state.mut_obj(k);
-    obj.tilex = obj.x as usize >> TILESHIFT;
-    obj.tiley = obj.y as usize >> TILESHIFT;
+    let area = {
+        let player = level_state.player();
+        level_state.level.map_segs.segs[0][player.tiley * MAP_SIZE + player.tilex] - AREATILE
+    };
+    let player = level_state.mut_player();
+    player.tilex = player.x as usize >> TILESHIFT;
+    player.tiley = player.y as usize >> TILESHIFT;
+    player.area_number = area as usize;
+
+    // TODO VictoryTile
 }
 
-pub fn give_points(game_state: &mut GameState, rdr: &VGARenderer, points: i32) {
+pub fn give_points(
+    game_state: &mut GameState,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+    points: i32,
+) {
     game_state.score += points;
     while game_state.score >= game_state.next_extra {
         game_state.next_extra += EXTRA_POINTS;
-        give_extra_man(game_state, rdr);
+        give_extra_man(game_state, rdr, sound, assets);
     }
     draw_score(&game_state, rdr)
 }
 
-pub fn give_extra_man(game_state: &mut GameState, rdr: &VGARenderer) {
+pub fn give_extra_man(
+    game_state: &mut GameState,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+) {
     if game_state.lives < 9 {
         game_state.lives += 1;
     }
     draw_lives(game_state, rdr);
-    // TODO PlaySound(BONUS1UPSND);
+    sound.play_sound(SoundName::BONUS1UP, assets);
 }
 
 pub fn get_bonus(
@@ -609,17 +642,17 @@ pub fn get_bonus(
         }
         StaticKind::BoCross => {
             sound.play_sound(SoundName::BONUS1, assets);
-            give_points(game_state, rdr, 100);
+            give_points(game_state, rdr, sound, assets, 100);
             game_state.treasure_count += 1;
         }
         StaticKind::BoChalice => {
             sound.play_sound(SoundName::BONUS2, assets);
-            give_points(game_state, rdr, 500);
+            give_points(game_state, rdr, sound, assets, 500);
             game_state.treasure_count += 1;
         }
         StaticKind::BoBible => {
             sound.play_sound(SoundName::BONUS3, assets);
-            give_points(game_state, rdr, 1000);
+            give_points(game_state, rdr, sound, assets, 1000);
             game_state.treasure_count += 1;
         }
         StaticKind::BoCrown => {
@@ -650,7 +683,7 @@ pub fn get_bonus(
             sound.play_sound(SoundName::BONUS1UP, assets);
             heal_self(game_state, rdr, 99);
             give_ammo(game_state, rdr, 25);
-            give_extra_man(game_state, rdr);
+            give_extra_man(game_state, rdr, sound, assets);
             game_state.treasure_count += 1;
         }
         StaticKind::BoFood => {
