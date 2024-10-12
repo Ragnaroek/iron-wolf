@@ -145,8 +145,16 @@ fn calc_sines() -> Vec<Fixed> {
     let angle_step = PI/2.0/ANGLE_QUAD as f32;
     for i in 0..=ANGLE_QUAD {
         let value : u32 = (GLOBAL1 as f32 * angle.sin()) as u32;
+        //TODO ugly fixes in here, make this exact to the old c-code
         let v_fixed = new_fixed_u32(value.min(65535));
-        let v_fixed_neg = new_fixed_u32(value | 0x80000000u32);
+        let mut value_neg = value | 0x80000000u32;
+        if i == 90 {
+            //otherwise a ??rounding error?? occurs and walking
+            //backward does not work anymore (TODO Fix this proper,
+            //latest in the generalisation)
+            value_neg -= 1;
+        }
+        let v_fixed_neg = new_fixed_u32(value_neg);
         sines[i] = v_fixed;
         sines[i+ANGLES] = v_fixed;
         sines[ANGLES/2-i] = v_fixed;
@@ -348,8 +356,6 @@ fn poll_controls(state: &mut ControlState, tics: u64, input: &input::Input) {
 
     poll_keyboard_buttons(state, input);
 
-    //println!("button_held {:}", state.)
-
     poll_keyboard_move(state, input, tics);
     //TODO Mouse Move
     //TODO Joystick Move?
@@ -367,7 +373,7 @@ fn poll_controls(state: &mut ControlState, tics: u64, input: &input::Input) {
     if state.control.y > max {
         state.control.y = max;
     } else if state.control.y < min {
-        state.control.y  = min;
+        state.control.y = min;
     }
 }
 
