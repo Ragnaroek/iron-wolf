@@ -228,6 +228,7 @@ pub enum Difficulty {
 pub struct GameState {
     pub difficulty: Difficulty,
 	pub map_on: usize,
+    pub old_score: i32,
 	pub score: i32,
     pub next_extra: i32,
 	pub lives: i32,

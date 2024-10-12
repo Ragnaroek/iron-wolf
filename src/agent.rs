@@ -637,7 +637,7 @@ fn latch_number(rdr: &VGARenderer, x_start: usize, y: usize, width: usize, num: 
 	}
 }
 
-// x in bytes
+/// x in bytes
 fn status_draw_pic(rdr: &VGARenderer, x: usize, y: usize, pic: GraphicNum) {
     let offset_prev = rdr.buffer_offset();
     for i in 0..3 {

@@ -7,8 +7,9 @@ use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{dead_guard, stand};
 use crate::agent::{spawn_player, thrust};
 use crate::draw::{RayCast, init_ray_cast, three_d_refresh};
-use crate::inter::check_highscore;
+use crate::inter::{check_highscore, level_completed};
 use crate::play::{draw_play_screen, finish_palette_shifts, play_loop, ProjectionConfig, new_game_state, new_control_state};
+use crate::vh::vw_fade_out;
 use crate::{map, time};
 use crate::vga_render::VGARenderer;
 use crate::input::Input;
@@ -26,6 +27,8 @@ pub const ANGLE_180 : u32 = ANGLE_45*4;
 pub const ANGLE_1 : u32 = ANGLE_45/45;
 
 pub const DEATH_ROTATE : u64 = 2;
+
+static ELEVATOR_BACK_TO : [usize; 6]= [1, 1, 7, 3, 5, 3];
 
 pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, input: &Input, prj: &ProjectionConfig, assets: &Assets, win_state: &mut WindowState) {
     let mut game_state = new_game_state();
@@ -49,6 +52,27 @@ pub async fn game_loop(ticker: &time::Ticker, vga: &VGA, rdr: &VGARenderer, inpu
 		play_loop(ticker, &mut level_state, &mut game_state, win_state, &mut control_state, vga, &mut rc, rdr, input, prj, assets).await;
 
 		match game_state.play_state {
+			PlayState::Completed|PlayState::SecretLevel => {
+				game_state.keys = 0;
+				draw_keys(&game_state, rdr);
+				vw_fade_out(vga).await;
+
+				level_completed(vga, rdr, input, win_state).await;
+
+				game_state.old_score = game_state.score;
+
+				// COMING BACK FROM SECRET LEVEL
+				if game_state.map_on == 9 {
+					game_state.map_on = ELEVATOR_BACK_TO[game_state.episode]; // back from secret
+				}
+				// GOING TO SECRET LEVEL
+				if game_state.play_state == PlayState::SecretLevel {
+					game_state.map_on = 9;
+				} else {
+					// GOING TO NEXT LEVEL
+					game_state.map_on += 1;
+				}
+			},
 			PlayState::Died => {
 				died(ticker, &mut level_state, &mut game_state, &mut rc, rdr, prj, input, assets).await;
 				if game_state.lives > -1 {

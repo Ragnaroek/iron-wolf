@@ -15,6 +15,7 @@ use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::draw::{RayCast, three_d_refresh};
 use crate::def::{GameState, ControlState, WeaponType, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, Difficulty, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC, EXTRA_POINTS};
 use crate::assets::{GraphicNum, GAMEPAL};
+use crate::game;
 use crate::input;
 use crate::inter::clear_split_vwb;
 use crate::menu::message;
@@ -89,6 +90,7 @@ pub fn new_game_state() -> GameState {
 	GameState {
 		map_on: 0,
         difficulty: Difficulty::Hard,
+        old_score: 0,
 		score: 0,
         next_extra: EXTRA_POINTS,
 		lives: 3,
@@ -236,13 +238,16 @@ pub async fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game
     input.clear_keys_down();
     clear_palette_shifts(game_state);
 
-    /*
-    {
-        let player = level_state.mut_player();
-        player.x = 2227029;
-        player.y = 1466660;
-        player.angle = 180;
-    }*/
+    
+    { // TODO Debug!
+        game_state.god_mode = true;
+        if game_state.episode == 0 && game_state.map_on == 0 {
+            let player = level_state.mut_player();
+            player.x = 1465555;
+            player.y = 3112211;
+            player.angle = 0;
+        }
+    }
 
     //TODO A lot to do here (clear palette, poll controls, prepare world)
     while game_state.play_state == PlayState::StillPlaying {
@@ -420,7 +425,7 @@ async fn check_keys(rdr: &VGARenderer, win_state: &mut WindowState, game_state: 
 
         message(rdr, win_state, "Debugging keys are\nnow available!");
         input.clear_keys_down();
-        input.check_ack().await;
+        input.ack().await;
         win_state.debug_ok = true;
     }
 
