@@ -2,20 +2,27 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
+use opl::OPL;
 use vga::input::NumCode;
 use vga::util;
 use vga::VGA;
 
 use crate::act1::{move_doors, move_push_walls};
-use crate::agent::{draw_health, draw_level, draw_face, draw_lives, draw_ammo, draw_keys, draw_weapon, draw_score};
+use crate::agent::{
+    draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_score, draw_weapon,
+};
+use crate::assets::{GraphicNum, GAMEPAL};
 use crate::debug::debug_keys;
 use crate::def::ActiveType;
 use crate::def::ObjType;
 use crate::def::WindowState;
-use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
-use crate::draw::{RayCast, three_d_refresh};
-use crate::def::{GameState, ControlState, Button, Assets,ObjKey, LevelState, Control, GLOBAL1, TILEGLOBAL, ANGLES, ANGLE_QUAD, FINE_ANGLES, FOCAL_LENGTH, NUM_BUTTONS, FL_NONMARK, FL_NEVERMARK, At, PlayState, STATUS_LINES, SCREENLOC};
-use crate::assets::{GraphicNum, GAMEPAL};
+use crate::def::{
+    Assets, At, Button, Control, ControlState, GameState, LevelState, ObjKey, PlayState, ANGLES,
+    ANGLE_QUAD, FINE_ANGLES, FL_NEVERMARK, FL_NONMARK, FOCAL_LENGTH, GLOBAL1, NUM_BUTTONS,
+    SCREENLOC, STATUS_LINES, TILEGLOBAL,
+};
+use crate::draw::{three_d_refresh, RayCast};
+use crate::fixed::{new_fixed, new_fixed_u32, Fixed};
 use crate::input;
 use crate::input::Input;
 use crate::inter::clear_split_vwb;
@@ -27,10 +34,10 @@ use crate::menu::MenuState;
 use crate::menu::SaveLoadGame;
 use crate::menu::LSA_X;
 use crate::menu::LSA_Y;
+use crate::scale::{setup_scaling, CompiledScaler};
 use crate::start::load_the_game;
 use crate::start::save_the_game;
 use crate::time;
-use crate::scale::{CompiledScaler, setup_scaling};
 use crate::us1::draw_window;
 use crate::util::check_param;
 use crate::vga_render::VGARenderer;
@@ -38,31 +45,40 @@ use crate::vl::set_palette;
 
 //TODO separate draw.c stuff from play.c stuff in here
 
-const MIN_DIST : i32 = 0x5800;
+const MIN_DIST: i32 = 0x5800;
 
-const HEIGHT_RATIO : f32 = 0.5;
-const SCREEN_WIDTH : usize = 80;
+const HEIGHT_RATIO: f32 = 0.5;
+const SCREEN_WIDTH: usize = 80;
 
-const PI : f32 = 3.141592657;
+const PI: f32 = 3.141592657;
 
-const ANG90 : usize = FINE_ANGLES/4;
-const ANG180 : usize = ANG90*2;
+const ANG90: usize = FINE_ANGLES / 4;
+const ANG180: usize = ANG90 * 2;
 
-const NUM_FINE_TANGENTS : usize = FINE_ANGLES/2 + ANG180;
-const VIEW_GLOBAL : usize = 0x10000;
-const RAD_TO_INT : f64 = FINE_ANGLES as f64 / 2.0 / std::f64::consts::PI;
+const NUM_FINE_TANGENTS: usize = FINE_ANGLES / 2 + ANG180;
+const VIEW_GLOBAL: usize = 0x10000;
+const RAD_TO_INT: f64 = FINE_ANGLES as f64 / 2.0 / std::f64::consts::PI;
 
-const RUN_MOVE : u64 = 70;
+const RUN_MOVE: u64 = 70;
 const BASE_MOVE: u64 = 35;
 
-const NUM_RED_SHIFTS : usize = 6;
-const RED_STEPS : i32 = 8;
+const NUM_RED_SHIFTS: usize = 6;
+const RED_STEPS: i32 = 8;
 
-const NUM_WHITE_SHIFTS : usize = 3;
-const WHITE_STEPS : i32 = 20;
-const WHITE_TICS : i32 = 6;
+const NUM_WHITE_SHIFTS: usize = 3;
+const WHITE_STEPS: i32 = 20;
+const WHITE_TICS: i32 = 6;
 
-static BUTTON_SCAN : [NumCode; NUM_BUTTONS] = [NumCode::Control, NumCode::Alt, NumCode::RShift, NumCode::Space, NumCode::Num1, NumCode::Num2, NumCode::Num3, NumCode::Num4];
+static BUTTON_SCAN: [NumCode; NUM_BUTTONS] = [
+    NumCode::Control,
+    NumCode::Alt,
+    NumCode::RShift,
+    NumCode::Space,
+    NumCode::Num1,
+    NumCode::Num2,
+    NumCode::Num3,
+    NumCode::Num4,
+];
 
 // TODO red/and whiteshifts as static array that is initialised in main?
 // Or allocate in main func and supply to Update func!
@@ -73,16 +89,16 @@ struct ColourShifts {
 }
 
 pub struct ProjectionConfig {
-	pub view_width: usize,
-	pub view_height: usize,
+    pub view_width: usize,
+    pub view_height: usize,
     pub center_x: usize,
-    pub shoot_delta : usize,
-	pub screenofs: usize,
+    pub shoot_delta: usize,
+    pub screenofs: usize,
     pub height_numerator: i32,
-	pub pixelangle: Vec<i32>,
+    pub pixelangle: Vec<i32>,
     pub sines: Vec<Fixed>,
     pub fine_tangents: [i32; NUM_FINE_TANGENTS],
-    pub scale : i32,
+    pub scale: i32,
     pub scaler: CompiledScaler,
 }
 
@@ -92,7 +108,7 @@ impl ProjectionConfig {
     }
 
     pub fn cos(&self, ix: usize) -> Fixed {
-        self.sines[ix+ANGLE_QUAD as usize]
+        self.sines[ix + ANGLE_QUAD as usize]
     }
 }
 
@@ -101,76 +117,76 @@ pub fn new_control_state() -> ControlState {
         control: Control { x: 0, y: 0 },
         angle_frac: 0,
         button_held: [false; NUM_BUTTONS],
-        button_state: [false; NUM_BUTTONS]
+        button_state: [false; NUM_BUTTONS],
     }
 }
 
 pub fn calc_projection(view_size: usize) -> ProjectionConfig {
-	let view_width = (view_size * 16) & !15;
-	let view_height = ((((view_size * 16) as f32 * HEIGHT_RATIO) as u16) & !1) as usize;
-    let center_x : usize = view_width/2 - 1;
-    let shoot_delta = view_width/10;
-	let screenofs = (200-STATUS_LINES-view_height)/2*SCREEN_WIDTH+(320-view_width)/8;
-    let half_view = view_width/2;
+    let view_width = (view_size * 16) & !15;
+    let view_height = ((((view_size * 16) as f32 * HEIGHT_RATIO) as u16) & !1) as usize;
+    let center_x: usize = view_width / 2 - 1;
+    let shoot_delta = view_width / 10;
+    let screenofs = (200 - STATUS_LINES - view_height) / 2 * SCREEN_WIDTH + (320 - view_width) / 8;
+    let half_view = view_width / 2;
 
     let face_dist = FOCAL_LENGTH + MIN_DIST;
 
-	let pixelangle = calc_pixelangle(view_width, face_dist as f64);
+    let pixelangle = calc_pixelangle(view_width, face_dist as f64);
     let sines = calc_sines();
     let fine_tangents = calc_fine_tangents();
 
-    let scale = half_view as i32 * face_dist/(VIEW_GLOBAL as i32/2);
-    let height_numerator = (TILEGLOBAL*scale)>>6;
+    let scale = half_view as i32 * face_dist / (VIEW_GLOBAL as i32 / 2);
+    let height_numerator = (TILEGLOBAL * scale) >> 6;
 
     let scaler = setup_scaling((view_width as f32 * 1.5) as usize, view_height);
 
-	ProjectionConfig {
-		view_width,
-		view_height,
+    ProjectionConfig {
+        view_width,
+        view_height,
         center_x,
         shoot_delta,
-		screenofs,
+        screenofs,
         height_numerator,
-		pixelangle,
+        pixelangle,
         sines,
         fine_tangents,
         scale,
         scaler,
-	}
+    }
 }
 
 fn calc_fine_tangents() -> [i32; NUM_FINE_TANGENTS] {
     let mut tangents = [0; FINE_ANGLES];
-    for i in 0..FINE_ANGLES/8 {
-        let tang = ((i as f64 +0.5)/RAD_TO_INT).tan();
+    for i in 0..FINE_ANGLES / 8 {
+        let tang = ((i as f64 + 0.5) / RAD_TO_INT).tan();
         tangents[i] = (tang * TILEGLOBAL as f64) as i32;
-        tangents[FINE_ANGLES/4-1-i] = (1.0/tang*TILEGLOBAL as f64) as i32;
+        tangents[FINE_ANGLES / 4 - 1 - i] = (1.0 / tang * TILEGLOBAL as f64) as i32;
     }
     tangents
 }
 
 fn calc_pixelangle(view_width: usize, face_dist: f64) -> Vec<i32> {
-	let half_view = view_width/2;
+    let half_view = view_width / 2;
 
-	let mut pixelangles = vec![0; view_width as usize]; 
-	for i in 0..half_view {
-		let tang = ((i * VIEW_GLOBAL) as f64 / view_width as f64) / face_dist;
-		let angle = (tang.atan() * RAD_TO_INT) as i32;
-        pixelangles[half_view-1-i] = angle;
-		pixelangles[half_view+i] = -angle;
-	}
+    let mut pixelangles = vec![0; view_width as usize];
+    for i in 0..half_view {
+        let tang = ((i * VIEW_GLOBAL) as f64 / view_width as f64) / face_dist;
+        let angle = (tang.atan() * RAD_TO_INT) as i32;
+        pixelangles[half_view - 1 - i] = angle;
+        pixelangles[half_view + i] = -angle;
+    }
 
-	pixelangles
+    pixelangles
 }
 
 fn calc_sines() -> Vec<Fixed> {
     //TODO_VANILLA +1?? Bug in the original? does it write outside the array there in the original?
-    let mut sines: Vec<Fixed> = vec![new_fixed(0, 0); ANGLES+ANGLE_QUAD+1]; 
+    let mut sines: Vec<Fixed> = vec![new_fixed(0, 0); ANGLES + ANGLE_QUAD + 1];
 
-    let mut angle : f32 = 0.0;
-    let angle_step = PI/2.0/ANGLE_QUAD as f32;
+    let mut angle: f32 = 0.0;
+    let angle_step = PI / 2.0 / ANGLE_QUAD as f32;
     for i in 0..=ANGLE_QUAD {
-        let value : u32 = (GLOBAL1 as f32 * angle.sin()) as u32;
+        let value: u32 = (GLOBAL1 as f32 * angle.sin()) as u32;
         //TODO ugly fixes in here, make this exact to the old c-code
         let v_fixed = new_fixed_u32(value.min(65535));
         let mut value_neg = value | 0x80000000u32;
@@ -182,11 +198,11 @@ fn calc_sines() -> Vec<Fixed> {
         }
         let v_fixed_neg = new_fixed_u32(value_neg);
         sines[i] = v_fixed;
-        sines[i+ANGLES] = v_fixed;
-        sines[ANGLES/2-i] = v_fixed;
-        sines[ANGLES-i] = v_fixed_neg;
-        sines[ANGLES/2+i] = v_fixed_neg;
-        angle += angle_step;   
+        sines[i + ANGLES] = v_fixed;
+        sines[ANGLES / 2 - i] = v_fixed;
+        sines[ANGLES - i] = v_fixed_neg;
+        sines[ANGLES / 2 + i] = v_fixed_neg;
+        angle += angle_step;
     }
     sines
 }
@@ -198,13 +214,16 @@ pub async fn play_loop(
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     control_state: &mut ControlState,
-    vga: &VGA, rc: &mut RayCast,
+    vga: &VGA,
+    opl: &mut OPL,
+    rc: &mut RayCast,
     rdr: &VGARenderer,
-    input: &input::Input, 
+    input: &input::Input,
     prj: &ProjectionConfig,
     assets: &Assets,
     loader: &dyn Loader,
-    save_load_param: Option<SaveLoadGame>) {
+    save_load_param: Option<SaveLoadGame>,
+) {
     let mut save_load = save_load_param;
     let shifts = init_colour_shifts();
 
@@ -219,9 +238,21 @@ pub async fn play_loop(
     input.clear_keys_down();
     clear_palette_shifts(game_state);
 
-    handle_save_load(level_state, game_state, win_state, rdr, input, prj, assets, loader, save_load).await;
-    
-    { // TODO Debug!
+    handle_save_load(
+        level_state,
+        game_state,
+        win_state,
+        rdr,
+        input,
+        prj,
+        assets,
+        loader,
+        save_load,
+    )
+    .await;
+
+    {
+        // TODO Debug!
         game_state.god_mode = true;
         /*
         if game_state.episode == 0 && game_state.map_on == 0 {
@@ -235,7 +266,7 @@ pub async fn play_loop(
             let player = level_state.mut_player();
             player.x = 2013924;
             player.y = 2163760;
-            player.angle = 50; 
+            player.angle = 50;
         }*/
 
         /*
@@ -263,15 +294,47 @@ pub async fn play_loop(
         move_push_walls(level_state, game_state, tics);
 
         for i in 0..level_state.actors.len() {
-            do_actor(ObjKey(i), tics, level_state, game_state, rdr, control_state, prj);
+            do_actor(
+                ObjKey(i),
+                tics,
+                level_state,
+                game_state,
+                rdr,
+                control_state,
+                prj,
+            );
         }
 
         update_palette_shifts(game_state, vga, &shifts, tics).await;
-        
-	    three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
 
-        save_load = check_keys(ticker, rdr, win_state, menu_state, game_state, level_state.player(), input, prj, loader).await;
-        handle_save_load(level_state, game_state, win_state, rdr, input, prj, assets, loader, save_load).await;
+        three_d_refresh(ticker, game_state, level_state, rc, rdr, prj, assets).await;
+
+        save_load = check_keys(
+            ticker,
+            opl,
+            rdr,
+            assets,
+            win_state,
+            menu_state,
+            game_state,
+            level_state.player(),
+            input,
+            prj,
+            loader,
+        )
+        .await;
+        handle_save_load(
+            level_state,
+            game_state,
+            win_state,
+            rdr,
+            input,
+            prj,
+            assets,
+            loader,
+            save_load,
+        )
+        .await;
 
         game_state.time_count += tics;
 
@@ -281,31 +344,73 @@ pub async fn play_loop(
         let offset_prev = rdr.buffer_offset();
         for i in 0..3 {
             rdr.set_buffer_offset(SCREENLOC[i]);
-        } 
+        }
         rdr.set_buffer_offset(offset_prev);
     }
 }
 
-async fn handle_save_load(level_state: &mut LevelState, game_state: &mut GameState, win_state: &mut WindowState, rdr: &VGARenderer, input: &Input, prj: &ProjectionConfig, assets: &Assets, loader: &dyn Loader, save_load: Option<SaveLoadGame>) {
+async fn handle_save_load(
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    win_state: &mut WindowState,
+    rdr: &VGARenderer,
+    input: &Input,
+    prj: &ProjectionConfig,
+    assets: &Assets,
+    loader: &dyn Loader,
+    save_load: Option<SaveLoadGame>,
+) {
     if let Some(what) = save_load {
         match what {
             SaveLoadGame::Load(which) => {
                 game_state.loaded_game = true;
-                load_the_game(level_state, game_state, win_state, rdr, input, prj, assets, loader, which, LSA_X+8, LSA_Y+5).await;
-            },
+                load_the_game(
+                    level_state,
+                    game_state,
+                    win_state,
+                    rdr,
+                    input,
+                    prj,
+                    assets,
+                    loader,
+                    which,
+                    LSA_X + 8,
+                    LSA_Y + 5,
+                )
+                .await;
+            }
             SaveLoadGame::Save(which, name) => {
-                save_the_game(level_state, game_state, rdr, loader, which, &name, LSA_X+8, LSA_Y+5);
-            },
+                save_the_game(
+                    level_state,
+                    game_state,
+                    rdr,
+                    loader,
+                    which,
+                    &name,
+                    LSA_X + 8,
+                    LSA_Y + 5,
+                );
+            }
         }
-    }    
+    }
 }
 
-fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig) {
-    if level_state.obj(k).active == ActiveType::No && !level_state.area_by_player[level_state.obj(k).area_number] {
+fn do_actor(
+    k: ObjKey,
+    tics: u64,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    rdr: &VGARenderer,
+    control_state: &mut ControlState,
+    prj: &ProjectionConfig,
+) {
+    if level_state.obj(k).active == ActiveType::No
+        && !level_state.area_by_player[level_state.obj(k).area_number]
+    {
         return;
     }
 
-    if level_state.obj(k).flags & (FL_NONMARK|FL_NEVERMARK) == 0 {
+    if level_state.obj(k).flags & (FL_NONMARK | FL_NEVERMARK) == 0 {
         let (tilex, tiley) = {
             let obj = level_state.obj(k);
             (obj.tilex, obj.tiley)
@@ -320,7 +425,7 @@ fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
             think(k, tics, level_state, game_state, rdr, control_state, prj);
             if level_state.obj(k).state.is_none() {
                 return;
-            } 
+            }
         }
 
         let (tilex, tiley, flags) = {
@@ -339,13 +444,15 @@ fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
 
     // transitional object
 
-    level_state.update_obj(k, |obj| obj.tic_count = obj.tic_count.saturating_sub(tics as u32));
+    level_state.update_obj(k, |obj| {
+        obj.tic_count = obj.tic_count.saturating_sub(tics as u32)
+    });
     while level_state.obj(k).tic_count <= 0 {
         if let Some(action) = level_state.obj(k).state.expect("state").action {
             action(k, tics, level_state, game_state, rdr, control_state, prj);
             if level_state.obj(k).state.is_none() {
                 return;
-            } 
+            }
         }
 
         level_state.update_obj(k, |obj| obj.state = obj.state.expect("state").next);
@@ -364,7 +471,7 @@ fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
         think(k, tics, level_state, game_state, rdr, control_state, prj);
         if level_state.obj(k).state.is_none() {
             return;
-        } 
+        }
     }
 
     let (tilex, tiley, flags) = {
@@ -381,100 +488,109 @@ fn do_actor(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut
 }
 
 pub async fn draw_play_screen(state: &GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {
-	rdr.fade_out().await;
+    rdr.fade_out().await;
 
-	let offset_prev = rdr.buffer_offset();
-	for i in 0..3 {
-		rdr.set_buffer_offset(SCREENLOC[i]); 
-		draw_play_border(rdr, prj);
-		rdr.pic(0, 200-STATUS_LINES, GraphicNum::STATUSBARPIC);
-	}
-	rdr.set_buffer_offset(offset_prev);
+    let offset_prev = rdr.buffer_offset();
+    for i in 0..3 {
+        rdr.set_buffer_offset(SCREENLOC[i]);
+        draw_play_border(rdr, prj);
+        rdr.pic(0, 200 - STATUS_LINES, GraphicNum::STATUSBARPIC);
+    }
+    rdr.set_buffer_offset(offset_prev);
 
-	draw_face(state, rdr);
-	draw_health(state, rdr);
-	draw_lives(state, rdr);
-	draw_level(state, rdr);
-	draw_ammo(state, rdr);
-	draw_keys(state, rdr);
-	draw_weapon(state, rdr);
-	draw_score(state, rdr);
+    draw_face(state, rdr);
+    draw_health(state, rdr);
+    draw_lives(state, rdr);
+    draw_level(state, rdr);
+    draw_ammo(state, rdr);
+    draw_keys(state, rdr);
+    draw_weapon(state, rdr);
+    draw_score(state, rdr);
 }
 
 fn draw_all_play_border_sides(rdr: &VGARenderer, prj: &ProjectionConfig) {
-	for i in 0..3 {
-		rdr.set_buffer_offset(SCREENLOC[i]); 
-		draw_play_border_side(rdr, prj);
-	}
+    for i in 0..3 {
+        rdr.set_buffer_offset(SCREENLOC[i]);
+        draw_play_border_side(rdr, prj);
+    }
 }
 
 /// To fix window overwrites
 fn draw_play_border_side(rdr: &VGARenderer, prj: &ProjectionConfig) {
     let xl = 160 - prj.view_width / 2;
-    let yl = (200-STATUS_LINES-prj.view_height) / 2;
+    let yl = (200 - STATUS_LINES - prj.view_height) / 2;
 
-    rdr.bar(0, 0, xl-1, 200-STATUS_LINES, 127);
-    rdr.bar(xl + prj.view_width+1, 0, xl-2, 200-STATUS_LINES, 127);
+    rdr.bar(0, 0, xl - 1, 200 - STATUS_LINES, 127);
+    rdr.bar(xl + prj.view_width + 1, 0, xl - 2, 200 - STATUS_LINES, 127);
 
-    vw_vlin(rdr, yl-1, yl+prj.view_height, xl-1, 0);
-    vw_vlin(rdr, yl-1, yl+prj.view_height, xl + prj.view_width, 125);
+    vw_vlin(rdr, yl - 1, yl + prj.view_height, xl - 1, 0);
+    vw_vlin(rdr, yl - 1, yl + prj.view_height, xl + prj.view_width, 125);
 }
 
 pub fn draw_all_play_border(rdr: &VGARenderer, prj: &ProjectionConfig) {
-	for i in 0..3 {
-		rdr.set_buffer_offset(SCREENLOC[i]); 
-		draw_play_border(rdr, prj);
-	}
+    for i in 0..3 {
+        rdr.set_buffer_offset(SCREENLOC[i]);
+        draw_play_border(rdr, prj);
+    }
 }
 
 pub fn draw_play_border(rdr: &VGARenderer, prj: &ProjectionConfig) {
-	//clear the background:
-	rdr.bar(0, 0, 320, 200-STATUS_LINES, 127);
+    //clear the background:
+    rdr.bar(0, 0, 320, 200 - STATUS_LINES, 127);
 
-	let xl = 160-prj.view_width/2;
-	let yl = (200-STATUS_LINES-prj.view_height)/2;
+    let xl = 160 - prj.view_width / 2;
+    let yl = (200 - STATUS_LINES - prj.view_height) / 2;
 
-	//view area
-	rdr.bar(xl, yl, prj.view_width, prj.view_height, 127);
+    //view area
+    rdr.bar(xl, yl, prj.view_width, prj.view_height, 127);
 
-	//border around the view area
-	vw_hlin(rdr, xl-1, xl+prj.view_width, yl-1, 0);
-	vw_hlin(rdr, xl-1, xl+prj.view_width, yl+prj.view_height, 125);
-	vw_vlin(rdr, yl-1, yl+prj.view_height, xl-1, 0);
-	vw_vlin(rdr, yl-1, yl+prj.view_height, xl+prj.view_width, 125);
+    //border around the view area
+    vw_hlin(rdr, xl - 1, xl + prj.view_width, yl - 1, 0);
+    vw_hlin(rdr, xl - 1, xl + prj.view_width, yl + prj.view_height, 125);
+    vw_vlin(rdr, yl - 1, yl + prj.view_height, xl - 1, 0);
+    vw_vlin(rdr, yl - 1, yl + prj.view_height, xl + prj.view_width, 125);
 
-	rdr.plot(xl-1, yl+prj.view_height, 124);
+    rdr.plot(xl - 1, yl + prj.view_height, 124);
 }
 
 fn vw_hlin(rdr: &VGARenderer, x: usize, z: usize, y: usize, c: u8) {
-	rdr.hlin(x, y, (z-x)+1, c)
+    rdr.hlin(x, y, (z - x) + 1, c)
 }
 
 fn vw_vlin(rdr: &VGARenderer, y: usize, z: usize, x: usize, c: u8) {
-	rdr.vlin(x, y, (z-y)+1, c)
+    rdr.vlin(x, y, (z - y) + 1, c)
 }
 
 ///	Generates a window of a given width & height in the
 /// middle of the screen
 pub fn center_window(rdr: &VGARenderer, win_state: &mut WindowState, width: usize, height: usize) {
-    draw_window(rdr, win_state, ((320/8)-width) / 2, ((160/8)-height)/2, width, height);
+    draw_window(
+        rdr,
+        win_state,
+        ((320 / 8) - width) / 2,
+        ((160 / 8) - height) / 2,
+        width,
+        height,
+    );
 }
 
 async fn check_keys(
     ticker: &time::Ticker,
+    opl: &mut OPL,
     rdr: &VGARenderer,
+    assets: &Assets,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     game_state: &mut GameState,
     player: &ObjType,
     input: &input::Input,
     prj: &ProjectionConfig,
-    loader: &dyn Loader) -> Option<SaveLoadGame> {
-    
-    if input.key_pressed(NumCode::BackSpace) && 
-    input.key_pressed(NumCode::LShift) && 
-    input.key_pressed(NumCode::Alt) &&
-    check_param("goobers") 
+    loader: &dyn Loader,
+) -> Option<SaveLoadGame> {
+    if input.key_pressed(NumCode::BackSpace)
+        && input.key_pressed(NumCode::LShift)
+        && input.key_pressed(NumCode::Alt)
+        && check_param("goobers")
     {
         clear_split_vwb(win_state);
 
@@ -493,7 +609,10 @@ async fn check_keys(
         menu_state.select_menu(Menu::Top);
         let prev_buffer = rdr.buffer_offset();
         rdr.set_buffer_offset(rdr.active_buffer());
-        let save_load = control_panel(ticker, game_state, rdr, input, win_state, menu_state, loader, scan).await;
+        let save_load = control_panel(
+            ticker, game_state, opl, rdr, input, assets, win_state, menu_state, loader, scan,
+        )
+        .await;
         rdr.set_buffer_offset(prev_buffer);
 
         win_state.set_font_color(0, 15);
@@ -527,7 +646,7 @@ fn poll_controls(state: &mut ControlState, tics: u64, input: &input::Input) {
     //TODO Joystick Move?
 
     //bound movement to a maximum
-    let max = 100*tics as i32;
+    let max = 100 * tics as i32;
     let min = -max;
 
     if state.control.x > max {
@@ -574,7 +693,7 @@ fn poll_keyboard_move(state: &mut ControlState, input: &input::Input, tics: u64)
 /*
 =============================================================================
 
-					PALETTE SHIFTING STUFF
+                    PALETTE SHIFTING STUFF
 
 =============================================================================
 */
@@ -620,12 +739,15 @@ fn init_colour_shifts() -> ColourShifts {
             ix += 1;
 
             let delta = -(GAMEPAL[ix] as i32);
-            white_shifts[i][ix] =(GAMEPAL[ix] as i32 + delta * i as i32 / WHITE_STEPS) as u8;
+            white_shifts[i][ix] = (GAMEPAL[ix] as i32 + delta * i as i32 / WHITE_STEPS) as u8;
             ix += 1;
         }
     }
 
-    ColourShifts { red_shifts,  white_shifts}
+    ColourShifts {
+        red_shifts,
+        white_shifts,
+    }
 }
 
 fn clear_palette_shifts(game_state: &mut GameState) {
@@ -633,7 +755,12 @@ fn clear_palette_shifts(game_state: &mut GameState) {
     game_state.damage_count = 0;
 }
 
-async fn update_palette_shifts(game_state: &mut GameState, vga: &VGA, shifts: &ColourShifts, tics: u64) {
+async fn update_palette_shifts(
+    game_state: &mut GameState,
+    vga: &VGA,
+    shifts: &ColourShifts,
+    tics: u64,
+) {
     let mut white;
     if game_state.bonus_count != 0 {
         white = game_state.bonus_count / WHITE_TICS + 1;
@@ -650,7 +777,7 @@ async fn update_palette_shifts(game_state: &mut GameState, vga: &VGA, shifts: &C
 
     let mut red;
     if game_state.damage_count != 0 {
-        red = game_state.damage_count/10 + 1;
+        red = game_state.damage_count / 10 + 1;
         if red > NUM_RED_SHIFTS as i32 {
             red = NUM_RED_SHIFTS as i32;
         }
@@ -677,7 +804,6 @@ async fn update_palette_shifts(game_state: &mut GameState, vga: &VGA, shifts: &C
         game_state.pal_shifted = false;
     }
 }
-
 
 /// Resets palette to normal if needed
 pub async fn finish_palette_shifts(game_state: &mut GameState, vga: &VGA) {

@@ -237,8 +237,10 @@ async fn demo_loop(
         let save_load = control_panel(
             &ticker,
             &mut game_state,
+            opl,
             rdr,
             input,
+            assets,
             win_state,
             menu_state,
             loader,
@@ -251,6 +253,7 @@ async fn demo_loop(
             iw_config,
             &mut game_state,
             vga,
+            opl,
             rdr,
             input,
             prj,
