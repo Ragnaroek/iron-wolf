@@ -1,9 +1,7 @@
-
-use crate::def::{Sprite, StaticType, VisObj, MAX_STATS, MAX_DOORS, ObjKey};
-use crate::act2::dead_guard;
-use crate::def::{Assets, ObjType, Level, LevelState, At, MAP_SIZE, PLAYER_KEY};
+use crate::def::{Sprite, StaticType, VisObj, ObjKey, Assets, ObjType, Level, LevelState, At, MAX_STATS, MAX_DOORS, MAP_SIZE, PLAYER_KEY, DirType, EnemyType, GameState, Difficulty, };
 use crate::assets::load_map_from_assets;
 use crate::act1::{spawn_door, spawn_static};
+use crate::act2::{dead_guard, stand};
 use crate::agent::{spawn_player, thrust};
 use crate::play::ProjectionConfig;
 
@@ -19,13 +17,13 @@ pub const ANGLE_90 : u32 = ANGLE_45*2;
 pub const ANGLE_180 : u32 = ANGLE_45*4;
 pub const ANGLE_1 : u32 = ANGLE_45/45;
 
-pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) -> Result<LevelState, String> {
-	let map = &assets.map_headers[map_on];
+pub fn setup_game_level(prj: &ProjectionConfig, game_state: &GameState, assets: &Assets) -> Result<LevelState, String> {
+	let map = &assets.map_headers[game_state.map_on];
 	if map.width != MAP_SIZE as u16 || map.height != MAP_SIZE as u16 {
 		panic!("Map not 64*64!");
 	}
 
-	let map_data = load_map_from_assets(assets, map_on)?;
+	let map_data = load_map_from_assets(assets, game_state.map_on)?;
 
     let mut tile_map = vec![vec![0; MAP_SIZE]; MAP_SIZE];
     let mut actor_at = vec![vec![At::Nothing; MAP_SIZE]; MAP_SIZE];
@@ -62,7 +60,7 @@ pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) 
 		}
 	}
 
-	let (actors, statics) = scan_info_plane(&map_data, &mut actor_at);
+	let (actors, statics) = scan_info_plane(&map_data, &mut actor_at, game_state.difficulty);
     let mut level_state = LevelState{
         level: Level {
 		    tile_map,
@@ -82,7 +80,7 @@ pub fn setup_game_level(prj: &ProjectionConfig, map_on: usize, assets: &Assets) 
 }
 
 // By convention the first element in the returned actors vec is the player
-fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>) -> (Vec<ObjType>, Vec<StaticType>) {
+fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>, difficulty: Difficulty) -> (Vec<ObjType>, Vec<StaticType>) {
 	let mut player = None;
 	let mut statics = Vec::new();
 	let mut actors = Vec::new();
@@ -108,10 +106,10 @@ fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>)
 					// TODO push wall
 				},
 				108..=111 => { // guard stand: normal mode
-
+					spawn(&mut actors, actor_at, stand(EnemyType::Guard, x, y, tile-108));
 				},
 				112..=115 => { // guard patrol: normal mode
-
+				
 				},
 				116..=119 => { // officer stand: normal mode
 
@@ -135,10 +133,12 @@ fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>)
 
 				},
 				144..=147 => { // guard stand: medium mode
-
+					if difficulty >= Difficulty::Medium {
+						spawn(&mut actors, actor_at, stand(EnemyType::Guard, x, y, tile-144));
+					}
 				},
 				148..=151 => { // guard patrol: medium mode
-
+				
 				},
 				152..=155 => { // officer stand: medium mode
 
@@ -159,10 +159,12 @@ fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>)
 
 				},
 				180..=183 => { // guard stand: hard mode
-
+					if difficulty >= Difficulty::Hard {
+						spawn(&mut actors, actor_at, stand(EnemyType::Guard, x, y, tile-180));
+					}
 				},
 				184..=187 => { // guard patrol: hard mode
-
+	
 				},
 				188..=191 => { // officer stand: hard mode
 
@@ -182,9 +184,7 @@ fn scan_info_plane(map_data: &libiw::map::MapData, actor_at : &mut Vec<Vec<At>>)
 				210..=213 => { // dogs patrol: hard mode
 
 				}
-
 				// TODO scan bosses, mutants and ghosts
-
 				_ => {},
 			}
 		}

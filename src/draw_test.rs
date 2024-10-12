@@ -1,4 +1,4 @@
-use crate::def::{ObjType, LevelState, Level, MAP_SIZE, DoorType, DoorAction, FL_NEVERMARK};
+use crate::def::{ObjType, LevelState, Level, MAP_SIZE, DoorType, DoorAction, FL_NEVERMARK, DirType, ClassType};
 use crate::draw::{Op, Hit, init_ray_cast, init_ray_cast_consts, calc_height};
 use crate::fixed::new_fixed_i32;
 use crate::play;
@@ -372,6 +372,7 @@ fn mock_doors() -> Vec<DoorType>{
 
 fn test_player() -> ObjType {
     ObjType{
+        class: ClassType::Player,
         flags: FL_NEVERMARK,
         view_height: 0,
         view_x: 0,
@@ -384,6 +385,8 @@ fn test_player() -> ObjType {
         y: 3768320,
         tilex: 1904384,
         tiley: 1923201,
+        dir: DirType::NoDir,
+        speed: 0,
         state: &S_PLAYER,
     }
 }
