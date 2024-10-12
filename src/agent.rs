@@ -286,7 +286,7 @@ pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
         class: ClassType::Player,
         distance: 0,
         area_number: 0,
-        active: true,
+        active: crate::def::ActiveType::Yes,
         tic_count: 0,
 		angle: (1-dir)*90,
         flags: FL_NEVERMARK, 

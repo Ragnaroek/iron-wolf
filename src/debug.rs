@@ -42,7 +42,6 @@ pub fn debug_actor_at(level_state: &LevelState, x: usize, y: usize, width: usize
             let at = level_state.actor_at[x+w][y+h];
             match at {
                 At::Wall(_) => print!("###|"),
-                At::Blocked => print!("bbb|"),
                 At::Nothing => print!("   |"),
                 At::Obj(ObjKey(k)) => print!("{:>3}|", k),
 

@@ -120,7 +120,6 @@ pub enum At {
     Nothing,
     Wall(u16),
     Obj(ObjKey),
-    Blocked, // magical blocked area
 }
 
 #[derive(Clone, Copy)]
@@ -190,11 +189,15 @@ impl LevelState {
     }
 }
 
-pub enum Dir {
-    North,
-    East,
-    South,
-    West
+derive_from!{
+    #[repr(usize)]
+    #[derive(Debug, Eq, PartialEq)]
+    pub enum Dir {
+        North,
+        East,
+        South,
+        West,
+    }
 }
 
 /// State about the controls
@@ -426,18 +429,20 @@ pub enum PlayState {
     SecretLevel,
 }
 
-#[repr(usize)]
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum DirType {
-    East = 0,
-    NorthEast = 1,
-    North = 2,
-    NorthWest = 3,
-    West = 4,
-    SouthWest = 5,
-    South = 6,
-    SouthEast = 7,
-    NoDir = 8,
+derive_from!{
+    #[repr(usize)]
+    #[derive(Eq, PartialEq, Debug, Clone, Copy)]
+    pub enum DirType {
+        East = 0,
+        NorthEast = 1,
+        North = 2,
+        NorthWest = 3,
+        West = 4,
+        SouthWest = 5,
+        South = 6,
+        SouthEast = 7,
+        NoDir = 8,
+    }
 }
 
 pub const NUM_ENEMIES : usize = 22;
@@ -468,43 +473,70 @@ pub enum EnemyType {
 	Death
 }
 
-#[derive(Eq, PartialEq, Debug, Clone, Copy)]
-pub enum ClassType {
-    Nothing,
-	Player,
-	Inert,
-	Guard,
-	Officer,
-	SS,
-	Dog,
-	Boss,
-	Schabb,
-	Fake,
-	MechaHitler,
-	Mutant,
-	Needle,
-	Fireo,
-	BJ,
-	Ghost,
-	RealHitler,
-	Gretel,
-	Gift,
-	Fat,
-	Rocket,
+derive_from!{
+    #[repr(usize)]
+    #[derive(PartialEq, Eq, Clone, Copy, Debug)]
+    pub enum ClassType {
+        Nothing,
+        Player,
+        Inert,
+        Guard,
+        Officer,
+        SS,
+        Dog,
+        Boss,
+        Schabb,
+        Fake,
+        MechaHitler,
+        Mutant,
+        Needle,
+        Fireo,
+        BJ,
+        Ghost,
+        RealHitler,
+        Gretel,
+        Gift,
+        Fat,
+        Rocket,
 
-	Spectre,
-	Angel,
-	Trans,
-	Uber,
-	Will,
-	Death,
-	HRocket,
-	Spark
+        Spectre,
+        Angel,
+        Trans,
+        Uber,
+        Will,
+        Death,
+        HRocket,
+        Spark,
+    }
 }
 
-#[derive(Debug, Clone, Copy)] //XXX do not make this Clone, fix actor_at (also takes a ObjKey instead ObjType???)
+
+#[repr(i16)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum ActiveType {
+    BadObject = -1,
+    No = 0,
+    Yes = 1,
+    Always = 2,
+}
+
+impl TryFrom<i16> for ActiveType {
+    type Error = ();
+
+    fn try_from(v: i16) -> Result<Self, Self::Error> {
+        match v {
+            -1 => Ok(ActiveType::BadObject),
+            0 => Ok(ActiveType::No),
+            1 => Ok(ActiveType::Yes),
+            2 => Ok(ActiveType::Always),
+            _ => Err(())
+        }
+    } 
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Copy)] //XXX do not make this Clone, fix actor_at (also takes a ObjKey instead ObjType???)
 pub struct ObjType {
-    pub active: bool,
+    pub active: ActiveType,
     pub tic_count: u32,
     pub class: ClassType,
     pub state: Option<&'static StateType>,
@@ -514,8 +546,8 @@ pub struct ObjType {
     pub distance: i32,
     pub dir: DirType,
 
-    pub x: i32,
-	pub y: i32,
+    pub x: i32, // TODO should be of Fixed type?
+	pub y: i32, // TODO should be of Fixed type?
 	pub tilex: usize,
 	pub tiley: usize,
     pub area_number: usize,
@@ -533,27 +565,35 @@ pub struct ObjType {
     pub temp2: i32,
     pub temp3: i32,
 
-    pub pitch: u32,
+    pub pitch: u32, // TODO not in the original ObjTyp, will not be restored on save load. Ok?
 }
 
-#[derive(Eq, PartialEq)]
-pub enum DoorAction {
-    Open,
-    Closed,
-    Opening,
-    Closing
+
+derive_from!{
+    #[repr(usize)]
+    #[derive(Debug, Eq, PartialEq)]
+    pub enum DoorAction {
+        Open,
+        Closed,
+        Opening,
+        Closing,
+    }
 }
 
-#[derive(Eq, PartialEq)]
-pub enum DoorLock {
-    Normal,
-    Lock1,
-    Lock2,
-    Lock3,
-    Lock4,
-    Elevator,
+derive_from!{
+    #[repr(usize)]
+    #[derive(Debug, Eq, PartialEq)]
+    pub enum DoorLock {
+        Normal,
+        Lock1,
+        Lock2,
+        Lock3,
+        Lock4,
+        Elevator,
+    }
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub struct DoorType {
     pub num: usize,
     pub tile_x: usize,
@@ -565,7 +605,7 @@ pub struct DoorType {
     pub position: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct StaticType {
     pub tile_x: usize,
     pub tile_y: usize,
@@ -624,7 +664,7 @@ pub struct Assets {
 type Think = fn(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig); 
 type Action = fn(k: ObjKey, tics: u64, level_state: &mut LevelState, game_state: &mut GameState, rdr: &VGARenderer, control_state: &mut ControlState, prj: &ProjectionConfig);
 
-#[derive(Debug)]
+#[derive(Eq, PartialEq, Debug)]
 pub struct StateType {
     pub rotate: usize,
     pub sprite: Option<Sprite>, // None means get from obj->temp1
@@ -736,28 +776,30 @@ pub struct StaticInfo {
     pub kind: StaticKind
 }
 
-#[derive(Eq, PartialEq, Clone, Copy, Debug)]
-pub enum StaticKind {
-    Dressing,
-	Block,
-	BoGibs,
-	BoAlpo,
-	BoFirstaid,
-	BoKey1,
-	BoKey2,
-	BoKey3,
-	BoKey4,
-	BoCross,
-	BoChalice,
-	BoBible,
-	BoCrown,
-	BoClip,
-	BoClip2,
-	BoMachinegun,
-	BoChaingun,
-	BoFood,
-	BoFullheal,
-	Bo25clip,
-	BoSpear
+derive_from!{
+    #[repr(usize)]
+    #[derive(Eq, PartialEq, Clone, Copy, Debug)]
+    pub enum StaticKind {
+        Dressing,
+        Block,
+        BoGibs,
+        BoAlpo,
+        BoFirstaid,
+        BoKey1,
+        BoKey2,
+        BoKey3,
+        BoKey4,
+        BoCross,
+        BoChalice,
+        BoBible,
+        BoCrown,
+        BoClip,
+        BoClip2,
+        BoMachinegun,
+        BoChaingun,
+        BoFood,
+        BoFullheal,
+        Bo25clip,
+        BoSpear,
+    }
 }
-
