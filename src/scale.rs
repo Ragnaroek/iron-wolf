@@ -19,12 +19,10 @@ pub struct Scaler {
 pub struct CompiledScaler {
     pub scalers : Vec<Scaler>,
     pub scale_call: Vec<usize>, //jump table into the pixel_scalers
-    pub max_scale_shl2 : usize,
 }
 
 pub fn setup_scaling(scaler_height: usize, view_height: usize) -> CompiledScaler {
     let max_scale_height = scaler_height / 2;
-    let max_scale_shl2 = (max_scale_height-1)<<2;
     let step_by_two = view_height / 2;
     let mut scalers = Vec::new();
 
@@ -53,7 +51,7 @@ pub fn setup_scaling(scaler_height: usize, view_height: usize) -> CompiledScaler
     } 
     scale_call[0] = 1;
 
-    CompiledScaler { scalers, scale_call, max_scale_shl2 }
+    CompiledScaler { scalers, scale_call }
 }
 
 fn build_comp_scale(scaler_height: usize, view_height: usize) -> Scaler {
