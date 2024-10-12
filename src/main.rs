@@ -40,12 +40,8 @@ fn main() -> Result<(), String> {
     let input = input::init(Arc::new(time), input_monitoring.clone());
 
 	thread::spawn(move || { 
-        // TODO Wait for key press instead
-        //thread::sleep(time::Duration::from_secs(3));
-        pg_13(&render, &input);
+        demo_loop(&render, &input);
     });
-
-    // TODO game loop
 
 	let options: screen::Options = vgaemu::screen::Options {
 		show_frame_rate: true,
@@ -59,6 +55,18 @@ fn main() -> Result<(), String> {
 fn init_game(vga: &vgaemu::VGA) {
     vl::set_palette(vga, assets::GAMEPAL);
     signon_screen(vga);
+}
+
+fn demo_loop(rdr: &dyn Renderer, input: &input::Input) {
+    pg_13(rdr, input);
+
+    loop {
+        loop { // title screen & demo loop
+            rdr.pic(0, 0, GraphicNum::TITLEPIC);
+            input.user_input(time::TICK_BASE*15);
+            // TODO exit game loop if input
+        }
+    }
 }
 
 fn signon_screen(vga: &vgaemu::VGA) {
@@ -91,14 +99,10 @@ fn pg_13(rdr: &dyn Renderer, input: &input::Input) {
     rdr.fade_out(); 
     rdr.bar(0, 0, 320, 200, 0x82);
     rdr.pic(216, 110, GraphicNum::PG13PIC);
-    rdr.fade_in();
-
-    input.user_input(time::TICK_BASE*7);
     
-    rdr.bar(0, 0, 320, 200, 0x10); //TODO just a demo
-    //TODO wait for user input and fade_out
-
-    input.user_input(time::TICK_BASE*9000);
+    rdr.fade_in();
+    input.user_input(time::TICK_BASE*7);
+    rdr.fade_out();
 }
 
 fn load_config() -> Config {

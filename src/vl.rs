@@ -84,7 +84,6 @@ pub fn fade_in(vga: &vgaemu::VGA, start: usize, end: usize, palette: &[u8], step
         for j in start..end {
             let (sub, _) = palette[j].overflowing_sub(palette1[j]);
             let delta = sub as usize;
-            //println!("delta = {}", delta);
             let (add, _) = palette1[j].overflowing_add((delta * i / steps) as u8);   
             palette2[j] = add;         
         }
