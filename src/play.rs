@@ -2,6 +2,8 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
+use std::time::Instant;
+
 use vgaemu::input::NumCode;
 
 use crate::act1::move_doors;
@@ -197,12 +199,12 @@ pub fn game_loop(ticker: &time::Ticker, rdr: &dyn Renderer, input: &input::Input
 fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &GameState, control_state: &mut ControlState, rdr: &dyn Renderer, input: &input::Input, prj: &ProjectionConfig, assets: &Assets) {
     let mut rc = init_ray_cast(prj.view_width);
 
-    {
+    /*{
         let player = level_state.mut_player();
         player.x = 1859846;
         player.y = 3768320;
         player.angle = 0;
-    }
+    }*/
 
     //TODO A lot to do here (clear palette, poll controls, prepare world)
     loop {
@@ -217,9 +219,12 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
 
         move_doors(level_state, tics);
 
+        let start = Instant::now();
         for i in 0..level_state.actors.len() {
-            do_actor(ObjKey(i), level_state, control_state, prj);
+            do_actor(ObjKey(i), ticker, level_state, control_state, prj);
         }
+        let end = Instant::now();
+        println!("do actors took: {:?}", end-start);
         
 	    three_d_refresh(game_state, level_state, &mut rc, rdr, prj, assets);
 
@@ -231,14 +236,14 @@ fn play_loop(ticker: &time::Ticker, level_state: &mut LevelState, game_state: &G
     }
 }
 
-fn do_actor(k: ObjKey, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn do_actor(k: ObjKey, ticker: &time::Ticker, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
     //TODO do ob->ticcount part from DoActor here
     let may_think = level_state.obj(k).state.think;
     if let Some(think) = may_think {
-        think(k, level_state, control_state, prj)
+        think(k, level_state, ticker, control_state, prj)
     }
 
-    //TODO remove obj if state becomes None
+    //TODO remove obj if state becomes None??
     //TODO return if flag = FL_NEVERMARK (the player obj always has this flag)
     //TODO Impl think for player = T_Player function and supply the corret (mutable) args
 }

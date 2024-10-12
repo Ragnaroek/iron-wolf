@@ -2,6 +2,7 @@ use crate::act1::operate_door;
 use crate::play::ProjectionConfig;
 use crate::def::{StateType, ObjType, ObjKey, LevelState, ControlState, Button, Dir, At, ANGLES, ANGLES_I32, MIN_DIST, PLAYER_SIZE, TILEGLOBAL, TILESHIFT, StateNext, FL_NEVERMARK, DirType, ClassType};
 use crate::fixed::{new_fixed_i32, fixed_by_frac};
+use crate::time;
 
 const ANGLE_SCALE : i32 = 20;
 const MOVE_SCALE : i32 = 150;
@@ -16,7 +17,7 @@ pub const S_PLAYER : StateType = StateType{
     next: StateNext::None,
 };
 
-fn t_player(k: ObjKey, level_state: &mut LevelState, control_state: &mut ControlState, prj: &ProjectionConfig) {
+fn t_player(k: ObjKey, level_state: &mut LevelState, _: &time::Ticker, control_state: &mut ControlState, prj: &ProjectionConfig) {
     if control_state.button_state[Button::Use as usize] {
         cmd_use(level_state, control_state);
     }
@@ -81,6 +82,9 @@ pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
 		y: ((tiley as i32) << TILESHIFT) + TILEGLOBAL / 2,
         speed: 0,
         dir: DirType::NoDir,
+        temp1: 0,
+        temp2: 0,
+        temp3: 0,
         state: &S_PLAYER,
     };
 
@@ -99,7 +103,7 @@ fn control_movement(k: ObjKey, level_state: &mut LevelState, control_state: &mut
     control_state.angle_frac -= angle_units*ANGLE_SCALE;
 
     {
-        let mut ob = level_state.mut_obj(k);
+        let ob = level_state.mut_obj(k);
         ob.angle -= angle_units;
         if ob.angle >= ANGLES as i32 {
             ob.angle -= ANGLES as i32;
@@ -134,9 +138,9 @@ pub fn thrust(k: ObjKey, level_state: &mut LevelState, prj: &ProjectionConfig, a
 
     clip_move(k, level_state, x_move.to_i32(), y_move.to_i32());
 
-    let mut ob = level_state.mut_obj(k);
-    ob.tilex = ob.x as usize >> TILESHIFT;
-    ob.tiley = ob.y as usize >> TILESHIFT;
+    let obj = level_state.mut_obj(k);
+    obj.tilex = obj.x as usize >> TILESHIFT;
+    obj.tiley = obj.y as usize >> TILESHIFT;
 
     //TODO update thrustspeed + reset funnyticount (only for Spear?)
 }
@@ -195,7 +199,7 @@ fn try_move(k : ObjKey, level_state: &mut LevelState) -> bool {
 }
 
 fn set_move(k: ObjKey, level_state: &mut LevelState, dx: i32, dy: i32) {
-    let mut obj = level_state.mut_obj(k);
+    let obj = level_state.mut_obj(k);
     obj.x = dx;
     obj.y = dy;
 }

@@ -717,7 +717,12 @@ fn draw_scaleds(level_state: &mut LevelState, wall_height: &Vec<i32>, consts: &R
                 visobj.view_x = obj.view_x;
                 visobj.view_height = obj.view_height;
 
-                // TODO set special shape
+                if visobj.sprite == Sprite::None {
+                    let special_shape = Sprite::try_from(obj.temp1 as usize);
+                    if special_shape.is_ok() {
+                        visobj.sprite = special_shape.expect("special shape");
+                    }
+                }
 
                 if obj.state.rotate != 0 {
                     let rotate = calc_rotate(prj, player_angle, obj);
