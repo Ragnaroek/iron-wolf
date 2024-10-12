@@ -1,5 +1,7 @@
 use vga::input::{self, NumCode};
 
+use std::sync::{Arc, Mutex};
+
 use super::time::{TimeCount, get_count};
 
 #[derive(PartialEq)]
@@ -22,17 +24,20 @@ pub struct ControlInfo {
 
 pub struct Input {
 	time: TimeCount,
-	pub input_monitoring: input::InputMonitoring
+	pub input_monitoring: Arc<Mutex<input::InputMonitoring>>
 }
 
-pub fn init(time: TimeCount, input_monitoring: input::InputMonitoring ) -> Input {
+pub fn init(time: TimeCount, input_monitoring: Arc<Mutex<input::InputMonitoring>>) -> Input {
 	Input{time, input_monitoring}
 } 
 
 impl Input {
 	pub async fn wait_user_input(&self, delay: u64) -> bool {
 		let last_count = get_count(&self.time);
-		self.input_monitoring.clear_keyboard();
+        {
+            let mut mon = self.input_monitoring.lock().unwrap();
+		    mon.clear_keyboard();
+        }
 		loop {
 			if self.check_ack() {
 				return true;
@@ -50,23 +55,33 @@ impl Input {
 	}
 
     pub fn start_ack(&self) {
-        self.input_monitoring.clear_keyboard();
+        let mut mon = self.input_monitoring.lock().unwrap();
+        mon.clear_keyboard();
         // TODO clear mouse and joystick buttons
     }
 
     pub fn check_ack(&self) -> bool {
-        self.input_monitoring.any_key_pressed()
+        let mon = self.input_monitoring.lock().unwrap();
+        mon.any_key_pressed()
     }
 
     pub fn key_pressed(&self, code: NumCode) -> bool {
-        self.input_monitoring.key_pressed(code)
+        let mon = self.input_monitoring.lock().unwrap();
+        mon.key_pressed(code)
     }
 
 	pub fn clear_keys_down(&self) {
 		// TODO set LastScan to None
 		// TODO set LastASCII to None
-		self.input_monitoring.clear_keyboard();
+        let mut mon = self.input_monitoring.lock().unwrap();
+		mon.clear_keyboard();
+        mon.keyboard.last_scan = NumCode::None
 	}
+
+    pub fn last_scan(&self) -> NumCode {
+        let mon = self.input_monitoring.lock().unwrap();
+        mon.keyboard.last_scan
+    }
 }
 
 pub fn read_control(input: &Input) -> ControlInfo {

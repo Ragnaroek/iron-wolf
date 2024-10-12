@@ -49,6 +49,9 @@ static END_STRINGS : [&'static str; 9] = [
 	"For guns and glory, press N.\nFor work and worry, press Y."
 ];
 
+static BACK_TO_DEMO : &'static str = "Back to Demo";
+static BACK_TO_GAME : &'static str = "Back to Game";
+
 static COLOR_HLITE : [u8; 4] = [
     DEACTIVE,
     HIGHLIGHT,
@@ -70,8 +73,15 @@ pub struct ItemInfo {
     pub indent: usize,
 }
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum ItemActivity {
+    Deactive,
+    Active,
+    Highlight,
+}
+
 pub struct ItemType {
-    pub active: bool,
+    pub active: ItemActivity,
     pub string: &'static str,
     pub item: usize,
 }
@@ -87,7 +97,7 @@ pub enum MainMenuItem {
     SaveGame = 4,
     ChangeView = 5,
     ViewScores = 6,
-    BackToDemo = 7,
+    BackTo = 7,
     Quit = 8,
 }
 
@@ -187,15 +197,15 @@ fn no_op_routine(_rdr: &VGARenderer, _which: usize) {}
 fn initial_main_menu() -> MenuStateEntry {
     MenuStateEntry {
         items: vec![
-            ItemType{item: MainMenuItem::NewGame.pos(), active: true, string: "New Game"},
-            ItemType{item: MainMenuItem::Sound.pos(), active: true, string: "Sound"},
-            ItemType{item: MainMenuItem::Control.pos(), active: true, string: "Control"},
-            ItemType{item: MainMenuItem::LoadGame.pos(), active: true, string: "Load Game"},
-            ItemType{item: MainMenuItem::SaveGame.pos(), active: true, string: "Save Game"},
-            ItemType{item: MainMenuItem::ChangeView.pos(), active: true, string: "Change View"},
-            ItemType{item: MainMenuItem::ViewScores.pos(), active: true, string: "View Scores"},
-            ItemType{item: MainMenuItem::BackToDemo.pos(), active: true, string: "Back to Demo"},
-            ItemType{item: MainMenuItem::Quit.pos(), active: true, string: "Quit"},
+            ItemType{item: MainMenuItem::NewGame.pos(), active: ItemActivity::Active, string: "New Game"},
+            ItemType{item: MainMenuItem::Sound.pos(), active: ItemActivity::Active, string: "Sound"},
+            ItemType{item: MainMenuItem::Control.pos(), active: ItemActivity::Active, string: "Control"},
+            ItemType{item: MainMenuItem::LoadGame.pos(), active: ItemActivity::Active, string: "Load Game"},
+            ItemType{item: MainMenuItem::SaveGame.pos(), active: ItemActivity::Deactive, string: "Save Game"},
+            ItemType{item: MainMenuItem::ChangeView.pos(), active: ItemActivity::Active, string: "Change View"},
+            ItemType{item: MainMenuItem::ViewScores.pos(), active: ItemActivity::Active, string: "View Scores"},
+            ItemType{item: MainMenuItem::BackTo.pos(), active: ItemActivity::Active, string: BACK_TO_DEMO},
+            ItemType{item: MainMenuItem::Quit.pos(), active: ItemActivity::Active, string: "Quit"},
         ],
         state: ItemInfo{x: MENU_X, y: MENU_Y, cur_pos: MainMenuItem::NewGame.pos(), indent: 24},
     }
@@ -204,33 +214,33 @@ fn initial_main_menu() -> MenuStateEntry {
 fn initial_episode_menu() -> MenuStateEntry {
     MenuStateEntry {
         items: vec![
-            ItemType{item: EpisodeItem::Episode1.pos(), active: true, string: "Episode 1\nEscape from Wolfenstein"},
+            ItemType{item: EpisodeItem::Episode1.pos(), active: ItemActivity::Active, string: "Episode 1\nEscape from Wolfenstein"},
             placeholder(),
-            ItemType{item: EpisodeItem::Episode2.pos(), active: false, string: "Episode 2\nOperation: Eisenfaust"},
+            ItemType{item: EpisodeItem::Episode2.pos(), active: ItemActivity::Deactive, string: "Episode 2\nOperation: Eisenfaust"},
             placeholder(),
-            ItemType{item: EpisodeItem::Episode3.pos(), active: false, string: "Episode 3\nDie, Fuhrer, Die!"},
+            ItemType{item: EpisodeItem::Episode3.pos(), active: ItemActivity::Deactive, string: "Episode 3\nDie, Fuhrer, Die!"},
             placeholder(),
-            ItemType{item: EpisodeItem::Episode4.pos(), active: false, string: "Episode 4\nA Dark Secret"},
+            ItemType{item: EpisodeItem::Episode4.pos(), active: ItemActivity::Deactive, string: "Episode 4\nA Dark Secret"},
             placeholder(),
-            ItemType{item: EpisodeItem::Episode5.pos(), active: false, string: "Episode 5\nTrail of the Madman"},
+            ItemType{item: EpisodeItem::Episode5.pos(), active: ItemActivity::Deactive, string: "Episode 5\nTrail of the Madman"},
             placeholder(),
-            ItemType{item: EpisodeItem::Episode6.pos(), active: false, string: "Episode 6\nConfrontation"},
+            ItemType{item: EpisodeItem::Episode6.pos(), active: ItemActivity::Deactive, string: "Episode 6\nConfrontation"},
         ],
         state: ItemInfo{x: NE_X, y: NE_Y, cur_pos: EpisodeItem::Episode1.pos(), indent: 88 },
     }
 }
 
 fn placeholder() -> ItemType {
-    ItemType{item: 0, active: false, string: ""}
+    ItemType{item: 0, active: ItemActivity::Deactive, string: ""}
 }
 
 fn initial_difficulty_menu() -> MenuStateEntry {
     MenuStateEntry {
         items: vec![
-            ItemType{item: DifficultyItem::Daddy.pos(), active: true, string: "Can I play, Daddy?"},
-            ItemType{item: DifficultyItem::HurtMe.pos(), active: true, string: "Don't hurt me."},
-            ItemType{item: DifficultyItem::BringEmOn.pos(), active: true, string: "Bring 'em on!"},
-            ItemType{item: DifficultyItem::Death.pos(), active: true, string: "I am Death incarnate!"},
+            ItemType{item: DifficultyItem::Daddy.pos(), active: ItemActivity::Active, string: "Can I play, Daddy?"},
+            ItemType{item: DifficultyItem::HurtMe.pos(), active: ItemActivity::Active, string: "Don't hurt me."},
+            ItemType{item: DifficultyItem::BringEmOn.pos(), active: ItemActivity::Active, string: "Bring 'em on!"},
+            ItemType{item: DifficultyItem::Death.pos(), active: ItemActivity::Active, string: "I am Death incarnate!"},
 
         ],
         state: ItemInfo{x: NM_X, y: NM_Y, cur_pos: DifficultyItem::Daddy.pos(), indent: 24},
@@ -260,12 +270,10 @@ pub async fn control_panel(ticker: &Ticker, game_state: &mut GameState, rdr: &VG
 
     // MAIN MENU LOOP
     loop {
-        // TODO Put this loop into cp_main_menu function and execute that if Menu::Top is on top of stack!
-        // TODO call menu function that is on top. quit loop if stack gets empty.
         let menu_opt = menu_stack.last();
         if let Some(menu) = menu_opt {
             let handle = match menu {
-                Menu::Top => cp_main_menu(ticker, rdr, input, win_state, menu_state).await,
+                Menu::Top => cp_main_menu(ticker, game_state, rdr, input, win_state, menu_state).await,
                 Menu::MainMenu(item) => {
                     match item {
                         MainMenuItem::NewGame => cp_new_game(ticker, game_state, rdr, input, win_state, menu_state).await,
@@ -291,20 +299,19 @@ pub async fn control_panel(ticker: &Ticker, game_state: &mut GameState, rdr: &VG
     // RETURN/START GAME EXECUTION
 }
 
-async fn cp_main_menu(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState) -> MenuHandle {
-    draw_main_menu(rdr, win_state, menu_state);
+async fn cp_main_menu(ticker: &Ticker, game_state: &GameState, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState) -> MenuHandle {
+    draw_main_menu(game_state, rdr, win_state, menu_state);
     rdr.fade_in().await;
     
     let handle = handle_menu(ticker, rdr, input, win_state, menu_state, no_op_routine).await;
-
     if handle == MenuHandle::Selected(MainMenuItem::NewGame.pos()) {
         return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::NewGame));
     } else if handle == MenuHandle::Selected(MainMenuItem::ViewScores.pos()) {
         todo!("show view scores");
-    } else if handle == MenuHandle::Selected(MainMenuItem::BackToDemo.pos()) {
+    } else if handle == MenuHandle::Selected(MainMenuItem::BackTo.pos()) {
         return MenuHandle::BackToGameLoop;
     } else if handle == MenuHandle::QuitMenu || handle == MenuHandle::Selected(MainMenuItem::Quit.pos()) {
-        menu_quit(ticker, rdr, input, win_state, menu_state).await;
+        menu_quit(ticker, game_state, rdr, input, win_state, menu_state).await;
         return MenuHandle::QuitMenu;
     } else {
         return handle;
@@ -420,7 +427,7 @@ fn episode_pic(i: usize) -> GraphicNum {
     }
 }
 
-async fn menu_quit(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState) {
+async fn menu_quit(ticker: &Ticker, game_state: &GameState, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, menu_state: &mut MenuState) {
     let text = END_STRINGS[((rnd_t()&0x07)+(rnd_t()&1)) as usize];
     if confirm(ticker, rdr, input, win_state, text).await {
         //TODO stop music
@@ -428,7 +435,7 @@ async fn menu_quit(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state:
         quit(None)
     }
 
-    draw_main_menu(rdr, win_state, menu_state)
+    draw_main_menu(game_state, rdr, win_state, menu_state)
 }
 
 async fn confirm(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, str: &str) -> bool {
@@ -525,7 +532,7 @@ async fn handle_menu_loop(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win
             ControlDirection::North => {
                 erase_gun(rdr, win_state, selected, x, y, which_pos);
 
-                if which_pos > 0 && selected.items[which_pos-1].active {
+                if which_pos > 0 && selected.items[which_pos-1].active != ItemActivity::Deactive {
                     y -= 6;
                     draw_half_step(ticker, rdr, x, y).await;
                 }
@@ -537,7 +544,7 @@ async fn handle_menu_loop(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win
                         which_pos -= 1;
                     }
 
-                    if selected.items[which_pos].active {
+                    if selected.items[which_pos].active != ItemActivity::Deactive {
                         break;
                     }  
                 }
@@ -549,7 +556,7 @@ async fn handle_menu_loop(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win
             ControlDirection::South => {
                 erase_gun(rdr, win_state, selected, x, y, which_pos);
 
-                if which_pos != selected.items.len()-1 && selected.items[which_pos+1].active {
+                if which_pos != selected.items.len()-1 && selected.items[which_pos+1].active != ItemActivity::Deactive {
                     y += 6;
                     draw_half_step(ticker, rdr, x, y).await;
                 }
@@ -561,7 +568,7 @@ async fn handle_menu_loop(ticker: &Ticker, rdr: &VGARenderer, input: &Input, win
                         which_pos += 1;
                     }
 
-                    if selected.items[which_pos].active {
+                    if selected.items[which_pos].active != ItemActivity::Deactive {
                         break;
                     }
                 }
@@ -630,7 +637,7 @@ fn draw_gun(rdr: &VGARenderer, win_state: &mut WindowState, selected: &MenuState
 
 fn read_any_control(input: &Input) -> ControlInfo {
     read_control(input)
-    // TODO also read mouse and jostick input
+    // TODO also read mouse and joystick input
 }
 
 fn setup_control_panel(win_state: &mut WindowState) {
@@ -639,13 +646,29 @@ fn setup_control_panel(win_state: &mut WindowState) {
     win_state.window_h = 200;
 }
 
-fn draw_main_menu(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState) {
+fn draw_main_menu(game_state: &GameState, rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState) {
     clear_ms_screen(rdr);
     rdr.pic(112, 184, GraphicNum::CMOUSELBACKPIC);
     draw_stripes(rdr, 10);
     rdr.pic(84, 0, GraphicNum::COPTIONSPIC);
 
     cp_draw_window(rdr, MENU_X-8, MENU_Y-3, MENU_W, MENU_H, BKGD_COLOR);
+
+    if game_state.in_game {
+        let main_menu_opt = menu_state.menues.get_mut(&Menu::Top);
+        if let Some(main_menu) = main_menu_opt {
+            let demo_item = &mut main_menu.items[MainMenuItem::BackTo.pos()];
+            demo_item.active = ItemActivity::Highlight;
+            demo_item.string = BACK_TO_GAME;
+        }
+    } else {
+        let main_menu_opt = menu_state.menues.get_mut(&Menu::Top);
+        if let Some(main_menu) = main_menu_opt {
+            let demo_item = &mut main_menu.items[MainMenuItem::BackTo.pos()];
+            demo_item.active = ItemActivity::Active;
+            demo_item.string = BACK_TO_DEMO;
+        }
+    }
 
     menu_state.select_menu(Menu::Top);
     draw_menu(rdr, win_state, menu_state);
@@ -667,7 +690,7 @@ fn draw_menu(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &MenuSt
         set_text_color(win_state, &selected.items, i, which == i);
 
         win_state.print_y = selected.state.y + i * 13;
-        if selected.items[i].active {
+        if selected.items[i].active != ItemActivity::Deactive {
             print(rdr, win_state, selected.items[i].string);
         } else {
             win_state.set_font_color(DEACTIVE, BKGD_COLOR);
@@ -681,9 +704,17 @@ fn draw_menu(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &MenuSt
 
 fn set_text_color(win_state: &mut WindowState, items: &[ItemType], which: usize, hlight: bool) {
     if hlight {
-        win_state.set_font_color(COLOR_HLITE[if items[which].active {1} else {0}], BKGD_COLOR)
+        win_state.set_font_color(COLOR_HLITE[active_ix(items[which].active)], BKGD_COLOR)
     } else {
-        win_state.set_font_color(COLOR_NORML[if items[which].active {1} else {0}], BKGD_COLOR)
+        win_state.set_font_color(COLOR_NORML[active_ix(items[which].active)], BKGD_COLOR)
+    }
+}
+
+fn active_ix(active: ItemActivity) -> usize {
+    match active {
+        ItemActivity::Deactive => 0,
+        ItemActivity::Active => 1,
+        ItemActivity::Highlight => 2,
     }
 }
 
@@ -753,7 +784,7 @@ pub fn check_for_episodes(menu_state: &mut MenuState) {
     menu_state.update_menu(Menu::MainMenu(MainMenuItem::NewGame), |entry| {
         for i in 0..entry.items.len() {
             if i%2==0 {
-                entry.items[i].active = true
+                entry.items[i].active = ItemActivity::Active;
             }
         }
     })

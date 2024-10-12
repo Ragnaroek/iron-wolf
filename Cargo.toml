@@ -22,7 +22,7 @@ serde = { version = "1.0.197", features = ["derive"] }
 cfg-if = { version = "1.0" }
 async-std = { version = "1.12.0", features = ["unstable"] }
 futures = "0.3.30"
-vga-emu = { version = "0.5.3" } # path="../vga-emu/"
+vga-emu = { path="../vga-emu/" } #{ version = "0.5.3" } 
 toml = "0.8.12"
 # feature web
 wasm-bindgen = { version = "0.2.92", optional = true, features = ["serde-serialize"]}
