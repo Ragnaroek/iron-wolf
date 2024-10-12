@@ -65,6 +65,11 @@ pub fn file_name(file: WolfFile) -> &'static str {
 // picture offset in the graphics array with GraphicNum::PG13PIC - STARTPICS.
 #[derive(Copy, Clone)]
 pub enum GraphicNum {
+	// Lump Start
+	COPTIONSPIC = 10,
+	CCURSOR1PIC = 11,
+	CMOUSELBACKPIC = 18,
+	
 	CLEVELPIC = 38,
 	CNAMEPIC = 39,
 	CSCOREPIC = 40,

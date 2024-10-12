@@ -2,6 +2,24 @@ use vga::input::{self, NumCode};
 
 use super::time::{TimeCount, get_count};
 
+#[derive(PartialEq)]
+pub enum ControlDirection {
+    North,
+    NorthEast,
+    East,
+    SouthEast,
+    South,
+    SouthWest,
+    West,
+    NorthWest,
+    None,
+}
+
+
+pub struct ControlInfo {
+    pub dir: ControlDirection,
+}
+
 pub struct Input {
 	time: TimeCount,
 	pub input_monitoring: input::InputMonitoring
@@ -42,3 +60,21 @@ impl Input {
 	}
 }
 
+pub fn read_control(input: &Input) -> ControlInfo {
+    let dir;
+    if input.key_pressed(NumCode::UpArrow) {
+        dir = ControlDirection::North;
+    } else if input.key_pressed(NumCode::DownArrow) {
+        dir = ControlDirection::South;
+    } else if input.key_pressed(NumCode::LeftArrow) {
+        dir = ControlDirection::West;
+    } else if input.key_pressed(NumCode::RightArrow) {
+        dir = ControlDirection::East;
+    } else {
+        dir = ControlDirection::None;
+    }
+
+    ControlInfo{
+        dir
+    }
+}
