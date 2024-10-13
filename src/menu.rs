@@ -556,7 +556,7 @@ async fn cp_main_menu(
     } else if handle == MenuHandle::QuitMenu
         || handle == MenuHandle::Selected(MainMenuItem::Quit.pos())
     {
-        menu_quit(ticker, rdr, input, win_state, menu_state).await;
+        menu_quit(ticker, rdr, sound, assets, input, win_state, menu_state).await;
         return MenuHandle::QuitMenu;
     } else {
         return handle;
@@ -588,7 +588,7 @@ async fn cp_new_game(
         )
         .await;
         if let MenuHandle::Selected(episode_selected) = episode_handle {
-            //TODO SD_PlaySound(SHOOTSND)
+            sound.play_sound(SoundName::SHOOT, assets);
             //TODO confirm dialog if already in a game
             game_state.episode = episode_selected / 2;
             return MenuHandle::OpenMenu(Menu::DifficultySelect);
@@ -629,6 +629,7 @@ async fn cp_load_game(
         if let MenuHandle::Selected(which) = load_handle {
             if state[which].available {
                 draw_ls_action(rdr, win_state, false);
+                sound.play_sound(SoundName::SHOOT, assets);
                 return MenuHandle::BackToGameLoop(Some(SaveLoadGame::Load(which)));
             } // else: loop back to handle_menu
         } else {
@@ -668,7 +669,7 @@ async fn cp_save_game(
             // TODO Check overwrite existing game
 
             if state[which].available {
-                if !confirm(ticker, rdr, input, win_state, GAME_SAVED).await {
+                if !confirm(ticker, rdr, sound, assets, input, win_state, GAME_SAVED).await {
                     draw_load_save_screen(rdr, win_state, menu_state, &state, true).await;
                     continue;
                 } else {
@@ -677,7 +678,7 @@ async fn cp_save_game(
                 }
             }
 
-            // TODO ShootSnd
+            sound.play_sound(SoundName::SHOOT, assets);
 
             let save_menu = &menu_state.menues[&Menu::MainMenu(MainMenuItem::SaveGame)];
             win_state.font_number = 0;
@@ -869,7 +870,7 @@ async fn cp_difficulty_select(
     .await;
 
     if let MenuHandle::Selected(diff_selected) = handle {
-        // TODO SD_PlaySound(SHOOTSND)
+        sound.play_sound(SoundName::SHOOT, assets);
         game_state.prepare_episode_select();
         game_state.difficulty = difficulty(diff_selected);
 
@@ -956,12 +957,14 @@ fn episode_pic(i: usize) -> GraphicNum {
 async fn menu_quit(
     ticker: &Ticker,
     rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
     input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
     let text = END_STRINGS[((rnd_t() & 0x07) + (rnd_t() & 1)) as usize];
-    if confirm(ticker, rdr, input, win_state, text).await {
+    if confirm(ticker, rdr, sound, assets, input, win_state, text).await {
         //TODO stop music
         rdr.fade_in().await;
         quit(None)
@@ -973,6 +976,8 @@ async fn menu_quit(
 async fn confirm(
     ticker: &Ticker,
     rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
     input: &Input,
     win_state: &mut WindowState,
     str: &str,
@@ -1006,13 +1011,18 @@ async fn confirm(
     }
 
     let exit = if input.key_pressed(NumCode::Y) {
-        // TODO ShootSnd
         true
     } else {
         false
     };
 
     input.clear_keys_down();
+
+    if exit {
+        sound.play_sound(SoundName::ESCPRESSED, assets);
+    } else {
+        sound.play_sound(SoundName::SHOOT, assets);
+    }
     // TODO SDPLaySound(whichsnd[exit])
 
     exit

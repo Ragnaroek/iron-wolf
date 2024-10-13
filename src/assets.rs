@@ -150,7 +150,7 @@ pub enum SoundName {
     DEATHSCREAM1,  // 29
     GETMACHINE,    // 30
     GETAMMO,       // 31
-    SHOOTS,        // 32
+    SHOOT,         // 32
     HEALTH1,       // 33
     HEALTH2,       // 34
     BONUS1,        // 35
