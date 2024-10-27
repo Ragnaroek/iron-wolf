@@ -15,6 +15,7 @@ use crate::fixed::{new_fixed, new_fixed_i32};
 use crate::game::setup_game_level;
 use crate::loader::{DiskLoader, Loader};
 use crate::play::{self, ProjectionConfig};
+use crate::sd;
 use crate::start::save_the_game;
 use crate::start::OBJ_TYPE_LEN;
 use crate::start::STAT_TYPE_LEN;
@@ -457,7 +458,7 @@ fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, VGARenderer, Assets)
 
     let (graphics, fonts, tiles) =
         assets::load_all_graphics(loader, &None).expect("load all graphics");
-    let assets = assets::load_assets(loader).expect("load assets");
+    let assets = assets::load_graphic_assets(loader).expect("load graphic assets");
 
     let prj = play::calc_projection(config.viewsize as usize);
 

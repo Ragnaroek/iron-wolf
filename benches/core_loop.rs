@@ -5,16 +5,17 @@ extern crate test;
 
 use iw::config::default_iw_config;
 use iw::loader::DiskLoader;
+use iw::sd::Sound;
 use std::path::PathBuf;
 use std::sync::Arc;
 use test::Bencher;
 
-use iw::assets;
 use iw::def::new_game_state;
 use iw::draw::{init_ray_cast, init_ray_cast_consts, wall_refresh};
 use iw::game::setup_game_level;
 use iw::play;
 use iw::vga_render;
+use iw::{assets, sd};
 
 #[bench]
 fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
@@ -29,7 +30,9 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
         data_path: iw_config.data.wolf3d_data.clone(),
         patch_path: iw_config.data.patch_data,
     };
-    let assets = assets::load_assets(&loader)?;
+
+    let assets = assets::load_graphic_assets(&loader)?;
+
     let prj = play::calc_projection(19);
     let (graphics, fonts, tiles) = assets::load_all_graphics(&loader, &None)?;
 

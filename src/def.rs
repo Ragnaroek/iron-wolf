@@ -1,3 +1,4 @@
+use crate::assets::SoundName;
 use crate::fixed::Fixed;
 use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::map::{MapFileType, MapSegs, MapType};
@@ -5,6 +6,7 @@ use crate::play::ProjectionConfig;
 use crate::sd::Sound;
 use crate::vga_render::{VGARenderer, PAGE_1_START, PAGE_2_START, PAGE_3_START};
 use opl::AdlSound;
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -92,6 +94,10 @@ macro_rules! derive_from {
             }
         }
     }
+}
+
+pub struct DigiSound {
+    pub chunk: Box<[u8]>,
 }
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
@@ -677,6 +683,7 @@ pub struct Assets {
     pub game_maps: Vec<u8>,
     pub audio_headers: Vec<u32>,
     pub audio_sounds: Vec<AdlSound>,
+    pub digi_sounds: HashMap<SoundName, DigiSound>,
 }
 
 type Think = fn(

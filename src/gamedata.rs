@@ -1,9 +1,13 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom};
 use std::str;
 
 use opl::{AdlSound, Instrument};
 
+use crate::assets::{SoundName, DIGI_MAP};
+use crate::def::DigiSound;
+use crate::sd::{DigiInfo, Sound};
 use crate::{assets::WolfVariant, util};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -185,6 +189,70 @@ pub fn load_all_sprites<M: Read + Seek>(
     }
 
     Ok(result)
+}
+
+pub fn load_all_digi_sounds<M: Read + Seek>(
+    sound: &Sound,
+    data: &mut M,
+    headers: &GamedataHeaders,
+) -> Result<HashMap<SoundName, DigiSound>, String> {
+    let sound_info_page = load_page(data, headers, (headers.num_chunks - 1) as usize)?;
+    let num_digi = (headers.headers[(headers.num_chunks - 1) as usize].length / 4) as usize;
+
+    let mut digi_list = Vec::with_capacity(num_digi as usize);
+    for i in 0..num_digi {
+        let start_page =
+            u16::from_le_bytes(sound_info_page[(i * 4)..(i * 4 + 2)].try_into().unwrap()) as usize;
+        let length = u16::from_le_bytes(
+            sound_info_page[(i * 4 + 2)..(i * 4 + 4)]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        if start_page >= headers.num_chunks as usize {
+            break;
+        }
+        digi_list.push(DigiInfo { start_page, length })
+    }
+
+    let mut sounds = HashMap::new();
+    for digi_sound in &DIGI_MAP {
+        let digi = &digi_list[digi_sound.page_no];
+        let digi_data = load_digi_page(data, headers, digi)?;
+        sounds.insert(digi_sound.sound, sound.prepare_digi_sound(digi_data)?);
+    }
+    Ok(sounds)
+}
+
+fn load_digi_page<M: Read + Seek>(
+    data: &mut M,
+    headers: &GamedataHeaders,
+    digi: &DigiInfo,
+) -> Result<Vec<u8>, String> {
+    let header = &headers.headers[headers.sound_start as usize + digi.start_page];
+    data.seek(SeekFrom::Start(header.offset as u64))
+        .map_err(|e| e.to_string())?;
+    let mut buffer: Vec<u8> = vec![0; digi.length as usize];
+    let n = data.read(&mut buffer).map_err(|e| e.to_string())?;
+    if n != digi.length as usize {
+        return Err("not enough bytes in page".to_string());
+    }
+    Ok(buffer)
+}
+
+fn load_page<M: Read + Seek>(
+    data: &mut M,
+    headers: &GamedataHeaders,
+    page: usize,
+) -> Result<Vec<u8>, String> {
+    let header = &headers.headers[page];
+    data.seek(SeekFrom::Start(header.offset as u64))
+        .map_err(|e| e.to_string())?;
+    let mut buffer: Vec<u8> = vec![0; header.length as usize];
+    let n = data.read(&mut buffer).map_err(|e| e.to_string())?;
+    if n != header.length as usize {
+        return Err("not enough bytes in page".to_string());
+    }
+    Ok(buffer)
 }
 
 pub fn load_audio_headers<M: Read>(data: &mut M) -> Result<Vec<u32>, String> {

@@ -12,7 +12,6 @@ use vga::util::spawn_task;
 use vga::SCReg;
 
 use crate::assets::{self, GraphicNum, GAMEPAL, SIGNON};
-use crate::config;
 use crate::def::{
     difficulty, new_game_state, weapon_type, ActiveType, Assets, At, ClassType, Dir, DirType,
     DoorAction, DoorLock, DoorType, GameState, IWConfig, LevelRatio, LevelState, ObjKey, ObjType,
@@ -35,6 +34,7 @@ use crate::us1::c_print;
 use crate::util::{new_data_reader_with_offset, new_data_writer, DataReader, DataWriter};
 use crate::vga_render::{self, VGARenderer};
 use crate::vl;
+use crate::{config, sd};
 
 const OBJ_TYPE_LEN: usize = 60;
 const STAT_TYPE_LEN: usize = 8;
@@ -73,17 +73,11 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
     vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
-    let mut opl = opl::new()?;
-    opl.init(opl::OPLSettings {
-        mixer_rate: 49716,
-        imf_clock_rate: 700,
-        adl_clock_rate: 140,
-    });
-
     let patch_config = &loader.load_patch_config_file();
 
+    let mut sound = sd::startup()?;
+    let assets = assets::load_assets(&sound, &loader)?;
     let (graphics, fonts, tiles) = assets::load_all_graphics(&loader, patch_config)?;
-    let assets = assets::load_assets(&loader)?;
 
     // TODO calc_projection and setup_scaling have to be re-done if view size changes in config
     let prj = play::calc_projection(config.viewsize as usize);
@@ -100,8 +94,6 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     let vga_screen = Arc::new(vga);
     let vga_loop = vga_screen.clone();
     let rdr = vga_render::init(vga_screen.clone(), graphics, fonts, tiles, loader.variant());
-
-    let mut sound = Sound { opl };
 
     spawn_task(async move {
         init_game(&vga_loop, &rdr, &input, &mut win_state).await;

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Cursor;
 
 use serde::{Deserialize, Serialize};
@@ -7,6 +8,7 @@ use crate::gamedata;
 use crate::loader::Loader;
 use crate::map::{load_map, load_map_headers, load_map_offsets, MapFileType, MapSegs, MapType};
 use crate::patch::{graphic_patch, PatchConfig};
+use crate::sd::Sound;
 use crate::util::new_data_reader;
 
 pub static GAMEPAL: &'static [u8] = include_bytes!("../assets/gamepal.bin");
@@ -23,7 +25,6 @@ pub const AUDIO_HEAD: &'static str = "AUDIOHED";
 pub const AUDIO_DATA: &'static str = "AUDIOT";
 
 const BLOCK: usize = 64;
-const MASKBLOCK: usize = 128;
 
 #[derive(Clone, Copy)]
 pub enum WolfFile {
@@ -116,7 +117,7 @@ pub fn file_name(file: WolfFile, variant: &WolfVariant) -> String {
 }
 
 #[repr(usize)]
-#[derive(Clone, Copy)]
+#[derive(Eq, PartialEq, Hash, Clone, Copy, Debug)]
 pub enum SoundName {
     HITWALL,       // 0
     SELECTWPN,     // 1
@@ -448,6 +449,7 @@ const STARTTILE8: usize = 135;
 const STARTTILE8M: usize = 136;
 const STARTEXTERNS: usize = 136;
 const NUM_FONT: usize = 2;
+pub const NUM_DIGI_SOUNDS: usize = 47;
 
 pub struct Graphic {
     pub data: Vec<u8>,
@@ -471,6 +473,256 @@ pub struct Huffnode {
     bit0: u16,
     bit1: u16,
 }
+
+pub enum DigiChannel {
+    Any,
+    Player,
+    Boss,
+}
+
+pub struct DigiMapEntry {
+    pub sound: SoundName,
+    pub page_no: usize,
+    pub channel: DigiChannel,
+}
+
+pub static DIGI_MAP: [DigiMapEntry; NUM_DIGI_SOUNDS] = [
+    DigiMapEntry {
+        sound: SoundName::HALT,
+        page_no: 0,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::DOGBARK,
+        page_no: 1,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::CLOSEDOOR,
+        page_no: 2,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::OPENDOOR,
+        page_no: 3,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::ATKMACHINEGUN,
+        page_no: 4,
+        channel: DigiChannel::Player,
+    },
+    DigiMapEntry {
+        sound: SoundName::ATKPISTOL,
+        page_no: 5,
+        channel: DigiChannel::Player,
+    },
+    DigiMapEntry {
+        sound: SoundName::ATKGATLING,
+        page_no: 6,
+        channel: DigiChannel::Player,
+    },
+    DigiMapEntry {
+        sound: SoundName::SCHUTZAD,
+        page_no: 7,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::GUTENTAG,
+        page_no: 8,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::MUTTI,
+        page_no: 9,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::BOSSFIRE,
+        page_no: 10,
+        channel: DigiChannel::Boss,
+    },
+    DigiMapEntry {
+        sound: SoundName::SSFIRE,
+        page_no: 11,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::DEATHSCREAM1,
+        page_no: 12,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::DEATHSCREAM2,
+        page_no: 13,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::DEATHSCREAM3,
+        page_no: 13,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::TAKEDAMAGE,
+        page_no: 14,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::PUSHWALL,
+        page_no: 15,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::LEBEN,
+        page_no: 20,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::NAZIFIRE,
+        page_no: 21,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::SLURPIE,
+        page_no: 22,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::YEAH,
+        page_no: 32,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::DOGDEATH,
+        page_no: 16,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::AHHHG,
+        page_no: 17,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::DIE,
+        page_no: 18,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::EVA,
+        page_no: 19,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::TOTHUND,
+        page_no: 23,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::MEINGOTT,
+        page_no: 24,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::SCHABBSHA,
+        page_no: 25,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::HITLERHA,
+        page_no: 26,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::SPION,
+        page_no: 27,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::NEINSOVAS,
+        page_no: 28,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::DOGATTACK,
+        page_no: 29,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::LEVELDONE,
+        page_no: 30,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::MECHSTEP,
+        page_no: 31,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::SCHEIST,
+        page_no: 33,
+        channel: DigiChannel::Any,
+    },
+    DigiMapEntry {
+        sound: SoundName::DEATHSCREAM4,
+        page_no: 34,
+        channel: DigiChannel::Any, // AIIEEE
+    },
+    DigiMapEntry {
+        sound: SoundName::DEATHSCREAM5,
+        page_no: 35,
+        channel: DigiChannel::Any, // DEE-DEE
+    },
+    DigiMapEntry {
+        sound: SoundName::DONNER,
+        page_no: 36,
+        channel: DigiChannel::Any, // EPISODE 4 BOSS DIE
+    },
+    DigiMapEntry {
+        sound: SoundName::EINE,
+        page_no: 37,
+        channel: DigiChannel::Any, // EPISODE 4 BOSS SIGHTING
+    },
+    DigiMapEntry {
+        sound: SoundName::ERLAUBEN,
+        page_no: 38,
+        channel: DigiChannel::Any, // EPISODE 6 BOSS SIGHTING
+    },
+    DigiMapEntry {
+        sound: SoundName::DEATHSCREAM6,
+        page_no: 39,
+        channel: DigiChannel::Any, // FART
+    },
+    DigiMapEntry {
+        sound: SoundName::DEATHSCREAM7,
+        page_no: 40,
+        channel: DigiChannel::Any, // GASP
+    },
+    DigiMapEntry {
+        sound: SoundName::DEATHSCREAM8,
+        page_no: 41,
+        channel: DigiChannel::Any, // GUH-BOY!
+    },
+    DigiMapEntry {
+        sound: SoundName::DEATHSCREAM9,
+        page_no: 42,
+        channel: DigiChannel::Any, // AH GEEZ!
+    },
+    DigiMapEntry {
+        sound: SoundName::KEIN,
+        page_no: 43,
+        channel: DigiChannel::Any, // EPISODE 5 BOSS SIGHTING
+    },
+    DigiMapEntry {
+        sound: SoundName::MEIN,
+        page_no: 44,
+        channel: DigiChannel::Any, // EPISODE 6 BOSS DIE
+    },
+    DigiMapEntry {
+        sound: SoundName::ROSE,
+        page_no: 45,
+        channel: DigiChannel::Any, // EPISODE 5 BOSS DIE
+    },
+];
 
 pub fn load_all_graphics(
     loader: &dyn Loader,
@@ -557,10 +809,7 @@ fn to_huffnodes(bytes: Vec<u8>) -> Vec<Huffnode> {
     for _ in 0..255 {
         let bit0 = u16::from_le_bytes(bytes[offset..(offset + 2)].try_into().unwrap());
         let bit1 = u16::from_le_bytes(bytes[(offset + 2)..(offset + 4)].try_into().unwrap());
-        nodes.push(Huffnode {
-            bit0: bit0,
-            bit1: bit1,
-        });
+        nodes.push(Huffnode { bit0, bit1 });
         offset += 4;
     }
 
@@ -766,7 +1015,7 @@ pub fn load_map_headers_from_config(
 // gamedata stuff
 
 // loads all assets for the game into memory
-pub fn load_assets(loader: &dyn Loader) -> Result<Assets, String> {
+pub fn load_assets(sound: &Sound, loader: &dyn Loader) -> Result<Assets, String> {
     let (map_offsets, map_headers) = load_map_headers_from_config(loader)?;
 
     let gamedata_bytes = loader.load_wolf_file(WolfFile::GameData);
@@ -775,6 +1024,8 @@ pub fn load_assets(loader: &dyn Loader) -> Result<Assets, String> {
     let mut gamedata_cursor = Cursor::new(gamedata_bytes);
     let textures = gamedata::load_all_textures(&mut gamedata_cursor, &gamedata_headers)?;
     let sprites = gamedata::load_all_sprites(&mut gamedata_cursor, &gamedata_headers)?;
+    let digi_sounds =
+        gamedata::load_all_digi_sounds(sound, &mut gamedata_cursor, &gamedata_headers)?;
 
     let mut audio_header_cursor = Cursor::new(loader.load_wolf_file(WolfFile::AudioHead));
     let audio_headers = gamedata::load_audio_headers(&mut audio_header_cursor)?;
@@ -794,5 +1045,30 @@ pub fn load_assets(loader: &dyn Loader) -> Result<Assets, String> {
         gamedata_headers,
         audio_headers,
         audio_sounds,
+        digi_sounds,
+    })
+}
+
+pub fn load_graphic_assets(loader: &dyn Loader) -> Result<Assets, String> {
+    let (map_offsets, map_headers) = load_map_headers_from_config(loader)?;
+
+    let gamedata_bytes = loader.load_wolf_file(WolfFile::GameData);
+    let gamedata_headers = gamedata::load_gamedata_headers(&gamedata_bytes)?;
+
+    let mut gamedata_cursor = Cursor::new(gamedata_bytes);
+    let textures = gamedata::load_all_textures(&mut gamedata_cursor, &gamedata_headers)?;
+    let sprites = gamedata::load_all_sprites(&mut gamedata_cursor, &gamedata_headers)?;
+    let game_maps = loader.load_wolf_file(WolfFile::GameMaps);
+
+    Ok(Assets {
+        map_headers,
+        map_offsets,
+        textures,
+        sprites,
+        game_maps,
+        gamedata_headers,
+        audio_headers: Vec::with_capacity(0),
+        audio_sounds: Vec::with_capacity(0),
+        digi_sounds: HashMap::new(),
     })
 }
