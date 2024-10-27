@@ -23,7 +23,7 @@ jobs:
       - name: Update
         run: sudo apt-get update
       - name: Install SDL
-        run: sudo apt-get install libsdl2-dev libsdl2-ttf-dev
+        run: sudo apt-get install libsdl2-dev libsdl2-ttf-dev libsdl2-mixer-dev
       - name: Build SDL
         run: cargo build --features sdl --verbose
       - name: Test SDL
