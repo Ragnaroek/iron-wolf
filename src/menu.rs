@@ -1156,10 +1156,12 @@ async fn handle_menu_loop(
         }
 
         if input.key_pressed(NumCode::Space) || input.key_pressed(NumCode::Return) {
+            sound.play_sound(SoundName::SHOOT, assets);
             exit = MenuHandle::Selected(which_pos);
             break;
         }
         if input.key_pressed(NumCode::Escape) {
+            sound.play_sound(SoundName::ESCPRESSED, assets);
             exit = MenuHandle::QuitMenu;
             break;
         }
