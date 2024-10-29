@@ -474,6 +474,7 @@ pub struct Huffnode {
     bit1: u16,
 }
 
+#[derive(Copy, Clone)]
 pub enum DigiChannel {
     Any,
     Player,

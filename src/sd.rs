@@ -1,5 +1,5 @@
 use crate::{
-    assets::SoundName,
+    assets::{DigiChannel, SoundName},
     def::{Assets, DigiSound, ObjType, TILESHIFT},
 };
 
@@ -11,7 +11,7 @@ use opl::OPL;
 #[cfg(feature = "sdl")]
 use sdl2::audio::{self, AudioCVT, AudioFormat};
 #[cfg(feature = "sdl")]
-use sdl2::mixer::{self};
+use sdl2::mixer::{self, Channel};
 
 const ORIG_SAMPLE_RATE: i32 = 7042;
 
@@ -20,6 +20,7 @@ pub struct DigiMixConfig {
     pub frequency: i32,
     pub format: AudioFormat,
     pub channels: i32,
+    pub group: mixer::Group,
 }
 
 pub struct DigiInfo {
@@ -57,6 +58,7 @@ pub fn startup() -> Result<Sound, String> {
         frequency: mix_freq,
         format: map_audio_format(mix_format),
         channels: mix_channels,
+        group,
     };
 
     Ok(Sound { opl, mix_config })
@@ -72,9 +74,9 @@ impl Sound {
     pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) {
         if let Some(digi_sound) = assets.digi_sounds.get(&sound) {
             let data_clone = digi_sound.chunk.clone();
-            spawn(async {
+            let channel = self.get_channel_for_digi(digi_sound.channel);
+            spawn(async move {
                 let chunk = mixer::Chunk::from_raw_buffer(data_clone).expect("chunk");
-                let channel = mixer::Channel::all();
                 channel.play(&chunk, 0).expect("play digi sound test");
                 // TODO inefficient. Only exists to keep the chunk referenced and not collected
                 // Real fix would be to make Chunk in SDL sync so that this works properly and
@@ -84,6 +86,22 @@ impl Sound {
         } else {
             let sound = &assets.audio_sounds[sound as usize];
             self.opl.play_adl(sound.clone()).expect("play sound file");
+        }
+    }
+
+    fn get_channel_for_digi(&self, channel: DigiChannel) -> Channel {
+        match channel {
+            DigiChannel::Any => {
+                if let Some(ch) = self.mix_config.group.find_available() {
+                    ch
+                } else if let Some(ch) = self.mix_config.group.find_oldest() {
+                    ch
+                } else {
+                    Channel::all()
+                }
+            }
+            DigiChannel::Player => Channel(0),
+            DigiChannel::Boss => Channel(1),
         }
     }
 
@@ -117,7 +135,11 @@ impl Sound {
         self.play_sound(sound, assets);
     }
 
-    pub fn prepare_digi_sound(&self, original_data: Vec<u8>) -> Result<DigiSound, String> {
+    pub fn prepare_digi_sound(
+        &self,
+        channel: DigiChannel,
+        original_data: Vec<u8>,
+    ) -> Result<DigiSound, String> {
         let cvt = AudioCVT::new(
             audio::AudioFormat::U8,
             1,
@@ -129,7 +151,10 @@ impl Sound {
 
         let converted_data = cvt.convert(original_data);
         let boxed = converted_data.into_boxed_slice();
-        Ok(DigiSound { chunk: boxed })
+        Ok(DigiSound {
+            chunk: boxed,
+            channel,
+        })
     }
 }
 
@@ -172,7 +197,11 @@ impl Sound {
     }
 
     #[cfg(feature = "web")]
-    pub fn prepare_digi_sound(&self, original_data: Vec<u8>) -> Result<DigiSound, String> {
+    pub fn prepare_digi_sound(
+        &self,
+        channel: DigiChannel,
+        original_data: Vec<u8>,
+    ) -> Result<DigiSound, String> {
         todo!("impl web digi sound preparation")
     }
 }

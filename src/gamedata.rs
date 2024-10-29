@@ -218,7 +218,10 @@ pub fn load_all_digi_sounds<M: Read + Seek>(
     for digi_sound in &DIGI_MAP {
         let digi = &digi_list[digi_sound.page_no];
         let digi_data = load_digi_page(data, headers, digi)?;
-        sounds.insert(digi_sound.sound, sound.prepare_digi_sound(digi_data)?);
+        sounds.insert(
+            digi_sound.sound,
+            sound.prepare_digi_sound(digi_sound.channel, digi_data)?,
+        );
     }
     Ok(sounds)
 }

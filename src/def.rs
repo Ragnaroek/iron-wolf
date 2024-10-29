@@ -1,4 +1,4 @@
-use crate::assets::SoundName;
+use crate::assets::{DigiChannel, SoundName};
 use crate::fixed::Fixed;
 use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::map::{MapFileType, MapSegs, MapType};
@@ -98,6 +98,7 @@ macro_rules! derive_from {
 
 pub struct DigiSound {
     pub chunk: Box<[u8]>,
+    pub channel: DigiChannel,
 }
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
