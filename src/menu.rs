@@ -5,7 +5,7 @@ use crate::assets::{is_sod, GraphicNum, Music, SoundName, WolfFile, WolfVariant}
 use crate::def::{difficulty, Assets, GameState, WindowState};
 use crate::input::{read_control, ControlDirection, ControlInfo, Input};
 use crate::loader::Loader;
-use crate::sd::Sound;
+use crate::sd::{DigiMode, MusicMode, Sound, SoundMode};
 use crate::start::quit;
 use crate::time::Ticker;
 use crate::us1::{c_print, line_input, print};
@@ -40,6 +40,15 @@ const LSM_X: usize = 85;
 const LSM_Y: usize = 55;
 const LSM_W: usize = 175;
 const LSM_H: usize = 10 * 13 + 10;
+
+const SM_X: usize = 48;
+const SM_W: usize = 250;
+const SM_Y1: usize = 20;
+const SM_H1: usize = 4 * 13 - 7;
+const SM_Y2: usize = SM_Y1 + 5 * 13;
+const SM_H2: usize = 4 * 13 - 7;
+const SM_Y3: usize = SM_Y2 + 5 * 13;
+const SM_H3: usize = 3 * 13 - 7;
 
 const NM_X: usize = 50;
 const NM_Y: usize = 100;
@@ -144,6 +153,25 @@ enum DifficultyItem {
 }
 
 impl DifficultyItem {
+    pub fn pos(self) -> usize {
+        self as usize
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+#[repr(usize)]
+enum SoundItem {
+    SoundEffectNone = 0,
+    SoundEffectPCSpeaker = 1,
+    SoundEffectAdLib = 2,
+    DigitizedNone = 5,
+    DigitizedSoundSource = 6,
+    DigitizedSoundBlaster = 7,
+    MusicNone = 10,
+    MusicAdLib = 11,
+}
+
+impl SoundItem {
     pub fn pos(self) -> usize {
         self as usize
     }
@@ -354,6 +382,79 @@ fn initial_difficulty_menu() -> MenuStateEntry {
     }
 }
 
+fn initial_sound_menu() -> MenuStateEntry {
+    MenuStateEntry {
+        items: vec![
+            ItemType {
+                item: 0,
+                active: ItemActivity::Active,
+                string: "None",
+            },
+            ItemType {
+                item: 1,
+                active: ItemActivity::Deactive, // TODO Activate if PC Speaker emulation implemented
+                string: "PC Speaker",
+            },
+            ItemType {
+                item: 2,
+                active: ItemActivity::Active,
+                string: "AdLib/Sound Blaster",
+            },
+            ItemType {
+                item: 3,
+                active: ItemActivity::Deactive,
+                string: "",
+            },
+            ItemType {
+                item: 4,
+                active: ItemActivity::Deactive,
+                string: "",
+            },
+            ItemType {
+                item: 5,
+                active: ItemActivity::Active,
+                string: "None",
+            },
+            ItemType {
+                item: 6,
+                active: ItemActivity::Deactive, // Implement if Sound Source emulation implemented
+                string: "Disney Sound Source",
+            },
+            ItemType {
+                item: 7,
+                active: ItemActivity::Active,
+                string: "Sound Blaster",
+            },
+            ItemType {
+                item: 8,
+                active: ItemActivity::Deactive,
+                string: "",
+            },
+            ItemType {
+                item: 9,
+                active: ItemActivity::Deactive,
+                string: "",
+            },
+            ItemType {
+                item: 10,
+                active: ItemActivity::Active,
+                string: "None",
+            },
+            ItemType {
+                item: 11,
+                active: ItemActivity::Active,
+                string: "AdLib/Sound Blaster",
+            },
+        ],
+        state: ItemInfo {
+            x: SM_X,
+            y: SM_Y1,
+            cur_pos: SoundItem::SoundEffectNone.pos(),
+            indent: 52,
+        },
+    }
+}
+
 fn initial_load_save_menu() -> MenuStateEntry {
     MenuStateEntry {
         items: vec![
@@ -426,6 +527,7 @@ pub fn initial_menu_state() -> MenuState {
                 Menu::MainMenu(MainMenuItem::NewGame),
                 initial_episode_menu(),
             ),
+            (Menu::MainMenu(MainMenuItem::Sound), initial_sound_menu()),
             (
                 Menu::MainMenu(MainMenuItem::LoadGame),
                 initial_load_save_menu(),
@@ -461,7 +563,6 @@ pub async fn control_panel(
     scan: NumCode,
 ) -> Option<SaveLoadGame> {
     // TODO scan code handling
-
     start_cp_music(sound, Music::WONDERIN, assets, loader);
     setup_control_panel(win_state, menu_state);
 
@@ -480,6 +581,12 @@ pub async fn control_panel(
                     MainMenuItem::NewGame => {
                         cp_new_game(
                             ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
+                        )
+                        .await
+                    }
+                    MainMenuItem::Sound => {
+                        cp_sound(
+                            ticker, rdr, sound, assets, input, win_state, menu_state, loader,
                         )
                         .await
                     }
@@ -545,6 +652,8 @@ async fn cp_main_menu(
     .await;
     if handle == MenuHandle::Selected(MainMenuItem::NewGame.pos()) {
         return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::NewGame));
+    } else if handle == MenuHandle::Selected(MainMenuItem::Sound.pos()) {
+        return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::Sound));
     } else if handle == MenuHandle::Selected(MainMenuItem::LoadGame.pos()) {
         return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::LoadGame));
     } else if handle == MenuHandle::Selected(MainMenuItem::SaveGame.pos()) {
@@ -599,6 +708,156 @@ async fn cp_new_game(
     }
 }
 
+// Sound
+
+async fn cp_sound(
+    ticker: &Ticker,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+    input: &Input,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+    loader: &dyn Loader,
+) -> MenuHandle {
+    draw_sound_menu(rdr, win_state, menu_state, sound).await;
+    loop {
+        let sound_handle = handle_menu(
+            ticker,
+            rdr,
+            sound,
+            assets,
+            input,
+            win_state,
+            menu_state,
+            no_op_routine,
+        )
+        .await;
+        if let MenuHandle::Selected(which) = sound_handle {
+            // SOUND EFFECTS
+            if which == SoundItem::SoundEffectNone.pos() {
+                sound.set_sound_mode(SoundMode::Off);
+                draw_sound_menu(rdr, win_state, menu_state, sound).await;
+            }
+            if which == SoundItem::SoundEffectPCSpeaker.pos() {
+                sound.set_sound_mode(SoundMode::PC);
+                draw_sound_menu(rdr, win_state, menu_state, sound).await;
+                sound.play_sound(SoundName::SHOOT, assets);
+            }
+            if which == SoundItem::SoundEffectAdLib.pos() {
+                sound.set_sound_mode(SoundMode::AdLib);
+                draw_sound_menu(rdr, win_state, menu_state, sound).await;
+                sound.play_sound(SoundName::SHOOT, assets);
+            }
+            // DIGITIZED SOUND
+            if which == SoundItem::DigitizedNone.pos() {
+                sound.set_digi_mode(DigiMode::Off);
+                draw_sound_menu(rdr, win_state, menu_state, sound).await;
+            }
+            if which == SoundItem::DigitizedSoundSource.pos() {
+                sound.set_digi_mode(DigiMode::SoundSource);
+                draw_sound_menu(rdr, win_state, menu_state, sound).await;
+                sound.play_sound(SoundName::SHOOT, assets);
+            }
+            if which == SoundItem::DigitizedSoundBlaster.pos() {
+                sound.set_digi_mode(DigiMode::SoundBlaster);
+                draw_sound_menu(rdr, win_state, menu_state, sound).await;
+                sound.play_sound(SoundName::SHOOT, assets);
+            }
+            // MUSIC
+            if which == SoundItem::MusicNone.pos() {
+                sound.set_music_mode(MusicMode::Off);
+                draw_sound_menu(rdr, win_state, menu_state, sound).await;
+            }
+            if which == SoundItem::MusicAdLib.pos() {
+                let changed = sound.music_mode() != MusicMode::AdLib;
+                sound.set_music_mode(MusicMode::AdLib);
+                draw_sound_menu(rdr, win_state, menu_state, sound).await;
+                sound.play_sound(SoundName::SHOOT, assets);
+                if changed {
+                    start_cp_music(sound, Music::WONDERIN, assets, loader);
+                }
+            }
+        } else {
+            // ESC pressed
+            rdr.fade_out().await;
+            return sound_handle;
+        }
+    }
+}
+
+async fn draw_sound_menu(
+    rdr: &VGARenderer,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+    sound: &Sound,
+) {
+    clear_ms_screen(rdr);
+    rdr.pic(112, 184, GraphicNum::CMOUSELBACKPIC);
+
+    cp_draw_window(rdr, SM_X - 8, SM_Y1 - 3, SM_W, SM_H1, BKGD_COLOR);
+    cp_draw_window(rdr, SM_X - 8, SM_Y2 - 3, SM_W, SM_H2, BKGD_COLOR);
+    cp_draw_window(rdr, SM_X - 8, SM_Y3 - 3, SM_W, SM_H3, BKGD_COLOR);
+
+    // TODO Active/Inactive state
+
+    menu_state.select_menu(Menu::MainMenu(MainMenuItem::Sound));
+    draw_menu(rdr, win_state, menu_state);
+
+    rdr.pic(100, SM_Y1 - 20, GraphicNum::CFXTITLEPIC);
+    rdr.pic(100, SM_Y2 - 20, GraphicNum::CDIGITITLEPIC);
+    rdr.pic(100, SM_Y3 - 20, GraphicNum::CMUSICTITLEPIC);
+
+    for item in &menu_state.selected_state().items {
+        if item.string == "" {
+            continue;
+        }
+
+        let mut on = false;
+        if item.item == SoundItem::SoundEffectNone.pos() {
+            on = sound.sound_mode() == SoundMode::Off;
+        }
+        if item.item == SoundItem::SoundEffectPCSpeaker.pos() {
+            on = sound.sound_mode() == SoundMode::PC;
+        }
+        if item.item == SoundItem::SoundEffectAdLib.pos() {
+            on = sound.sound_mode() == SoundMode::AdLib;
+        }
+
+        if item.item == SoundItem::DigitizedNone.pos() {
+            on = sound.digi_mode() == DigiMode::Off;
+        }
+        if item.item == SoundItem::DigitizedSoundSource.pos() {
+            on = sound.digi_mode() == DigiMode::SoundSource;
+        }
+        if item.item == SoundItem::DigitizedSoundBlaster.pos() {
+            on = sound.digi_mode() == DigiMode::SoundBlaster;
+        }
+
+        if item.item == SoundItem::MusicNone.pos() {
+            on = sound.music_mode() == MusicMode::Off;
+        }
+        if item.item == SoundItem::MusicAdLib.pos() {
+            on = sound.music_mode() == MusicMode::AdLib;
+        }
+
+        if on {
+            rdr.pic(
+                SM_X + 24,
+                SM_Y1 + item.item * 13 + 2,
+                GraphicNum::CSELECTEDPIC,
+            );
+        } else {
+            rdr.pic(
+                SM_X + 24,
+                SM_Y1 + item.item * 13 + 2,
+                GraphicNum::CNOTSELECTEDPIC,
+            );
+        }
+    }
+
+    rdr.fade_in().await;
+}
 // Load & Save
 
 async fn cp_load_game(
@@ -1023,8 +1282,6 @@ async fn confirm(
     } else {
         sound.play_sound(SoundName::SHOOT, assets);
     }
-    // TODO SDPLaySound(whichsnd[exit])
-
     exit
 }
 
@@ -1439,5 +1696,5 @@ pub fn start_cp_music(sound: &mut Sound, track: Music, assets: &Assets, loader: 
         .load_wolf_file_slice(WolfFile::AudioData, (offset + 2) as u64, (len - 2) as usize)
         .expect("Audio file");
 
-    sound.opl.play_imf(track_data).expect("start song play");
+    sound.play_imf(track_data).expect("start song play");
 }

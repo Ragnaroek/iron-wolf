@@ -31,7 +31,7 @@ cfg-if = "1.0"
 async-std = { version = "1.13.0", features = ["unstable"] }
 futures = "0.3.31"
 vga-emu = "0.6.2"                                           # { path = "../vga-emu/" }
-opl-emu = "0.2.3"                                           # { path = "../opl-emu/" }                                                                     #{ path = "../opl-emu/" }                          #                                          # { path = "../opl-emu/" }
+opl-emu = "0.2.4"                                           # { path = "../opl-emu/" }                                                                                                              #{ path = "../opl-emu/" }                          #                                          # { path = "../opl-emu/" }
 toml = "0.8.19"
 # feature sdl
 sdl2 = { version = "0.37.0", optional = true, default-features = false, features = [
