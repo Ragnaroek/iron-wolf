@@ -3,7 +3,7 @@ use crate::agent::take_damage;
 use crate::assets::SoundName;
 use crate::def::{
     ActiveType, Assets, At, ClassType, ControlState, Difficulty, DirType, DoorAction, EnemyType,
-    GameState, LevelState, ObjKey, ObjType, Sprite, StateType, FL_SHOOTABLE, FL_VISABLE,
+    GameState, LevelState, ObjKey, ObjType, Sprite, StateType, FL_AMBUSH, FL_SHOOTABLE, FL_VISABLE,
     ICON_ARROWS, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, RUN_SPEED, SPD_DOG, SPD_PATROL, TILEGLOBAL,
     TILESHIFT,
 };
@@ -791,6 +791,180 @@ pub static S_SSDIE4: StateType = StateType {
     next: Some(&S_SSDIE4),
 };
 
+//
+// hans
+//
+pub static S_BOSSSTAND: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossW1),
+    tic_time: 0,
+    think: Some(t_stand),
+    action: None,
+    next: Some(&S_BOSSSTAND),
+};
+
+pub static S_BOSSCHASE1: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossW1),
+    tic_time: 10,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_BOSSCHASE1S),
+};
+
+pub static S_BOSSCHASE1S: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossW1),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_BOSSCHASE2),
+};
+
+pub static S_BOSSCHASE2: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossW2),
+    tic_time: 8,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_BOSSCHASE3),
+};
+
+pub static S_BOSSCHASE3: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossW3),
+    tic_time: 10,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_BOSSCHASE3S),
+};
+
+pub static S_BOSSCHASE3S: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossW3),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_BOSSCHASE4),
+};
+
+pub static S_BOSSCHASE4: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossW4),
+    tic_time: 8,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_BOSSCHASE1),
+};
+
+pub static S_BOSSDIE1: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossDie1),
+    tic_time: 15,
+    think: None,
+    action: Some(a_death_scream),
+    next: Some(&S_BOSSDIE2),
+};
+
+pub static S_BOSSDIE2: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossDie2),
+    tic_time: 15,
+    think: None,
+    action: None,
+    next: Some(&S_BOSSDIE3),
+};
+
+pub static S_BOSSDIE3: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossDie3),
+    tic_time: 15,
+    think: None,
+    action: None,
+    next: Some(&S_BOSSDIE4),
+};
+
+pub static S_BOSSDIE4: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossDead),
+    tic_time: 0,
+    think: None,
+    action: None,
+    next: Some(&S_BOSSDIE4),
+};
+
+pub static S_BOSSSHOOT1: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossShoot1),
+    tic_time: 30,
+    think: None,
+    action: None,
+    next: Some(&S_BOSSSHOOT2),
+};
+
+pub static S_BOSSSHOOT2: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_BOSSSHOOT3),
+};
+
+pub static S_BOSSSHOOT3: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossShoot3),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_BOSSSHOOT4),
+};
+
+pub static S_BOSSSHOOT4: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_BOSSSHOOT5),
+};
+
+pub static S_BOSSSHOOT5: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossShoot3),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_BOSSSHOOT6),
+};
+
+pub static S_BOSSSHOOT6: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_BOSSSHOOT7),
+};
+
+pub static S_BOSSSHOOT7: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossShoot3),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_BOSSSHOOT8),
+};
+
+pub static S_BOSSSHOOT8: StateType = StateType {
+    rotate: 0,
+    sprite: Some(Sprite::BossShoot1),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_BOSSCHASE1),
+};
+
 fn t_path(
     k: ObjKey,
     tics: u64,
@@ -1025,12 +1199,14 @@ fn t_chase(
     _: &ProjectionConfig,
     _: &Assets,
 ) {
+    if game_state.victory_flag {
+        return;
+    }
+
     let (player_tile_x, player_tile_y) = {
         let player = level_state.player();
         (player.tilex, player.tiley)
     };
-
-    // TODO check gamestate.victoryflag
 
     let mut dodge = false;
     if check_line(level_state, level_state.obj(k)) {
@@ -1051,6 +1227,7 @@ fn t_chase(
             let state_change = match obj.class {
                 ClassType::Guard => Some(&S_GRDSHOOT1),
                 ClassType::SS => Some(&S_SSSHOOT1),
+                ClassType::Boss => Some(&S_BOSSSHOOT1),
                 _ => panic!("impl state change for {:?}", obj.class),
             };
 
@@ -1134,6 +1311,7 @@ pub fn spawn_stand(
     which: EnemyType,
     actors: &mut Vec<ObjType>,
     actor_at: &mut Vec<Vec<At>>,
+    game_state: &mut GameState,
     x_tile: usize,
     y_tile: usize,
     tile_dir: u16,
@@ -1153,8 +1331,9 @@ pub fn spawn_stand(
         }
     };
     stand.speed = SPD_PATROL;
-
-    // TODO: update gamestate.killtotal
+    if !game_state.loaded_game {
+        game_state.kill_total += 1;
+    }
 
     // TODO: update ambush info
     stand.hitpoints = START_HITPOINTS[difficulty as usize][which as usize];
@@ -1162,6 +1341,26 @@ pub fn spawn_stand(
     stand.flags |= FL_SHOOTABLE;
 
     spawn(actors, actor_at, stand);
+}
+
+pub fn spawn_boss(
+    map_data: &MapSegs,
+    actors: &mut Vec<ObjType>,
+    actor_at: &mut Vec<Vec<At>>,
+    game_state: &mut GameState,
+    x_tile: usize,
+    y_tile: usize,
+) {
+    let mut boss = spawn_new_obj(map_data, x_tile, y_tile, &S_BOSSSTAND, ClassType::Boss);
+    boss.speed = SPD_PATROL;
+    boss.hitpoints = START_HITPOINTS[game_state.difficulty as usize][EnemyType::Boss as usize];
+    boss.dir = DirType::South;
+    boss.flags = FL_SHOOTABLE | FL_AMBUSH;
+    if !game_state.loaded_game {
+        game_state.kill_total += 1;
+    }
+
+    spawn(actors, actor_at, boss);
 }
 
 pub fn spawn_patrol(
@@ -1333,16 +1532,20 @@ fn t_shoot(
 }
 
 fn a_death_scream(
-    _: ObjKey,
+    k: ObjKey,
     _: u64,
-    _: &mut LevelState,
+    level_state: &mut LevelState,
     _: &mut GameState,
-    _: &mut Sound,
+    sound: &mut Sound,
     _: &VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
-    _: &Assets,
+    assets: &Assets,
 ) {
-    // TODO play death sounds
-    todo!("a_death_scream")
+    // TODO sometimes play DEATHSCREAM6SND
+    let obj = level_state.obj(k);
+    match obj.class {
+        ClassType::Boss => sound.play_sound(SoundName::MUTTI, assets),
+        _ => todo!("death scream missing"),
+    }
 }

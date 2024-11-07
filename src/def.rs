@@ -329,6 +329,8 @@ pub struct GameState {
 
     pub made_noise: bool,
 
+    pub got_gat_gun: bool,
+
     pub bonus_count: i32,
     pub damage_count: i32,
 
@@ -384,6 +386,7 @@ pub fn new_game_state() -> GameState {
         kill_y: 0,
         victory_flag: false,
         god_mode: false,
+        got_gat_gun: false,
         play_state: PlayState::StillPlaying,
         killer_obj: None,
         attack_frame: 0,
@@ -803,12 +806,39 @@ derive_from! {
         SSSHOOT1 = 184, SSSHOOT2 = 185, SSSHOOT3 = 186,
 
         // mutant
-        MutantS1 = 189, MutantS2 = 190, MutantS3 = 191, MutantS4 = 192,
-        MutantS5 = 193, MutantS6 = 194, MutantS7 = 195, MutantS8 = 196,
+        MutantS1 = 187, MutantS2 = 188, MutantS3 = 189, MutantS4 = 190,
+        MutantS5 = 191, MutantS6 = 192, MutantS7 = 193, MutantS8 = 194,
 
         // officer
-        OfficerS1 = 240, OfficerS2 = 241, OfficerS3 = 242, OfficerS4 = 243,
-        OfficerS5 = 244, OfficerS6 = 245, OfficerS7 = 246, OfficerS8 = 247,
+        OfficerS1 = 238, OfficerS2 = 239, OfficerS3 = 240, OfficerS4 = 241,
+        OfficerS5 = 242, OfficerS6 = 243, OfficerS7 = 244, OfficerS8 = 245,
+
+        OfficerW11 = 246, OfficerW12 = 247, OfficerW13 = 248, OfficerW14 = 249,
+        OfficerW15 = 250, OfficerW16 = 251, OfficerW17 = 252, OfficerW18 = 253,
+
+        OfficerW21 = 254, OfficerW22 = 255, OfficerW23 = 256, OfficerW24 = 257,
+        OfficerW25 = 258, OfficerW26 = 259, OfficerW27 = 260, OfficerW28 = 261,
+
+        OfficerW31 = 262, OfficerW32 = 263, OfficerW33 = 264, OfficerW34 = 265,
+        OfficerW35 = 266, OfficerW36 = 267, OfficerW37 = 268, OfficerW38 = 269,
+
+        OfficerW41 = 270, OfficerW42 = 271, OfficerW43 = 272, OfficerW44 = 273,
+        OfficerW45 = 274, OfficerW46 = 275, OfficerW47 = 276, OfficerW48 = 277,
+
+        OfficerPain1 = 278, OfficerDie1 = 279, OfficerDie2 = 280, OfficerDie3 = 281,
+        OfficerPain2 = 282, OfficerDie4 = 283, OfficerDead = 284,
+
+        OfficerShoot1 = 285, OfficerShoot2 = 286, OfficerShoot3 = 287,
+
+        // ghosts
+        BlinkyW1 = 288, BlinkyW2 = 289, PinkyW1 = 290, PinkyW2 = 291,
+        ClydeW1 = 292, ClydeW2 = 293, InkyW1 = 294, InkyW2 = 295,
+
+        // hans
+        BossW1 = 296, BossW2 = 297, BossW3 = 298, BossW4 = 299,
+        BossShoot1 = 300, BossShoot2 = 301, BossShoot3 = 302, BossDead = 303,
+
+        BossDie1 = 304, BossDie2 = 305, BossDie3 = 306,
 
         // player attack frames
         KnifeReady = 416, KnifeAtk1 = 417, KnifeAtk2 = 418, KnifeAtk3 = 419, KnifeAtk4 = 420,

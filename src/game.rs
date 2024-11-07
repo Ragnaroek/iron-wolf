@@ -3,7 +3,7 @@ use std::vec;
 use vga::VGA;
 
 use crate::act1::{spawn_door, spawn_static};
-use crate::act2::{spawn_dead_guard, spawn_patrol, spawn_stand};
+use crate::act2::{spawn_boss, spawn_dead_guard, spawn_patrol, spawn_stand};
 use crate::agent::{
     draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_weapon,
 };
@@ -64,6 +64,11 @@ pub async fn game_loop(
     draw_play_screen(&game_state, rdr, prj).await;
 
     'game_loop: loop {
+        // TODO Debug
+        game_state.episode = 0;
+        game_state.map_on = 8;
+        // END Debug
+
         let mut level_state = setup_game_level(prj, game_state, assets).unwrap();
         let mut rc = init_ray_cast(prj.view_width);
 
@@ -487,6 +492,7 @@ fn scan_info_plane(
                         EnemyType::Guard,
                         &mut actors,
                         actor_at,
+                        game_state,
                         x,
                         y,
                         tile - 108,
@@ -529,6 +535,7 @@ fn scan_info_plane(
                         EnemyType::SS,
                         &mut actors,
                         actor_at,
+                        game_state,
                         x,
                         y,
                         tile - 126,
@@ -556,6 +563,7 @@ fn scan_info_plane(
                         EnemyType::Dog,
                         &mut actors,
                         actor_at,
+                        game_state,
                         x,
                         y,
                         tile - 134,
@@ -590,6 +598,7 @@ fn scan_info_plane(
                             EnemyType::Guard,
                             &mut actors,
                             actor_at,
+                            game_state,
                             x,
                             y,
                             tile - 144,
@@ -635,6 +644,7 @@ fn scan_info_plane(
                             EnemyType::SS,
                             &mut actors,
                             actor_at,
+                            game_state,
                             x,
                             y,
                             tile - 162,
@@ -694,6 +704,7 @@ fn scan_info_plane(
                             EnemyType::Guard,
                             &mut actors,
                             actor_at,
+                            game_state,
                             x,
                             y,
                             tile - 180,
@@ -739,6 +750,7 @@ fn scan_info_plane(
                             EnemyType::SS,
                             &mut actors,
                             actor_at,
+                            game_state,
                             x,
                             y,
                             tile - 198,
@@ -785,7 +797,7 @@ fn scan_info_plane(
                     }
                 }
                 214 => {
-                    todo!("boss");
+                    spawn_boss(map_data, &mut actors, actor_at, game_state, x, y);
                 }
                 215 => {
                     todo!("gift");

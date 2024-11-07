@@ -510,7 +510,7 @@ pub fn take_damage(
 
     start_damage_flash(game_state, points);
 
-    // TODO gotgatgun?
+    game_state.got_gat_gun = false;
 
     draw_health(game_state, rdr);
     draw_face(game_state, rdr);
@@ -582,13 +582,18 @@ pub fn thrust(
 
     clip_move(k, level_state, x_move.to_i32(), y_move.to_i32());
 
+    {
+        let player = level_state.mut_player();
+        player.tilex = player.x as usize >> TILESHIFT; // scale to tile values
+        player.tiley = player.y as usize >> TILESHIFT;
+    }
+
     let area = {
         let player = level_state.player();
         level_state.level.map_segs.segs[0][player.tiley * MAP_SIZE + player.tilex] - AREATILE
     };
+
     let player = level_state.mut_player();
-    player.tilex = player.x as usize >> TILESHIFT;
-    player.tiley = player.y as usize >> TILESHIFT;
     player.area_number = area as usize;
 
     // TODO VictoryTile
@@ -677,7 +682,12 @@ pub fn get_bonus(
             give_weapon(game_state, rdr, WeaponType::MachineGun);
         }
         StaticKind::BoChaingun => {
-            panic!("get chaingun");
+            sound.play_sound(SoundName::GETGATLING, assets);
+            give_weapon(game_state, rdr, WeaponType::ChainGun);
+
+            status_draw_pic(rdr, 17, 4, GraphicNum::GOTGATLINGPIC);
+            game_state.face_count = 0;
+            game_state.got_gat_gun = true;
         }
         StaticKind::BoFullheal => {
             sound.play_sound(SoundName::BONUS1UP, assets);
@@ -714,7 +724,9 @@ fn heal_self(game_state: &mut GameState, rdr: &VGARenderer, points: i32) {
         game_state.health = 100;
     }
     draw_health(&game_state, rdr);
-    // TODO set gotgatgun to 0
+
+    game_state.got_gat_gun = false;
+
     draw_face(&game_state, rdr);
 }
 

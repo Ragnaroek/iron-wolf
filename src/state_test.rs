@@ -1,8 +1,8 @@
 use crate::act2::spawn_stand;
 use crate::agent::S_PLAYER;
 use crate::def::{
-    At, ClassType, Difficulty, DirType, EnemyType, Level, LevelState, ObjKey, ObjType,
-    FL_NEVERMARK, FL_SHOOTABLE, MAP_SIZE,
+    new_game_state, At, ClassType, Difficulty, DirType, EnemyType, GameState, Level, LevelState,
+    ObjKey, ObjType, FL_NEVERMARK, FL_SHOOTABLE, MAP_SIZE,
 };
 use crate::fixed::new_fixed_i32;
 use crate::map::MapSegs;
@@ -18,11 +18,13 @@ fn test_check_line_1() {
     player.x = 1970056;
     player.y = 3768320;
     let mut level_state = mock_level_state(player);
+    let mut game_state = new_game_state();
     spawn_stand(
         &level_state.level.map_segs,
         EnemyType::Guard,
         &mut level_state.actors,
         &mut level_state.actor_at,
+        &mut game_state,
         29,
         30,
         3,
@@ -40,11 +42,13 @@ fn test_check_line_2() {
     player.x = 2106529;
     player.y = 3768320;
     let mut level_state = mock_level_state(player);
+    let mut game_state = new_game_state();
     spawn_stand(
         &level_state.level.map_segs,
         EnemyType::Guard,
         &mut level_state.actors,
         &mut level_state.actor_at,
+        &mut game_state,
         39,
         61,
         2,
@@ -58,11 +62,13 @@ fn test_check_line_2() {
 fn test_check_diag() {
     let mut level_state = mock_level_state_with_actor_at();
     //level state contains a completely empty map without any walls or objects
+    let mut game_state = new_game_state();
     spawn_stand(
         &level_state.level.map_segs,
         EnemyType::Guard,
         &mut level_state.actors,
         &mut level_state.actor_at,
+        &mut game_state,
         4,
         3,
         1,
@@ -90,11 +96,13 @@ fn test_check_diag() {
 #[test]
 fn test_check_side() {
     let mut level_state = mock_level_state_with_actor_at();
+    let mut game_state = new_game_state();
     spawn_stand(
         &level_state.level.map_segs,
         EnemyType::Guard,
         &mut level_state.actors,
         &mut level_state.actor_at,
+        &mut game_state,
         4,
         3,
         1,

@@ -183,7 +183,7 @@ pub fn load_all_sprites<M: Read + Seek>(
     let mut result =
         Vec::with_capacity(headers.sound_start as usize - headers.sprite_start as usize);
 
-    for i in headers.sprite_start..(headers.sound_start - 1) {
+    for i in headers.sprite_start..headers.sound_start {
         let sprite = load_sprite(data, &headers.headers[i as usize])?;
         result.push(sprite);
     }

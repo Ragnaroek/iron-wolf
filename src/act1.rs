@@ -656,7 +656,9 @@ pub fn move_push_walls(level_state: &mut LevelState, game_state: &mut GameState,
         // the tile can now be walked into
         level_state.level.tile_map[game_state.push_wall_x][game_state.push_wall_y] = 0;
         level_state.actor_at[game_state.push_wall_x][game_state.push_wall_y] = At::Nothing;
-        // TODO mapsegs[0] is manipulated here with player->areanumber+AREATILE why??
+        level_state.level.map_segs.segs[0]
+            [game_state.push_wall_y * MAP_SIZE + game_state.push_wall_x] =
+            level_state.player().area_number as u16 + AREATILE; // fixup area to make it walkable
 
         // see if it should be pushed farther
         if game_state.push_wall_state > 256 {

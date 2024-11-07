@@ -4,15 +4,15 @@ mod state_test;
 
 use crate::act1::{open_door, place_item_type};
 use crate::act2::{
-    S_DOGCHASE1, S_DOGDIE1, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_SSCHASE1, S_SSDIE1,
-    S_SSPAIN, S_SSPAIN1,
+    S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN,
+    S_GRDPAIN1, S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1,
 };
 use crate::agent::{give_points, take_damage};
 use crate::assets::SoundName;
 use crate::def::{
     Assets, At, ClassType, DirType, GameState, LevelState, ObjKey, ObjType, StateType, StaticKind,
     WeaponType, FL_AMBUSH, FL_ATTACKMODE, FL_FIRSTATTACK, FL_NONMARK, FL_SHOOTABLE, MAP_SIZE,
-    MIN_ACTOR_DIST, TILEGLOBAL, TILESHIFT, UNSIGNEDSHIFT,
+    MIN_ACTOR_DIST, SPD_PATROL, TILEGLOBAL, TILESHIFT, UNSIGNEDSHIFT,
 };
 use crate::fixed::new_fixed_i32;
 use crate::game::AREATILE;
@@ -791,6 +791,11 @@ pub fn first_sighting(k: ObjKey, level_state: &mut LevelState, sound: &mut Sound
             new_state(obj, &S_SSCHASE1);
             obj.speed *= 4;
         }
+        ClassType::Boss => {
+            sound.play_sound_loc_actor(SoundName::GUTENTAG, assets, obj);
+            new_state(obj, &S_BOSSCHASE1);
+            obj.speed = SPD_PATROL * 3;
+        }
         _ => panic!(
             "first sight for class type not implemented: {:?}",
             obj.class
@@ -1075,7 +1080,9 @@ fn kill_actor(
                 new_state(obj, &S_DOGDIE1);
             }
             ClassType::Boss => {
-                panic!("kill boss");
+                give_points(game_state, rdr, sound, assets, 5000);
+                new_state(obj, &S_BOSSDIE1);
+                place_item_type(level_state, StaticKind::BoKey1, tile_x, tile_y);
             }
             ClassType::Gretel => {
                 panic!("kill gretel");
