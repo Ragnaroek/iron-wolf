@@ -716,6 +716,7 @@ type Action = fn(
 
 #[derive(Eq, PartialEq, Debug)]
 pub struct StateType {
+    pub id: u16, // non-changing ID of this state, will be used in save games
     pub rotate: usize,
     pub sprite: Option<Sprite>, // None means get from obj->temp1
     pub tic_time: u32,

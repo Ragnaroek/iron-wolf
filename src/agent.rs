@@ -20,6 +20,7 @@ const MOVE_SCALE: i32 = 150;
 const BACKMOVE_SCALE: i32 = 100;
 
 pub static S_PLAYER: StateType = StateType {
+    id: 10,
     rotate: 0,
     sprite: None,
     tic_time: 0,
@@ -29,6 +30,7 @@ pub static S_PLAYER: StateType = StateType {
 };
 
 pub static S_ATTACK: StateType = StateType {
+    id: 11,
     rotate: 0,
     sprite: None,
     tic_time: 0,
@@ -643,7 +645,8 @@ pub fn get_bonus(
             heal_self(game_state, rdr, 25);
         }
         StaticKind::BoKey1 | StaticKind::BoKey2 | StaticKind::BoKey3 | StaticKind::BoKey4 => {
-            panic!("get key");
+            give_key(game_state, rdr, check.item_number);
+            sound.play_sound(SoundName::GETKEY, assets);
         }
         StaticKind::BoCross => {
             sound.play_sound(SoundName::BONUS1, assets);
@@ -716,6 +719,19 @@ pub fn get_bonus(
     }
     start_bonus_flash(game_state);
     check.sprite = Sprite::None; // remove from list
+}
+
+fn give_key(game_state: &mut GameState, rdr: &VGARenderer, key: StaticKind) {
+    let key_value = match key {
+        StaticKind::BoKey1 => 1 << 0,
+        StaticKind::BoKey2 => 1 << 1,
+        StaticKind::BoKey3 => 1 << 2,
+        StaticKind::BoKey4 => 1 << 3,
+        _ => panic!("give_key called with non key StaticKind: {:?}", key),
+    };
+
+    game_state.keys |= key_value;
+    draw_keys(game_state, rdr);
 }
 
 fn heal_self(game_state: &mut GameState, rdr: &VGARenderer, points: i32) {

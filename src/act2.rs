@@ -123,6 +123,7 @@ static START_HITPOINTS: [[i32; NUM_ENEMIES]; 4] = [
 // guards
 
 pub static S_GRDSTAND: StateType = StateType {
+    id: 1000,
     rotate: 1,
     sprite: Some(Sprite::GuardS1),
     tic_time: 0,
@@ -132,6 +133,7 @@ pub static S_GRDSTAND: StateType = StateType {
 };
 
 pub static S_GRDPATH1: StateType = StateType {
+    id: 1001,
     rotate: 1,
     sprite: Some(Sprite::GuardW11),
     tic_time: 20,
@@ -141,6 +143,7 @@ pub static S_GRDPATH1: StateType = StateType {
 };
 
 pub static S_GRDPATH1S: StateType = StateType {
+    id: 1002,
     rotate: 1,
     sprite: Some(Sprite::GuardW11),
     tic_time: 5,
@@ -150,6 +153,7 @@ pub static S_GRDPATH1S: StateType = StateType {
 };
 
 pub static S_GRDPATH2: StateType = StateType {
+    id: 1003,
     rotate: 1,
     sprite: Some(Sprite::GuardW21),
     tic_time: 15,
@@ -159,6 +163,7 @@ pub static S_GRDPATH2: StateType = StateType {
 };
 
 pub static S_GRDPATH3: StateType = StateType {
+    id: 1004,
     rotate: 1,
     sprite: Some(Sprite::GuardW31),
     tic_time: 20,
@@ -168,6 +173,7 @@ pub static S_GRDPATH3: StateType = StateType {
 };
 
 pub static S_GRDPATH3S: StateType = StateType {
+    id: 1005,
     rotate: 1,
     sprite: Some(Sprite::GuardW31),
     tic_time: 5,
@@ -177,6 +183,7 @@ pub static S_GRDPATH3S: StateType = StateType {
 };
 
 pub static S_GRDPATH4: StateType = StateType {
+    id: 1006,
     rotate: 1,
     sprite: Some(Sprite::GuardW41),
     tic_time: 15,
@@ -186,6 +193,7 @@ pub static S_GRDPATH4: StateType = StateType {
 };
 
 pub static S_GRDPAIN: StateType = StateType {
+    id: 1007,
     rotate: 2,
     sprite: Some(Sprite::GuardPain1),
     tic_time: 10,
@@ -195,6 +203,7 @@ pub static S_GRDPAIN: StateType = StateType {
 };
 
 pub static S_GRDPAIN1: StateType = StateType {
+    id: 1008,
     rotate: 2,
     sprite: Some(Sprite::GuardPain2),
     tic_time: 10,
@@ -204,6 +213,7 @@ pub static S_GRDPAIN1: StateType = StateType {
 };
 
 pub static S_GRDSHOOT1: StateType = StateType {
+    id: 1009,
     rotate: 0,
     sprite: Some(Sprite::GuardShoot1),
     tic_time: 20,
@@ -213,6 +223,7 @@ pub static S_GRDSHOOT1: StateType = StateType {
 };
 
 pub static S_GRDSHOOT2: StateType = StateType {
+    id: 1010,
     rotate: 0,
     sprite: Some(Sprite::GuardShoot2),
     tic_time: 20,
@@ -222,6 +233,7 @@ pub static S_GRDSHOOT2: StateType = StateType {
 };
 
 pub static S_GRDSHOOT3: StateType = StateType {
+    id: 1011,
     rotate: 0,
     sprite: Some(Sprite::GuardShoot3),
     tic_time: 20,
@@ -231,6 +243,7 @@ pub static S_GRDSHOOT3: StateType = StateType {
 };
 
 pub static S_GRDCHASE1: StateType = StateType {
+    id: 1012,
     rotate: 1,
     sprite: Some(Sprite::GuardW11),
     tic_time: 10,
@@ -240,6 +253,7 @@ pub static S_GRDCHASE1: StateType = StateType {
 };
 
 pub static S_GRDCHASE1S: StateType = StateType {
+    id: 1013,
     rotate: 1,
     sprite: Some(Sprite::GuardW11),
     tic_time: 3,
@@ -249,6 +263,7 @@ pub static S_GRDCHASE1S: StateType = StateType {
 };
 
 pub static S_GRDCHASE2: StateType = StateType {
+    id: 1014,
     rotate: 1,
     sprite: Some(Sprite::GuardW21),
     tic_time: 8,
@@ -258,6 +273,7 @@ pub static S_GRDCHASE2: StateType = StateType {
 };
 
 pub static S_GRDCHASE3: StateType = StateType {
+    id: 1015,
     rotate: 1,
     sprite: Some(Sprite::GuardW31),
     tic_time: 10,
@@ -267,6 +283,7 @@ pub static S_GRDCHASE3: StateType = StateType {
 };
 
 pub static S_GRDCHASE3S: StateType = StateType {
+    id: 1016,
     rotate: 1,
     sprite: Some(Sprite::GuardW31),
     tic_time: 3,
@@ -276,6 +293,7 @@ pub static S_GRDCHASE3S: StateType = StateType {
 };
 
 pub static S_GRDCHASE4: StateType = StateType {
+    id: 1017,
     rotate: 1,
     sprite: Some(Sprite::GuardW41),
     tic_time: 8,
@@ -285,6 +303,7 @@ pub static S_GRDCHASE4: StateType = StateType {
 };
 
 pub static S_GRDDIE1: StateType = StateType {
+    id: 1018,
     rotate: 0,
     sprite: Some(Sprite::GuardDie1),
     tic_time: 15,
@@ -294,6 +313,7 @@ pub static S_GRDDIE1: StateType = StateType {
 };
 
 pub static S_GRDDIE2: StateType = StateType {
+    id: 1019,
     rotate: 0,
     sprite: Some(Sprite::GuardDie2),
     tic_time: 15,
@@ -303,6 +323,7 @@ pub static S_GRDDIE2: StateType = StateType {
 };
 
 pub static S_GRDDIE3: StateType = StateType {
+    id: 1020,
     rotate: 0,
     sprite: Some(Sprite::GuardDie3),
     tic_time: 15,
@@ -312,6 +333,7 @@ pub static S_GRDDIE3: StateType = StateType {
 };
 
 pub static S_GRDDIE4: StateType = StateType {
+    id: 1021,
     rotate: 0,
     sprite: Some(Sprite::GuardDead),
     tic_time: 0,
@@ -327,6 +349,7 @@ pub static S_GRDDIE4: StateType = StateType {
 // dogs
 
 pub static S_DOGPATH1: StateType = StateType {
+    id: 1022,
     rotate: 1,
     sprite: Some(Sprite::DogW11),
     tic_time: 20,
@@ -336,6 +359,7 @@ pub static S_DOGPATH1: StateType = StateType {
 };
 
 pub static S_DOGPATH1S: StateType = StateType {
+    id: 1023,
     rotate: 1,
     sprite: Some(Sprite::DogW11),
     tic_time: 5,
@@ -345,6 +369,7 @@ pub static S_DOGPATH1S: StateType = StateType {
 };
 
 pub static S_DOGPATH2: StateType = StateType {
+    id: 1024,
     rotate: 1,
     sprite: Some(Sprite::DogW21),
     tic_time: 15,
@@ -354,6 +379,7 @@ pub static S_DOGPATH2: StateType = StateType {
 };
 
 pub static S_DOGPATH3: StateType = StateType {
+    id: 1025,
     rotate: 1,
     sprite: Some(Sprite::DogW31),
     tic_time: 20,
@@ -363,6 +389,7 @@ pub static S_DOGPATH3: StateType = StateType {
 };
 
 pub static S_DOGPATH3S: StateType = StateType {
+    id: 1026,
     rotate: 1,
     sprite: Some(Sprite::DogW31),
     tic_time: 5,
@@ -372,6 +399,7 @@ pub static S_DOGPATH3S: StateType = StateType {
 };
 
 pub static S_DOGPATH4: StateType = StateType {
+    id: 1027,
     rotate: 1,
     sprite: Some(Sprite::DogW41),
     tic_time: 15,
@@ -381,6 +409,7 @@ pub static S_DOGPATH4: StateType = StateType {
 };
 
 pub static S_DOGJUMP1: StateType = StateType {
+    id: 1028,
     rotate: 0,
     sprite: Some(Sprite::DogJump1),
     tic_time: 10,
@@ -390,6 +419,7 @@ pub static S_DOGJUMP1: StateType = StateType {
 };
 
 pub static S_DOGJUMP2: StateType = StateType {
+    id: 1029,
     rotate: 0,
     sprite: Some(Sprite::DogJump2),
     tic_time: 10,
@@ -399,6 +429,7 @@ pub static S_DOGJUMP2: StateType = StateType {
 };
 
 pub static S_DOGJUMP3: StateType = StateType {
+    id: 1030,
     rotate: 0,
     sprite: Some(Sprite::DogJump3),
     tic_time: 10,
@@ -408,6 +439,7 @@ pub static S_DOGJUMP3: StateType = StateType {
 };
 
 pub static S_DOGJUMP4: StateType = StateType {
+    id: 1031,
     rotate: 0,
     sprite: Some(Sprite::DogJump1),
     tic_time: 10,
@@ -417,6 +449,7 @@ pub static S_DOGJUMP4: StateType = StateType {
 };
 
 pub static S_DOGJUMP5: StateType = StateType {
+    id: 1032,
     rotate: 0,
     sprite: Some(Sprite::DogW11),
     tic_time: 10,
@@ -426,6 +459,7 @@ pub static S_DOGJUMP5: StateType = StateType {
 };
 
 pub static S_DOGCHASE1: StateType = StateType {
+    id: 1033,
     rotate: 1,
     sprite: Some(Sprite::DogW11),
     tic_time: 10,
@@ -435,6 +469,7 @@ pub static S_DOGCHASE1: StateType = StateType {
 };
 
 pub static S_DOGCHASE1S: StateType = StateType {
+    id: 1034,
     rotate: 1,
     sprite: Some(Sprite::DogW11),
     tic_time: 3,
@@ -444,6 +479,7 @@ pub static S_DOGCHASE1S: StateType = StateType {
 };
 
 pub static S_DOGCHASE2: StateType = StateType {
+    id: 1035,
     rotate: 1,
     sprite: Some(Sprite::DogW21),
     tic_time: 8,
@@ -453,6 +489,7 @@ pub static S_DOGCHASE2: StateType = StateType {
 };
 
 pub static S_DOGCHASE3: StateType = StateType {
+    id: 1036,
     rotate: 1,
     sprite: Some(Sprite::DogW31),
     tic_time: 10,
@@ -462,6 +499,7 @@ pub static S_DOGCHASE3: StateType = StateType {
 };
 
 pub static S_DOGCHASE3S: StateType = StateType {
+    id: 1037,
     rotate: 1,
     sprite: Some(Sprite::DogW31),
     tic_time: 3,
@@ -471,6 +509,7 @@ pub static S_DOGCHASE3S: StateType = StateType {
 };
 
 pub static S_DOGCHASE4: StateType = StateType {
+    id: 1038,
     rotate: 1,
     sprite: Some(Sprite::DogW41),
     tic_time: 8,
@@ -480,6 +519,7 @@ pub static S_DOGCHASE4: StateType = StateType {
 };
 
 pub static S_DOGDIE1: StateType = StateType {
+    id: 1039,
     rotate: 0,
     sprite: Some(Sprite::DogDie1),
     tic_time: 15,
@@ -489,6 +529,7 @@ pub static S_DOGDIE1: StateType = StateType {
 };
 
 pub static S_DOGDIE2: StateType = StateType {
+    id: 1040,
     rotate: 0,
     sprite: Some(Sprite::DogDie2),
     tic_time: 15,
@@ -498,6 +539,7 @@ pub static S_DOGDIE2: StateType = StateType {
 };
 
 pub static S_DOGDIE3: StateType = StateType {
+    id: 1041,
     rotate: 0,
     sprite: Some(Sprite::DogDie3),
     tic_time: 15,
@@ -507,6 +549,7 @@ pub static S_DOGDIE3: StateType = StateType {
 };
 
 pub static S_DOGDEAD: StateType = StateType {
+    id: 1042,
     rotate: 0,
     sprite: Some(Sprite::DogDead),
     tic_time: 15,
@@ -518,6 +561,7 @@ pub static S_DOGDEAD: StateType = StateType {
 // officers
 
 pub static S_OFCSTAND: StateType = StateType {
+    id: 1043,
     rotate: 1,
     sprite: Some(Sprite::OfficerS1),
     tic_time: 0,
@@ -529,6 +573,7 @@ pub static S_OFCSTAND: StateType = StateType {
 // mutant
 
 pub static S_MUTSTAND: StateType = StateType {
+    id: 1044,
     rotate: 1,
     sprite: Some(Sprite::MutantS1),
     tic_time: 0,
@@ -540,6 +585,7 @@ pub static S_MUTSTAND: StateType = StateType {
 // SS
 
 pub static S_SSSTAND: StateType = StateType {
+    id: 1045,
     rotate: 1,
     sprite: Some(Sprite::SSS1),
     tic_time: 0,
@@ -549,6 +595,7 @@ pub static S_SSSTAND: StateType = StateType {
 };
 
 pub static S_SSPATH1: StateType = StateType {
+    id: 1046,
     rotate: 1,
     sprite: Some(Sprite::SSW11),
     tic_time: 20,
@@ -558,6 +605,7 @@ pub static S_SSPATH1: StateType = StateType {
 };
 
 pub static S_SSPATH1S: StateType = StateType {
+    id: 1047,
     rotate: 1,
     sprite: Some(Sprite::SSW11),
     tic_time: 5,
@@ -567,6 +615,7 @@ pub static S_SSPATH1S: StateType = StateType {
 };
 
 pub static S_SSPATH2: StateType = StateType {
+    id: 1048,
     rotate: 1,
     sprite: Some(Sprite::SSW21),
     tic_time: 15,
@@ -576,6 +625,7 @@ pub static S_SSPATH2: StateType = StateType {
 };
 
 pub static S_SSPATH3: StateType = StateType {
+    id: 1049,
     rotate: 1,
     sprite: Some(Sprite::SSW31),
     tic_time: 20,
@@ -585,6 +635,7 @@ pub static S_SSPATH3: StateType = StateType {
 };
 
 pub static S_SSPATH3S: StateType = StateType {
+    id: 1050,
     rotate: 1,
     sprite: Some(Sprite::SSW31),
     tic_time: 5,
@@ -594,6 +645,7 @@ pub static S_SSPATH3S: StateType = StateType {
 };
 
 pub static S_SSPATH4: StateType = StateType {
+    id: 1051,
     rotate: 1,
     sprite: Some(Sprite::SSW41),
     tic_time: 15,
@@ -603,6 +655,7 @@ pub static S_SSPATH4: StateType = StateType {
 };
 
 pub static S_SSPAIN: StateType = StateType {
+    id: 1052,
     rotate: 2,
     sprite: Some(Sprite::SSPAIN1),
     tic_time: 10,
@@ -612,6 +665,7 @@ pub static S_SSPAIN: StateType = StateType {
 };
 
 pub static S_SSPAIN1: StateType = StateType {
+    id: 1053,
     rotate: 2,
     sprite: Some(Sprite::SSPAIN2),
     tic_time: 10,
@@ -621,6 +675,7 @@ pub static S_SSPAIN1: StateType = StateType {
 };
 
 pub static S_SSSHOOT1: StateType = StateType {
+    id: 1054,
     rotate: 0,
     sprite: Some(Sprite::SSSHOOT1),
     tic_time: 20,
@@ -630,6 +685,7 @@ pub static S_SSSHOOT1: StateType = StateType {
 };
 
 pub static S_SSSHOOT2: StateType = StateType {
+    id: 1055,
     rotate: 0,
     sprite: Some(Sprite::SSSHOOT2),
     tic_time: 20,
@@ -639,6 +695,7 @@ pub static S_SSSHOOT2: StateType = StateType {
 };
 
 pub static S_SSSHOOT3: StateType = StateType {
+    id: 1056,
     rotate: 0,
     sprite: Some(Sprite::SSSHOOT3),
     tic_time: 10,
@@ -648,6 +705,7 @@ pub static S_SSSHOOT3: StateType = StateType {
 };
 
 pub static S_SSSHOOT4: StateType = StateType {
+    id: 1057,
     rotate: 0,
     sprite: Some(Sprite::SSSHOOT2),
     tic_time: 10,
@@ -657,6 +715,7 @@ pub static S_SSSHOOT4: StateType = StateType {
 };
 
 pub static S_SSSHOOT5: StateType = StateType {
+    id: 1058,
     rotate: 0,
     sprite: Some(Sprite::SSSHOOT3),
     tic_time: 10,
@@ -666,6 +725,7 @@ pub static S_SSSHOOT5: StateType = StateType {
 };
 
 pub static S_SSSHOOT6: StateType = StateType {
+    id: 1059,
     rotate: 0,
     sprite: Some(Sprite::SSSHOOT2),
     tic_time: 10,
@@ -675,6 +735,7 @@ pub static S_SSSHOOT6: StateType = StateType {
 };
 
 pub static S_SSSHOOT7: StateType = StateType {
+    id: 1060,
     rotate: 0,
     sprite: Some(Sprite::SSSHOOT3),
     tic_time: 10,
@@ -684,6 +745,7 @@ pub static S_SSSHOOT7: StateType = StateType {
 };
 
 pub static S_SSSHOOT8: StateType = StateType {
+    id: 1061,
     rotate: 0,
     sprite: Some(Sprite::SSSHOOT2),
     tic_time: 10,
@@ -693,6 +755,7 @@ pub static S_SSSHOOT8: StateType = StateType {
 };
 
 pub static S_SSSHOOT9: StateType = StateType {
+    id: 1062,
     rotate: 0,
     sprite: Some(Sprite::SSSHOOT3),
     tic_time: 10,
@@ -702,6 +765,7 @@ pub static S_SSSHOOT9: StateType = StateType {
 };
 
 pub static S_SSCHASE1: StateType = StateType {
+    id: 1063,
     rotate: 1,
     sprite: Some(Sprite::SSW11),
     tic_time: 10,
@@ -711,6 +775,7 @@ pub static S_SSCHASE1: StateType = StateType {
 };
 
 pub static S_SSCHASE1S: StateType = StateType {
+    id: 1064,
     rotate: 1,
     sprite: Some(Sprite::SSW11),
     tic_time: 3,
@@ -720,6 +785,7 @@ pub static S_SSCHASE1S: StateType = StateType {
 };
 
 pub static S_SSCHASE2: StateType = StateType {
+    id: 1065,
     rotate: 1,
     sprite: Some(Sprite::SSW21),
     tic_time: 8,
@@ -729,6 +795,7 @@ pub static S_SSCHASE2: StateType = StateType {
 };
 
 pub static S_SSCHASE3: StateType = StateType {
+    id: 1066,
     rotate: 1,
     sprite: Some(Sprite::SSW31),
     tic_time: 10,
@@ -738,6 +805,7 @@ pub static S_SSCHASE3: StateType = StateType {
 };
 
 pub static S_SSCHASE3S: StateType = StateType {
+    id: 1067,
     rotate: 1,
     sprite: Some(Sprite::SSW31),
     tic_time: 3,
@@ -747,6 +815,7 @@ pub static S_SSCHASE3S: StateType = StateType {
 };
 
 pub static S_SSCHASE4: StateType = StateType {
+    id: 1068,
     rotate: 1,
     sprite: Some(Sprite::SSW41),
     tic_time: 8,
@@ -756,6 +825,7 @@ pub static S_SSCHASE4: StateType = StateType {
 };
 
 pub static S_SSDIE1: StateType = StateType {
+    id: 1069,
     rotate: 0,
     sprite: Some(Sprite::SSDIE1),
     tic_time: 15,
@@ -765,6 +835,7 @@ pub static S_SSDIE1: StateType = StateType {
 };
 
 pub static S_SSDIE2: StateType = StateType {
+    id: 1070,
     rotate: 0,
     sprite: Some(Sprite::SSDIE2),
     tic_time: 15,
@@ -774,6 +845,7 @@ pub static S_SSDIE2: StateType = StateType {
 };
 
 pub static S_SSDIE3: StateType = StateType {
+    id: 1071,
     rotate: 0,
     sprite: Some(Sprite::SSDIE3),
     tic_time: 15,
@@ -783,6 +855,7 @@ pub static S_SSDIE3: StateType = StateType {
 };
 
 pub static S_SSDIE4: StateType = StateType {
+    id: 1072,
     rotate: 0,
     sprite: Some(Sprite::SSDEAD),
     tic_time: 0,
@@ -795,6 +868,7 @@ pub static S_SSDIE4: StateType = StateType {
 // hans
 //
 pub static S_BOSSSTAND: StateType = StateType {
+    id: 1073,
     rotate: 0,
     sprite: Some(Sprite::BossW1),
     tic_time: 0,
@@ -804,6 +878,7 @@ pub static S_BOSSSTAND: StateType = StateType {
 };
 
 pub static S_BOSSCHASE1: StateType = StateType {
+    id: 1074,
     rotate: 0,
     sprite: Some(Sprite::BossW1),
     tic_time: 10,
@@ -813,6 +888,7 @@ pub static S_BOSSCHASE1: StateType = StateType {
 };
 
 pub static S_BOSSCHASE1S: StateType = StateType {
+    id: 1075,
     rotate: 0,
     sprite: Some(Sprite::BossW1),
     tic_time: 3,
@@ -822,6 +898,7 @@ pub static S_BOSSCHASE1S: StateType = StateType {
 };
 
 pub static S_BOSSCHASE2: StateType = StateType {
+    id: 1076,
     rotate: 0,
     sprite: Some(Sprite::BossW2),
     tic_time: 8,
@@ -831,6 +908,7 @@ pub static S_BOSSCHASE2: StateType = StateType {
 };
 
 pub static S_BOSSCHASE3: StateType = StateType {
+    id: 1077,
     rotate: 0,
     sprite: Some(Sprite::BossW3),
     tic_time: 10,
@@ -840,6 +918,7 @@ pub static S_BOSSCHASE3: StateType = StateType {
 };
 
 pub static S_BOSSCHASE3S: StateType = StateType {
+    id: 1078,
     rotate: 0,
     sprite: Some(Sprite::BossW3),
     tic_time: 3,
@@ -849,6 +928,7 @@ pub static S_BOSSCHASE3S: StateType = StateType {
 };
 
 pub static S_BOSSCHASE4: StateType = StateType {
+    id: 1079,
     rotate: 0,
     sprite: Some(Sprite::BossW4),
     tic_time: 8,
@@ -858,6 +938,7 @@ pub static S_BOSSCHASE4: StateType = StateType {
 };
 
 pub static S_BOSSDIE1: StateType = StateType {
+    id: 1080,
     rotate: 0,
     sprite: Some(Sprite::BossDie1),
     tic_time: 15,
@@ -867,6 +948,7 @@ pub static S_BOSSDIE1: StateType = StateType {
 };
 
 pub static S_BOSSDIE2: StateType = StateType {
+    id: 1081,
     rotate: 0,
     sprite: Some(Sprite::BossDie2),
     tic_time: 15,
@@ -876,6 +958,7 @@ pub static S_BOSSDIE2: StateType = StateType {
 };
 
 pub static S_BOSSDIE3: StateType = StateType {
+    id: 1082,
     rotate: 0,
     sprite: Some(Sprite::BossDie3),
     tic_time: 15,
@@ -885,6 +968,7 @@ pub static S_BOSSDIE3: StateType = StateType {
 };
 
 pub static S_BOSSDIE4: StateType = StateType {
+    id: 1083,
     rotate: 0,
     sprite: Some(Sprite::BossDead),
     tic_time: 0,
@@ -894,6 +978,7 @@ pub static S_BOSSDIE4: StateType = StateType {
 };
 
 pub static S_BOSSSHOOT1: StateType = StateType {
+    id: 1084,
     rotate: 0,
     sprite: Some(Sprite::BossShoot1),
     tic_time: 30,
@@ -903,6 +988,7 @@ pub static S_BOSSSHOOT1: StateType = StateType {
 };
 
 pub static S_BOSSSHOOT2: StateType = StateType {
+    id: 1085,
     rotate: 0,
     sprite: Some(Sprite::BossShoot2),
     tic_time: 10,
@@ -912,6 +998,7 @@ pub static S_BOSSSHOOT2: StateType = StateType {
 };
 
 pub static S_BOSSSHOOT3: StateType = StateType {
+    id: 1086,
     rotate: 0,
     sprite: Some(Sprite::BossShoot3),
     tic_time: 10,
@@ -921,6 +1008,7 @@ pub static S_BOSSSHOOT3: StateType = StateType {
 };
 
 pub static S_BOSSSHOOT4: StateType = StateType {
+    id: 1087,
     rotate: 0,
     sprite: Some(Sprite::BossShoot2),
     tic_time: 10,
@@ -930,6 +1018,7 @@ pub static S_BOSSSHOOT4: StateType = StateType {
 };
 
 pub static S_BOSSSHOOT5: StateType = StateType {
+    id: 1088,
     rotate: 0,
     sprite: Some(Sprite::BossShoot3),
     tic_time: 10,
@@ -939,6 +1028,7 @@ pub static S_BOSSSHOOT5: StateType = StateType {
 };
 
 pub static S_BOSSSHOOT6: StateType = StateType {
+    id: 1089,
     rotate: 0,
     sprite: Some(Sprite::BossShoot2),
     tic_time: 10,
@@ -948,6 +1038,7 @@ pub static S_BOSSSHOOT6: StateType = StateType {
 };
 
 pub static S_BOSSSHOOT7: StateType = StateType {
+    id: 1090,
     rotate: 0,
     sprite: Some(Sprite::BossShoot3),
     tic_time: 10,
@@ -957,6 +1048,7 @@ pub static S_BOSSSHOOT7: StateType = StateType {
 };
 
 pub static S_BOSSSHOOT8: StateType = StateType {
+    id: 1091,
     rotate: 0,
     sprite: Some(Sprite::BossShoot1),
     tic_time: 10,
@@ -1185,6 +1277,8 @@ fn t_stand(
     _: &ProjectionConfig,
     assets: &Assets,
 ) {
+    println!("class = {:?}", level_state.obj(k).class);
+
     sight_player(k, level_state, sound, assets, tics);
 }
 

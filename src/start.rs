@@ -746,9 +746,13 @@ fn read_static(reader: &mut DataReader) -> StaticType {
     let tile_x = reader.read_u8() as usize;
     let tile_y = reader.read_u8() as usize;
     reader.skip(2); // visspot ptr is not used in iw
-    let shape_num = reader.read_u16() as usize;
+    let mut shape_num = reader.read_u16() as usize;
     let flags = reader.read_u8();
     let item_number = reader.read_u8() as usize;
+
+    if shape_num == u16::MAX as usize {
+        shape_num = usize::MAX;
+    }
 
     StaticType {
         tile_x,

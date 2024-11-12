@@ -14,6 +14,7 @@ use crate::assets::Music;
 use crate::assets::{GraphicNum, GAMEPAL};
 use crate::debug::debug_keys;
 use crate::def::ActiveType;
+use crate::def::ClassType;
 use crate::def::ObjType;
 use crate::def::WindowState;
 use crate::def::{
