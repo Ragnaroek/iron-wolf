@@ -374,7 +374,7 @@ pub fn save_the_game(
     write_obj_type(writer, &null_obj_type());
 
     let offset = writer.offset(); // no checksum over obj_type, reset the offset
-    writer.skip(2); //lastobjlist always nulled, not needed for iw
+    writer.write_u16(level_state.statics.len() as u16);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
 
     for i in 0..level_state.statics.len() {
@@ -675,15 +675,22 @@ pub fn do_load(
     }
 
     let offset = reader.offset(); // no checksum over obj_type, reset the offset
-    reader.skip(2); // laststatobj pointer, don't need that in iw
+    let mut statics_len = reader.read_u16() as usize;
+    if statics_len > MAX_STATS {
+        statics_len = level_state.statics.len();
+    }
     let (offset, checksum) = do_read_checksum(reader, offset, checksum);
 
-    // only read the statics available in the level. The remaining
+    // only read the statics available in the save file. The remaining
     // statics contain garbage and will be skipped
-    for i in 0..level_state.statics.len() {
-        level_state.statics[i] = read_static(reader);
+    for i in 0..statics_len {
+        if i < level_state.statics.len() {
+            level_state.statics[i] = read_static(reader);
+        } else {
+            level_state.statics.push(read_static(reader));
+        }
     }
-    reader.skip((MAX_STATS - level_state.statics.len()) * STAT_TYPE_LEN); // skip garbage static data
+    reader.skip((MAX_STATS - statics_len) * STAT_TYPE_LEN); // skip garbage static data
     let (offset, checksum) = do_read_checksum(reader, offset, checksum);
 
     let mut door_positions = vec![0; level_state.doors.len()];

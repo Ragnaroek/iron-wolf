@@ -314,15 +314,8 @@ fn check_written_save_0(loader: &DiskLoader) {
         }
     }
 
-    assert_eq!(
-        test_save[obj_offset_end], 0,
-        "laststatobj pointer (1) not nulled"
-    );
-    assert_eq!(
-        test_save[obj_offset_end + 1],
-        0,
-        "laststatobj pointer (1) not nulled"
-    );
+    assert_eq!(test_save[obj_offset_end], 88);
+    assert_eq!(test_save[obj_offset_end + 1], 1);
 
     let static_offset_start = obj_offset_end + 2;
     let static_offset_end = 19631;
@@ -359,7 +352,7 @@ fn check_written_save_0(loader: &DiskLoader) {
             .try_into()
             .expect("checksum"),
     );
-    assert_eq!(checksum, 129989);
+    assert_eq!(checksum, 130078);
 }
 
 // save game 1 is a manipulated/cheated one. Lives were edited to 99.
