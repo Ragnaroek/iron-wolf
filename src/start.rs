@@ -11,6 +11,7 @@ use vga::input::NumCode;
 use vga::util::spawn_task;
 use vga::SCReg;
 
+use crate::act2::get_state_by_id;
 use crate::assets::{self, GraphicNum, GAMEPAL, SIGNON};
 use crate::def::{
     difficulty, new_game_state, weapon_type, ActiveType, Assets, At, ClassType, Dir, DirType,
@@ -484,7 +485,11 @@ fn write_obj_type(writer: &mut DataWriter, obj: &ObjType) {
     writer.write_i16(obj.active as i16);
     writer.write_u16(obj.tic_count as u16);
     writer.write_u16(obj.class as u16);
-    writer.skip(2); // state ptr not restored, pointer values not available
+    if let Some(state) = obj.state {
+        writer.write_u16(state.id);
+    } else {
+        writer.write_u16(0);
+    }
     writer.write_u8(obj.flags);
     writer.skip(1); //padding flags
 
@@ -638,13 +643,13 @@ pub fn do_load(
         level_state.area_by_player[i] = val != 0;
     }
 
-    let player = read_partial_obj_type(reader);
-    copy_partial_obj_type(level_state.mut_player(), &player);
+    let player = read_obj_type(reader);
+    *level_state.mut_player() = player;
 
     let mut actors_loaded = Vec::with_capacity(level_state.actors.len());
     loop {
         disk_anim.disk_flop_anim(rdr);
-        let actor = read_partial_obj_type(reader);
+        let actor = read_obj_type(reader);
         if actor.active == ActiveType::BadObject {
             break;
         }
@@ -652,7 +657,7 @@ pub fn do_load(
     }
 
     for i in 1..level_state.actors.len() {
-        copy_partial_obj_type(&mut level_state.actors[i], &actors_loaded[i - 1]);
+        level_state.actors[i] = actors_loaded[i - 1];
     }
 
     // fix up actor_at array pointers
@@ -763,31 +768,6 @@ fn read_static(reader: &mut DataReader) -> StaticType {
     }
 }
 
-// Copies every field except the state.
-fn copy_partial_obj_type(dst: &mut ObjType, src: &ObjType) {
-    dst.active = src.active;
-    dst.tic_count = src.tic_count;
-    dst.class = src.class;
-    dst.flags = src.flags;
-    dst.distance = src.distance;
-    dst.dir = src.dir;
-    dst.x = src.x;
-    dst.y = src.y;
-    dst.tilex = src.tilex;
-    dst.tiley = src.tiley;
-    dst.area_number = src.area_number;
-    dst.view_x = src.view_x;
-    dst.view_height = src.view_height;
-    dst.trans_x = src.trans_x;
-    dst.trans_y = src.trans_y;
-    dst.angle = src.angle;
-    dst.hitpoints = src.hitpoints;
-    dst.speed = src.speed;
-    dst.temp1 = src.temp1;
-    dst.temp2 = src.temp3;
-    dst.temp3 = src.temp3;
-}
-
 pub fn null_obj_type() -> ObjType {
     ObjType {
         active: ActiveType::BadObject,
@@ -818,7 +798,7 @@ pub fn null_obj_type() -> ObjType {
 
 // Read ObjType from file. 'state' is always excluded and set to 'None', since it
 // is a pointer value that makes no nense in the Rust world.
-fn read_partial_obj_type(reader: &mut DataReader) -> ObjType {
+fn read_obj_type(reader: &mut DataReader) -> ObjType {
     let active = ActiveType::try_from(reader.read_i16()).expect("ActiveType");
     if active == ActiveType::BadObject {
         reader.skip(OBJ_TYPE_LEN - 2);
@@ -826,7 +806,10 @@ fn read_partial_obj_type(reader: &mut DataReader) -> ObjType {
     }
     let tic_count = reader.read_u16() as u32;
     let class = ClassType::try_from(reader.read_u16() as usize).expect("ClassType");
-    reader.skip(2); // state_ptr not restored
+
+    let state_id = reader.read_u16();
+    let state = get_state_by_id(state_id);
+
     let flags = reader.read_u8();
     reader.skip(1); // padding for flags
 
@@ -861,12 +844,11 @@ fn read_partial_obj_type(reader: &mut DataReader) -> ObjType {
     let temp3 = reader.read_i16() as i32;
 
     reader.skip(4); // next and prev pointer we don't need in iw (each 2 bytes/1 word)
-
     ObjType {
         active,
         tic_count,
         class,
-        state: None,
+        state,
         flags,
         distance,
         dir,

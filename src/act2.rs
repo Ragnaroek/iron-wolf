@@ -1,5 +1,9 @@
+#[cfg(test)]
+#[path = "./act2_test.rs"]
+mod act2_test;
+
 use crate::act1::open_door;
-use crate::agent::take_damage;
+use crate::agent::{take_damage, S_ATTACK, S_PLAYER};
 use crate::assets::SoundName;
 use crate::def::{
     ActiveType, Assets, At, ClassType, ControlState, Difficulty, DirType, DoorAction, EnemyType,
@@ -1057,6 +1061,112 @@ pub static S_BOSSSHOOT8: StateType = StateType {
     next: Some(&S_BOSSCHASE1),
 };
 
+pub static STATES: [&'static StateType; 94] = [
+    &S_PLAYER,
+    &S_ATTACK,
+    &S_GRDSTAND,
+    &S_GRDPATH1,
+    &S_GRDPATH1S,
+    &S_GRDPATH2,
+    &S_GRDPATH3,
+    &S_GRDPATH3S,
+    &S_GRDPATH4,
+    &S_GRDPAIN,
+    &S_GRDPAIN1,
+    &S_GRDSHOOT1,
+    &S_GRDSHOOT2,
+    &S_GRDSHOOT3,
+    &S_GRDCHASE1,
+    &S_GRDCHASE1S,
+    &S_GRDCHASE2,
+    &S_GRDCHASE3,
+    &S_GRDCHASE3S,
+    &S_GRDCHASE4,
+    &S_GRDDIE1,
+    &S_GRDDIE2,
+    &S_GRDDIE3,
+    &S_GRDDIE4,
+    &S_DOGPATH1,
+    &S_DOGPATH1S,
+    &S_DOGPATH2,
+    &S_DOGPATH3,
+    &S_DOGPATH3S,
+    &S_DOGPATH4,
+    &S_DOGJUMP1,
+    &S_DOGJUMP2,
+    &S_DOGJUMP3,
+    &S_DOGJUMP4,
+    &S_DOGJUMP5,
+    &S_DOGCHASE1,
+    &S_DOGCHASE1S,
+    &S_DOGCHASE2,
+    &S_DOGCHASE3,
+    &S_DOGCHASE3S,
+    &S_DOGCHASE4,
+    &S_DOGDIE1,
+    &S_DOGDIE2,
+    &S_DOGDIE3,
+    &S_DOGDEAD,
+    &S_OFCSTAND,
+    &S_MUTSTAND,
+    &S_SSSTAND,
+    &S_SSPATH1,
+    &S_SSPATH1S,
+    &S_SSPATH2,
+    &S_SSPATH3,
+    &S_SSPATH3S,
+    &S_SSPATH4,
+    &S_SSPAIN,
+    &S_SSPAIN1,
+    &S_SSSHOOT1,
+    &S_SSSHOOT2,
+    &S_SSSHOOT3,
+    &S_SSSHOOT4,
+    &S_SSSHOOT5,
+    &S_SSSHOOT6,
+    &S_SSSHOOT7,
+    &S_SSSHOOT8,
+    &S_SSSHOOT9,
+    &S_SSCHASE1,
+    &S_SSCHASE1S,
+    &S_SSCHASE2,
+    &S_SSCHASE3,
+    &S_SSCHASE3S,
+    &S_SSCHASE4,
+    &S_SSDIE1,
+    &S_SSDIE2,
+    &S_SSDIE3,
+    &S_SSDIE4,
+    &S_BOSSSTAND,
+    &S_BOSSCHASE1,
+    &S_BOSSCHASE1S,
+    &S_BOSSCHASE2,
+    &S_BOSSCHASE3,
+    &S_BOSSCHASE3S,
+    &S_BOSSCHASE4,
+    &S_BOSSDIE1,
+    &S_BOSSDIE2,
+    &S_BOSSDIE3,
+    &S_BOSSDIE4,
+    &S_BOSSSHOOT1,
+    &S_BOSSSHOOT2,
+    &S_BOSSSHOOT3,
+    &S_BOSSSHOOT4,
+    &S_BOSSSHOOT5,
+    &S_BOSSSHOOT6,
+    &S_BOSSSHOOT7,
+    &S_BOSSSHOOT8,
+];
+
+pub fn get_state_by_id(id: u16) -> Option<&'static StateType> {
+    for s in &STATES {
+        if s.id == id {
+            return Some(&s);
+        }
+    }
+    return None;
+}
+
 fn t_path(
     k: ObjKey,
     tics: u64,
@@ -1277,8 +1387,6 @@ fn t_stand(
     _: &ProjectionConfig,
     assets: &Assets,
 ) {
-    println!("class = {:?}", level_state.obj(k).class);
-
     sight_player(k, level_state, sound, assets, tics);
 }
 
