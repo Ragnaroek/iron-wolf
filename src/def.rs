@@ -62,6 +62,8 @@ pub const SPD_DOG: i32 = 1500;
 pub const STATUS_LINES: usize = 40;
 pub static SCREENLOC: [usize; 3] = [PAGE_1_START, PAGE_2_START, PAGE_3_START];
 
+pub const EXIT_TILE: u16 = 99;
+
 pub static DIR_ANGLE: [usize; 9] = [
     0,
     ANGLES / 8,

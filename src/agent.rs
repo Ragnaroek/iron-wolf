@@ -3,9 +3,9 @@ use crate::assets::{face_pic, n_pic, weapon_pic, GraphicNum, SoundName};
 use crate::def::{
     Assets, At, Button, ClassType, ControlState, Difficulty, Dir, DirType, GameState, LevelState,
     ObjKey, ObjType, PlayState, Sprite, StateType, StaticKind, StaticType, WeaponType,
-    ALT_ELEVATOR_TILE, ANGLES, ANGLES_I32, ELEVATOR_TILE, EXTRA_POINTS, FL_NEVERMARK, FL_SHOOTABLE,
-    FL_VISABLE, MAP_SIZE, MIN_DIST, PLAYER_SIZE, PUSHABLE_TILE, SCREENLOC, STATUS_LINES,
-    TILEGLOBAL, TILESHIFT,
+    ALT_ELEVATOR_TILE, ANGLES, ANGLES_I32, ELEVATOR_TILE, EXIT_TILE, EXTRA_POINTS, FL_NEVERMARK,
+    FL_SHOOTABLE, FL_VISABLE, MAP_SIZE, MIN_DIST, PLAYER_SIZE, PUSHABLE_TILE, SCREENLOC,
+    STATUS_LINES, TILEGLOBAL, TILESHIFT,
 };
 use crate::fixed::{fixed_by_frac, new_fixed_i32};
 use crate::game::AREATILE;
@@ -446,7 +446,13 @@ fn cmd_use(
 
     if !control_state.button_held(Button::Use) && doornum & 0x80 != 0 {
         control_state.set_button_held(Button::Use, true);
-        operate_door((doornum & !0x80) as usize, level_state, sound, assets);
+        operate_door(
+            (doornum & !0x80) as usize,
+            level_state,
+            game_state,
+            sound,
+            assets,
+        );
     } else {
         // TODO SD_PlaySound(DONOTHINGSND)
     }
@@ -562,6 +568,10 @@ fn control_movement(
     }
 }
 
+fn victor_tile() {
+    todo!("reached victor tile")
+}
+
 pub fn thrust(
     k: ObjKey,
     level_state: &mut LevelState,
@@ -590,15 +600,21 @@ pub fn thrust(
         player.tiley = player.y as usize >> TILESHIFT;
     }
 
-    let area = {
+    let (area, offset) = {
         let player = level_state.player();
-        level_state.level.map_segs.segs[0][player.tiley * MAP_SIZE + player.tilex] - AREATILE
+        let offset = player.tiley * MAP_SIZE + player.tilex;
+        (
+            level_state.level.map_segs.segs[0][offset] - AREATILE,
+            offset,
+        )
     };
 
     let player = level_state.mut_player();
     player.area_number = area as usize;
 
-    // TODO VictoryTile
+    if level_state.level.map_segs.segs[1][offset] == EXIT_TILE {
+        victor_tile();
+    }
 }
 
 pub fn give_points(

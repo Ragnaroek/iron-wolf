@@ -354,11 +354,23 @@ pub fn spawn_door(
 pub fn operate_door(
     doornum: usize,
     level_state: &mut LevelState,
+    game_state: &mut GameState,
     sound: &mut Sound,
     assets: &Assets,
 ) {
-    // TODO handle locked door here (check for keys, play sound)
     let door: &mut DoorType = &mut level_state.doors[doornum];
+
+    if door.lock == DoorLock::Lock1
+        || door.lock == DoorLock::Lock2
+        || door.lock == DoorLock::Lock3
+        || door.lock == DoorLock::Lock4
+    {
+        if game_state.keys & (1 << (door.lock as usize - DoorLock::Lock1 as usize)) == 0 {
+            sound.play_sound(SoundName::NOWAY, assets);
+            return;
+        }
+    }
+
     match door.action {
         DoorAction::Closed | DoorAction::Closing => open_door(door),
         DoorAction::Open | DoorAction::Opening => close_door(doornum, level_state, sound, assets),
