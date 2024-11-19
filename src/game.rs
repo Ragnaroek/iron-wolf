@@ -424,7 +424,7 @@ pub fn setup_game_level(
         last_attacker: None,
     };
 
-    thrust(PLAYER_KEY, &mut level_state, prj, 0, 0); // set some variables
+    thrust(PLAYER_KEY, &mut level_state, game_state, prj, 0, 0); // set some variables
 
     Ok(level_state)
 }

@@ -5,17 +5,16 @@ extern crate test;
 
 use iw::config::default_iw_config;
 use iw::loader::DiskLoader;
-use iw::sd::Sound;
 use std::path::PathBuf;
 use std::sync::Arc;
 use test::Bencher;
 
+use iw::assets;
 use iw::def::new_game_state;
 use iw::draw::{init_ray_cast, init_ray_cast_consts, wall_refresh};
 use iw::game::setup_game_level;
 use iw::play;
 use iw::vga_render;
-use iw::{assets, sd};
 
 #[bench]
 fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {

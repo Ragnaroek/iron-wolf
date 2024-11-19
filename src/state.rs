@@ -597,8 +597,6 @@ pub fn move_obj(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     rdr: &VGARenderer,
-    player_x: i32,
-    player_y: i32,
     mov: i32,
     tics: u64,
 ) {
@@ -639,12 +637,12 @@ pub fn move_obj(
     // check to make sure it's not on top of player
 
     if level_state.area_by_player[level_state.obj(k).area_number] {
-        let delta_x = level_state.obj(k).x - player_x;
+        let delta_x = level_state.obj(k).x - level_state.player().x;
         if delta_x < -MIN_ACTOR_DIST || delta_x > MIN_ACTOR_DIST {
             level_state.update_obj(k, |obj| obj.distance -= mov);
             return;
         }
-        let delta_y = level_state.obj(k).y - player_y;
+        let delta_y = level_state.obj(k).y - level_state.player().y;
         if delta_y < -MIN_ACTOR_DIST || delta_y > MIN_ACTOR_DIST {
             level_state.update_obj(k, |obj| obj.distance -= mov);
             return;
@@ -655,6 +653,7 @@ pub fn move_obj(
             take_damage(k, (tics * 2) as i32, level_state, game_state, rdr)
         }
 
+        // back up
         let obj = level_state.mut_obj(k);
         match obj.dir {
             DirType::North => obj.y += mov,

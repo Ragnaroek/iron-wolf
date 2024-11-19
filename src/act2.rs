@@ -7,9 +7,9 @@ use crate::agent::{take_damage, S_ATTACK, S_PLAYER};
 use crate::assets::SoundName;
 use crate::def::{
     ActiveType, Assets, At, ClassType, ControlState, Difficulty, DirType, DoorAction, EnemyType,
-    GameState, LevelState, ObjKey, ObjType, Sprite, StateType, FL_AMBUSH, FL_SHOOTABLE, FL_VISABLE,
-    ICON_ARROWS, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, RUN_SPEED, SPD_DOG, SPD_PATROL, TILEGLOBAL,
-    TILESHIFT,
+    GameState, LevelState, ObjKey, ObjType, PlayState, Sprite, StateType, FL_AMBUSH, FL_SHOOTABLE,
+    FL_VISABLE, ICON_ARROWS, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, RUN_SPEED, SPD_DOG, SPD_PATROL,
+    TILEGLOBAL, TILESHIFT,
 };
 use crate::map::MapSegs;
 use crate::play::ProjectionConfig;
@@ -20,6 +20,9 @@ use crate::state::{
 };
 use crate::user::rnd_t;
 use crate::vga_render::VGARenderer;
+
+const BJ_RUN_SPEED: i32 = 2048;
+const BJ_JUMP_SPEED: i32 = 680;
 
 static START_HITPOINTS: [[i32; NUM_ENEMIES]; 4] = [
     [
@@ -1204,11 +1207,7 @@ fn t_path(
 
         let dist = level_state.obj(k).distance;
         if mov < dist {
-            let (x, y) = {
-                let player = level_state.player();
-                (player.x, player.y)
-            };
-            move_obj(k, level_state, game_state, rdr, x, y, mov, tics);
+            move_obj(k, level_state, game_state, rdr, mov, tics);
             break;
         }
 
@@ -1281,11 +1280,7 @@ fn t_dog_chase(
 
         let dist = level_state.obj(k).distance;
         if mov < dist {
-            let (x, y) = {
-                let player = level_state.player();
-                (player.x, player.y)
-            };
-            move_obj(k, level_state, game_state, rdr, x, y, mov, tics);
+            move_obj(k, level_state, game_state, rdr, mov, tics);
             break;
         }
 
@@ -1467,11 +1462,7 @@ fn t_chase(
         }
 
         if mov < level_state.obj(k).distance {
-            let (x, y) = {
-                let player = level_state.player();
-                (player.x, player.y)
-            };
-            move_obj(k, level_state, game_state, rdr, x, y, mov, tics);
+            move_obj(k, level_state, game_state, rdr, mov, tics);
             break;
         }
 
@@ -1750,4 +1741,216 @@ fn a_death_scream(
         ClassType::Boss => sound.play_sound(SoundName::MUTTI, assets),
         _ => todo!("death scream missing"),
     }
+}
+
+/*
+============================================================================
+                            BJ VICTORY
+============================================================================
+*/
+
+pub static S_BJRUN1: StateType = StateType {
+    id: 9000,
+    rotate: 0,
+    sprite: Some(Sprite::BJW1),
+    tic_time: 12,
+    think: Some(t_bj_run),
+    action: None,
+    next: Some(&S_BJRUN1S),
+};
+
+pub static S_BJRUN1S: StateType = StateType {
+    id: 9001,
+    rotate: 0,
+    sprite: Some(Sprite::BJW1),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_BJRUN2),
+};
+
+pub static S_BJRUN2: StateType = StateType {
+    id: 9002,
+    rotate: 0,
+    sprite: Some(Sprite::BJW2),
+    tic_time: 8,
+    think: Some(t_bj_run),
+    action: None,
+    next: Some(&S_BJRUN3),
+};
+
+pub static S_BJRUN3: StateType = StateType {
+    id: 9003,
+    rotate: 0,
+    sprite: Some(Sprite::BJW3),
+    tic_time: 12,
+    think: Some(t_bj_run),
+    action: None,
+    next: Some(&S_BJRUN3S),
+};
+
+pub static S_BJRUN3S: StateType = StateType {
+    id: 9004,
+    rotate: 0,
+    sprite: Some(Sprite::BJW3),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_BJRUN4),
+};
+
+pub static S_BJRUN4: StateType = StateType {
+    id: 9005,
+    rotate: 0,
+    sprite: Some(Sprite::BJW4),
+    tic_time: 8,
+    think: Some(t_bj_run),
+    action: None,
+    next: Some(&S_BJRUN1),
+};
+
+pub static S_BJ_JUMP1: StateType = StateType {
+    id: 9006,
+    rotate: 0,
+    sprite: Some(Sprite::BJJump1),
+    tic_time: 14,
+    think: Some(t_bj_jump),
+    action: None,
+    next: Some(&S_BJ_JUMP2),
+};
+
+pub static S_BJ_JUMP2: StateType = StateType {
+    id: 9007,
+    rotate: 0,
+    sprite: Some(Sprite::BJJump2),
+    tic_time: 14,
+    think: Some(t_bj_jump),
+    action: Some(t_bj_yell),
+    next: Some(&S_BJ_JUMP3),
+};
+
+pub static S_BJ_JUMP3: StateType = StateType {
+    id: 9008,
+    rotate: 0,
+    sprite: Some(Sprite::BJJump3),
+    tic_time: 14,
+    think: Some(t_bj_jump),
+    action: None,
+    next: Some(&S_BJ_JUMP4),
+};
+
+pub static S_BJ_JUMP4: StateType = StateType {
+    id: 9009,
+    rotate: 0,
+    sprite: Some(Sprite::BJJump4),
+    tic_time: 300,
+    think: None,
+    action: Some(t_bj_done),
+    next: Some(&S_BJ_JUMP4),
+};
+
+pub static S_DEATH_CAM: StateType = StateType {
+    id: 9010,
+    rotate: 0,
+    sprite: None,
+    tic_time: 0,
+    think: None,
+    action: None,
+    next: None,
+};
+
+pub fn spawn_bj_victory(level_state: &mut LevelState) {
+    let player = level_state.player();
+    let mut bj = spawn_new_obj(
+        &level_state.level.map_segs,
+        player.tilex,
+        player.tiley + 1,
+        &S_BJRUN1,
+        ClassType::BJ,
+    );
+    bj.x = player.x;
+    bj.y = player.y;
+    bj.dir = DirType::North;
+    bj.temp1 = 6; // tiles to run forward
+    spawn(&mut level_state.actors, &mut level_state.actor_at, bj);
+}
+
+fn t_bj_run(
+    k: ObjKey,
+    tics: u64,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    _: &mut Sound,
+    rdr: &VGARenderer,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    _: &Assets,
+) {
+    let mut mov = BJ_RUN_SPEED * tics as i32;
+    while mov > 0 {
+        if mov < level_state.obj(k).distance {
+            move_obj(k, level_state, game_state, rdr, mov, tics);
+            break;
+        }
+
+        {
+            let obj = level_state.mut_obj(k);
+            obj.x = ((obj.tilex as i32) << TILESHIFT) + TILEGLOBAL / 2;
+            obj.y = ((obj.tiley as i32) << TILESHIFT) + TILEGLOBAL / 2;
+            mov -= obj.distance;
+        }
+
+        select_path_dir(k, level_state);
+
+        let obj = level_state.mut_obj(k);
+        obj.temp1 -= 1;
+        if obj.temp1 <= 0 {
+            new_state(obj, &S_BJ_JUMP1);
+            return;
+        }
+    }
+}
+
+fn t_bj_jump(
+    k: ObjKey,
+    tics: u64,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    _: &mut Sound,
+    rdr: &VGARenderer,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    _: &Assets,
+) {
+    let mov = BJ_JUMP_SPEED * tics as i32;
+    move_obj(k, level_state, game_state, rdr, mov, tics);
+}
+
+fn t_bj_yell(
+    k: ObjKey,
+    _: u64,
+    level_state: &mut LevelState,
+    _: &mut GameState,
+    sound: &mut Sound,
+    _: &VGARenderer,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    assets: &Assets,
+) {
+    let obj = level_state.obj(k);
+    sound.play_sound_loc_actor(SoundName::YEAH, assets, obj); // JAB
+}
+
+fn t_bj_done(
+    _: ObjKey,
+    _: u64,
+    _: &mut LevelState,
+    game_state: &mut GameState,
+    _: &mut Sound,
+    _: &VGARenderer,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    _: &Assets,
+) {
+    game_state.play_state = PlayState::Victorious;
 }

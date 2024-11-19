@@ -463,7 +463,18 @@ fn close_door(doornum: usize, level_state: &mut LevelState, sound: &mut Sound, a
 }
 
 // called from play_loop
-pub fn move_doors(level_state: &mut LevelState, sound: &mut Sound, assets: &Assets, tics: u64) {
+pub fn move_doors(
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    sound: &mut Sound,
+    assets: &Assets,
+    tics: u64,
+) {
+    if game_state.victory_flag {
+        // don't move door during victory sequence
+        return;
+    }
+
     for doornum in 0..level_state.doors.len() {
         match level_state.doors[doornum].action {
             DoorAction::Open => door_open(doornum, level_state, sound, assets, tics),

@@ -1,4 +1,5 @@
 use crate::act1::{operate_door, push_wall};
+use crate::act2::spawn_bj_victory;
 use crate::assets::{face_pic, n_pic, weapon_pic, GraphicNum, SoundName};
 use crate::def::{
     Assets, At, Button, ClassType, ControlState, Difficulty, Dir, DirType, GameState, LevelState,
@@ -150,7 +151,7 @@ fn t_attack(
     update_face(tics, game_state, rdr);
 
     if game_state.victory_flag {
-        // TODO victory_spin()!
+        victory_spin(tics, level_state);
         return;
     }
 
@@ -166,7 +167,7 @@ fn t_attack(
         control_state.button_state[Button::Attack as usize] = false;
     }
 
-    control_movement(k, level_state, control_state, prj);
+    control_movement(k, level_state, game_state, control_state, prj);
 
     if game_state.victory_flag {
         return;
@@ -350,9 +351,34 @@ fn gun_attack(
     );
 }
 
+fn victory_spin(tics: u64, level_state: &mut LevelState) {
+    let player = level_state.mut_player();
+
+    if player.angle > 270 {
+        player.angle -= tics as i32 * 3;
+        if player.angle < 270 {
+            player.angle = 270;
+        }
+    } else if player.angle < 270 {
+        player.angle += tics as i32 * 3;
+        if player.angle > 270 {
+            player.angle = 270;
+        }
+    }
+
+    let dest_y = (((player.tiley - 5) << TILESHIFT) - 0x3000) as i32;
+
+    if player.y > dest_y {
+        player.y -= tics as i32 * 4096;
+        if player.y < dest_y {
+            player.y = dest_y;
+        }
+    }
+}
+
 fn t_player(
     k: ObjKey,
-    _: u64,
+    tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
@@ -361,6 +387,11 @@ fn t_player(
     prj: &ProjectionConfig,
     assets: &Assets,
 ) {
+    if game_state.victory_flag {
+        victory_spin(tics, level_state);
+        return;
+    }
+
     if control_state.button_state[Button::Use as usize] {
         cmd_use(level_state, game_state, sound, assets, control_state);
     }
@@ -371,7 +402,11 @@ fn t_player(
         cmd_fire(level_state, game_state, control_state);
     }
 
-    control_movement(k, level_state, control_state, prj);
+    control_movement(k, level_state, game_state, control_state, prj);
+    if game_state.victory_flag {
+        return;
+    }
+    // TODO plux and tilex update?
 }
 
 fn cmd_fire(
@@ -497,6 +532,10 @@ pub fn take_damage(
     game_state: &mut GameState,
     rdr: &VGARenderer,
 ) {
+    if game_state.victory_flag {
+        return;
+    }
+
     let mut points = points_param;
 
     level_state.last_attacker = Some(attacker);
@@ -529,6 +568,7 @@ pub fn take_damage(
 fn control_movement(
     k: ObjKey,
     level_state: &mut LevelState,
+    game_state: &mut GameState,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
 ) {
@@ -558,23 +598,45 @@ fn control_movement(
     // forward/backwards move
     let ob = level_state.obj(k);
     if control_y < 0 {
-        thrust(k, level_state, prj, ob.angle, -control_y * MOVE_SCALE)
+        thrust(
+            k,
+            level_state,
+            game_state,
+            prj,
+            ob.angle,
+            -control_y * MOVE_SCALE,
+        )
     } else if control_y > 0 {
         let mut angle = ob.angle + ANGLES as i32 / 2;
         if angle >= ANGLES as i32 {
             angle -= ANGLES as i32;
         }
-        thrust(k, level_state, prj, angle, control_y * BACKMOVE_SCALE);
+        thrust(
+            k,
+            level_state,
+            game_state,
+            prj,
+            angle,
+            control_y * BACKMOVE_SCALE,
+        );
     }
+
+    if game_state.victory_flag {
+        return;
+    }
+
+    // TODO playerxmove?
 }
 
-fn victor_tile() {
-    todo!("reached victor tile")
+fn victory_tile(level_state: &mut LevelState, game_state: &mut GameState) {
+    spawn_bj_victory(level_state); // TODO don't do this in SPEAR
+    game_state.victory_flag = true;
 }
 
 pub fn thrust(
     k: ObjKey,
     level_state: &mut LevelState,
+    game_state: &mut GameState,
     prj: &ProjectionConfig,
     angle: i32,
     speed_param: i32,
@@ -613,7 +675,7 @@ pub fn thrust(
     player.area_number = area as usize;
 
     if level_state.level.map_segs.segs[1][offset] == EXIT_TILE {
-        victor_tile();
+        victory_tile(level_state, game_state);
     }
 }
 

@@ -2,6 +2,7 @@
 #[path = "./draw_test.rs"]
 mod draw_test;
 
+use crate::act2::S_DEATH_CAM;
 use crate::agent::get_bonus;
 use crate::def::{
     Assets, ClassType, DoorLock, DoorType, GameState, Level, LevelState, ObjType, Sprite,
@@ -12,7 +13,7 @@ use crate::fixed::{fixed_by_frac, new_fixed_i32, Fixed};
 use crate::play::ProjectionConfig;
 use crate::scale::{scale_shape, simple_scale_shape, MAP_MASKS_1};
 use crate::sd::Sound;
-use crate::time;
+use crate::time::{self, Ticker};
 use crate::vga_render::{self, VGARenderer};
 
 const DEG90: usize = 900;
@@ -613,7 +614,7 @@ pub async fn three_d_refresh(
         prj,
         assets,
     );
-    draw_player_weapon(game_state, rdr, prj, assets);
+    draw_player_weapon(ticker, level_state, game_state, rdr, prj, assets);
 
     if game_state.fizzle_in {
         rdr.fizzle_fade(
@@ -939,12 +940,21 @@ fn vert_wall(i: usize) -> usize {
 }
 
 fn draw_player_weapon(
+    ticker: &Ticker,
+    level_state: &LevelState,
     game_state: &GameState,
     rdr: &VGARenderer,
     prj: &ProjectionConfig,
     assets: &Assets,
 ) {
-    // TODO Handle victoryflag here (for non SPEAR)
+    if game_state.victory_flag {
+        let player = level_state.player();
+        if player.state == Some(&S_DEATH_CAM) && (ticker.get_count() & 32) != 0 {
+            let sprite = &assets.sprites[Sprite::DeathCam as usize];
+            simple_scale_shape(rdr, prj, prj.view_width / 2, sprite, prj.view_height + 1);
+        }
+        return;
+    }
 
     if let Some(weapon) = game_state.weapon {
         let shape_num = WEAPON_SCALE[weapon as usize] as usize + game_state.weapon_frame;

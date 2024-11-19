@@ -843,6 +843,10 @@ derive_from! {
 
         BossDie1 = 304, BossDie2 = 305, BossDie3 = 306,
 
+        // bj
+        BJW1 = 408, BJW2 = 409, BJW3 = 410, BJW4 = 411,
+        BJJump1 = 412, BJJump2 = 413, BJJump3 = 414, BJJump4 = 415,
+
         // player attack frames
         KnifeReady = 416, KnifeAtk1 = 417, KnifeAtk2 = 418, KnifeAtk3 = 419, KnifeAtk4 = 420,
         PistolReady = 421, PistolAtk1 = 422, PistolAtk2 = 423, PistolAtk3 = 424, PistolAtk4 = 425,
