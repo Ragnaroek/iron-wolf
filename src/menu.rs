@@ -1,7 +1,7 @@
 use std::{ascii, collections::HashMap, str};
 use vga::input::NumCode;
 
-use crate::assets::{is_sod, GraphicNum, Music, SoundName, WolfFile, WolfVariant};
+use crate::assets::{is_sod, GraphicNum, Music, SoundName, WolfVariant};
 use crate::def::{difficulty, Assets, GameState, WindowState};
 use crate::input::{read_control, ControlDirection, ControlInfo, Input};
 use crate::loader::Loader;
@@ -21,8 +21,8 @@ const BORDER2_COLOR: u8 = 0x23;
 const DEACTIVE: u8 = 0x2b;
 const BKGD_COLOR: u8 = 0x2d;
 
-const READ_COLOR: u8 = 0x4a;
-const READ_HCOLOR: u8 = 0x47;
+pub const READ_COLOR: u8 = 0x4a;
+pub const READ_HCOLOR: u8 = 0x47;
 const TEXT_COLOR: u8 = 0x17;
 const HIGHLIGHT: u8 = 0x13;
 
@@ -563,7 +563,7 @@ pub async fn control_panel(
     scan: NumCode,
 ) -> Option<SaveLoadGame> {
     // TODO scan code handling
-    start_cp_music(sound, Music::WONDERIN, assets, loader);
+    sound.play_music(Music::WONDERIN, assets, loader);
     setup_control_panel(win_state, menu_state);
 
     let mut menu_stack: Vec<Menu> = Vec::new();
@@ -775,7 +775,7 @@ async fn cp_sound(
                 draw_sound_menu(rdr, win_state, menu_state, sound).await;
                 sound.play_sound(SoundName::SHOOT, assets);
                 if changed {
-                    start_cp_music(sound, Music::WONDERIN, assets, loader);
+                    sound.play_music(Music::WONDERIN, assets, loader);
                 }
             }
         } else {
@@ -1684,17 +1684,4 @@ pub fn intro_song(variant: &WolfVariant) -> Music {
     } else {
         Music::NAZINOR
     }
-}
-
-pub fn start_cp_music(sound: &mut Sound, track: Music, assets: &Assets, loader: &dyn Loader) {
-    let variant = loader.variant();
-    let trackno = track as usize;
-    let offset = assets.audio_headers[variant.start_music + trackno];
-    let len = assets.audio_headers[variant.start_music + trackno + 1] - offset;
-
-    let track_data = loader
-        .load_wolf_file_slice(WolfFile::AudioData, (offset + 2) as u64, (len - 2) as usize)
-        .expect("Audio file");
-
-    sound.play_imf(track_data).expect("start song play");
 }

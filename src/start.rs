@@ -25,8 +25,7 @@ use crate::input::{self, Input};
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::menu::{
-    check_for_episodes, control_panel, initial_menu_state, intro_song, message, start_cp_music,
-    MenuState,
+    check_for_episodes, control_panel, initial_menu_state, intro_song, message, MenuState,
 };
 use crate::play::{self, ProjectionConfig};
 use crate::sd::Sound;
@@ -194,7 +193,7 @@ async fn demo_loop(
     menu_state: &mut MenuState,
     loader: &dyn Loader,
 ) {
-    start_cp_music(sound, intro_song(loader.variant()), assets, loader);
+    sound.play_music(intro_song(loader.variant()), assets, loader);
 
     if !iw_config.options.no_wait {
         pg_13(rdr, input).await;

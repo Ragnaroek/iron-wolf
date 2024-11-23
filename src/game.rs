@@ -16,9 +16,9 @@ use crate::def::{
 };
 use crate::draw::{init_ray_cast, three_d_refresh, RayCast};
 use crate::input::Input;
-use crate::inter::{check_highscore, level_completed, preload_graphics};
+use crate::inter::{check_highscore, level_completed, preload_graphics, victory};
 use crate::loader::Loader;
-use crate::menu::{start_cp_music, MenuState, SaveLoadGame};
+use crate::menu::{MenuState, SaveLoadGame};
 use crate::play::{
     draw_play_screen, finish_palette_shifts, new_control_state, play_loop, ProjectionConfig, SONGS,
 };
@@ -75,7 +75,7 @@ pub async fn game_loop(
         win_state.in_game = true;
 
         let track = SONGS[game_state.map_on + game_state.episode * 10];
-        start_cp_music(sound, track, assets, loader);
+        sound.play_music(track, assets, loader);
 
         //TODO PreloadGraphics?
 
@@ -157,6 +157,17 @@ pub async fn game_loop(
                 rdr.fade_out().await;
 
                 check_highscore(rdr, input, game_state.score, game_state.map_on + 1).await;
+
+                return;
+            }
+            PlayState::Victorious => {
+                rdr.fade_out().await;
+
+                victory(game_state, sound, rdr, input, assets, win_state, loader).await;
+
+                check_highscore(rdr, input, game_state.score, game_state.map_on + 1).await;
+
+                // TODO MainMenu viewscores manipulation?
 
                 return;
             }

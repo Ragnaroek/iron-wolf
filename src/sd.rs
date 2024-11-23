@@ -1,8 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 use crate::{
-    assets::{DigiChannel, SoundName},
+    assets::{DigiChannel, Music, SoundName, WolfFile},
     def::{Assets, DigiSound, ObjType, TILESHIFT},
+    loader::Loader,
 };
 
 #[cfg(feature = "sdl")]
@@ -138,13 +139,22 @@ impl Sound {
         }
     }
 
-    pub fn play_imf(&mut self, data: Vec<u8>) -> Result<(), &'static str> {
+    pub fn play_music(&mut self, track: Music, assets: &Assets, loader: &dyn Loader) {
         if self.modes.lock().unwrap().music == MusicMode::Off {
-            return Ok(());
+            return;
         }
 
+        let variant = loader.variant();
+        let trackno = track as usize;
+        let offset = assets.audio_headers[variant.start_music + trackno];
+        let len = assets.audio_headers[variant.start_music + trackno + 1] - offset;
+
+        let track_data = loader
+            .load_wolf_file_slice(WolfFile::AudioData, (offset + 2) as u64, (len - 2) as usize)
+            .expect("load track data");
+
         let mut opl_mon = self.opl.lock().unwrap();
-        opl_mon.play_imf(data)
+        opl_mon.play_imf(track_data).expect("play imf")
     }
 
     fn get_channel_for_digi(&self, channel: DigiChannel) -> Channel {
@@ -270,8 +280,8 @@ impl Sound {
         todo!("impl play sound web");
     }
 
-    pub fn play_imf(&mut self, data: Vec<u8>) -> Result<(), &'static str> {
-        todo!("impl play imf web");
+    pub fn play_music(&mut self, track: Music, assets: &Assets, loader: &dyn Loader) {
+        todo!("impl play music web");
     }
 
     pub fn play_sound_loc_tile(

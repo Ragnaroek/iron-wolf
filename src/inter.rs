@@ -1,13 +1,15 @@
 use std::ascii::Char;
 
 use crate::agent::{draw_level, draw_score, give_points};
-use crate::assets::{num_pic, GraphicNum};
-use crate::def::{Assets, GameState, IWConfig, WindowState, STATUS_LINES};
+use crate::assets::{num_pic, GraphicNum, Music};
+use crate::def::{Assets, Difficulty, GameState, IWConfig, WindowState, STATUS_LINES};
 use crate::input::Input;
-use crate::menu::{clear_ms_screen, draw_stripes};
+use crate::loader::Loader;
+use crate::menu::{clear_ms_screen, draw_stripes, READ_HCOLOR};
 use crate::play::{draw_all_play_border, ProjectionConfig};
 use crate::sd::Sound;
 use crate::time;
+use crate::us1::print;
 use crate::vga_render::VGARenderer;
 use crate::vh::BLACK;
 
@@ -67,6 +69,11 @@ struct ParTime {
 const PAR_AMOUNT: i32 = 500;
 const RATIO_XX: usize = 37;
 const PERCENT_100_AMT: i32 = 10000;
+
+const RATIO_X: usize = 6;
+const RATIO_Y: usize = 14;
+const TIME_X: usize = 14;
+const TIME_Y: usize = 8;
 
 static PAR_TIMES: [ParTime; 60] = [
     // Episode One Par Times
@@ -317,6 +324,102 @@ static PAR_TIMES: [ParTime; 60] = [
     },
 ];
 
+pub async fn victory(
+    game_state: &mut GameState,
+    sound: &mut Sound,
+    rdr: &VGARenderer,
+    input: &Input,
+    assets: &Assets,
+    win_state: &mut WindowState,
+    loader: &dyn Loader,
+) {
+    sound.play_music(Music::URAHERO, assets, loader);
+    clear_split_vwb(win_state);
+
+    rdr.bar(0, 0, 320, 200 - STATUS_LINES, 127);
+    write(rdr, 18, 2, "you win!");
+    write(rdr, TIME_X, TIME_Y - 2, "total time");
+    write(rdr, 12, RATIO_Y - 2, "averages");
+    write(rdr, RATIO_X + 8, RATIO_Y, "kill    %");
+    write(rdr, RATIO_X + 4, RATIO_Y + 2, "secret    %");
+    write(rdr, RATIO_X, RATIO_Y + 4, "treasure    %");
+
+    rdr.pic(8, 4, GraphicNum::BJWINSPIC);
+
+    let mut sec = 0;
+    let mut kr = 0;
+    let mut sr = 0;
+    let mut tr = 0;
+    for i in 0..8 {
+        sec += game_state.level_ratios[i].time;
+        kr += game_state.level_ratios[i].kill;
+        sr += game_state.level_ratios[i].secret;
+        tr += game_state.level_ratios[i].treasure;
+    }
+    kr /= 8;
+    sr /= 8;
+    tr /= 8;
+
+    let min = sec as usize / 60;
+    let sec = sec as usize % 60;
+
+    let mut i = TIME_X * 8 + 1;
+    rdr.pic(i, TIME_Y * 8, num_pic(min / 10));
+    i += 2 * 8;
+    rdr.pic(i, TIME_Y * 8, num_pic(min % 10));
+    i += 2 * 8;
+    write(rdr, i / 8, TIME_Y, ":");
+    i += 1 * 8;
+    rdr.pic(i, TIME_Y * 8, num_pic(sec / 10));
+    i += 2 * 8;
+    rdr.pic(i, TIME_Y * 8, num_pic(sec % 10));
+
+    let str = kr.to_string();
+    let x = RATIO_X + 24 - str.len() * 2;
+    write(rdr, x, RATIO_Y, &str);
+
+    let str = sr.to_string();
+    let x = RATIO_X + 24 - str.len() * 2;
+    write(rdr, x, RATIO_Y + 2, &str);
+
+    let str = tr.to_string();
+    let x = RATIO_X + 24 - str.len() * 2;
+    write(rdr, x, RATIO_Y + 4, &str);
+
+    if game_state.difficulty >= Difficulty::Medium {
+        rdr.pic(30 * 8, TIME_Y * 8, GraphicNum::CTIMECODEPIC);
+        win_state.font_number = 0;
+        win_state.font_color = READ_HCOLOR;
+        win_state.print_x = 30 * 8 - 3;
+        win_state.print_y = TIME_Y * 8 + 8;
+        win_state.print_x += 4;
+
+        let v1 = (((min / 10) ^ (min % 10)) ^ 0xa) as u32 + 65;
+        let v2 = (((sec / 10) ^ (sec % 10)) ^ 0xa) as u32 + 65;
+        let v3 = (v1 ^ v2) + 65;
+        print(
+            rdr,
+            win_state,
+            &format!(
+                "{}{}{}",
+                char::from_u32(v1).expect("char"),
+                char::from_u32(v2).expect("char"),
+                char::from_u32(v3).expect("char")
+            ),
+        );
+    }
+
+    win_state.font_number = 1;
+
+    rdr.activate_buffer(rdr.buffer_offset()).await;
+    rdr.fade_in().await;
+    input.ack().await;
+
+    rdr.fade_out().await;
+
+    // TODO end_text()
+}
+
 pub fn clear_split_vwb(win_state: &mut WindowState) {
     // TODO clear 'update' global variable?
     win_state.window_x = 0;
@@ -372,7 +475,7 @@ pub async fn level_completed(
 
     // do the intermission
     rdr.set_buffer_offset(rdr.active_buffer());
-    rdr.pic(0, 16, GraphicNum::LGUYPIC);
+    rdr.pic(0, 16, GraphicNum::GUYPIC);
 
     let mut bj_breather = new_bj_breather();
     if game_state.map_on < 8 {
@@ -758,9 +861,9 @@ impl BjBreather {
         if ticker.get_count() > (self.time_start + self.max) {
             self.which = !self.which;
             if self.which {
-                rdr.pic(0, 16, GraphicNum::LGUYPIC);
+                rdr.pic(0, 16, GraphicNum::GUYPIC);
             } else {
-                rdr.pic(0, 16, GraphicNum::LGUY2PIC);
+                rdr.pic(0, 16, GraphicNum::GUY2PIC);
             }
             self.time_start = ticker.get_count();
             self.max = 35;
