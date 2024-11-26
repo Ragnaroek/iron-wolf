@@ -63,7 +63,7 @@ pub fn print_centered(rdr: &VGARenderer, win_state: &mut WindowState, str: &str)
     draw_string(rdr, font, str, px, py, win_state.font_color);
 }
 
-fn draw_string(rdr: &VGARenderer, font: &Font, str: &str, px_in: usize, py: usize, color: u8) {
+pub fn draw_string(rdr: &VGARenderer, font: &Font, str: &str, px_in: usize, py: usize, color: u8) {
     let mut px = px_in;
     for c in str.chars() {
         let ext_ascii_val = c as usize;
@@ -85,7 +85,7 @@ fn draw_string(rdr: &VGARenderer, font: &Font, str: &str, px_in: usize, py: usiz
 }
 
 /// Returns a (width, height) tupel.
-fn measure_string(font: &Font, str: &str) -> (usize, usize) {
+pub fn measure_string(font: &Font, str: &str) -> (usize, usize) {
     let mut w: usize = 0;
     for c in str.chars() {
         let ext_ascii_val = c as usize;

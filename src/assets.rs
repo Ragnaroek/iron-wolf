@@ -1,9 +1,10 @@
+use core::str;
 use std::collections::HashMap;
 use std::io::Cursor;
 
 use serde::{Deserialize, Serialize};
 
-use crate::def::{Assets, WeaponType};
+use crate::def::{derive_from, Assets, WeaponType};
 use crate::gamedata;
 use crate::loader::Loader;
 use crate::map::{load_map, load_map_headers, load_map_offsets, MapFileType, MapSegs, MapType};
@@ -43,42 +44,50 @@ pub enum WolfFile {
 #[derive(Debug)]
 pub struct WolfVariant {
     pub file_ending: &'static str,
+    pub num_episodes: usize,
     pub num_pics: usize,
     pub start_pics: usize,
     pub start_music: usize,
     pub start_adlib_sound: usize,
     pub start_digi_sound: usize,
+    pub start_end_text: usize,
 }
 
 static SOD_FILE_ENDING: &str = "SOD";
 
 pub static W3D1: WolfVariant = WolfVariant {
     file_ending: "WL1",
+    num_episodes: 1,
     num_pics: 139,
     start_pics: 3,
     start_music: 207,
     start_adlib_sound: 87,
     start_digi_sound: 174,
+    start_end_text: 155,
 };
 
 // TODO Demo file support WL1 and WL3??
 pub static W3D6: WolfVariant = WolfVariant {
     file_ending: "WL6",
+    num_episodes: 6,
     num_pics: 132,
     start_pics: 3,
     start_music: 261,
     start_adlib_sound: 87,
     start_digi_sound: 174,
+    start_end_text: 143,
 };
 
 // TODO Put this behind conditional compilation (once Spear of Destiny support is started)?
 pub static SOD: WolfVariant = WolfVariant {
     file_ending: SOD_FILE_ENDING,
+    num_episodes: 4,
     num_pics: 147,
     start_pics: 3,
     start_music: 243,
     start_adlib_sound: 81,
     start_digi_sound: 162,
+    start_end_text: 168,
 };
 
 pub fn is_sod(variant: &WolfVariant) -> bool {
@@ -242,135 +251,143 @@ pub enum Music {
 
 // num values are chunk offsets. They need to be translated to
 // picture offset in the graphics array with GraphicNum::PG13PIC - STARTPICS.
-#[derive(Copy, Clone, PartialEq)]
-pub enum GraphicNum {
-    NONE = 0,
-    // Lump Start
-    COPTIONSPIC = 10,
-    CCURSOR1PIC = 11,
-    CCURSOR2PIC = 12,
-    CNOTSELECTEDPIC = 13,
-    CSELECTEDPIC = 14,
-    CFXTITLEPIC = 15,
-    CDIGITITLEPIC = 16,
-    CMUSICTITLEPIC = 17,
-    CMOUSELBACKPIC = 18,
-    CBABYMODEPIC = 19,
-    CEASYPIC = 20,
-    CNORMALPIC = 21,
-    CHARDPIC = 22,
-    CLOADSAVEDISKPIC = 23,
-    CDISKLOADING1PIC = 24,
-    CDISKLOADING2PIC = 25,
+derive_from! {
+    #[repr(usize)]
+    #[derive(Copy, Clone, PartialEq, Debug)]
+    pub enum GraphicNum {
+        NONE = 0,
+        HBLAZEPIC = 5,
+        HTOPWINDOWPIC = 6,
+        HLEFTWINDOWPIC = 7,
+        HRIGHTWINDOWPIC = 8,
+        HBOTTOMINFOPIC = 9,
+        // Lump Start
+        COPTIONSPIC = 10,
+        CCURSOR1PIC = 11,
+        CCURSOR2PIC = 12,
+        CNOTSELECTEDPIC = 13,
+        CSELECTEDPIC = 14,
+        CFXTITLEPIC = 15,
+        CDIGITITLEPIC = 16,
+        CMUSICTITLEPIC = 17,
+        CMOUSELBACKPIC = 18,
+        CBABYMODEPIC = 19,
+        CEASYPIC = 20,
+        CNORMALPIC = 21,
+        CHARDPIC = 22,
+        CLOADSAVEDISKPIC = 23,
+        CDISKLOADING1PIC = 24,
+        CDISKLOADING2PIC = 25,
 
-    CLOADGAMEPIC = 28,
-    CSAVEGAMEPIC = 29,
-    CEPISODE1PIC = 30,
-    CEPISODE2PIC = 31,
-    CEPISODE3PIC = 32,
-    CEPISODE4PIC = 33,
-    CEPISODE5PIC = 34,
-    CEPISODE6PIC = 35,
-    CCODEPIC = 36,
-    CTIMECODEPIC = 37,
-    CLEVELPIC = 38,
-    CNAMEPIC = 39,
-    CSCOREPIC = 40,
+        CLOADGAMEPIC = 28,
+        CSAVEGAMEPIC = 29,
+        CEPISODE1PIC = 30,
+        CEPISODE2PIC = 31,
+        CEPISODE3PIC = 32,
+        CEPISODE4PIC = 33,
+        CEPISODE5PIC = 34,
+        CEPISODE6PIC = 35,
+        CCODEPIC = 36,
+        CTIMECODEPIC = 37,
+        CLEVELPIC = 38,
+        CNAMEPIC = 39,
+        CSCOREPIC = 40,
 
-    GUYPIC = 43,
-    COLONPIC = 44,
-    NUM0PIC = 45,
-    NUM1PIC = 46,
-    NUM2PIC = 47,
-    NUM3PIC = 48,
-    NUM4PIC = 49,
-    NUM5PIC = 50,
-    NUM6PIC = 51,
-    NUM7PIC = 52,
-    NUM8PIC = 53,
-    NUM9PIC = 54,
-    PERCENTPIC = 55,
-    APIC = 56,
-    BPIC = 57,
-    CPIC = 58,
-    DPIC = 59,
-    EPIC = 60,
-    FPIC = 61,
-    GPIC = 62,
-    HPIC = 63,
-    IPIC = 64,
-    JPIC = 65,
-    KPIC = 66,
-    LPIC = 67,
-    MPIC = 68,
-    NPIC = 69,
-    OPIC = 70,
-    PPIC = 71,
-    QPIC = 72,
-    RPIC = 73,
-    SPIC = 74,
-    TPIC = 75,
-    UPIC = 76,
-    VPIC = 77,
-    WPIC = 78,
-    XPIC = 79,
-    YPIC = 80,
-    ZPIC = 81,
-    EXPOINTPIC = 82,
-    APOSTROPHEPIC = 83,
-    GUY2PIC = 84,
-    BJWINSPIC = 85,
-    STATUSBARPIC = 86,
-    TITLEPIC = 87,
-    PG13PIC = 88,
-    CREDITSPIC = 89,
-    HIGHSCOREPIC = 90,
-    // TODO add missing pics
-    // Lump Start
-    KNIFEPIC = 91,
-    GUNPIC = 92,
-    MACHINEGUNPIC = 93,
-    GATLINGGUNPIC = 94,
-    NOKEYPIC = 95,
-    GOLDKEYPIC = 96,
-    SILVERKEYPIC = 97,
-    NBLANKPIC = 98,
-    N0PIC = 99,
-    N1PIC = 100,
-    N2PIC = 101,
-    N3PIC = 102,
-    N4PIC = 103,
-    N5PIC = 104,
-    N6PIC = 105,
-    N7PIC = 106,
-    N8PIC = 107,
-    N9PIC = 108,
-    FACE1APIC = 109,
-    FACE1BPIC = 110,
-    FACE1CPIC = 111,
-    FACE2APIC = 112,
-    FACE2BPIC = 113,
-    FACE2CPIC = 114,
-    FACE3APIC = 115,
-    FACE3BPIC = 116,
-    FACE3CPIC = 117,
-    FACE4APIC = 118,
-    FACE4BPIC = 119,
-    FACE4CPIC = 120,
-    FACE5APIC = 121,
-    FACE5BPIC = 122,
-    FACE5CPIC = 123,
-    FACE6APIC = 124,
-    FACE6BPIC = 125,
-    FACE6CPIC = 126,
-    FACE7APIC = 127,
-    FACE7BPIC = 128,
-    FACE7CPIC = 129,
-    FACE8APIC = 130,
-    GOTGATLINGPIC = 131,
-    MUTANTBJPIC = 132,
-    PAUSEDPIC = 133,
-    GETPSYCHEDPIC = 134,
+        GUYPIC = 43,
+        COLONPIC = 44,
+        NUM0PIC = 45,
+        NUM1PIC = 46,
+        NUM2PIC = 47,
+        NUM3PIC = 48,
+        NUM4PIC = 49,
+        NUM5PIC = 50,
+        NUM6PIC = 51,
+        NUM7PIC = 52,
+        NUM8PIC = 53,
+        NUM9PIC = 54,
+        PERCENTPIC = 55,
+        APIC = 56,
+        BPIC = 57,
+        CPIC = 58,
+        DPIC = 59,
+        EPIC = 60,
+        FPIC = 61,
+        GPIC = 62,
+        HPIC = 63,
+        IPIC = 64,
+        JPIC = 65,
+        KPIC = 66,
+        LPIC = 67,
+        MPIC = 68,
+        NPIC = 69,
+        OPIC = 70,
+        PPIC = 71,
+        QPIC = 72,
+        RPIC = 73,
+        SPIC = 74,
+        TPIC = 75,
+        UPIC = 76,
+        VPIC = 77,
+        WPIC = 78,
+        XPIC = 79,
+        YPIC = 80,
+        ZPIC = 81,
+        EXPOINTPIC = 82,
+        APOSTROPHEPIC = 83,
+        GUY2PIC = 84,
+        BJWINSPIC = 85,
+        STATUSBARPIC = 86,
+        TITLEPIC = 87,
+        PG13PIC = 88,
+        CREDITSPIC = 89,
+        HIGHSCOREPIC = 90,
+        // TODO add missing pics
+        // Lump Start
+        KNIFEPIC = 91,
+        GUNPIC = 92,
+        MACHINEGUNPIC = 93,
+        GATLINGGUNPIC = 94,
+        NOKEYPIC = 95,
+        GOLDKEYPIC = 96,
+        SILVERKEYPIC = 97,
+        NBLANKPIC = 98,
+        N0PIC = 99,
+        N1PIC = 100,
+        N2PIC = 101,
+        N3PIC = 102,
+        N4PIC = 103,
+        N5PIC = 104,
+        N6PIC = 105,
+        N7PIC = 106,
+        N8PIC = 107,
+        N9PIC = 108,
+        FACE1APIC = 109,
+        FACE1BPIC = 110,
+        FACE1CPIC = 111,
+        FACE2APIC = 112,
+        FACE2BPIC = 113,
+        FACE2CPIC = 114,
+        FACE3APIC = 115,
+        FACE3BPIC = 116,
+        FACE3CPIC = 117,
+        FACE4APIC = 118,
+        FACE4BPIC = 119,
+        FACE4CPIC = 120,
+        FACE5APIC = 121,
+        FACE5BPIC = 122,
+        FACE5CPIC = 123,
+        FACE6APIC = 124,
+        FACE6BPIC = 125,
+        FACE6CPIC = 126,
+        FACE7APIC = 127,
+        FACE7BPIC = 128,
+        FACE7CPIC = 129,
+        FACE8APIC = 130,
+        GOTGATLINGPIC = 131,
+        MUTANTBJPIC = 132,
+        PAUSEDPIC = 133,
+        GETPSYCHEDPIC = 134,
+    }
 }
 
 pub fn face_pic(n: usize) -> GraphicNum {
@@ -734,7 +751,7 @@ pub static DIGI_MAP: [DigiMapEntry; NUM_DIGI_SOUNDS] = [
 pub fn load_all_graphics(
     loader: &dyn Loader,
     patch_config: &Option<PatchConfig>,
-) -> Result<(Vec<Graphic>, Vec<Font>, TileData), String> {
+) -> Result<(Vec<Graphic>, Vec<Font>, TileData, Vec<String>), String> {
     let grhuffman_bytes = loader.load_wolf_file(WolfFile::GraphicDict);
     let grhuffman = to_huffnodes(grhuffman_bytes);
 
@@ -748,6 +765,7 @@ pub fn load_all_graphics(
         let font = load_font(i, &grstarts, &grdata, &grhuffman)?;
         fonts.push(font);
     }
+
     let variant = loader.variant();
     let mut graphics = Vec::with_capacity(variant.num_pics);
     for i in variant.start_pics..(variant.start_pics + variant.num_pics) {
@@ -767,7 +785,20 @@ pub fn load_all_graphics(
 
     let tile8 = load_tile8(&grstarts, &grdata, &grhuffman)?;
 
-    Ok((graphics, fonts, TileData { tile8 }))
+    let mut texts = Vec::with_capacity(variant.num_episodes);
+    for i in variant.start_end_text..(variant.start_end_text + variant.num_episodes) {
+        let (pos, compressed) = data_sizes(i, &grstarts)?;
+        let source = &grdata[pos..(pos + compressed)];
+        let expanded = expand_chunk(i, source, &grhuffman);
+
+        if let Some(ascii) = expanded.as_ascii() {
+            texts.push(ascii.as_str().to_owned());
+        } else {
+            return Err("non ascii found in texts".to_owned());
+        }
+    }
+
+    Ok((graphics, fonts, TileData { tile8 }, texts))
 }
 
 fn extract_picsizes(
@@ -909,8 +940,12 @@ fn data_sizes(chunk: usize, grstarts: &Vec<u8>) -> Result<(usize, usize), String
 
 fn grfilepos(chunk: usize, grstarts: &Vec<u8>) -> i32 {
     let offset = chunk * 3;
-    let mut value = i32::from_le_bytes(grstarts[offset..(offset + 4)].try_into().unwrap());
-    value &= 0x00ffffff;
+    let value = i32::from_le_bytes([
+        grstarts[offset],
+        grstarts[offset + 1],
+        grstarts[offset + 2],
+        0,
+    ]);
     if value == 0xffffff {
         -1
     } else {

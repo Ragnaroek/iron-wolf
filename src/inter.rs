@@ -8,6 +8,7 @@ use crate::loader::Loader;
 use crate::menu::{clear_ms_screen, draw_stripes, READ_HCOLOR};
 use crate::play::{draw_all_play_border, ProjectionConfig};
 use crate::sd::Sound;
+use crate::text::end_text;
 use crate::time;
 use crate::us1::print;
 use crate::vga_render::VGARenderer;
@@ -417,7 +418,7 @@ pub async fn victory(
 
     rdr.fade_out().await;
 
-    // TODO end_text()
+    end_text(rdr, input, game_state.episode).await;
 }
 
 pub fn clear_split_vwb(win_state: &mut WindowState) {

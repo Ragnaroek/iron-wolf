@@ -33,11 +33,18 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
     let assets = assets::load_graphic_assets(&loader)?;
 
     let prj = play::calc_projection(19);
-    let (graphics, fonts, tiles) = assets::load_all_graphics(&loader, &None)?;
+    let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, &None)?;
 
     let vga = vga::new(0x13);
     let vga_screen = Arc::new(vga);
-    let render = vga_render::init(vga_screen.clone(), graphics, fonts, tiles, &assets::W3D1);
+    let render = vga_render::init(
+        vga_screen.clone(),
+        graphics,
+        fonts,
+        tiles,
+        texts,
+        &assets::W3D1,
+    );
 
     let mut game_state = new_game_state();
 

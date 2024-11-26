@@ -454,14 +454,14 @@ fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, VGARenderer, Assets)
     let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
     vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
-    let (graphics, fonts, tiles) =
+    let (graphics, fonts, tiles, texts) =
         assets::load_all_graphics(loader, &None).expect("load all graphics");
     let assets = assets::load_graphic_assets(loader).expect("load graphic assets");
 
     let prj = play::calc_projection(config.viewsize as usize);
 
     let vga_screen = Arc::new(vga);
-    let rdr = vga_render::init(vga_screen, graphics, fonts, tiles, loader.variant());
+    let rdr = vga_render::init(vga_screen, graphics, fonts, tiles, texts, loader.variant());
 
     (prj, rdr, assets)
 }

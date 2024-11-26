@@ -76,6 +76,7 @@ pub static DIR_ANGLE: [usize; 9] = [
     ANGLES,
 ];
 
+#[macro_export]
 macro_rules! derive_from {
     ($(#[$meta:meta])* $vis:vis enum $name:ident {
         $($(#[$vmeta:meta])* $vname:ident $(= $val:expr)?,)*
@@ -97,6 +98,7 @@ macro_rules! derive_from {
         }
     }
 }
+pub use derive_from;
 
 pub struct DigiSound {
     pub chunk: Box<[u8]>,

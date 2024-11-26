@@ -26,6 +26,7 @@ pub mod scale;
 pub mod sd;
 pub mod start;
 pub mod state;
+pub mod text;
 pub mod time;
 pub mod us1;
 pub mod user;

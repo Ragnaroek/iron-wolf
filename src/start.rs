@@ -77,7 +77,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
 
     let mut sound = sd::startup()?;
     let assets = assets::load_assets(&sound, &loader)?;
-    let (graphics, fonts, tiles) = assets::load_all_graphics(&loader, patch_config)?;
+    let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, patch_config)?;
 
     // TODO calc_projection and setup_scaling have to be re-done if view size changes in config
     let prj = play::calc_projection(config.viewsize as usize);
@@ -93,7 +93,14 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
 
     let vga_screen = Arc::new(vga);
     let vga_loop = vga_screen.clone();
-    let rdr = vga_render::init(vga_screen.clone(), graphics, fonts, tiles, loader.variant());
+    let rdr = vga_render::init(
+        vga_screen.clone(),
+        graphics,
+        fonts,
+        tiles,
+        texts,
+        loader.variant(),
+    );
 
     spawn_task(async move {
         init_game(&vga_loop, &rdr, &input, &mut win_state).await;

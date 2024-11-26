@@ -27,10 +27,11 @@ pub struct VGARenderer {
     linewidth: usize,
     bufferofs: AtomicUsize,
     displayofs: AtomicUsize,
-    graphics: Vec<Graphic>,
+    pub graphics: Vec<Graphic>,
     pub fonts: Vec<Font>,
     pub tiles: TileData,
-    variant: &'static WolfVariant,
+    pub texts: Vec<String>,
+    pub variant: &'static WolfVariant,
 }
 
 pub fn init(
@@ -38,6 +39,7 @@ pub fn init(
     graphics: Vec<Graphic>,
     fonts: Vec<Font>,
     tiles: TileData,
+    texts: Vec<String>,
     variant: &'static WolfVariant,
 ) -> VGARenderer {
     VGARenderer {
@@ -48,6 +50,7 @@ pub fn init(
         graphics,
         fonts,
         tiles,
+        texts,
         variant,
     }
 }
