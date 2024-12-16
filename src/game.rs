@@ -9,6 +9,7 @@ use crate::agent::{
 };
 use crate::agent::{spawn_player, thrust};
 use crate::assets::load_map_from_assets;
+use crate::config::WolfConfig;
 use crate::def::{
     Assets, At, ControlState, Difficulty, DoorLock, EnemyType, GameState, IWConfig, Level,
     LevelState, ObjType, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState,
@@ -45,6 +46,7 @@ static ELEVATOR_BACK_TO: [usize; 6] = [1, 1, 7, 3, 5, 3];
 
 pub async fn game_loop(
     ticker: &time::Ticker,
+    wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
     game_state: &mut GameState,
     vga: &VGA,
@@ -77,8 +79,6 @@ pub async fn game_loop(
         let track = SONGS[game_state.map_on + game_state.episode * 10];
         sound.play_music(track, assets, loader);
 
-        //TODO PreloadGraphics?
-
         if !game_state.died {
             preload_graphics(ticker, iw_config, &game_state, prj, input, rdr).await;
         } else {
@@ -91,6 +91,7 @@ pub async fn game_loop(
         rdr.fade_in().await;
 
         play_loop(
+            wolf_config,
             ticker,
             &mut level_state,
             game_state,
@@ -156,7 +157,18 @@ pub async fn game_loop(
 
                 rdr.fade_out().await;
 
-                check_highscore(rdr, input, game_state.score, game_state.map_on + 1).await;
+                check_highscore(
+                    sound,
+                    rdr,
+                    input,
+                    assets,
+                    win_state,
+                    loader,
+                    &mut wolf_config.high_scores,
+                    game_state.score,
+                    game_state.map_on + 1,
+                )
+                .await;
 
                 return;
             }
@@ -165,7 +177,18 @@ pub async fn game_loop(
 
                 victory(game_state, sound, rdr, input, assets, win_state, loader).await;
 
-                check_highscore(rdr, input, game_state.score, game_state.map_on + 1).await;
+                check_highscore(
+                    sound,
+                    rdr,
+                    input,
+                    assets,
+                    win_state,
+                    loader,
+                    &mut wolf_config.high_scores,
+                    game_state.score,
+                    game_state.map_on + 1,
+                )
+                .await;
 
                 // TODO MainMenu viewscores manipulation?
 

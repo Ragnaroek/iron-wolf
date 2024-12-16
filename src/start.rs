@@ -13,6 +13,7 @@ use vga::SCReg;
 
 use crate::act2::get_state_by_id;
 use crate::assets::{self, GraphicNum, GAMEPAL, SIGNON};
+use crate::config::WolfConfig;
 use crate::def::{
     difficulty, new_game_state, weapon_type, ActiveType, Assets, At, ClassType, Dir, DirType,
     DoorAction, DoorLock, DoorType, GameState, IWConfig, LevelRatio, LevelState, ObjKey, ObjType,
@@ -66,7 +67,7 @@ impl DiskAnim {
 }
 
 pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<(), String> {
-    let config = config::load_wolf_config(&loader);
+    let mut wolf_config = config::load_wolf_config(&loader);
 
     let vga = vga::new(0x13);
     //enable Mode Y
@@ -80,7 +81,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, patch_config)?;
 
     // TODO calc_projection and setup_scaling have to be re-done if view size changes in config
-    let prj = play::calc_projection(config.viewsize as usize);
+    let prj = play::calc_projection(wolf_config.viewsize as usize);
 
     let ticker = time::new_ticker();
     let input_monitoring = Arc::new(Mutex::new(vga::input::new_input_monitoring()));
@@ -105,6 +106,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     spawn_task(async move {
         init_game(&vga_loop, &rdr, &input, &mut win_state).await;
         demo_loop(
+            &mut wolf_config,
             &iw_config,
             ticker,
             &vga_loop,
@@ -188,6 +190,7 @@ async fn finish_signon(
 }
 
 async fn demo_loop(
+    wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
     ticker: time::Ticker,
     vga: &vga::VGA,
@@ -225,7 +228,7 @@ async fn demo_loop(
             rdr.fade_out().await;
 
             // high scores
-            draw_high_scores(rdr);
+            draw_high_scores(rdr, win_state, &wolf_config.high_scores);
             rdr.fade_in().await;
             if input.wait_user_input(time::TICK_BASE * 10).await {
                 break;
@@ -240,6 +243,7 @@ async fn demo_loop(
 
         // TODO RecordDemo()
         let save_load = control_panel(
+            wolf_config,
             &ticker,
             &mut game_state,
             sound,
@@ -255,6 +259,7 @@ async fn demo_loop(
 
         game_loop(
             &ticker,
+            wolf_config,
             iw_config,
             &mut game_state,
             vga,

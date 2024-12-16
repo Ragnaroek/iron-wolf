@@ -2,6 +2,7 @@ use std::ascii::Char;
 
 use crate::agent::{draw_level, draw_score, give_points};
 use crate::assets::{num_pic, GraphicNum, Music};
+use crate::config::MAX_SCORES;
 use crate::def::{Assets, Difficulty, GameState, IWConfig, WindowState, STATUS_LINES};
 use crate::input::Input;
 use crate::loader::Loader;
@@ -10,7 +11,8 @@ use crate::play::{draw_all_play_border, ProjectionConfig};
 use crate::sd::Sound;
 use crate::text::end_text;
 use crate::time;
-use crate::us1::print;
+use crate::us1::{measure_string, print};
+use crate::user::HighScore;
 use crate::vga_render::VGARenderer;
 use crate::vh::BLACK;
 
@@ -429,10 +431,22 @@ pub fn clear_split_vwb(win_state: &mut WindowState) {
     win_state.window_h = 160;
 }
 
-pub async fn check_highscore(rdr: &VGARenderer, input: &Input, score: i32, map: usize) {
+pub async fn check_highscore(
+    sound: &mut Sound,
+    rdr: &VGARenderer,
+    input: &Input,
+    assets: &Assets,
+    win_state: &mut WindowState,
+    loader: &dyn Loader,
+    high_scores: &mut Vec<HighScore>,
+    score: i32,
+    map: usize,
+) {
     // TODO load high_score and check whether user achieved high_score
 
-    draw_high_scores(rdr);
+    sound.play_music(Music::ROSTER, assets, loader);
+
+    draw_high_scores(rdr, win_state, high_scores);
     rdr.activate_buffer(rdr.buffer_offset()).await;
     rdr.fade_in().await;
 
@@ -440,7 +454,11 @@ pub async fn check_highscore(rdr: &VGARenderer, input: &Input, score: i32, map: 
     input.wait_user_input(500).await;
 }
 
-pub fn draw_high_scores(rdr: &VGARenderer) {
+pub fn draw_high_scores(
+    rdr: &VGARenderer,
+    win_state: &mut WindowState,
+    high_scores: &Vec<HighScore>,
+) {
     clear_ms_screen(rdr);
     draw_stripes(rdr, 10);
 
@@ -448,7 +466,39 @@ pub fn draw_high_scores(rdr: &VGARenderer) {
     rdr.pic(4 * 8, 68, GraphicNum::CNAMEPIC);
     rdr.pic(20 * 8, 68, GraphicNum::CLEVELPIC);
     rdr.pic(28 * 8, 68, GraphicNum::CSCOREPIC);
+
+    win_state.font_number = 0;
+    win_state.set_font_color(15, 0x29);
+
+    for i in 0..MAX_SCORES {
+        let s = &high_scores[i];
+        // name
+        win_state.print_y = 76 + (16 * i);
+        win_state.print_x = 4 * 8;
+        print(rdr, win_state, &s.name);
+        // level
+        let completed_str = to_fixed_width_string(s.completed as u32); // Used fixed-width numbers (129...)
+        let font = &rdr.fonts[win_state.font_number];
+        let (w, _) = measure_string(font, &completed_str);
+        win_state.print_x = (22 * 8) - w;
+        win_state.print_x -= 6;
+        let level = format!("E{}/L{}", s.episode + 1, completed_str);
+        print(rdr, win_state, &level);
+        // score
+        let score_str = to_fixed_width_string(s.score);
+        let (w, _) = measure_string(font, &score_str);
+        win_state.print_x = (34 * 8) - 8 - w;
+        print(rdr, win_state, &score_str);
+    }
 }
+
+fn to_fixed_width_string(u: u32) -> String {
+    u.to_string()
+        .chars()
+        .map(|c| char::from_u32((c.to_ascii_lowercase() as u32) + (129 - 48)).unwrap())
+        .collect::<String>()
+}
+
 /// LevelCompleted
 ///
 /// Entered with the screen faded out

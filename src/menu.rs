@@ -2,8 +2,10 @@ use std::{ascii, collections::HashMap, str};
 use vga::input::NumCode;
 
 use crate::assets::{is_sod, GraphicNum, Music, SoundName, WolfVariant};
+use crate::config::WolfConfig;
 use crate::def::{difficulty, Assets, GameState, WindowState};
 use crate::input::{read_control, ControlDirection, ControlInfo, Input};
+use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::sd::{DigiMode, MusicMode, Sound, SoundMode};
 use crate::start::quit;
@@ -551,6 +553,7 @@ fn placeholder() -> ItemType {
 
 /// Wolfenstein Control Panel!  Ta Da!
 pub async fn control_panel(
+    wolf_config: &WolfConfig,
     ticker: &Ticker,
     game_state: &mut GameState,
     sound: &mut Sound,
@@ -601,6 +604,10 @@ pub async fn control_panel(
                             ticker, rdr, sound, assets, input, win_state, menu_state, loader,
                         )
                         .await
+                    }
+                    MainMenuItem::ViewScores => {
+                        cp_view_scores(wolf_config, rdr, sound, assets, input, win_state, loader)
+                            .await
                     }
                     _ => todo!("implement other menu selects"),
                 },
@@ -659,7 +666,7 @@ async fn cp_main_menu(
     } else if handle == MenuHandle::Selected(MainMenuItem::SaveGame.pos()) {
         return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::SaveGame));
     } else if handle == MenuHandle::Selected(MainMenuItem::ViewScores.pos()) {
-        todo!("show view scores");
+        return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::ViewScores));
     } else if handle == MenuHandle::Selected(MainMenuItem::BackTo.pos()) {
         return MenuHandle::BackToGameLoop(None);
     } else if handle == MenuHandle::QuitMenu
@@ -897,6 +904,29 @@ async fn cp_load_game(
             return load_handle;
         }
     }
+}
+
+async fn cp_view_scores(
+    wolf_config: &WolfConfig,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+    input: &Input,
+    win_state: &mut WindowState,
+    loader: &dyn Loader,
+) -> MenuHandle {
+    win_state.font_number = 0;
+    sound.play_music(Music::ROSTER, assets, loader);
+    draw_high_scores(rdr, win_state, &wolf_config.high_scores);
+    rdr.fade_in().await;
+    win_state.font_number = 1;
+
+    input.ack().await;
+
+    sound.play_music(Music::WONDERIN, assets, loader);
+    rdr.fade_out().await;
+
+    MenuHandle::BackToGameLoop(None)
 }
 
 async fn cp_save_game(

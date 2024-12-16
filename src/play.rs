@@ -12,6 +12,7 @@ use crate::agent::{
 };
 use crate::assets::Music;
 use crate::assets::{GraphicNum, GAMEPAL};
+use crate::config::WolfConfig;
 use crate::debug::debug_keys;
 use crate::def::ActiveType;
 use crate::def::ObjType;
@@ -291,6 +292,7 @@ fn calc_sines() -> Vec<Fixed> {
 }
 
 pub async fn play_loop(
+    wolf_config: &mut WolfConfig,
     ticker: &time::Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
@@ -395,6 +397,7 @@ pub async fn play_loop(
         three_d_refresh(ticker, game_state, level_state, rc, rdr, sound, prj, assets).await;
 
         save_load = check_keys(
+            wolf_config,
             ticker,
             sound,
             rdr,
@@ -691,6 +694,7 @@ pub fn center_window(rdr: &VGARenderer, win_state: &mut WindowState, width: usiz
 }
 
 async fn check_keys(
+    wolf_config: &mut WolfConfig,
     ticker: &time::Ticker,
     sound: &mut Sound,
     rdr: &VGARenderer,
@@ -726,7 +730,17 @@ async fn check_keys(
         let prev_buffer = rdr.buffer_offset();
         rdr.set_buffer_offset(rdr.active_buffer());
         let save_load = control_panel(
-            ticker, game_state, sound, rdr, input, assets, win_state, menu_state, loader, scan,
+            wolf_config,
+            ticker,
+            game_state,
+            sound,
+            rdr,
+            input,
+            assets,
+            win_state,
+            menu_state,
+            loader,
+            scan,
         )
         .await;
         rdr.set_buffer_offset(prev_buffer);
