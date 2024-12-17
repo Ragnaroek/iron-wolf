@@ -444,9 +444,9 @@ fn game_file_size(level_state: &LevelState, game_state: &GameState) -> usize {
 fn write_game_state(writer: &mut DataWriter, game_state: &GameState) {
     writer.write_u16(game_state.difficulty as u16);
     writer.write_u16(game_state.map_on as u16);
-    writer.write_i32(game_state.old_score);
-    writer.write_i32(game_state.score);
-    writer.write_i32(game_state.next_extra);
+    writer.write_u32(game_state.old_score);
+    writer.write_u32(game_state.score);
+    writer.write_u32(game_state.next_extra);
     writer.write_i16(game_state.lives as i16);
     writer.write_i16(game_state.health as i16);
     writer.write_i16(game_state.ammo as i16);
@@ -892,9 +892,9 @@ fn read_obj_type(reader: &mut DataReader) -> ObjType {
 fn load_game_state(reader: &mut DataReader, game_state: &mut GameState) {
     game_state.difficulty = difficulty(reader.read_u16() as usize);
     game_state.map_on = reader.read_u16() as usize;
-    game_state.old_score = reader.read_i32();
-    game_state.score = reader.read_i32();
-    game_state.next_extra = reader.read_i32();
+    game_state.old_score = reader.read_u32();
+    game_state.score = reader.read_u32();
+    game_state.next_extra = reader.read_u32();
     game_state.lives = reader.read_i16() as i32;
     game_state.health = reader.read_i16() as i32;
     game_state.ammo = reader.read_i16() as i32;

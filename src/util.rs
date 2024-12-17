@@ -96,6 +96,21 @@ pub struct DataWriter {
 }
 
 impl DataWriter {
+    pub fn write_utf8_string(&mut self, str: &str, size: usize) {
+        let mut data = vec![0; size];
+
+        let mut i = 0;
+        for byte in str.as_bytes() {
+            data[i] = *byte;
+            i += 1;
+            if i >= size {
+                break;
+            }
+        }
+
+        self.write_bytes(&data)
+    }
+
     pub fn write_bytes(&mut self, bytes: &[u8]) {
         for i in 0..bytes.len() {
             self.data[self.offset] = bytes[i];
@@ -121,6 +136,14 @@ impl DataWriter {
 
     pub fn write_i32(&mut self, v: i32) {
         self.write_bytes(&v.to_le_bytes());
+    }
+
+    pub fn write_bool(&mut self, v: bool) {
+        if v {
+            self.write_u16(1);
+        } else {
+            self.write_u16(0);
+        }
     }
 
     pub fn skip(&mut self, bytes: usize) {

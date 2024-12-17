@@ -14,6 +14,7 @@ use vga::input::{to_numcode, NumCode};
 
 pub const IW_CONFIG_FILE_NAME: &str = "iw_config.toml";
 pub const CONFIG_DATA: &'static str = "CONFIG.WL6";
+pub const MAX_HIGH_NAME: usize = 57;
 pub const MAX_SCORES: usize = 7;
 
 // Load the config from the config file if it exists.
@@ -36,17 +37,20 @@ pub fn default_iw_config() -> Result<IWConfig, String> {
     toml::from_str("vanilla = true").map_err(|e| e.to_string())
 }
 
+#[derive(Copy, Clone)]
 pub enum SDMode {
     Off = 0,
     PC = 1,
     AdLib = 2,
 }
 
+#[derive(Copy, Clone)]
 pub enum SMMode {
     Off = 0,
     AdLib = 1,
 }
 
+#[derive(Copy, Clone)]
 pub enum SDSMode {
     Off = 0,
     PC = 1,
@@ -77,7 +81,53 @@ pub struct WolfConfig {
     pub mouse_adjustment: u16,
 }
 
-// TODO write a test with load/write roundtrip (once write is there)
+pub fn write_wolf_config(loader: &dyn Loader, wolf_config: &WolfConfig) -> Result<(), String> {
+    let mut writer = util::new_data_writer(522); // TODO always 522 bytes?
+
+    for i in 0..MAX_SCORES {
+        let high_score = &wolf_config.high_scores[i];
+        writer.write_utf8_string(&high_score.name, MAX_HIGH_NAME + 1);
+        writer.write_u32(high_score.score);
+        writer.write_u16(high_score.completed);
+        writer.write_u16(high_score.episode);
+    }
+
+    writer.write_u16(wolf_config.sd_mode as u16);
+    writer.write_u16(wolf_config.sm_mode as u16);
+    writer.write_u16(wolf_config.sds_mode as u16);
+
+    writer.write_bool(wolf_config.mouse_enabled);
+    writer.write_bool(wolf_config.joystick_enabled);
+    writer.write_bool(wolf_config.joypad_enabled);
+    writer.write_u16(wolf_config.joystick_progressive);
+    writer.write_u16(wolf_config.joystick_port);
+
+    for i in 0..4 {
+        writer.write_u16(numcode_to_u16(wolf_config.dirscan[i]));
+    }
+    for i in 0..8 {
+        writer.write_u16(numcode_to_u16(wolf_config.buttonscan[i]));
+    }
+    for i in 0..4 {
+        writer.write_u16(numcode_to_u16(wolf_config.buttonmouse[i]));
+    }
+    for i in 0..4 {
+        writer.write_u16(numcode_to_u16(wolf_config.buttonjoy[i]));
+    }
+
+    writer.write_u16(wolf_config.viewsize - 4); // TODO remove - 4, viewisze is fixed with 15 on read a.t.m
+    writer.write_u16(wolf_config.mouse_adjustment);
+
+    loader.write_wolf_file(WolfFile::ConfigData, &writer.data)
+}
+
+pub fn numcode_to_u16(code: NumCode) -> u16 {
+    if code == NumCode::Bad {
+        0xFFFF
+    } else {
+        code as u16
+    }
+}
 
 pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
     let data = loader.load_wolf_file(WolfFile::ConfigData);
@@ -86,7 +136,7 @@ pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
     let mut high_scores = Vec::with_capacity(MAX_SCORES);
 
     for _ in 0..MAX_SCORES {
-        let mut name = reader.read_utf8_string(58);
+        let mut name = reader.read_utf8_string(MAX_HIGH_NAME + 1);
         name.retain(|c| c != '\0');
 
         let score = reader.read_u32();

@@ -18,7 +18,7 @@ use crate::vh::{vw_hlin, vw_vlin};
 const NUM_SAVE_GAMES: usize = 10;
 
 const STRIPE: u8 = 0x2c;
-const BORDER_COLOR: u8 = 0x29;
+pub const BORDER_COLOR: u8 = 0x29;
 const BORDER2_COLOR: u8 = 0x23;
 const DEACTIVE: u8 = 0x2b;
 const BKGD_COLOR: u8 = 0x2d;

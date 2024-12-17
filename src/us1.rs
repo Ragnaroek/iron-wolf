@@ -7,6 +7,8 @@ use crate::time::{Ticker, TICK_BASE};
 use crate::vga_render::VGARenderer;
 use crate::vh::{draw_tile_8, WHITE};
 
+const MAX_STRING: usize = 128; // Maximum input string size
+
 pub fn print(rdr: &VGARenderer, win_state: &mut WindowState, str: &str) {
     let font = &rdr.fonts[win_state.font_number];
     let lines: Vec<&str> = str.split("\n").collect();
@@ -148,6 +150,8 @@ pub fn clear_window(rdr: &VGARenderer, win_state: &mut WindowState) {
     );
 }
 
+/// max_chars = 0 for maximum chars
+/// max_width = 0 for maximum width
 pub fn line_input(
     ticker: &Ticker,
     rdr: &VGARenderer,
@@ -242,10 +246,21 @@ pub fn line_input(
             _ => {}
         }
 
+        let font = &rdr.fonts[win_state.font_number];
+
         if c != '\0' {
-            input_str.insert(cursor.pos, c);
-            cursor.pos += 1;
-            redraw = true;
+            let len = input_str.len();
+            let (w, _) = measure_string(font, &input_str);
+
+            if !c.is_whitespace()
+                && len < MAX_STRING
+                && ((max_chars == 0) || (len < max_chars))
+                && ((max_width == 0) || (w < max_width))
+            {
+                input_str.insert(cursor.pos, c);
+                cursor.pos += 1;
+                redraw = true;
+            }
         }
 
         if cursor_moved {
@@ -256,7 +271,6 @@ pub fn line_input(
         }
 
         if redraw {
-            let font = &rdr.fonts[win_state.font_number];
             // clear out old string and cursor
             cursor.clear(rdr, win_state, x, y, &old_str, last_cursor_pos);
             draw_string(rdr, font, &old_str, x, y, win_state.back_color);

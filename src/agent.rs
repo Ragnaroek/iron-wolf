@@ -684,7 +684,7 @@ pub fn give_points(
     rdr: &VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    points: i32,
+    points: u32,
 ) {
     game_state.score += points;
     while game_state.score >= game_state.next_extra {
@@ -971,7 +971,7 @@ pub fn draw_weapon(state: &GameState, rdr: &VGARenderer) {
 }
 
 pub fn draw_score(state: &GameState, rdr: &VGARenderer) {
-    latch_number(rdr, 6, 16, 6, state.score);
+    latch_number(rdr, 6, 16, 6, state.score as i32);
 }
 
 fn latch_number(rdr: &VGARenderer, x_start: usize, y: usize, width: usize, num: i32) {

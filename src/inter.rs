@@ -2,16 +2,17 @@ use std::ascii::Char;
 
 use crate::agent::{draw_level, draw_score, give_points};
 use crate::assets::{num_pic, GraphicNum, Music};
-use crate::config::MAX_SCORES;
+use crate::config::{write_wolf_config, WolfConfig, MAX_HIGH_NAME, MAX_SCORES};
 use crate::def::{Assets, Difficulty, GameState, IWConfig, WindowState, STATUS_LINES};
 use crate::input::Input;
 use crate::loader::Loader;
-use crate::menu::{clear_ms_screen, draw_stripes, READ_HCOLOR};
+use crate::menu::{clear_ms_screen, draw_stripes, BORDER_COLOR, READ_HCOLOR};
 use crate::play::{draw_all_play_border, ProjectionConfig};
 use crate::sd::Sound;
+use crate::start::quit;
 use crate::text::end_text;
-use crate::time;
-use crate::us1::{measure_string, print};
+use crate::time::{self, Ticker};
+use crate::us1::{line_input, measure_string, print};
 use crate::user::HighScore;
 use crate::vga_render::VGARenderer;
 use crate::vh::BLACK;
@@ -69,9 +70,9 @@ struct ParTime {
     time_str: &'static str,
 }
 
-const PAR_AMOUNT: i32 = 500;
+const PAR_AMOUNT: u32 = 500;
 const RATIO_XX: usize = 37;
-const PERCENT_100_AMT: i32 = 10000;
+const PERCENT_100_AMT: u32 = 10000;
 
 const RATIO_X: usize = 6;
 const RATIO_Y: usize = 14;
@@ -432,26 +433,63 @@ pub fn clear_split_vwb(win_state: &mut WindowState) {
 }
 
 pub async fn check_highscore(
+    ticker: &Ticker,
     sound: &mut Sound,
     rdr: &VGARenderer,
     input: &Input,
     assets: &Assets,
     win_state: &mut WindowState,
     loader: &dyn Loader,
-    high_scores: &mut Vec<HighScore>,
-    score: i32,
-    map: usize,
+    wolf_config: &mut WolfConfig,
+    my_score: HighScore,
 ) {
-    // TODO load high_score and check whether user achieved high_score
+    let mut n = -1;
+    for i in 0..MAX_SCORES {
+        let score = &wolf_config.high_scores[i];
+        if my_score.score > score.score
+            || (my_score.score == score.score && my_score.completed > score.completed)
+        {
+            wolf_config.high_scores.insert(i, my_score);
+            wolf_config.high_scores.truncate(MAX_SCORES);
+            n = i as isize;
+            break;
+        }
+    }
 
     sound.play_music(Music::ROSTER, assets, loader);
 
-    draw_high_scores(rdr, win_state, high_scores);
+    draw_high_scores(rdr, win_state, &wolf_config.high_scores);
     rdr.activate_buffer(rdr.buffer_offset()).await;
     rdr.fade_in().await;
 
-    input.clear_keys_down();
-    input.wait_user_input(500).await;
+    if n >= 0 {
+        win_state.print_y = 76 + (16 * n as usize);
+        win_state.print_x = 4 * 8;
+        win_state.back_color = BORDER_COLOR;
+        win_state.font_color = 15;
+        let (input, escape) = line_input(
+            ticker,
+            rdr,
+            input,
+            win_state,
+            win_state.print_x,
+            win_state.print_y,
+            true,
+            MAX_HIGH_NAME,
+            100,
+            &wolf_config.high_scores[n as usize].name,
+        );
+        if !escape {
+            wolf_config.high_scores[n as usize].name = input;
+        }
+        let write_result = write_wolf_config(loader, wolf_config);
+        if write_result.is_err() {
+            quit(Some("failed to write config file"));
+        }
+    } else {
+        input.clear_keys_down();
+        input.wait_user_input(500).await;
+    }
 }
 
 pub fn draw_high_scores(
@@ -587,9 +625,9 @@ pub async fn level_completed(
         };
 
         // PRINT TIME BONUS
-        let mut bonus = time_left * PAR_AMOUNT;
+        let mut bonus = time_left as u32 * PAR_AMOUNT;
         if bonus > 0 {
-            for i in 0..=time_left {
+            for i in 0..=(time_left as u32) {
                 let str = (i * PAR_AMOUNT).to_string();
                 let x = 36 - str.len() * 2;
                 write(rdr, x, 7, &str);
@@ -800,7 +838,7 @@ async fn done_normal_level_complete(
     let x = RATIO_XX - str.len() * 2;
     write(rdr, x, 18, &str);
 
-    let mut bonus = time_left * PAR_AMOUNT;
+    let mut bonus = time_left as u32 * PAR_AMOUNT;
     if kill_ratio == 100 {
         bonus += PERCENT_100_AMT;
     }

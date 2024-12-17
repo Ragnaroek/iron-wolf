@@ -134,7 +134,7 @@ async fn show_article(rdr: &VGARenderer, input: &Input, which: usize) {
             NumCode::Escape => break,
             NumCode::UpArrow | NumCode::PgUp | NumCode::LeftArrow => {
                 if layout_ctx.page_num > 1 {
-                    back_page(&mut layout_ctx, &mut text);
+                    back_page(&mut text);
                     layout_ctx.page_num -= 1;
                     new_page = true;
                 }
@@ -231,7 +231,7 @@ fn page_layout(
     }
 }
 
-fn back_page(layout_ctx: &mut LayoutContext, text: &mut Text) {
+fn back_page(text: &mut Text) {
     loop {
         let ch0 = text.prev();
         let ch1 = text.prev().map(|c| c.to_ascii_uppercase());

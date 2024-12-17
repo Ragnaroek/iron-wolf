@@ -21,11 +21,18 @@ run-web: build-web
 coverage-sdl:
 	cargo tarpaulin --features sdl --ignore-tests --out Lcov
 
-## Misc
-test-all:
+## Testing
+
+test-sdl:
 	cargo test --features sdl
+
+test-web:
 	cargo test --features web
 
+test-all: test-sdl test-web
+
+
+## Misc
 profile:
 	sudo -E cargo flamegraph --bench core_loop -- --bench
 

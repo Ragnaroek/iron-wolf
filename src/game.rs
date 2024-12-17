@@ -24,6 +24,7 @@ use crate::play::{
     draw_play_screen, finish_palette_shifts, new_control_state, play_loop, ProjectionConfig, SONGS,
 };
 use crate::sd::Sound;
+use crate::user::HighScore;
 use crate::vga_render::VGARenderer;
 use crate::vh::vw_fade_out;
 use crate::{map, time};
@@ -158,15 +159,15 @@ pub async fn game_loop(
                 rdr.fade_out().await;
 
                 check_highscore(
+                    ticker,
                     sound,
                     rdr,
                     input,
                     assets,
                     win_state,
                     loader,
-                    &mut wolf_config.high_scores,
-                    game_state.score,
-                    game_state.map_on + 1,
+                    wolf_config,
+                    new_high_score(game_state),
                 )
                 .await;
 
@@ -178,15 +179,15 @@ pub async fn game_loop(
                 victory(game_state, sound, rdr, input, assets, win_state, loader).await;
 
                 check_highscore(
+                    ticker,
                     sound,
                     rdr,
                     input,
                     assets,
                     win_state,
                     loader,
-                    &mut wolf_config.high_scores,
-                    game_state.score,
-                    game_state.map_on + 1,
+                    wolf_config,
+                    new_high_score(game_state),
                 )
                 .await;
 
@@ -196,6 +197,15 @@ pub async fn game_loop(
             }
             _ => panic!("not implemented end with state {:?}", game_state.play_state),
         }
+    }
+}
+
+fn new_high_score(game_state: &GameState) -> HighScore {
+    HighScore {
+        name: "".to_string(),
+        score: 11000, //game_state.score,
+        completed: game_state.map_on as u16 + 1,
+        episode: game_state.episode as u16,
     }
 }
 

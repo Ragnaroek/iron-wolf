@@ -32,7 +32,7 @@ pub const ANGLES_I32: i32 = ANGLES as i32;
 pub const ANGLE_QUAD: usize = ANGLES / 4;
 pub const TILEGLOBAL: i32 = 1 << 16;
 
-pub const EXTRA_POINTS: i32 = 40000;
+pub const EXTRA_POINTS: u32 = 40000;
 
 pub const RUN_SPEED: i32 = 6000;
 
@@ -294,9 +294,9 @@ pub struct GameState {
     pub died: bool,
     pub difficulty: Difficulty,
     pub map_on: usize,
-    pub old_score: i32,
-    pub score: i32,
-    pub next_extra: i32,
+    pub old_score: u32,
+    pub score: u32,
+    pub next_extra: u32,
     pub lives: i32,
     pub health: i32,
     pub ammo: i32,

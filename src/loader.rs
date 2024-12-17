@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 pub trait Loader: Sync + Send {
     fn variant(&self) -> &'static WolfVariant;
 
+    fn write_wolf_file(&self, file: WolfFile, data: &[u8]) -> Result<(), String>;
+
     fn load_wolf_file(&self, file: WolfFile) -> Vec<u8>;
     fn load_wolf_file_slice(
         &self,
@@ -33,6 +35,13 @@ pub struct DiskLoader {
 impl Loader for DiskLoader {
     fn variant(&self) -> &'static WolfVariant {
         return self.variant;
+    }
+
+    fn write_wolf_file(&self, file: WolfFile, data: &[u8]) -> Result<(), String> {
+        let name = file_name(file, &self.variant);
+        let path = &self.data_path.join(name);
+        let mut file = File::create(path).map_err(|e| e.to_string())?;
+        file.write_all(data).map_err(|e| e.to_string())
     }
 
     fn load_wolf_file(&self, file: WolfFile) -> Vec<u8> {

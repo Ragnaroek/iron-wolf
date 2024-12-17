@@ -164,6 +164,10 @@ impl Loader for WebLoader {
         return self.variant;
     }
 
+    fn write_wolf_file(&self, file: WolfFile, data: &[u8]) -> Result<(), String> {
+        todo!("write_wolf_file not implemented for web");
+    }
+
     fn load_wolf_file(&self, file: WolfFile) -> Vec<u8> {
         let buffer = self
             .files
