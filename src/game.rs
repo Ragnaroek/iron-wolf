@@ -67,11 +67,6 @@ pub async fn game_loop(
     draw_play_screen(&game_state, rdr, prj).await;
 
     'game_loop: loop {
-        // TODO Debug
-        game_state.episode = 0;
-        game_state.map_on = 8;
-        // END Debug
-
         let mut level_state = setup_game_level(prj, game_state, assets).unwrap();
         let mut rc = init_ray_cast(prj.view_width);
 
@@ -203,7 +198,7 @@ pub async fn game_loop(
 fn new_high_score(game_state: &GameState) -> HighScore {
     HighScore {
         name: "".to_string(),
-        score: 11000, //game_state.score,
+        score: game_state.score,
         completed: game_state.map_on as u16 + 1,
         episode: game_state.episode as u16,
     }
