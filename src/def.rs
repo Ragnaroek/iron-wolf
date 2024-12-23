@@ -814,6 +814,23 @@ derive_from! {
         MutantS1 = 187, MutantS2 = 188, MutantS3 = 189, MutantS4 = 190,
         MutantS5 = 191, MutantS6 = 192, MutantS7 = 193, MutantS8 = 194,
 
+        MutantW11 = 195, MutantW12 = 196, MutantW13 = 197, MutantW14 = 198,
+        MutantW15 = 199, MutantW16 = 200, MutantW17 = 201, MutantW18 = 202,
+
+        MutantW21 = 203, MutantW22 = 204, MutantW23 = 205, MutantW24 = 206,
+        MutantW25 = 207, MutantW26 = 208, MutantW27 = 209, MutantW28 = 210,
+
+        MutantW31 = 211, MutantW32 = 212, MutantW33 = 213, MutantW34 = 214,
+        MutantW35 = 215, MutantW36 = 216, MutantW37 = 217, MutantW38 = 218,
+
+        MutantW41 = 219, MutantW42 = 220, MutantW43 = 221, MutantW44 = 222,
+        MutantW45 = 223, MutantW46 = 224, MutantW47 = 225, MutantW48 = 226,
+
+        MutantPain1 = 227, MutantDie1 = 228, MutantDie2 = 229, MutantDie3 = 230,
+        MutantPain2 = 231, MutantDie4 = 232, MutantDead = 233,
+
+        MutantShoot1 = 234, MutantShoot2 = 235, MutantShoot3 = 236, MutantShoot4 = 237,
+
         // officer
         OfficerS1 = 238, OfficerS2 = 239, OfficerS3 = 240, OfficerS4 = 241,
         OfficerS5 = 242, OfficerS6 = 243, OfficerS7 = 244, OfficerS8 = 245,

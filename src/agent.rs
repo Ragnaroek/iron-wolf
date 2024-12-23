@@ -788,7 +788,11 @@ pub fn get_bonus(
             todo!("give BoAlpo");
         }
         StaticKind::BoGibs => {
-            panic!("get gibs");
+            if game_state.health > 10 {
+                return;
+            }
+            sound.play_sound(SoundName::SLURPIE, assets);
+            heal_self(game_state, rdr, 1);
         }
         StaticKind::BoSpear => {
             panic!("get spear");

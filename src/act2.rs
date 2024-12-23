@@ -127,7 +127,7 @@ static START_HITPOINTS: [[i32; NUM_ENEMIES]; 4] = [
     ],
 ];
 
-// guards
+// guards (1000)
 
 pub static S_GRDSTAND: StateType = StateType {
     id: 1000,
@@ -349,11 +349,11 @@ pub static S_GRDDIE4: StateType = StateType {
     next: Some(&S_GRDDIE4),
 };
 
-// ghosts
+// ghosts (1100)
 
 // TODO Impl ghosts
 
-// dogs
+// dogs (1200)
 
 pub static S_DOGPATH1: StateType = StateType {
     id: 1022,
@@ -565,7 +565,7 @@ pub static S_DOGDEAD: StateType = StateType {
     next: Some(&S_DOGDEAD),
 };
 
-// officers
+// officers (1300)
 
 pub static S_OFCSTAND: StateType = StateType {
     id: 1043,
@@ -577,10 +577,10 @@ pub static S_OFCSTAND: StateType = StateType {
     next: Some(&S_OFCSTAND),
 };
 
-// mutant
+// mutant (1400)
 
 pub static S_MUTSTAND: StateType = StateType {
-    id: 1044,
+    id: 1400,
     rotate: 1,
     sprite: Some(Sprite::MutantS1),
     tic_time: 0,
@@ -589,7 +589,177 @@ pub static S_MUTSTAND: StateType = StateType {
     next: Some(&S_MUTSTAND),
 };
 
-// SS
+pub static S_MUTPAIN: StateType = StateType {
+    id: 1407,
+    rotate: 2,
+    sprite: Some(Sprite::MutantPain1),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_MUTCHASE1),
+};
+
+pub static S_MUTPAIN1: StateType = StateType {
+    id: 1408,
+    rotate: 2,
+    sprite: Some(Sprite::MutantPain2),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_MUTCHASE1),
+};
+
+pub static S_MUTSHOOT1: StateType = StateType {
+    id: 1409,
+    rotate: 0,
+    sprite: Some(Sprite::MutantShoot1),
+    tic_time: 6,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_MUTSHOOT2),
+};
+
+pub static S_MUTSHOOT2: StateType = StateType {
+    id: 1410,
+    rotate: 0,
+    sprite: Some(Sprite::MutantShoot2),
+    tic_time: 20,
+    think: None,
+    action: None,
+    next: Some(&S_MUTSHOOT3),
+};
+
+pub static S_MUTSHOOT3: StateType = StateType {
+    id: 1411,
+    rotate: 0,
+    sprite: Some(Sprite::MutantShoot3),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_MUTSHOOT4),
+};
+
+pub static S_MUTSHOOT4: StateType = StateType {
+    id: 1412,
+    rotate: 0,
+    sprite: Some(Sprite::MutantShoot4),
+    tic_time: 20,
+    think: None,
+    action: None,
+    next: Some(&S_MUTCHASE1),
+};
+
+pub static S_MUTCHASE1: StateType = StateType {
+    id: 1413,
+    rotate: 1,
+    sprite: Some(Sprite::MutantW11),
+    tic_time: 10,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_MUTCHASE1S),
+};
+
+pub static S_MUTCHASE1S: StateType = StateType {
+    id: 1414,
+    rotate: 1,
+    sprite: Some(Sprite::MutantW11),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_MUTCHASE2),
+};
+
+pub static S_MUTCHASE2: StateType = StateType {
+    id: 1415,
+    rotate: 1,
+    sprite: Some(Sprite::MutantW21),
+    tic_time: 8,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_MUTCHASE3),
+};
+
+pub static S_MUTCHASE3: StateType = StateType {
+    id: 1416,
+    rotate: 1,
+    sprite: Some(Sprite::MutantW31),
+    tic_time: 10,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_MUTCHASE3S),
+};
+
+pub static S_MUTCHASE3S: StateType = StateType {
+    id: 1417,
+    rotate: 1,
+    sprite: Some(Sprite::MutantW31),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_MUTCHASE4),
+};
+
+pub static S_MUTCHASE4: StateType = StateType {
+    id: 1418,
+    rotate: 1,
+    sprite: Some(Sprite::MutantW41),
+    tic_time: 8,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_MUTCHASE1),
+};
+
+pub static S_MUTDIE1: StateType = StateType {
+    id: 1419,
+    rotate: 0,
+    sprite: Some(Sprite::MutantDie1),
+    tic_time: 7,
+    think: None,
+    action: Some(a_death_scream),
+    next: Some(&S_MUTDIE2),
+};
+
+pub static S_MUTDIE2: StateType = StateType {
+    id: 1420,
+    rotate: 0,
+    sprite: Some(Sprite::MutantDie2),
+    tic_time: 7,
+    think: None,
+    action: None,
+    next: Some(&S_MUTDIE3),
+};
+
+pub static S_MUTDIE3: StateType = StateType {
+    id: 1421,
+    rotate: 0,
+    sprite: Some(Sprite::MutantDie3),
+    tic_time: 7,
+    think: None,
+    action: None,
+    next: Some(&S_MUTDIE4),
+};
+
+pub static S_MUTDIE4: StateType = StateType {
+    id: 1422,
+    rotate: 0,
+    sprite: Some(Sprite::MutantDie4),
+    tic_time: 7,
+    think: None,
+    action: None,
+    next: Some(&S_MUTDIE5),
+};
+
+pub static S_MUTDIE5: StateType = StateType {
+    id: 1423,
+    rotate: 0,
+    sprite: Some(Sprite::MutantDead),
+    tic_time: 0,
+    think: None,
+    action: None,
+    next: Some(&S_MUTDIE5),
+};
+
+// SS (1500)
 
 pub static S_SSSTAND: StateType = StateType {
     id: 1045,
@@ -872,7 +1042,7 @@ pub static S_SSDIE4: StateType = StateType {
 };
 
 //
-// hans
+// hans (1600)
 //
 pub static S_BOSSSTAND: StateType = StateType {
     id: 1073,
@@ -1423,6 +1593,7 @@ fn t_chase(
             // go into attack frame
             let state_change = match obj.class {
                 ClassType::Guard => Some(&S_GRDSHOOT1),
+                ClassType::Mutant => Some(&S_MUTSHOOT1),
                 ClassType::SS => Some(&S_SSSHOOT1),
                 ClassType::Boss => Some(&S_BOSSSHOOT1),
                 _ => panic!("impl state change for {:?}", obj.class),
@@ -1738,6 +1909,7 @@ fn a_death_scream(
     // TODO sometimes play DEATHSCREAM6SND
     let obj = level_state.obj(k);
     match obj.class {
+        ClassType::Mutant => sound.play_sound(SoundName::AHHHG, assets),
         ClassType::Boss => sound.play_sound(SoundName::MUTTI, assets),
         _ => todo!("death scream missing"),
     }

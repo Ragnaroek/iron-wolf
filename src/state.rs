@@ -5,7 +5,8 @@ mod state_test;
 use crate::act1::{open_door, place_item_type};
 use crate::act2::{
     S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN,
-    S_GRDPAIN1, S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1,
+    S_GRDPAIN1, S_MUTCHASE1, S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1, S_SSCHASE1, S_SSDIE1, S_SSPAIN,
+    S_SSPAIN1,
 };
 use crate::agent::{give_points, take_damage};
 use crate::assets::SoundName;
@@ -780,6 +781,10 @@ pub fn first_sighting(k: ObjKey, level_state: &mut LevelState, sound: &mut Sound
             new_state(obj, &S_GRDCHASE1);
             obj.speed *= 3; // go faster when chasing player
         }
+        ClassType::Mutant => {
+            new_state(obj, &S_MUTCHASE1);
+            obj.speed *= 3;
+        }
         ClassType::Dog => {
             sound.play_sound_loc_actor(SoundName::SPION, assets, obj);
             new_state(obj, &S_DOGCHASE1);
@@ -1024,7 +1029,11 @@ pub fn damage_actor(
                 panic!("damage officer");
             }
             ClassType::Mutant => {
-                panic!("damage mutant");
+                if obj.hitpoints & 1 != 0 {
+                    new_state(obj, &S_MUTPAIN);
+                } else {
+                    new_state(obj, &S_MUTPAIN1);
+                }
             }
             ClassType::SS => {
                 if obj.hitpoints & 1 != 0 {
@@ -1063,7 +1072,9 @@ fn kill_actor(
                 panic!("kill officer");
             }
             ClassType::Mutant => {
-                panic!("kill mutant");
+                give_points(game_state, rdr, sound, assets, 700);
+                new_state(obj, &S_MUTDIE1);
+                place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
             }
             ClassType::SS => {
                 give_points(game_state, rdr, sound, assets, 500);

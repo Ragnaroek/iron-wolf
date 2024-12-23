@@ -842,7 +842,17 @@ fn scan_info_plane(
                     todo!("gift");
                 }
                 216..=219 => {
-                    todo!("stand mutant");
+                    spawn_stand(
+                        map_data,
+                        EnemyType::Mutant,
+                        &mut actors,
+                        actor_at,
+                        game_state,
+                        x,
+                        y,
+                        tile - 216,
+                        difficulty,
+                    );
                 }
                 220..=223 => {
                     todo!("patrol mutant");
@@ -861,14 +871,38 @@ fn scan_info_plane(
                 }
                 // nothing on 228 to 233
                 234..=237 => {
-                    todo!("mutant");
+                    if difficulty >= Difficulty::Medium {
+                        spawn_stand(
+                            map_data,
+                            EnemyType::Mutant,
+                            &mut actors,
+                            actor_at,
+                            game_state,
+                            x,
+                            y,
+                            tile - 234,
+                            difficulty,
+                        );
+                    }
                 }
                 238..=241 => {
                     todo!("mutant");
                 }
                 //nothing on 242 to 251
                 252..=255 => {
-                    todo!("mutant");
+                    if difficulty >= Difficulty::Hard {
+                        spawn_stand(
+                            map_data,
+                            EnemyType::Mutant,
+                            &mut actors,
+                            actor_at,
+                            game_state,
+                            x,
+                            y,
+                            tile - 252,
+                            difficulty,
+                        );
+                    }
                 }
                 256..=259 => {
                     todo!("mutant");
