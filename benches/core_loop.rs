@@ -3,6 +3,8 @@
 extern crate iw;
 extern crate test;
 
+use vga::VGA;
+
 use iw::config::default_iw_config;
 use iw::loader::DiskLoader;
 use std::path::PathBuf;
@@ -35,7 +37,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
     let prj = play::calc_projection(19);
     let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, &None)?;
 
-    let vga = vga::new(0x13);
+    let vga = VGA::setup_no_backend(0x13);
     let vga_screen = Arc::new(vga);
     let render = vga_render::init(
         vga_screen.clone(),

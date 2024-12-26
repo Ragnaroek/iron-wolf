@@ -1,23 +1,19 @@
 use std::{path::PathBuf, sync::Arc};
 
-use vga::SCReg;
+use vga::{SCReg, VGA};
 
 use crate::assets;
 use crate::config;
-use crate::def::GameState;
-use crate::def::LevelState;
 use crate::def::{
     new_game_state, ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction,
-    DoorLock, DoorType, ObjKey, ObjType, Sprite, StaticKind, StaticType, WeaponType, MAP_SIZE,
-    NUM_AREAS,
+    DoorLock, DoorType, GameState, LevelState, ObjKey, ObjType, Sprite, StaticKind, StaticType,
+    WeaponType, MAP_SIZE, NUM_AREAS,
 };
 use crate::fixed::{new_fixed, new_fixed_i32};
 use crate::game::setup_game_level;
 use crate::loader::{DiskLoader, Loader};
 use crate::play::{self, ProjectionConfig};
-use crate::start::save_the_game;
-use crate::start::OBJ_TYPE_LEN;
-use crate::start::STAT_TYPE_LEN;
+use crate::start::{save_the_game, OBJ_TYPE_LEN, STAT_TYPE_LEN};
 use crate::vga_render::{self, VGARenderer};
 
 use super::{do_load, null_obj_type};
@@ -448,7 +444,7 @@ fn reset_partial_obj_type(obj: &mut ObjType) {
 
 fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, VGARenderer, Assets) {
     let config = config::load_wolf_config(loader);
-    let vga = vga::new(0x13);
+    let vga = VGA::setup_no_backend(0x13);
 
     //enable Mode Y
     let mem_mode = vga.get_sc_data(SCReg::MemoryMode);

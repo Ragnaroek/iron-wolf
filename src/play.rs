@@ -760,6 +760,12 @@ async fn check_keys(
         rdr.set_buffer_offset(prev_buffer);
         return None;
     }
+
+    // iw key combos
+    if input.key_pressed(NumCode::Alt) && input.key_pressed(NumCode::F) {
+        println!("would go to fullscreen, if it would be implemented")
+    }
+
     return None;
 }
 

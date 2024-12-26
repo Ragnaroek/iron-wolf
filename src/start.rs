@@ -9,7 +9,7 @@ use std::usize;
 
 use vga::input::NumCode;
 use vga::util::spawn_task;
-use vga::SCReg;
+use vga::{SCReg, VGA};
 
 use crate::act2::get_state_by_id;
 use crate::assets::{self, GraphicNum, GAMEPAL, SIGNON};
@@ -68,12 +68,6 @@ impl DiskAnim {
 
 pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<(), String> {
     let mut wolf_config = config::load_wolf_config(&loader);
-
-    let vga = vga::new(0x13);
-    //enable Mode Y
-    let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
-    vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
-
     let patch_config = &loader.load_patch_config_file();
 
     let mut sound = sd::startup()?;
@@ -91,6 +85,11 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     let mut menu_state = initial_menu_state();
 
     check_for_episodes(&mut menu_state);
+
+    let (vga, handle) = VGA::setup(0x13, false)?;
+    //enable Mode Y
+    let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
+    vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
     let vga_screen = Arc::new(vga);
     let vga_loop = vga_screen.clone();
@@ -127,15 +126,9 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
         input_monitoring: Some(input_monitoring),
         ..Default::default()
     };
-    vga_screen.start(options).unwrap();
-    /*
-    vga_screen.start_debug_planar_mode(
-        1300,
-        700,
-        options,
-    ).unwrap();
-    */
+    let handle_ref = Arc::new(handle);
 
+    vga_screen.start(handle_ref, options)?;
     Ok(())
 }
 
