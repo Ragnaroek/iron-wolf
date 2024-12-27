@@ -1906,12 +1906,12 @@ fn a_death_scream(
     _: &ProjectionConfig,
     assets: &Assets,
 ) {
-    // TODO sometimes play DEATHSCREAM6SND
     let obj = level_state.obj(k);
     match obj.class {
         ClassType::Mutant => sound.play_sound(SoundName::AHHHG, assets),
+        ClassType::SS => sound.play_sound(SoundName::LEBEN, assets),
         ClassType::Boss => sound.play_sound(SoundName::MUTTI, assets),
-        _ => todo!("death scream missing"),
+        _ => todo!("death scream missing: {:?}", obj.class),
     }
 }
 
