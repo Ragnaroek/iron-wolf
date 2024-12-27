@@ -421,7 +421,7 @@ pub fn setup_game_level(
     map_ptr = 0;
     for y in 0..MAP_SIZE {
         for x in 0..MAP_SIZE {
-            let tile = map_segs.segs[0][map_ptr];
+            let mut tile = map_segs.segs[0][map_ptr];
             map_ptr += 1;
 
             if tile == AMBUSH_TILE {
@@ -432,7 +432,21 @@ pub fn setup_game_level(
                     }
                 }
 
-                // TODO something with AREATILEs has to happen here
+                let map = map_segs.segs[0][map_ptr];
+                if map >= AREATILE {
+                    tile = map;
+                }
+                if map_segs.segs[0][map_ptr - 1 - MAP_SIZE] >= AREATILE {
+                    tile = map_segs.segs[0][map_ptr - 1 - MAP_SIZE];
+                }
+                if map_segs.segs[0][map_ptr - 1 + MAP_SIZE] >= AREATILE {
+                    tile = map_segs.segs[0][map_ptr - 1 + MAP_SIZE];
+                }
+                if map_segs.segs[0][map_ptr - 2] >= AREATILE {
+                    tile = map_segs.segs[0][map_ptr - 2]
+                }
+
+                map_segs.segs[0][map_ptr - 1] = tile;
             }
         }
     }
