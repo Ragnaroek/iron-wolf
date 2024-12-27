@@ -742,7 +742,9 @@ pub fn get_bonus(
             game_state.treasure_count += 1;
         }
         StaticKind::BoCrown => {
-            todo!("get crown");
+            sound.play_sound(SoundName::BONUS4, assets);
+            give_points(game_state, rdr, sound, assets, 5000);
+            game_state.treasure_count += 1;
         }
         StaticKind::BoClip => {
             if game_state.ammo == 99 {
