@@ -2,6 +2,9 @@
 #[path = "./draw_test.rs"]
 mod draw_test;
 
+#[cfg(feature = "tracing")]
+use tracing::instrument;
+
 use crate::act2::S_DEATH_CAM;
 use crate::agent::get_bonus;
 use crate::def::{
@@ -500,6 +503,7 @@ impl RayCast {
     }
 }
 
+#[cfg_attr(feature = "tracing", instrument(skip_all))]
 pub fn wall_refresh(
     level_state: &mut LevelState,
     rc: &mut RayCast,
@@ -586,6 +590,7 @@ pub fn wall_refresh(
     }
 }
 
+#[cfg_attr(feature = "tracing", instrument(skip_all))]
 pub async fn three_d_refresh(
     ticker: &time::Ticker,
     game_state: &mut GameState,

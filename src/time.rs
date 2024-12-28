@@ -1,3 +1,6 @@
+#[cfg(feature = "tracing")]
+use tracing::instrument;
+
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -63,6 +66,7 @@ impl Ticker {
         set_count(&self.time_count, 0)
     }
 
+    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     pub fn calc_tics(&self) -> u64 {
         let last_time_count = self.last_count.load(Ordering::Relaxed);
         if last_time_count > get_count(&self.time_count) {

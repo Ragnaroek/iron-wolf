@@ -2,6 +2,11 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
+#[cfg(feature = "tracing")]
+use tracing::info_span;
+#[cfg(feature = "tracing")]
+use tracing::instrument;
+
 use vga::input::NumCode;
 use vga::util;
 use vga::VGA;
@@ -363,34 +368,37 @@ pub async fn play_loop(
         }*/
     }
 
-    //TODO A lot to do here (clear palette, poll controls, prepare world)
+    let mut _frame_id: u64 = 0;
     while game_state.play_state == PlayState::StillPlaying {
-        // TODO replace this very inefficient calc_tic function. It waits
-        // for a tic to happen which burns a lot of cycles on fast CPU.
-        // Completely get rid of the tick thread and compute ticks through
-        // timings from the rendering loop.
-        // Also make rendering independent from everything that is based on tics!!
-        // (call poll_controls and do_actors only with 70Hz!)
-        let tics = ticker.calc_tics();
-
-        poll_controls(control_state, tics, input);
-
-        move_doors(level_state, game_state, sound, assets, tics);
-        move_push_walls(level_state, game_state, tics);
-
-        for i in 0..level_state.actors.len() {
-            do_actor(
-                ObjKey(i),
-                tics,
+        #[cfg(feature = "tracing")]
+        let span = info_span!("frame", id = _frame_id);
+        _frame_id += 1;
+        #[cfg(feature = "tracing")]
+        let tics = span.in_scope(|| {
+            update_game_state(
+                ticker,
                 level_state,
                 game_state,
+                control_state,
                 sound,
                 rdr,
-                control_state,
+                input,
                 prj,
                 assets,
-            );
-        }
+            )
+        });
+        #[cfg(not(feature = "tracing"))]
+        let tics = update_game_state(
+            ticker,
+            level_state,
+            game_state,
+            control_state,
+            sound,
+            rdr,
+            input,
+            prj,
+            assets,
+        );
 
         update_palette_shifts(game_state, vga, &shifts, tics).await;
 
@@ -411,6 +419,7 @@ pub async fn play_loop(
             loader,
         )
         .await;
+
         handle_save_load(
             level_state,
             game_state,
@@ -435,6 +444,47 @@ pub async fn play_loop(
         }
         rdr.set_buffer_offset(offset_prev);
     }
+}
+
+fn update_game_state(
+    ticker: &time::Ticker,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    control_state: &mut ControlState,
+    sound: &mut Sound,
+    rdr: &VGARenderer,
+    input: &input::Input,
+    prj: &ProjectionConfig,
+    assets: &Assets,
+) -> u64 {
+    // TODO replace this very inefficient calc_tic function. It waits
+    // for a tic to happen which burns a lot of cycles on fast CPU.
+    // Completely get rid of the tick thread and compute ticks through
+    // timings from the rendering loop.
+    // Also make rendering independent from everything that is based on tics!!
+    // (call poll_controls and do_actors only with 70Hz!)
+    let tics = ticker.calc_tics();
+
+    poll_controls(control_state, tics, input);
+
+    move_doors(level_state, game_state, sound, assets, tics);
+    move_push_walls(level_state, game_state, tics);
+
+    for i in 0..level_state.actors.len() {
+        do_actor(
+            ObjKey(i),
+            tics,
+            level_state,
+            game_state,
+            sound,
+            rdr,
+            control_state,
+            prj,
+            assets,
+        );
+    }
+
+    tics
 }
 
 async fn handle_save_load(
@@ -693,6 +743,7 @@ pub fn center_window(rdr: &VGARenderer, win_state: &mut WindowState, width: usiz
     );
 }
 
+#[cfg_attr(feature = "tracing", instrument(skip_all))]
 async fn check_keys(
     wolf_config: &mut WolfConfig,
     ticker: &time::Ticker,
@@ -891,6 +942,7 @@ fn clear_palette_shifts(game_state: &mut GameState) {
     game_state.damage_count = 0;
 }
 
+#[cfg_attr(feature = "tracing", instrument(skip_all))]
 async fn update_palette_shifts(
     game_state: &mut GameState,
     vga: &VGA,

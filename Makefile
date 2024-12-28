@@ -2,8 +2,14 @@
 build-sdl:
 	cargo build --release --features sdl
 
+build-sdl-tracing:
+	cargo build --release --features sdl,tracing
+
 run-sdl:
 	cargo run --features sdl
+
+run-sdl-tracing:
+		cargo run --features sdl,tracing
 
 run-sdl-debug:
 	cargo run --features sdl -- -goobers
@@ -29,7 +35,7 @@ test-sdl:
 test-web:
 	cargo test --features web
 
-test-all: test-sdl test-web
+test-all: build-sdl-tracing test-sdl test-web
 
 
 ## Misc
