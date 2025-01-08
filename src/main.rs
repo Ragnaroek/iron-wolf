@@ -29,7 +29,14 @@ fn main() -> Result<(), String> {
 
 #[cfg(feature = "tracing")]
 fn setup_tracing() -> tracing_appender::non_blocking::WorkerGuard {
-    let appender = tracing_appender::rolling::never("./", "iw.trace");
+    use std::time::SystemTime;
+
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let file = format!("{}.trace", now);
+    let appender = tracing_appender::rolling::never("./", file);
     let (non_blocking_appender, guard) = tracing_appender::non_blocking(appender);
 
     tracing_subscriber::fmt()

@@ -416,6 +416,8 @@ fn cmd_fire(
 ) {
     control_state.button_held[Button::Attack as usize] = true;
 
+    game_state.weapon_frame = 0;
+
     level_state.mut_player().state = Some(&S_ATTACK);
 
     game_state.attack_frame = 0;

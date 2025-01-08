@@ -973,13 +973,14 @@ checksum = "579a42fc0b8e0c63b76519a339be31bed574929511fa53c1a3acae26eb258f29"
 
 [[package]]
 name = "vga-emu"
-version = "0.7.1"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3235941f0b1729712ed5e9a10514377ae9b98b8cfc690c929a69128ac73ff4d8"
+checksum = "6487884869d8fe3297f15be7b2c33f3355a809519ec108aa4268c6190b554ef1"
 dependencies = [
  "async-std",
  "js-sys",
  "sdl2",
+ "tracing",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

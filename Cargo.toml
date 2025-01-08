@@ -16,7 +16,12 @@ web = [
     "dep:js-sys",
     "dep:wasm-timer",
 ]
-tracing = ["dep:tracing", "dep:tracing-subscriber", "dep:tracing-appender"]
+tracing = [
+    "vga-emu/tracing",
+    "dep:tracing",
+    "dep:tracing-subscriber",
+    "dep:tracing-appender",
+]
 
 [lib]
 name = "iw"
@@ -30,10 +35,10 @@ path = "src/main.rs"
 
 serde = { version = "1.0.216", features = ["derive"] }
 cfg-if = "1.0"
-async-std = { version = "1.13.0", features = ["unstable"] }
+async-std = { version = "1.13.0" }
 futures = "0.3.31"
-vga-emu = "0.7.1"                                           # { path = "../vga-emu/" }
-opl-emu = "0.2.4"                                           # { path = "../opl-emu/" }                                                                                                              #{ path = "../opl-emu/" }                          #                                          # { path = "../opl-emu/" }
+vga-emu = "0.7.2"                                      # { path = "../vga-emu/" }                                                           #
+opl-emu = "0.2.4"                                      # { path = "../opl-emu/" }                                                                                                              #{ path = "../opl-emu/" }                          #                                          # { path = "../opl-emu/" }
 toml = "0.8.19"
 
 # feature tracing

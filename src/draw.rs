@@ -619,6 +619,7 @@ pub async fn three_d_refresh(
         prj,
         assets,
     );
+
     draw_player_weapon(ticker, level_state, game_state, rdr, prj, assets);
 
     if game_state.fizzle_in {
@@ -648,6 +649,7 @@ pub async fn three_d_refresh(
 }
 
 // Clears the screen and already draws the bottom and ceiling
+#[cfg_attr(feature = "tracing", instrument(skip_all))]
 fn clear_screen(state: &GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {
     let ceil_color = VGA_CEILING[state.episode * 10 + state.map_on];
 
@@ -944,6 +946,7 @@ fn vert_wall(i: usize) -> usize {
     }
 }
 
+#[cfg_attr(feature = "tracing", instrument(skip_all))]
 fn draw_player_weapon(
     ticker: &Ticker,
     level_state: &LevelState,
@@ -970,6 +973,7 @@ fn draw_player_weapon(
     // TODO handle demorecord || demoplayback
 }
 
+#[cfg_attr(feature = "tracing", instrument(skip_all))]
 fn draw_scaleds(
     level_state: &mut LevelState,
     game_state: &mut GameState,

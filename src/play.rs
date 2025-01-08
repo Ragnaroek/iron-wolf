@@ -8,7 +8,6 @@ use tracing::info_span;
 use tracing::instrument;
 
 use vga::input::NumCode;
-use vga::util;
 use vga::VGA;
 
 use crate::act1::{move_doors, move_push_walls};
@@ -344,6 +343,7 @@ pub async fn play_loop(
     {
         // TODO Debug!
         game_state.god_mode = true;
+
         /*
         if game_state.episode == 0 && game_state.map_on == 0 {
             let player = level_state.mut_player();
@@ -373,10 +373,13 @@ pub async fn play_loop(
         #[cfg(feature = "tracing")]
         let span = info_span!("frame", id = _frame_id);
         _frame_id += 1;
+
+        let tics = ticker.wait_for_tic().await;
+
         #[cfg(feature = "tracing")]
-        let tics = span.in_scope(|| {
+        span.in_scope(|| {
             update_game_state(
-                ticker,
+                tics,
                 level_state,
                 game_state,
                 control_state,
@@ -388,8 +391,8 @@ pub async fn play_loop(
             )
         });
         #[cfg(not(feature = "tracing"))]
-        let tics = update_game_state(
-            ticker,
+        update_game_state(
+            tics,
             level_state,
             game_state,
             control_state,
@@ -447,7 +450,7 @@ pub async fn play_loop(
 }
 
 fn update_game_state(
-    ticker: &time::Ticker,
+    tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     control_state: &mut ControlState,
@@ -456,15 +459,7 @@ fn update_game_state(
     input: &input::Input,
     prj: &ProjectionConfig,
     assets: &Assets,
-) -> u64 {
-    // TODO replace this very inefficient calc_tic function. It waits
-    // for a tic to happen which burns a lot of cycles on fast CPU.
-    // Completely get rid of the tick thread and compute ticks through
-    // timings from the rendering loop.
-    // Also make rendering independent from everything that is based on tics!!
-    // (call poll_controls and do_actors only with 70Hz!)
-    let tics = ticker.calc_tics();
-
+) {
     poll_controls(control_state, tics, input);
 
     move_doors(level_state, game_state, sound, assets, tics);
@@ -483,8 +478,6 @@ fn update_game_state(
             assets,
         );
     }
-
-    tics
 }
 
 async fn handle_save_load(
@@ -979,15 +972,12 @@ async fn update_palette_shifts(
     }
 
     if red != 0 {
-        util::vsync(vga).await;
         set_palette(vga, &shifts.red_shifts[red as usize - 1]);
         game_state.pal_shifted = true;
     } else if white != 0 {
-        util::vsync(vga).await;
         set_palette(vga, &shifts.white_shifts[white as usize - 1]);
         game_state.pal_shifted = true;
     } else if game_state.pal_shifted {
-        util::vsync(vga).await;
         set_palette(vga, &GAMEPAL); // back to normal
         game_state.pal_shifted = false;
     }
@@ -997,7 +987,6 @@ async fn update_palette_shifts(
 pub async fn finish_palette_shifts(game_state: &mut GameState, vga: &VGA) {
     if game_state.pal_shifted {
         game_state.pal_shifted = false;
-        util::vsync(vga).await;
         set_palette(vga, &GAMEPAL);
     }
 }

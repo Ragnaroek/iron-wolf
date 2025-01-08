@@ -1,4 +1,3 @@
-use vga::util;
 use vga::{ColorReg, VGA};
 
 pub fn set_palette(vga: &VGA, palette: &[u8]) {
@@ -36,7 +35,6 @@ pub async fn fade_out(
     blue: u8,
     steps: usize,
 ) {
-    util::vsync(vga).await;
     let palette_orig = get_palette(vga);
     let mut palette_new = palette_orig.clone();
 
@@ -58,8 +56,6 @@ pub async fn fade_out(
             palette_new[ix] = (orig + (delta * i as i32 / steps as i32)) as u8;
             ix += 1;
         }
-
-        util::vsync(vga).await;
         set_palette(vga, &palette_new);
     }
 
@@ -67,7 +63,6 @@ pub async fn fade_out(
 }
 
 pub async fn fade_in(vga: &VGA, start: usize, end: usize, palette: &[u8], steps: usize) {
-    util::vsync(vga).await;
     let palette1 = get_palette(vga);
     let mut palette2 = palette1.clone();
 
@@ -81,8 +76,6 @@ pub async fn fade_in(vga: &VGA, start: usize, end: usize, palette: &[u8], steps:
             let (add, _) = palette1[j].overflowing_add((delta * i / steps) as u8);
             palette2[j] = add;
         }
-
-        util::vsync(vga).await;
         set_palette(vga, &palette2);
     }
     set_palette(vga, palette);

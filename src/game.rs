@@ -245,7 +245,6 @@ async fn died(
 
     if clockwise < counter {
         // rotate clockwise
-
         if curangle > iangle {
             curangle -= ANGLES as i32;
         }
@@ -254,7 +253,7 @@ async fn died(
                 break;
             }
 
-            let tics = ticker.calc_tics();
+            let tics = ticker.wait_for_tic().await;
             let mut change = (tics * DEATH_ROTATE) as i32;
             if curangle + change > iangle {
                 change = iangle - curangle;
@@ -278,7 +277,7 @@ async fn died(
                 break;
             }
 
-            let tics = ticker.calc_tics();
+            let tics = ticker.wait_for_tic().await;
             let mut change = -((tics * DEATH_ROTATE) as i32);
             if curangle + change < iangle {
                 change = iangle - curangle;

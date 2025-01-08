@@ -3,13 +3,15 @@ use tracing::instrument;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use async_std::task;
 
-use vga::util;
-
 pub const TICK_BASE: u64 = 70; //Hz
 const TARGET_NANOS: u128 = 1_000_000_000 / TICK_BASE as u128; //duration of one tick in nanos
+const TARGET_MILLIS: f64 = 1000.0 / TICK_BASE as f64;
+const TICK_SAMPLE_RATE: Duration = std::time::Duration::from_nanos((TARGET_NANOS / 2) as u64);
+
 const MAX_TICS: u64 = 10;
 
 pub type TimeCount = Arc<AtomicU64>;
@@ -35,19 +37,13 @@ pub fn new_ticker() -> Ticker {
     let time_count = new_time_count();
     let time_t = time_count.clone();
 
-    util::spawn_task(async move {
-        let mut last_tick = now();
+    task::spawn_blocking(move || {
+        let start_time = Instant::now();
         loop {
-            let last_duration = last_tick.elapsed().as_nanos();
-            let overlap =
-                (last_duration as i128 - TARGET_NANOS as i128).clamp(0, TARGET_NANOS as i128);
-
-            last_tick = now();
-            task::sleep(std::time::Duration::from_nanos(
-                (TARGET_NANOS - overlap as u128) as u64,
-            ))
-            .await;
-            time_t.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            std::thread::sleep(TICK_SAMPLE_RATE);
+            let elapsed = start_time.elapsed().as_millis_f64();
+            let tics = (elapsed / TARGET_MILLIS) as u64;
+            time_t.store(tics, std::sync::atomic::Ordering::Relaxed);
         }
     });
 
@@ -67,7 +63,7 @@ impl Ticker {
     }
 
     #[cfg_attr(feature = "tracing", instrument(skip_all))]
-    pub fn calc_tics(&self) -> u64 {
+    pub async fn wait_for_tic(&self) -> u64 {
         let last_time_count = self.last_count.load(Ordering::Relaxed);
         if last_time_count > get_count(&self.time_count) {
             // if the game was paused a LONG time
@@ -76,8 +72,11 @@ impl Ticker {
 
         let mut tics;
         let mut new_time;
+        let mut get_times = Duration::ZERO;
         loop {
+            let get_start = Instant::now();
             new_time = get_count(&self.time_count);
+            get_times += Instant::now() - get_start;
             tics = new_time - last_time_count;
             if tics != 0 {
                 break;
@@ -101,27 +100,5 @@ impl Ticker {
             (TARGET_NANOS * count as u128) as u64,
         ))
         .await
-    }
-}
-
-cfg_if::cfg_if! {
-    if #[cfg(feature = "web")] {
-        struct WebInstant(u128);
-
-        fn now() -> WebInstant {
-            let millis = web_sys::window().expect("window context").performance().expect("performance").now();
-            WebInstant((millis * 1_000_000.0) as u128)
-        }
-
-        impl WebInstant {
-            fn elapsed(&self) -> std::time::Duration {
-                let t_now = now();
-                std::time::Duration::from_nanos((t_now.0 - self.0) as u64)
-            }
-        }
-    } else {
-        fn now() -> std::time::Instant {
-            std::time::Instant::now()
-        }
     }
 }

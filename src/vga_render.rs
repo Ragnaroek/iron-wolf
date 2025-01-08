@@ -1,7 +1,9 @@
+#[cfg(feature = "tracing")]
+use tracing::instrument;
+
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 
-use vga::util;
 use vga::{CRTReg, SCReg, VGA};
 
 use crate::assets::{Font, TileData, WolfVariant};
@@ -91,9 +93,8 @@ impl VGARenderer {
         self.bufferofs.load(std::sync::atomic::Ordering::Relaxed)
     }
 
+    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     pub async fn activate_buffer(&self, offset: usize) {
-        util::display_enable(&self.vga).await;
-
         let addr_parts = offset.to_le_bytes();
         self.vga.set_crt_data(CRTReg::StartAdressLow, addr_parts[0]);
         self.vga
@@ -101,8 +102,6 @@ impl VGARenderer {
 
         self.displayofs
             .store(offset, std::sync::atomic::Ordering::Relaxed);
-
-        util::vsync(&self.vga).await;
     }
 
     // displayofs in the orginal
@@ -225,6 +224,7 @@ impl VGARenderer {
         vl::fade_in(&self.vga, 0, 255, GAMEPAL, 30).await;
     }
 
+    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     pub async fn fizzle_fade(
         &self,
         ticker: &time::Ticker,

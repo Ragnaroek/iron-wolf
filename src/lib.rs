@@ -4,6 +4,7 @@
 #![feature(ascii_char_variants)]
 #![feature(type_alias_impl_trait)]
 #![feature(stmt_expr_attributes)]
+#![feature(duration_millis_float)]
 
 pub mod act1;
 pub mod act2;
