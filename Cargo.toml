@@ -6,7 +6,7 @@ authors = ["Michael Bohn <spaceodyssey@gmx.de>"]
 description = "Iron-Wolf a Wolfenstein 3D source port"
 
 [features]
-sdl = ["vga-emu/sdl", "opl-emu/sdl", "sdl2"]
+sdl = ["vga-emu/sdl", "opl-emu/sdl", "sdl2", "tokio/rt-multi-thread"]
 web = [
     "vga-emu/web",
     "opl-emu/web",
@@ -32,14 +32,12 @@ name = "iw"
 path = "src/main.rs"
 
 [dependencies]
-
 serde = { version = "1.0.216", features = ["derive"] }
 cfg-if = "1.0"
-async-std = { version = "1.13.0" }
-futures = "0.3.31"
-vga-emu = "0.7.2"                                      # { path = "../vga-emu/" }                                                           #
-opl-emu = "0.2.4"                                      # { path = "../opl-emu/" }                                                                                                              #{ path = "../opl-emu/" }                          #                                          # { path = "../opl-emu/" }
 toml = "0.8.19"
+tokio = { version = "1.43.0", features = ["rt", "time"] }
+vga-emu = "0.7.3"                                         # { path = "../vga-emu/" }
+opl-emu = "0.2.4"                                         # { path = "../opl-emu/" }
 
 # feature tracing
 tracing = { version = "0.1.41", optional = true, default-features = false, features = [

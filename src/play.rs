@@ -2,6 +2,10 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
+use std::time::Instant;
+
+use tokio::time::sleep;
+
 #[cfg(feature = "tracing")]
 use tracing::info_span;
 #[cfg(feature = "tracing")]
@@ -44,6 +48,7 @@ use crate::sd::Sound;
 use crate::start::load_the_game;
 use crate::start::save_the_game;
 use crate::time;
+use crate::time::TARGET_FRAME_DURATION;
 use crate::us1::draw_window;
 use crate::util::check_param;
 use crate::vga_render::VGARenderer;
@@ -374,7 +379,15 @@ pub async fn play_loop(
         let span = info_span!("frame", id = _frame_id);
         _frame_id += 1;
 
-        let tics = ticker.wait_for_tic().await;
+        let (next_frame_start, curr_tics) = ticker.next_tics_time();
+        let want_frame_start = next_frame_start + (TARGET_FRAME_DURATION / 2); // target mid frame time
+        let wait_time = want_frame_start.saturating_duration_since(Instant::now());
+        sleep(wait_time).await;
+
+        let mut tics = ticker.get_count().saturating_sub(curr_tics); // in the best case one tic, saturating in case the count is reset/non-monotonic
+        if tics == 0 {
+            tics = 1;
+        }
 
         #[cfg(feature = "tracing")]
         span.in_scope(|| {

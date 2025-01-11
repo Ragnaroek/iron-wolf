@@ -5,12 +5,15 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use async_std::task;
+use tokio::runtime::Runtime;
+use tokio::time::sleep;
 
 pub const TICK_BASE: u64 = 70; //Hz
 const TARGET_NANOS: u128 = 1_000_000_000 / TICK_BASE as u128; //duration of one tick in nanos
 const TARGET_MILLIS: f64 = 1000.0 / TICK_BASE as f64;
 const TICK_SAMPLE_RATE: Duration = std::time::Duration::from_nanos((TARGET_NANOS / 2) as u64);
+// target frame duration at 70Hz
+pub const TARGET_FRAME_DURATION: Duration = std::time::Duration::from_nanos(TARGET_NANOS as u64);
 
 const MAX_TICS: u64 = 10;
 
@@ -31,23 +34,25 @@ pub fn set_count(count: &TimeCount, new_val: u64) {
 pub struct Ticker {
     pub time_count: TimeCount,
     pub last_count: AtomicU64,
+    pub start_time: Instant,
 }
 
-pub fn new_ticker() -> Ticker {
+pub fn new_ticker(rt: Arc<Runtime>) -> Ticker {
     let time_count = new_time_count();
     let time_t = time_count.clone();
 
-    task::spawn_blocking(move || {
-        let start_time = Instant::now();
-        loop {
-            std::thread::sleep(TICK_SAMPLE_RATE);
-            let elapsed = start_time.elapsed().as_millis_f64();
-            let tics = (elapsed / TARGET_MILLIS) as u64;
-            time_t.store(tics, std::sync::atomic::Ordering::Relaxed);
-        }
+    let start_time = Instant::now();
+    let start_time_t = start_time.clone();
+
+    rt.spawn_blocking(move || loop {
+        std::thread::sleep(TICK_SAMPLE_RATE);
+        let elapsed = start_time_t.elapsed().as_millis_f64();
+        let tics = (elapsed / TARGET_MILLIS) as u64;
+        time_t.store(tics, std::sync::atomic::Ordering::Relaxed);
     });
 
     Ticker {
+        start_time,
         time_count,
         last_count: AtomicU64::new(0),
     }
@@ -56,6 +61,16 @@ pub fn new_ticker() -> Ticker {
 impl Ticker {
     pub fn get_count(&self) -> u64 {
         get_count(&self.time_count)
+    }
+
+    // returns the count the next tic is based on
+    pub fn next_tics_time(&self) -> (Instant, u64) {
+        let count = self.get_count();
+        (
+            self.start_time
+                + Duration::from_nanos(((count + 1) as f64 * TARGET_MILLIS * 1_000_000.0) as u64),
+            count,
+        )
     }
 
     pub fn clear_count(&self) {
@@ -96,7 +111,7 @@ impl Ticker {
 
     // waits for 'count' tics in a non-busy way
     pub async fn tics(&self, count: u64) {
-        task::sleep(std::time::Duration::from_nanos(
+        sleep(std::time::Duration::from_nanos(
             (TARGET_NANOS * count as u128) as u64,
         ))
         .await

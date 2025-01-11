@@ -1,13 +1,12 @@
 use std::sync::{Arc, Mutex};
 
+use tokio::runtime::Runtime;
+
 use crate::{
     assets::{DigiChannel, Music, SoundName, WolfFile},
     def::{Assets, DigiSound, ObjType, TILESHIFT},
     loader::Loader,
 };
-
-#[cfg(feature = "sdl")]
-use async_std::task::spawn;
 
 use opl::OPL;
 
@@ -71,6 +70,7 @@ pub struct Sound {
     modes: Arc<Mutex<Modes>>,
     opl: Arc<Mutex<OPL>>,
     mix_config: Arc<Mutex<DigiMixConfig>>,
+    rt: Arc<Runtime>,
 }
 
 #[cfg(feature = "web")]
@@ -80,7 +80,7 @@ pub struct Sound {
 }
 
 #[cfg(feature = "sdl")]
-pub fn startup() -> Result<Sound, String> {
+pub fn startup(rt: Arc<Runtime>) -> Result<Sound, String> {
     let mut opl = opl::new()?;
     opl.init(opl::OPLSettings {
         mixer_rate: 49716,
@@ -105,11 +105,12 @@ pub fn startup() -> Result<Sound, String> {
         opl: Arc::new(Mutex::new(opl)),
         mix_config: Arc::new(Mutex::new(mix_config)),
         modes: default_modes(),
+        rt,
     })
 }
 
 #[cfg(feature = "web")]
-pub fn startup() -> Result<Sound, String> {
+pub fn startup(_: Arc<Runtime>) -> Result<Sound, String> {
     todo!("impl web sd startup")
 }
 
@@ -122,7 +123,7 @@ impl Sound {
             let digi_sound = may_digi_sound.expect("some digi sound");
             let data_clone = digi_sound.chunk.clone();
             let channel = self.get_channel_for_digi(digi_sound.channel);
-            spawn(async move {
+            self.rt.spawn_blocking(move || {
                 let chunk = mixer::Chunk::from_raw_buffer(data_clone).expect("chunk");
                 channel.play(&chunk, 0).expect("play digi sound");
                 // TODO inefficient. Only exists to keep the chunk referenced and not collected

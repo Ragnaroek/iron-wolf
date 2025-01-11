@@ -7,8 +7,9 @@ use std::process::exit;
 use std::sync::{Arc, Mutex};
 use std::usize;
 
+use tokio::runtime;
+
 use vga::input::NumCode;
-use vga::util::spawn_task;
 use vga::{SCReg, VGA};
 
 use crate::act2::get_state_by_id;
@@ -70,14 +71,22 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     let mut wolf_config = config::load_wolf_config(&loader);
     let patch_config = &loader.load_patch_config_file();
 
-    let mut sound = sd::startup()?;
+    #[cfg(feature = "web")]
+    let rt = runtime::Builder::new_current_thread()
+        .build()
+        .map_err(|e| e.to_string())?;
+    #[cfg(feature = "sdl")]
+    let rt = runtime::Runtime::new().map_err(|e| e.to_string())?;
+    let rt_ref = Arc::new(rt);
+
+    let mut sound = sd::startup(rt_ref.clone())?;
     let assets = assets::load_assets(&sound, &loader)?;
     let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, patch_config)?;
 
     // TODO calc_projection and setup_scaling have to be re-done if view size changes in config
     let prj = play::calc_projection(wolf_config.viewsize as usize);
 
-    let ticker = time::new_ticker();
+    let ticker = time::new_ticker(rt_ref.clone());
     let input_monitoring = Arc::new(Mutex::new(vga::input::new_input_monitoring()));
     let input = input::init(ticker.time_count.clone(), input_monitoring.clone());
 
@@ -102,7 +111,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
         loader.variant(),
     );
 
-    spawn_task(async move {
+    rt_ref.spawn(async move {
         init_game(&vga_loop, &rdr, &input, &mut win_state).await;
         demo_loop(
             &mut wolf_config,
