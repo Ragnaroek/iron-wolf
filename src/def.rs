@@ -114,14 +114,16 @@ pub enum WeaponType {
     ChainGun = 3,
 }
 
-// Note: An illegal usize will be mapped to Knife (everything > 3)
-pub fn weapon_type(i: usize) -> WeaponType {
-    match i {
-        0 => WeaponType::Knife,
-        1 => WeaponType::Pistol,
-        2 => WeaponType::MachineGun,
-        3 => WeaponType::ChainGun,
-        _ => WeaponType::Knife,
+impl WeaponType {
+    // Note: An illegal usize will be mapped to Knife (everything > 3)
+    pub fn from_usize(i: usize) -> WeaponType {
+        match i {
+            0 => WeaponType::Knife,
+            1 => WeaponType::Pistol,
+            2 => WeaponType::MachineGun,
+            3 => WeaponType::ChainGun,
+            _ => WeaponType::Knife,
+        }
     }
 }
 
@@ -249,6 +251,7 @@ impl ControlState {
 
 // nums here are an index into ControlState::button_state
 #[repr(usize)]
+#[derive(Debug)]
 pub enum Button {
     NoButton = usize::MAX,
     Attack = 0,
@@ -259,6 +262,22 @@ pub enum Button {
     ReadyPistol = 5,
     ReadyMachineGun = 6,
     ReadyChainGun = 7,
+}
+
+impl Button {
+    pub fn from_usize(u: usize) -> Button {
+        match u {
+            0 => Button::Attack,
+            1 => Button::Strafe,
+            2 => Button::Run,
+            3 => Button::Use,
+            4 => Button::ReadyKnife,
+            5 => Button::ReadyPistol,
+            6 => Button::ReadyMachineGun,
+            7 => Button::ReadyChainGun,
+            _ => Button::NoButton,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]

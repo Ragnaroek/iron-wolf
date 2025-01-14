@@ -67,6 +67,8 @@ pub async fn game_loop(
     draw_play_screen(&game_state, rdr, prj).await;
 
     'game_loop: loop {
+        game_state.map_on = 8; // !! DEBUG
+
         let mut level_state = setup_game_level(prj, game_state, assets).unwrap();
         let mut rc = init_ray_cast(prj.view_width);
 

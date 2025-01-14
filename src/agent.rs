@@ -202,21 +202,17 @@ fn t_attack(
             }
             4 => {
                 if game_state.ammo == 0 {
+                    // can only happen with chain gun
+                    game_state.attack_frame += 1;
                     break;
                 }
                 if control_state.button_state[Button::Attack as usize] {
                     game_state.attack_frame -= 2;
                 }
+                weapon_attack(level_state, game_state, sound, rdr, prj, assets);
             }
             1 => {
-                if game_state.ammo == 0 {
-                    // can only happen with chain gun
-                    game_state.attack_frame += 1;
-                    break;
-                }
-                gun_attack(level_state, game_state, sound, rdr, prj, assets);
-                game_state.ammo -= 1;
-                draw_ammo(&game_state, rdr);
+                weapon_attack(level_state, game_state, sound, rdr, prj, assets);
             }
             2 => {
                 knife_attack(level_state, game_state, rdr, prj, sound, assets);
@@ -234,6 +230,24 @@ fn t_attack(
         game_state.weapon_frame =
             ATTACK_INFO[game_state.weapon.unwrap() as usize][game_state.attack_frame].frame;
     }
+}
+
+fn weapon_attack(
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    sound: &mut Sound,
+    rdr: &VGARenderer,
+    prj: &ProjectionConfig,
+    assets: &Assets,
+) {
+    if game_state.ammo == 0 {
+        // can only happen with chain gun
+        game_state.attack_frame += 1;
+        return;
+    }
+    gun_attack(level_state, game_state, sound, rdr, prj, assets);
+    game_state.ammo -= 1;
+    draw_ammo(&game_state, rdr);
 }
 
 fn knife_attack(
@@ -382,7 +396,7 @@ fn t_player(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    _: &VGARenderer,
+    rdr: &VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     assets: &Assets,
@@ -392,13 +406,14 @@ fn t_player(
         return;
     }
 
-    if control_state.button_state[Button::Use as usize] {
+    update_face(tics, game_state, rdr);
+    check_weapon_change(game_state, rdr, control_state);
+
+    if control_state.button_state(Button::Use) {
         cmd_use(level_state, game_state, sound, assets, control_state);
     }
 
-    if control_state.button_state[Button::Attack as usize]
-        && !control_state.button_held[Button::Attack as usize]
-    {
+    if control_state.button_state(Button::Attack) && !control_state.button_held(Button::Attack) {
         cmd_fire(level_state, game_state, control_state);
     }
 
@@ -565,6 +580,28 @@ pub fn take_damage(
     draw_face(game_state, rdr);
 
     // TODO SPEAR make eyes bug on major damage
+}
+
+fn check_weapon_change(
+    game_state: &mut GameState,
+    rdr: &VGARenderer,
+    control_state: &mut ControlState,
+) {
+    if game_state.ammo == 0 {
+        return; // must use knife with no ammo
+    }
+
+    for i in (WeaponType::Knife as usize)..=(game_state.best_weapon as usize) {
+        let weapon_i = i - WeaponType::Knife as usize;
+
+        if control_state.button_state(Button::from_usize(Button::ReadyKnife as usize + weapon_i)) {
+            let weapon = WeaponType::from_usize(weapon_i);
+            game_state.weapon = Some(weapon);
+            game_state.chosen_weapon = weapon;
+            draw_weapon(game_state, rdr);
+            return;
+        }
+    }
 }
 
 fn control_movement(

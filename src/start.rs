@@ -16,10 +16,9 @@ use crate::act2::get_state_by_id;
 use crate::assets::{self, GraphicNum, GAMEPAL, SIGNON};
 use crate::config::WolfConfig;
 use crate::def::{
-    difficulty, new_game_state, weapon_type, ActiveType, Assets, At, ClassType, Dir, DirType,
-    DoorAction, DoorLock, DoorType, GameState, IWConfig, LevelRatio, LevelState, ObjKey, ObjType,
-    Sprite, StaticKind, StaticType, WeaponType, WindowState, MAP_SIZE, MAX_DOORS, MAX_STATS,
-    NUM_AREAS,
+    difficulty, new_game_state, ActiveType, Assets, At, ClassType, Dir, DirType, DoorAction,
+    DoorLock, DoorType, GameState, IWConfig, LevelRatio, LevelState, ObjKey, ObjType, Sprite,
+    StaticKind, StaticType, WeaponType, WindowState, MAP_SIZE, MAX_DOORS, MAX_STATS, NUM_AREAS,
 };
 use crate::fixed::{new_fixed_u16, new_fixed_u32};
 use crate::game::{game_loop, setup_game_level};
@@ -902,9 +901,9 @@ fn load_game_state(reader: &mut DataReader, game_state: &mut GameState) {
     game_state.ammo = reader.read_i16() as i32;
     game_state.keys = reader.read_i16() as i32;
 
-    game_state.best_weapon = weapon_type(reader.read_u16() as usize);
-    game_state.weapon = Some(weapon_type(reader.read_u16() as usize));
-    game_state.chosen_weapon = weapon_type(reader.read_u16() as usize);
+    game_state.best_weapon = WeaponType::from_usize(reader.read_u16() as usize);
+    game_state.weapon = Some(WeaponType::from_usize(reader.read_u16() as usize));
+    game_state.chosen_weapon = WeaponType::from_usize(reader.read_u16() as usize);
 
     game_state.face_frame = reader.read_u16() as usize;
     game_state.attack_frame = reader.read_u16() as usize;
