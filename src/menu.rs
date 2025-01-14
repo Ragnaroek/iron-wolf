@@ -1365,6 +1365,7 @@ async fn handle_menu_loop(
     let exit;
     loop {
         // CHANGE GUN SHAPE
+
         if ticker.get_count() > timer {
             ticker.clear_count();
             if shape == GraphicNum::CCURSOR1PIC {
