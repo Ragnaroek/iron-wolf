@@ -522,6 +522,7 @@ async fn handle_save_load(
                     LSA_Y + 5,
                 )
                 .await;
+                update_status_bar(game_state, rdr);
             }
             SaveLoadGame::Save(which, name) => {
                 save_the_game(
@@ -673,6 +674,10 @@ pub async fn draw_play_screen(state: &GameState, rdr: &VGARenderer, prj: &Projec
     }
     rdr.set_buffer_offset(offset_prev);
 
+    update_status_bar(state, rdr);
+}
+
+pub fn update_status_bar(state: &GameState, rdr: &VGARenderer) {
     draw_face(state, rdr);
     draw_health(state, rdr);
     draw_lives(state, rdr);
