@@ -67,8 +67,6 @@ pub async fn game_loop(
     draw_play_screen(&game_state, rdr, prj).await;
 
     'game_loop: loop {
-        game_state.map_on = 8; // !! DEBUG
-
         let mut level_state = setup_game_level(prj, game_state, assets).unwrap();
         let mut rc = init_ray_cast(prj.view_width);
 
@@ -415,8 +413,13 @@ pub fn setup_game_level(
         }
     }
 
-    let (actors, statics, info_map) =
-        scan_info_plane(&map_segs, game_state, &mut actor_at, game_state.difficulty);
+    let (actors, statics, info_map) = scan_info_plane(
+        &mut tile_map,
+        &mut map_segs,
+        game_state,
+        &mut actor_at,
+        game_state.difficulty,
+    );
 
     // take out the ambush markers
     map_ptr = 0;
@@ -497,7 +500,8 @@ fn door_lock(tile: u16) -> DoorLock {
 
 // By convention the first element in the returned actors vec is the player
 fn scan_info_plane(
-    map_data: &map::MapSegs,
+    tile_map: &mut Vec<Vec<u16>>,
+    map_data: &mut map::MapSegs,
     game_state: &mut GameState,
     actor_at: &mut Vec<Vec<At>>,
     difficulty: Difficulty,
@@ -542,6 +546,7 @@ fn scan_info_plane(
                 108..=111 => {
                     // guard stand: normal mode
                     spawn_stand(
+                        tile_map,
                         map_data,
                         EnemyType::Guard,
                         &mut actors,
@@ -585,6 +590,7 @@ fn scan_info_plane(
                 126..=129 => {
                     // ss stand: normal mode
                     spawn_stand(
+                        tile_map,
                         map_data,
                         EnemyType::SS,
                         &mut actors,
@@ -613,6 +619,7 @@ fn scan_info_plane(
                 134..=137 => {
                     // dogs stand: normal mode
                     spawn_stand(
+                        tile_map,
                         map_data,
                         EnemyType::Dog,
                         &mut actors,
@@ -648,6 +655,7 @@ fn scan_info_plane(
                     // guard stand: medium mode
                     if difficulty >= Difficulty::Medium {
                         spawn_stand(
+                            tile_map,
                             map_data,
                             EnemyType::Guard,
                             &mut actors,
@@ -694,6 +702,7 @@ fn scan_info_plane(
                     // ss stand: medium mode
                     if difficulty >= Difficulty::Medium {
                         spawn_stand(
+                            tile_map,
                             map_data,
                             EnemyType::SS,
                             &mut actors,
@@ -754,6 +763,7 @@ fn scan_info_plane(
                     // guard stand: hard mode
                     if difficulty >= Difficulty::Hard {
                         spawn_stand(
+                            tile_map,
                             map_data,
                             EnemyType::Guard,
                             &mut actors,
@@ -800,6 +810,7 @@ fn scan_info_plane(
                     // ss stand: hard mode
                     if difficulty >= Difficulty::Hard {
                         spawn_stand(
+                            tile_map,
                             map_data,
                             EnemyType::SS,
                             &mut actors,
@@ -858,6 +869,7 @@ fn scan_info_plane(
                 }
                 216..=219 => {
                     spawn_stand(
+                        tile_map,
                         map_data,
                         EnemyType::Mutant,
                         &mut actors,
@@ -888,6 +900,7 @@ fn scan_info_plane(
                 234..=237 => {
                     if difficulty >= Difficulty::Medium {
                         spawn_stand(
+                            tile_map,
                             map_data,
                             EnemyType::Mutant,
                             &mut actors,
@@ -907,6 +920,7 @@ fn scan_info_plane(
                 252..=255 => {
                     if difficulty >= Difficulty::Hard {
                         spawn_stand(
+                            tile_map,
                             map_data,
                             EnemyType::Mutant,
                             &mut actors,

@@ -20,7 +20,8 @@ fn test_check_line_1() {
     let mut level_state = mock_level_state(player);
     let mut game_state = new_game_state();
     spawn_stand(
-        &level_state.level.map_segs,
+        &mut level_state.level.tile_map,
+        &mut level_state.level.map_segs,
         EnemyType::Guard,
         &mut level_state.actors,
         &mut level_state.actor_at,
@@ -44,7 +45,8 @@ fn test_check_line_2() {
     let mut level_state = mock_level_state(player);
     let mut game_state = new_game_state();
     spawn_stand(
-        &level_state.level.map_segs,
+        &mut level_state.level.tile_map,
+        &mut level_state.level.map_segs,
         EnemyType::Guard,
         &mut level_state.actors,
         &mut level_state.actor_at,
@@ -64,7 +66,8 @@ fn test_check_diag() {
     //level state contains a completely empty map without any walls or objects
     let mut game_state = new_game_state();
     spawn_stand(
-        &level_state.level.map_segs,
+        &mut level_state.level.tile_map,
+        &mut level_state.level.map_segs,
         EnemyType::Guard,
         &mut level_state.actors,
         &mut level_state.actor_at,
@@ -98,7 +101,8 @@ fn test_check_side() {
     let mut level_state = mock_level_state_with_actor_at();
     let mut game_state = new_game_state();
     spawn_stand(
-        &level_state.level.map_segs,
+        &mut level_state.level.tile_map,
+        &mut level_state.level.map_segs,
         EnemyType::Guard,
         &mut level_state.actors,
         &mut level_state.actor_at,

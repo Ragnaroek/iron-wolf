@@ -7,10 +7,11 @@ use crate::agent::{take_damage, S_ATTACK, S_PLAYER};
 use crate::assets::SoundName;
 use crate::def::{
     ActiveType, Assets, At, ClassType, ControlState, Difficulty, DirType, DoorAction, EnemyType,
-    GameState, LevelState, ObjKey, ObjType, PlayState, Sprite, StateType, FL_AMBUSH, FL_SHOOTABLE,
-    FL_VISABLE, ICON_ARROWS, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, RUN_SPEED, SPD_DOG, SPD_PATROL,
-    TILEGLOBAL, TILESHIFT,
+    GameState, LevelState, ObjKey, ObjType, PlayState, Sprite, StateType, AMBUSH_TILE, FL_AMBUSH,
+    FL_SHOOTABLE, FL_VISABLE, ICON_ARROWS, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, RUN_SPEED,
+    SPD_DOG, SPD_PATROL, TILEGLOBAL, TILESHIFT,
 };
+use crate::game::AREATILE;
 use crate::map::MapSegs;
 use crate::play::ProjectionConfig;
 use crate::sd::Sound;
@@ -1671,7 +1672,8 @@ pub fn spawn_dead_guard(
 }
 
 pub fn spawn_stand(
-    map_data: &MapSegs,
+    tile_map: &mut Vec<Vec<u16>>,
+    map_data: &mut MapSegs,
     which: EnemyType,
     actors: &mut Vec<ObjType>,
     actor_at: &mut Vec<Vec<At>>,
@@ -1699,7 +1701,30 @@ pub fn spawn_stand(
         game_state.kill_total += 1;
     }
 
-    // TODO: update ambush info
+    let map_ptr = y_tile * MAP_SIZE + x_tile;
+    let map = map_data.segs[0][map_ptr];
+    if map == AMBUSH_TILE {
+        tile_map[x_tile][y_tile] = 0;
+
+        let mut tile = 0;
+        if map_data.segs[0][map_ptr + 1] >= AREATILE {
+            tile = map_data.segs[0][map_ptr + 1];
+        }
+        if map_data.segs[0][map_ptr - MAP_SIZE] >= AREATILE {
+            tile = map_data.segs[0][map_ptr - MAP_SIZE];
+        }
+        if map_data.segs[0][map_ptr + MAP_SIZE] >= AREATILE {
+            tile = map_data.segs[0][map_ptr + MAP_SIZE];
+        }
+        if map_data.segs[0][map_ptr - 1] >= AREATILE {
+            tile = map_data.segs[0][map_ptr - 1];
+        }
+        map_data.segs[0][map_ptr] = tile;
+        stand.area_number = (tile - AREATILE) as usize;
+
+        stand.flags |= FL_AMBUSH;
+    }
+
     stand.hitpoints = START_HITPOINTS[difficulty as usize][which as usize];
     stand.dir = dir_type(tile_dir * 2);
     stand.flags |= FL_SHOOTABLE;
