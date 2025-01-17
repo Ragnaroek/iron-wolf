@@ -88,6 +88,7 @@ pub async fn game_loop(
 
         play_loop(
             wolf_config,
+            iw_config,
             ticker,
             &mut level_state,
             game_state,
@@ -189,6 +190,9 @@ pub async fn game_loop(
                 // TODO MainMenu viewscores manipulation?
 
                 return;
+            }
+            PlayState::Warped => {
+                // do nothing
             }
             _ => panic!("not implemented end with state {:?}", game_state.play_state),
         }

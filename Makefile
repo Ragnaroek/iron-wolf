@@ -6,13 +6,10 @@ build-sdl-tracing:
 	cargo build --release --features sdl,tracing
 
 run-sdl:
-	cargo run --features sdl
+	cargo run --features sdl -- -goobers
 
 run-sdl-tracing:
 		cargo run --features sdl,tracing
-
-run-sdl-debug:
-	cargo run --features sdl -- -goobers
 
 run-sdl-profile:
 	sudo -E cargo flamegraph --features sdl --profile=dev -- run

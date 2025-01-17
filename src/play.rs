@@ -23,6 +23,7 @@ use crate::assets::{GraphicNum, GAMEPAL};
 use crate::config::WolfConfig;
 use crate::debug::debug_keys;
 use crate::def::ActiveType;
+use crate::def::IWConfig;
 use crate::def::ObjType;
 use crate::def::WindowState;
 use crate::def::{
@@ -302,6 +303,7 @@ fn calc_sines() -> Vec<Fixed> {
 
 pub async fn play_loop(
     wolf_config: &mut WolfConfig,
+    iw_config: &IWConfig,
     ticker: &time::Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
@@ -344,34 +346,6 @@ pub async fn play_loop(
         save_load,
     )
     .await;
-
-    {
-        // TODO Debug!
-        game_state.god_mode = true;
-
-        /*
-        if game_state.episode == 0 && game_state.map_on == 0 {
-            let player = level_state.mut_player();
-            player.x = 1465555;
-            player.y = 3112211;
-            player.angle = 0;
-        }*/
-        /*
-        if game_state.episode == 0 && game_state.map_on == 0 {
-            let player = level_state.mut_player();
-            player.x = 2013924;
-            player.y = 2163760;
-            player.angle = 50;
-        }*/
-
-        /*
-        if game_state.episode == 0 && game_state.map_on == 1 {
-            let player = level_state.mut_player();
-            player.x = 3019722;
-            player.y = 224653;
-            player.angle = 0;
-        }*/
-    }
 
     let mut _frame_id: u64 = 0;
     while game_state.play_state == PlayState::StillPlaying {
@@ -422,6 +396,7 @@ pub async fn play_loop(
 
         save_load = check_keys(
             wolf_config,
+            iw_config,
             ticker,
             sound,
             rdr,
@@ -757,6 +732,7 @@ pub fn center_window(rdr: &VGARenderer, win_state: &mut WindowState, width: usiz
 #[cfg_attr(feature = "tracing", instrument(skip_all))]
 async fn check_keys(
     wolf_config: &mut WolfConfig,
+    iw_config: &IWConfig,
     ticker: &time::Ticker,
     sound: &mut Sound,
     rdr: &VGARenderer,
@@ -815,10 +791,14 @@ async fn check_keys(
         return save_load;
     }
 
-    if input.key_pressed(NumCode::Tab) && win_state.debug_ok {
+    if input.key_pressed(NumCode::Tab) && (win_state.debug_ok || iw_config.options.enable_debug) {
         let prev_buffer = rdr.buffer_offset();
         rdr.set_buffer_offset(rdr.active_buffer());
-        debug_keys(rdr, win_state, game_state, player, input).await;
+
+        win_state.font_number = 0;
+        win_state.set_font_color(0, 15);
+        debug_keys(ticker, rdr, win_state, game_state, player, input).await;
+
         rdr.set_buffer_offset(prev_buffer);
         return None;
     }

@@ -688,6 +688,8 @@ pub struct IWConfigOptions {
     pub no_wait: bool,
     #[serde(default)]
     pub fast_psyched: bool,
+    #[serde(default)]
+    pub enable_debug: bool,
 }
 
 fn default_path() -> PathBuf {

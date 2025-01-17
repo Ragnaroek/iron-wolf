@@ -22,8 +22,15 @@ vanilla = true
 no_wait = false
 
 # disable the (fake) psyched animation that simulates
-# the original experience 
+# the original experience
 fast_psyched = false
+
+# enable debug key
+# This is a shortcurt for providing the -goobers flag
+# and pressing Left Shift + Alt + Backspace in the game.
+# You can directly enter debug keys with Tab + <Key> if this
+# is enabled.
+enable_debug = false
 
 [mods]
 # nothing yet, planned:

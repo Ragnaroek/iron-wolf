@@ -173,6 +173,9 @@ pub fn line_input(
     let mut cursor = new_cursor(initial_input.len());
     let mut input_str = String::from(initial_input);
     let mut old_str = String::from(initial_input);
+
+    input.clear_last_scan();
+    input.clear_last_ascii();
     while !done {
         if update_cursor {
             cursor.xor_i(rdr, win_state, x, y, &input_str);
