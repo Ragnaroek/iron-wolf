@@ -3,7 +3,7 @@ use vga::input::NumCode;
 
 use crate::assets::{is_sod, GraphicNum, Music, SoundName, WolfVariant};
 use crate::config::WolfConfig;
-use crate::def::{difficulty, Assets, GameState, WindowState};
+use crate::def::{Assets, Difficulty, GameState, WindowState};
 use crate::input::{read_control, ControlDirection, ControlInfo, Input};
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
@@ -1161,7 +1161,7 @@ async fn cp_difficulty_select(
     if let MenuHandle::Selected(diff_selected) = handle {
         sound.play_sound(SoundName::SHOOT, assets);
         game_state.prepare_episode_select();
-        game_state.difficulty = difficulty(diff_selected);
+        game_state.difficulty = Difficulty::from_pos(diff_selected);
 
         rdr.fade_out().await;
         return MenuHandle::BackToGameLoop(None);

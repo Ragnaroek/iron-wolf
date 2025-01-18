@@ -283,19 +283,21 @@ impl Button {
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(usize)]
 pub enum Difficulty {
-    Baby,
-    Easy,
-    Medium,
-    Hard,
+    Baby,   // Can I play, Daddy?
+    Easy,   // Don't hurt me.
+    Medium, // Bring 'em on!
+    Hard,   // I am Death incarnate!
 }
 
-pub fn difficulty(i: usize) -> Difficulty {
-    match i {
-        0 => Difficulty::Baby,
-        1 => Difficulty::Easy,
-        2 => Difficulty::Hard,
-        3 => Difficulty::Hard,
-        _ => Difficulty::Baby,
+impl Difficulty {
+    pub fn from_pos(i: usize) -> Difficulty {
+        match i {
+            0 => Difficulty::Baby,
+            1 => Difficulty::Easy,
+            2 => Difficulty::Medium,
+            3 => Difficulty::Hard,
+            _ => Difficulty::Baby,
+        }
     }
 }
 

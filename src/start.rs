@@ -16,7 +16,7 @@ use crate::act2::get_state_by_id;
 use crate::assets::{self, GraphicNum, GAMEPAL, SIGNON};
 use crate::config::WolfConfig;
 use crate::def::{
-    difficulty, new_game_state, ActiveType, Assets, At, ClassType, Dir, DirType, DoorAction,
+    new_game_state, ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction,
     DoorLock, DoorType, GameState, IWConfig, LevelRatio, LevelState, ObjKey, ObjType, Sprite,
     StaticKind, StaticType, WeaponType, WindowState, MAP_SIZE, MAX_DOORS, MAX_STATS, NUM_AREAS,
 };
@@ -891,7 +891,7 @@ fn read_obj_type(reader: &mut DataReader) -> ObjType {
 }
 
 fn load_game_state(reader: &mut DataReader, game_state: &mut GameState) {
-    game_state.difficulty = difficulty(reader.read_u16() as usize);
+    game_state.difficulty = Difficulty::from_pos(reader.read_u16() as usize);
     game_state.map_on = reader.read_u16() as usize;
     game_state.old_score = reader.read_u32();
     game_state.score = reader.read_u32();
