@@ -297,7 +297,6 @@ fn gun_attack(
     prj: &ProjectionConfig,
     assets: &Assets,
 ) {
-    //TODO play weapon sound!
     match game_state.weapon {
         Some(WeaponType::Pistol) => sound.play_sound(SoundName::ATKPISTOL, assets),
         Some(WeaponType::MachineGun) => sound.play_sound(SoundName::ATKMACHINEGUN, assets),
@@ -308,7 +307,10 @@ fn gun_attack(
 
     let mut view_dist = 0x7fffffff;
     let mut closest = None;
+    let mut old_closest;
     loop {
+        old_closest = closest;
+
         for i in 1..level_state.actors.len() {
             let check = &level_state.actors[i];
             if check.flags & FL_SHOOTABLE != 0
@@ -321,7 +323,7 @@ fn gun_attack(
                 }
             }
         }
-        if closest.is_none() {
+        if closest == old_closest {
             return; // no more targets, all missed
         }
 

@@ -6,7 +6,7 @@ build-sdl-tracing:
 	cargo build --release --features sdl,tracing
 
 run-sdl:
-	cargo run --features sdl -- -goobers
+	RUST_BACKTRACE=1 cargo run --features sdl -- -goobers
 
 run-sdl-tracing:
 		cargo run --features sdl,tracing

@@ -918,7 +918,7 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
             let y: i32 = y_frac >> 8;
             y_frac += y_step;
 
-            let value = level_state.level.tile_map[x as usize][y as usize];
+            let mut value = level_state.level.tile_map[x as usize][y as usize];
             x += x_step;
 
             if value == 0 {
@@ -929,10 +929,10 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
             }
 
             // see if the door is open enough
-            let door = value & !0x80;
+            value &= !0x80;
             let intercept = y_frac - y_step / 2;
 
-            if intercept > level_state.doors[door as usize].position as i32 {
+            if intercept > level_state.doors[value as usize].position as i32 {
                 return false;
             }
         }
@@ -969,7 +969,8 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
 
             let x = x_frac >> 8;
             x_frac += x_step;
-            let value = level_state.level.tile_map[x as usize][y as usize];
+
+            let mut value = level_state.level.tile_map[x as usize][y as usize];
             y += y_step;
 
             if value == 0 {
@@ -980,10 +981,10 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
                 return false;
             }
 
-            let door = value & !0x80;
+            value &= !0x80;
             let intercept = x_frac - x_step / 2;
 
-            if intercept > level_state.doors[door as usize].position as i32 {
+            if intercept > level_state.doors[value as usize].position as i32 {
                 return false;
             }
         }
