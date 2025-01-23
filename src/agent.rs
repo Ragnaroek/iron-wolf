@@ -828,7 +828,11 @@ pub fn get_bonus(
             heal_self(game_state, rdr, 10);
         }
         StaticKind::BoAlpo => {
-            todo!("give BoAlpo");
+            if game_state.health == 100 {
+                return;
+            }
+            sound.play_sound(SoundName::HEALTH1, assets);
+            heal_self(game_state, rdr, 4);
         }
         StaticKind::BoGibs => {
             if game_state.health > 10 {
