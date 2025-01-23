@@ -692,6 +692,12 @@ pub struct IWConfigOptions {
     pub fast_psyched: bool,
     #[serde(default)]
     pub enable_debug: bool,
+    #[serde(default = "true_default")]
+    pub fullscreen: bool,
+}
+
+fn true_default() -> bool {
+    true
 }
 
 fn default_path() -> PathBuf {

@@ -32,6 +32,10 @@ fast_psyched = false
 # is enabled.
 enable_debug = false
 
+# Start the game in fullscreen mode. Can be toggeled
+# in-game with ALT+F.
+fullscreen = true
+
 [mods]
 # nothing yet, planned:
 # - brutal mod

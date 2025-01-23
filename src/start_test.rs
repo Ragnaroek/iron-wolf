@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use vga::{SCReg, VGA};
+use vga::{SCReg, VGABuilder};
 
 use crate::assets;
 use crate::config;
@@ -444,7 +444,7 @@ fn reset_partial_obj_type(obj: &mut ObjType) {
 
 fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, VGARenderer, Assets) {
     let config = config::load_wolf_config(loader);
-    let vga = VGA::setup_no_backend(0x13);
+    let vga = VGABuilder::new().video_mode(0x13).build_no_backend();
 
     //enable Mode Y
     let mem_mode = vga.get_sc_data(SCReg::MemoryMode);

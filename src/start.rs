@@ -10,7 +10,7 @@ use std::usize;
 use tokio::runtime;
 
 use vga::input::NumCode;
-use vga::{SCReg, VGA};
+use vga::{SCReg, VGABuilder};
 
 use crate::act2::get_state_by_id;
 use crate::assets::{self, GraphicNum, GAMEPAL, SIGNON};
@@ -94,7 +94,10 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
 
     check_for_episodes(&mut menu_state);
 
-    let (vga, handle) = VGA::setup(0x13, false)?;
+    let (vga, handle) = VGABuilder::new()
+        .video_mode(0x13)
+        .fullscreen(iw_config.options.fullscreen)
+        .build()?;
     //enable Mode Y
     let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
     vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
@@ -135,7 +138,6 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
         ..Default::default()
     };
     let handle_ref = Arc::new(handle);
-
     vga_screen.start(handle_ref, options)?;
     Ok(())
 }
