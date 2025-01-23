@@ -7,9 +7,8 @@ use std::process::exit;
 use std::sync::{Arc, Mutex};
 use std::usize;
 
-use tokio::runtime;
-
 use vga::input::NumCode;
+use vga::util::tokio_runtime;
 use vga::{SCReg, VGABuilder};
 
 use crate::act2::get_state_by_id;
@@ -70,12 +69,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     let mut wolf_config = config::load_wolf_config(&loader);
     let patch_config = &loader.load_patch_config_file();
 
-    #[cfg(feature = "web")]
-    let rt = runtime::Builder::new_current_thread()
-        .build()
-        .map_err(|e| e.to_string())?;
-    #[cfg(feature = "sdl")]
-    let rt = runtime::Runtime::new().map_err(|e| e.to_string())?;
+    let rt = tokio_runtime()?;
     let rt_ref = Arc::new(rt);
 
     let mut sound = sd::startup(rt_ref.clone())?;
