@@ -3,6 +3,7 @@
 extern crate iw;
 extern crate test;
 
+use iw::start::new_view_size;
 use vga::VGABuilder;
 
 use iw::config::default_iw_config;
@@ -15,7 +16,6 @@ use iw::assets;
 use iw::def::new_game_state;
 use iw::draw::{init_ray_cast, init_ray_cast_consts, wall_refresh};
 use iw::game::setup_game_level;
-use iw::play;
 use iw::vga_render;
 
 #[bench]
@@ -34,7 +34,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
 
     let assets = assets::load_graphic_assets(&loader)?;
 
-    let prj = play::calc_projection(19);
+    let prj = new_view_size(19);
     let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, &None)?;
 
     let vga = VGABuilder::new().video_mode(0x13).build_no_backend();

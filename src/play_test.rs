@@ -1,10 +1,10 @@
 use super::calc_pixelangle;
-use super::calc_projection;
 use crate::fixed::new_fixed_i32;
+use crate::start::new_view_size;
 
 #[test]
 fn test_calc_sines() {
-    let prj = calc_projection(19);
+    let prj = new_view_size(19);
 
     assert_eq!(prj.sin(0), new_fixed_i32(0));
     assert_eq!(prj.sin(360), new_fixed_i32(-2147483648));

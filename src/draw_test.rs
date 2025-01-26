@@ -6,13 +6,13 @@ use crate::def::{
 use crate::draw::{calc_height, init_ray_cast, init_ray_cast_consts, Hit, Op};
 use crate::fixed::new_fixed_i32;
 use crate::map::MapSegs;
-use crate::play;
+use crate::start::new_view_size;
 
 use super::RayCast;
 
 #[test]
 fn test_cast_angle_63() -> Result<(), String> {
-    let mut prj = play::calc_projection(19);
+    let mut prj = new_view_size(19);
     // fix rounding errors fine_tangents to make the
     // test results fully compatible with the original
     prj.fine_tangents[898] = prj.fine_tangents[898] + 2;
@@ -162,7 +162,7 @@ fn check_cast_pixx_46(rc: &RayCast) {
 
 #[test]
 fn test_cast_angle_353() -> Result<(), String> {
-    let prj = play::calc_projection(19);
+    let prj = new_view_size(19);
     let mut level_state = mock_level_state();
     level_state.mut_player().angle = 353;
     let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
@@ -189,7 +189,7 @@ fn test_cast_angle_353() -> Result<(), String> {
 
 #[test]
 fn test_cast_angle_26() -> Result<(), String> {
-    let prj = play::calc_projection(19);
+    let prj = new_view_size(19);
     let mut level_state = mock_level_state();
     level_state.mut_player().angle = 26;
     let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
@@ -246,7 +246,7 @@ fn check_cast_angle_26_pixx_0(rc: &RayCast) {
 
 #[test]
 fn test_cast_angle_288() -> Result<(), String> {
-    let prj = play::calc_projection(19);
+    let prj = new_view_size(19);
     let mut level_state = mock_level_state();
     level_state.mut_player().angle = 288;
     let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
@@ -304,7 +304,7 @@ fn check_cast_angle_288_pixx_274(rc: &RayCast) {
 
 #[test]
 fn test_init_ray_cast_consts() {
-    let prj = play::calc_projection(19);
+    let prj = new_view_size(19);
     let mut player = test_player();
     player.angle = 63;
     let consts = init_ray_cast_consts(&prj, &player, 0);
@@ -314,7 +314,7 @@ fn test_init_ray_cast_consts() {
 
 #[test]
 fn test_calc_height() {
-    let prj = play::calc_projection(19);
+    let prj = new_view_size(19);
     let mut player = test_player();
     player.angle = 63;
 

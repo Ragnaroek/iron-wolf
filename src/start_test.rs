@@ -12,10 +12,11 @@ use crate::def::{
 use crate::fixed::{new_fixed, new_fixed_i32};
 use crate::game::setup_game_level;
 use crate::loader::{DiskLoader, Loader};
-use crate::play::{self, ProjectionConfig};
+use crate::play::ProjectionConfig;
 use crate::start::{save_the_game, OBJ_TYPE_LEN, STAT_TYPE_LEN};
 use crate::vga_render::{self, VGARenderer};
 
+use super::new_view_size;
 use super::{do_load, null_obj_type};
 
 // Read a original W3D savegame and writes it back. Should result in almost
@@ -454,7 +455,7 @@ fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, VGARenderer, Assets)
         assets::load_all_graphics(loader, &None).expect("load all graphics");
     let assets = assets::load_graphic_assets(loader).expect("load graphic assets");
 
-    let prj = play::calc_projection(config.viewsize as usize);
+    let prj = new_view_size(config.viewsize);
 
     let vga_screen = Arc::new(vga);
     let rdr = vga_render::init(vga_screen, graphics, fonts, tiles, texts, loader.variant());

@@ -17,7 +17,8 @@ use crate::config::WolfConfig;
 use crate::def::{
     new_game_state, ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction,
     DoorLock, DoorType, GameState, IWConfig, LevelRatio, LevelState, ObjKey, ObjType, Sprite,
-    StaticKind, StaticType, WeaponType, WindowState, MAP_SIZE, MAX_DOORS, MAX_STATS, NUM_AREAS,
+    StaticKind, StaticType, WeaponType, WindowState, HEIGHT_RATIO, MAP_SIZE, MAX_DOORS, MAX_STATS,
+    NUM_AREAS,
 };
 use crate::fixed::{new_fixed_u16, new_fixed_u32};
 use crate::game::{game_loop, setup_game_level};
@@ -76,9 +77,6 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     let assets = assets::load_assets(&sound, &loader)?;
     let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, patch_config)?;
 
-    // TODO calc_projection and setup_scaling have to be re-done if view size changes in config
-    let prj = play::calc_projection(wolf_config.viewsize as usize);
-
     let ticker = time::new_ticker(rt_ref.clone());
     let input_monitoring = Arc::new(Mutex::new(vga::input::new_input_monitoring()));
     let input = input::init(ticker.time_count.clone(), input_monitoring.clone());
@@ -108,7 +106,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     );
 
     rt_ref.spawn(async move {
-        init_game(&vga_loop, &rdr, &input, &mut win_state).await;
+        let prj = init_game(&wolf_config, &vga_loop, &rdr, &input, &mut win_state).await;
         demo_loop(
             &mut wolf_config,
             &iw_config,
@@ -152,12 +150,28 @@ pub fn initial_window_state() -> WindowState {
     }
 }
 
-async fn init_game(vga: &vga::VGA, rdr: &VGARenderer, input: &Input, win_state: &mut WindowState) {
+async fn init_game(
+    wolf_config: &WolfConfig,
+    vga: &vga::VGA,
+    rdr: &VGARenderer,
+    input: &Input,
+    win_state: &mut WindowState,
+) -> ProjectionConfig {
     vl::set_palette(vga, GAMEPAL);
     signon_screen(vga);
 
+    let prj = new_view_size(wolf_config.viewsize);
+
     // TODO InitRedShifts
     finish_signon(vga, rdr, input, win_state).await;
+    prj
+}
+
+pub fn new_view_size(width: u16) -> ProjectionConfig {
+    play::calc_projection(
+        (width * 16) as usize,
+        (width as f64 * 16.0 * HEIGHT_RATIO) as usize,
+    )
 }
 
 async fn finish_signon(

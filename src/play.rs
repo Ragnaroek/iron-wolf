@@ -59,7 +59,6 @@ use crate::vl::set_palette;
 
 const MIN_DIST: i32 = 0x5800;
 
-const HEIGHT_RATIO: f32 = 0.5;
 const SCREEN_WIDTH: usize = 80;
 
 const PI: f32 = 3.141592657;
@@ -215,9 +214,9 @@ pub fn new_control_state() -> ControlState {
     }
 }
 
-pub fn calc_projection(view_size: usize) -> ProjectionConfig {
-    let view_width = (view_size * 16) & !15;
-    let view_height = ((((view_size * 16) as f32 * HEIGHT_RATIO) as u16) & !1) as usize;
+pub fn calc_projection(width: usize, height: usize) -> ProjectionConfig {
+    let view_width = width & !15;
+    let view_height = height & !1;
     let center_x: usize = view_width / 2 - 1;
     let shoot_delta = view_width / 10;
     let screenofs = (200 - STATUS_LINES - view_height) / 2 * SCREEN_WIDTH + (320 - view_width) / 8;
@@ -232,7 +231,7 @@ pub fn calc_projection(view_size: usize) -> ProjectionConfig {
     let scale = half_view as i32 * face_dist / (VIEW_GLOBAL as i32 / 2);
     let height_numerator = (TILEGLOBAL * scale) >> 6;
 
-    let scaler = setup_scaling((view_width as f32 * 1.5) as usize, view_height);
+    let scaler = setup_scaling((view_width as f64 * 1.5) as usize, view_height);
 
     ProjectionConfig {
         view_width,

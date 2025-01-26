@@ -23,6 +23,8 @@ pub const ELEVATOR_TILE: u16 = 21;
 pub const AMBUSH_TILE: u16 = 106;
 pub const ALT_ELEVATOR_TILE: u16 = 107;
 
+pub const HEIGHT_RATIO: f64 = 0.5;
+
 pub const GLOBAL1: i32 = 1 << 16;
 pub const MAP_SIZE: usize = 64;
 pub const MIN_DIST: i32 = 0x5800;

@@ -115,7 +115,7 @@ pub fn write_wolf_config(loader: &dyn Loader, wolf_config: &WolfConfig) -> Resul
         writer.write_u16(numcode_to_u16(wolf_config.buttonjoy[i]));
     }
 
-    writer.write_u16(wolf_config.viewsize - 4); // TODO remove - 4, viewisze is fixed with 15 on read a.t.m
+    writer.write_u16(wolf_config.viewsize);
     writer.write_u16(wolf_config.mouse_adjustment);
 
     loader.write_wolf_file(WolfFile::ConfigData, &writer.data)
@@ -177,8 +177,7 @@ pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
     for i in 0..4 {
         buttonjoy[i] = to_numcode(reader.read_u16() as u8);
     }
-    let mut viewsize = reader.read_u16();
-    viewsize = 19; //TODO this should be configurable in the menu
+    let viewsize = reader.read_u16();
     let mouse_adjustment = reader.read_u16();
 
     WolfConfig {
