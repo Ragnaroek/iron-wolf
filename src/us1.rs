@@ -38,7 +38,9 @@ pub fn print(rdr: &VGARenderer, win_state: &mut WindowState, str: &str) {
 pub fn c_print(rdr: &VGARenderer, win_state: &mut WindowState, str: &str) {
     let lines = str.split("\n");
     for line in lines {
-        c_print_line(rdr, win_state, line);
+        if !line.is_empty() {
+            c_print_line(rdr, win_state, line);
+        }
     }
 }
 

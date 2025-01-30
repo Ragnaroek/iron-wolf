@@ -39,6 +39,7 @@ use crate::inter::clear_split_vwb;
 use crate::loader::Loader;
 use crate::menu::control_panel;
 use crate::menu::message;
+use crate::menu::GameStateUpdate;
 use crate::menu::Menu;
 use crate::menu::MenuState;
 use crate::menu::SaveLoadGame;
@@ -311,15 +312,14 @@ pub async fn play_loop(
     control_state: &mut ControlState,
     vga: &VGA,
     sound: &mut Sound,
-    rc: &mut RayCast,
+    rc_param: RayCast,
     rdr: &VGARenderer,
     input: &input::Input,
-    prj: &ProjectionConfig,
+    prj_param: ProjectionConfig,
     assets: &Assets,
     loader: &dyn Loader,
     save_load_param: Option<SaveLoadGame>,
-) {
-    let mut save_load = save_load_param;
+) -> (ProjectionConfig, RayCast) {
     let shifts = init_colour_shifts();
 
     game_state.play_state = PlayState::StillPlaying;
@@ -339,13 +339,15 @@ pub async fn play_loop(
         win_state,
         rdr,
         input,
-        prj,
+        &prj_param,
         assets,
         loader,
-        save_load,
+        save_load_param,
     )
     .await;
 
+    let mut prj = prj_param;
+    let mut rc = rc_param;
     let mut _frame_id: u64 = 0;
     while game_state.play_state == PlayState::StillPlaying {
         #[cfg(feature = "tracing")]
@@ -372,7 +374,7 @@ pub async fn play_loop(
                 sound,
                 rdr,
                 input,
-                prj,
+                &prj,
                 assets,
             )
         });
@@ -385,19 +387,30 @@ pub async fn play_loop(
             sound,
             rdr,
             input,
-            prj,
+            &prj,
             assets,
         );
 
         update_palette_shifts(game_state, vga, &shifts, tics).await;
 
-        three_d_refresh(ticker, game_state, level_state, rc, rdr, sound, prj, assets).await;
+        three_d_refresh(
+            ticker,
+            game_state,
+            level_state,
+            &mut rc,
+            rdr,
+            sound,
+            &prj,
+            assets,
+        )
+        .await;
 
-        save_load = check_keys(
+        let update = check_keys(
             wolf_config,
             iw_config,
             ticker,
             sound,
+            rc,
             rdr,
             assets,
             win_state,
@@ -409,6 +422,8 @@ pub async fn play_loop(
             loader,
         )
         .await;
+        prj = update.projection_config;
+        rc = update.ray_cast;
 
         handle_save_load(
             level_state,
@@ -416,10 +431,10 @@ pub async fn play_loop(
             win_state,
             rdr,
             input,
-            prj,
+            &prj,
             assets,
             loader,
-            save_load,
+            update.save_load,
         )
         .await;
 
@@ -434,6 +449,7 @@ pub async fn play_loop(
         }
         rdr.set_buffer_offset(offset_prev);
     }
+    (prj, rc)
 }
 
 fn update_game_state(
@@ -643,7 +659,7 @@ pub async fn draw_play_screen(state: &GameState, rdr: &VGARenderer, prj: &Projec
     let offset_prev = rdr.buffer_offset();
     for i in 0..3 {
         rdr.set_buffer_offset(SCREENLOC[i]);
-        draw_play_border(rdr, prj);
+        draw_play_border(rdr, prj.view_width, prj.view_height);
         rdr.pic(0, 200 - STATUS_LINES, GraphicNum::STATUSBARPIC);
     }
     rdr.set_buffer_offset(offset_prev);
@@ -684,27 +700,27 @@ fn draw_play_border_side(rdr: &VGARenderer, prj: &ProjectionConfig) {
 pub fn draw_all_play_border(rdr: &VGARenderer, prj: &ProjectionConfig) {
     for i in 0..3 {
         rdr.set_buffer_offset(SCREENLOC[i]);
-        draw_play_border(rdr, prj);
+        draw_play_border(rdr, prj.view_width, prj.view_height);
     }
 }
 
-pub fn draw_play_border(rdr: &VGARenderer, prj: &ProjectionConfig) {
+pub fn draw_play_border(rdr: &VGARenderer, width: usize, height: usize) {
     //clear the background:
     rdr.bar(0, 0, 320, 200 - STATUS_LINES, 127);
 
-    let xl = 160 - prj.view_width / 2;
-    let yl = (200 - STATUS_LINES - prj.view_height) / 2;
+    let xl = 160 - width / 2;
+    let yl = (200 - STATUS_LINES - height) / 2;
 
     //view area
-    rdr.bar(xl, yl, prj.view_width, prj.view_height, 127);
+    rdr.bar(xl, yl, width, height, 0);
 
     //border around the view area
-    vw_hlin(rdr, xl - 1, xl + prj.view_width, yl - 1, 0);
-    vw_hlin(rdr, xl - 1, xl + prj.view_width, yl + prj.view_height, 125);
-    vw_vlin(rdr, yl - 1, yl + prj.view_height, xl - 1, 0);
-    vw_vlin(rdr, yl - 1, yl + prj.view_height, xl + prj.view_width, 125);
+    vw_hlin(rdr, xl - 1, xl + width, yl - 1, 0);
+    vw_hlin(rdr, xl - 1, xl + width, yl + height, 125);
+    vw_vlin(rdr, yl - 1, yl + height, xl - 1, 0);
+    vw_vlin(rdr, yl - 1, yl + height, xl + width, 125);
 
-    rdr.plot(xl - 1, yl + prj.view_height, 124);
+    rdr.plot(xl - 1, yl + height, 124);
 }
 
 fn vw_hlin(rdr: &VGARenderer, x: usize, z: usize, y: usize, c: u8) {
@@ -734,6 +750,7 @@ async fn check_keys(
     iw_config: &IWConfig,
     ticker: &time::Ticker,
     sound: &mut Sound,
+    rc: RayCast,
     rdr: &VGARenderer,
     assets: &Assets,
     win_state: &mut WindowState,
@@ -741,9 +758,9 @@ async fn check_keys(
     game_state: &mut GameState,
     player: &ObjType,
     input: &input::Input,
-    prj: &ProjectionConfig,
+    prj: ProjectionConfig,
     loader: &dyn Loader,
-) -> Option<SaveLoadGame> {
+) -> GameStateUpdate {
     if input.key_pressed(NumCode::BackSpace)
         && input.key_pressed(NumCode::LShift)
         && input.key_pressed(NumCode::Alt)
@@ -755,7 +772,7 @@ async fn check_keys(
         input.clear_keys_down();
         input.ack().await;
         win_state.debug_ok = true;
-        return None;
+        return GameStateUpdate::with_render_update(prj, rc);
     }
 
     let scan = input.last_scan();
@@ -766,13 +783,15 @@ async fn check_keys(
         menu_state.select_menu(Menu::Top);
         let prev_buffer = rdr.buffer_offset();
         rdr.set_buffer_offset(rdr.active_buffer());
-        let save_load = control_panel(
+        let update = control_panel(
             wolf_config,
             ticker,
             game_state,
             sound,
+            rc,
             rdr,
             input,
+            prj,
             assets,
             win_state,
             menu_state,
@@ -784,10 +803,10 @@ async fn check_keys(
 
         win_state.set_font_color(0, 15);
         input.clear_keys_down();
-        draw_play_screen(game_state, rdr, prj).await;
+        draw_play_screen(game_state, rdr, &update.projection_config).await;
         //TODO stargame and loadedgame handling
         rdr.fade_in().await;
-        return save_load;
+        return update;
     }
 
     if input.key_pressed(NumCode::Tab) && (win_state.debug_ok || iw_config.options.enable_debug) {
@@ -799,7 +818,7 @@ async fn check_keys(
         debug_keys(ticker, rdr, win_state, game_state, player, input).await;
 
         rdr.set_buffer_offset(prev_buffer);
-        return None;
+        return GameStateUpdate::with_render_update(prj, rc);
     }
 
     // iw key combos
@@ -807,7 +826,7 @@ async fn check_keys(
         println!("would go to fullscreen, if it would be implemented")
     }
 
-    return None;
+    return GameStateUpdate::with_render_update(prj, rc);
 }
 
 // reads input delta since last tic and manipulates the player state

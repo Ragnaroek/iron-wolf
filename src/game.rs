@@ -15,7 +15,7 @@ use crate::def::{
     LevelState, ObjType, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState,
     AMBUSH_TILE, ANGLES, MAP_SIZE, MAX_DOORS, MAX_STATS, NUM_AREAS, PLAYER_KEY,
 };
-use crate::draw::{init_ray_cast, three_d_refresh, RayCast};
+use crate::draw::{three_d_refresh, RayCast};
 use crate::input::Input;
 use crate::inter::{check_highscore, level_completed, preload_graphics, victory};
 use crate::loader::Loader;
@@ -52,23 +52,25 @@ pub async fn game_loop(
     game_state: &mut GameState,
     vga: &VGA,
     sound: &mut Sound,
+    rc_param: RayCast,
     rdr: &VGARenderer,
     input: &Input,
-    prj: &ProjectionConfig,
+    prj_param: ProjectionConfig,
     assets: &Assets,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
     save_load_param: Option<SaveLoadGame>,
-) {
+) -> (ProjectionConfig, RayCast) {
     let mut save_load = save_load_param;
     let mut control_state: ControlState = new_control_state();
 
-    draw_play_screen(&game_state, rdr, prj).await;
+    draw_play_screen(&game_state, rdr, &prj_param).await;
 
+    let mut prj = prj_param;
+    let mut rc = rc_param;
     'game_loop: loop {
-        let mut level_state = setup_game_level(prj, game_state, assets).unwrap();
-        let mut rc = init_ray_cast(prj.view_width);
+        let mut level_state = setup_game_level(&prj, game_state, assets).unwrap();
 
         win_state.in_game = true;
 
@@ -76,7 +78,7 @@ pub async fn game_loop(
         sound.play_music(track, assets, loader);
 
         if !game_state.died {
-            preload_graphics(ticker, iw_config, &game_state, prj, input, rdr).await;
+            preload_graphics(ticker, iw_config, &game_state, &prj, input, rdr).await;
         } else {
             game_state.died = false;
         }
@@ -86,7 +88,7 @@ pub async fn game_loop(
 
         rdr.fade_in().await;
 
-        play_loop(
+        let (prj_play, rc_play) = play_loop(
             wolf_config,
             iw_config,
             ticker,
@@ -97,7 +99,7 @@ pub async fn game_loop(
             &mut control_state,
             vga,
             sound,
-            &mut rc,
+            rc,
             rdr,
             input,
             prj,
@@ -107,6 +109,8 @@ pub async fn game_loop(
         )
         .await;
         save_load = None;
+        prj = prj_play;
+        rc = rc_play;
 
         win_state.in_game = false;
 
@@ -117,7 +121,7 @@ pub async fn game_loop(
                 vw_fade_out(vga).await;
 
                 level_completed(
-                    ticker, rdr, input, game_state, prj, sound, assets, win_state,
+                    ticker, rdr, input, game_state, &prj, sound, assets, win_state,
                 )
                 .await;
 
@@ -143,7 +147,7 @@ pub async fn game_loop(
                     &mut rc,
                     rdr,
                     sound,
-                    prj,
+                    &prj,
                     input,
                     assets,
                 )
@@ -167,7 +171,7 @@ pub async fn game_loop(
                 )
                 .await;
 
-                return;
+                return (prj, rc);
             }
             PlayState::Victorious => {
                 rdr.fade_out().await;
@@ -189,7 +193,7 @@ pub async fn game_loop(
 
                 // TODO MainMenu viewscores manipulation?
 
-                return;
+                return (prj, rc);
             }
             PlayState::Warped => {
                 // do nothing

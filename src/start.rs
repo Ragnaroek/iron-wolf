@@ -20,6 +20,7 @@ use crate::def::{
     StaticKind, StaticType, WeaponType, WindowState, HEIGHT_RATIO, MAP_SIZE, MAX_DOORS, MAX_STATS,
     NUM_AREAS,
 };
+use crate::draw::{init_ray_cast, RayCast};
 use crate::fixed::{new_fixed_u16, new_fixed_u32};
 use crate::game::{game_loop, setup_game_level};
 use crate::input::{self, Input};
@@ -28,7 +29,7 @@ use crate::loader::Loader;
 use crate::menu::{
     check_for_episodes, control_panel, initial_menu_state, intro_song, message, MenuState,
 };
-use crate::play::{self, ProjectionConfig};
+use crate::play::{self, draw_play_border, ProjectionConfig};
 use crate::sd::Sound;
 use crate::time;
 use crate::us1::c_print;
@@ -107,15 +108,17 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
 
     rt_ref.spawn(async move {
         let prj = init_game(&wolf_config, &vga_loop, &rdr, &input, &mut win_state).await;
+        let rc = init_ray_cast(prj.view_width);
         demo_loop(
             &mut wolf_config,
             &iw_config,
             ticker,
             &vga_loop,
             &mut sound,
+            rc,
             &rdr,
             &input,
-            &prj,
+            prj,
             &assets,
             &mut win_state,
             &mut menu_state,
@@ -167,11 +170,22 @@ async fn init_game(
     prj
 }
 
-pub fn new_view_size(width: u16) -> ProjectionConfig {
-    play::calc_projection(
-        (width * 16) as usize,
-        (width as f64 * 16.0 * HEIGHT_RATIO) as usize,
+/// Returns width, height dimensions
+fn dim_from_viewsize(view_size: u16) -> (usize, usize) {
+    (
+        (view_size * 16) as usize,
+        (view_size as f64 * 16.0 * HEIGHT_RATIO) as usize,
     )
+}
+
+pub fn new_view_size(view_size: u16) -> ProjectionConfig {
+    let (w, h) = dim_from_viewsize(view_size);
+    play::calc_projection(w, h)
+}
+
+pub fn show_view_size(rdr: &VGARenderer, view_size: u16) {
+    let (w, h) = dim_from_viewsize(view_size);
+    draw_play_border(rdr, w, h);
 }
 
 async fn finish_signon(
@@ -206,9 +220,10 @@ async fn demo_loop(
     ticker: time::Ticker,
     vga: &vga::VGA,
     sound: &mut Sound,
+    rc_param: RayCast,
     rdr: &VGARenderer,
     input: &input::Input,
-    prj: &play::ProjectionConfig,
+    prj_param: ProjectionConfig,
     assets: &Assets,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
@@ -220,6 +235,8 @@ async fn demo_loop(
         pg_13(rdr, input).await;
     }
 
+    let mut prj = prj_param;
+    let mut rc = rc_param;
     loop {
         while !iw_config.options.no_wait {
             // title screen & demo loop
@@ -253,28 +270,12 @@ async fn demo_loop(
         let mut game_state = new_game_state();
 
         // TODO RecordDemo()
-        let save_load = control_panel(
+        let update = control_panel(
             wolf_config,
             &ticker,
             &mut game_state,
             sound,
-            rdr,
-            input,
-            assets,
-            win_state,
-            menu_state,
-            loader,
-            NumCode::None,
-        )
-        .await;
-
-        game_loop(
-            &ticker,
-            wolf_config,
-            iw_config,
-            &mut game_state,
-            vga,
-            sound,
+            rc,
             rdr,
             input,
             prj,
@@ -282,7 +283,28 @@ async fn demo_loop(
             win_state,
             menu_state,
             loader,
-            save_load,
+            NumCode::None,
+        )
+        .await;
+        prj = update.projection_config;
+        rc = update.ray_cast;
+
+        (prj, rc) = game_loop(
+            &ticker,
+            wolf_config,
+            iw_config,
+            &mut game_state,
+            vga,
+            sound,
+            rc,
+            rdr,
+            input,
+            prj,
+            assets,
+            win_state,
+            menu_state,
+            loader,
+            update.save_load,
         )
         .await;
         rdr.fade_out().await;

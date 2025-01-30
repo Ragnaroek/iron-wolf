@@ -4,11 +4,13 @@ use vga::input::NumCode;
 use crate::assets::{is_sod, GraphicNum, Music, SoundName, WolfVariant};
 use crate::config::WolfConfig;
 use crate::def::{Assets, Difficulty, GameState, WindowState};
+use crate::draw::{init_ray_cast, RayCast};
 use crate::input::{read_control, ControlDirection, ControlInfo, Input};
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
+use crate::play::ProjectionConfig;
 use crate::sd::{DigiMode, MusicMode, Sound, SoundMode};
-use crate::start::quit;
+use crate::start::{new_view_size, quit, show_view_size};
 use crate::time::Ticker;
 use crate::us1::{c_print, line_input, print};
 use crate::user::rnd_t;
@@ -25,6 +27,7 @@ const BKGD_COLOR: u8 = 0x2d;
 
 pub const READ_COLOR: u8 = 0x4a;
 pub const READ_HCOLOR: u8 = 0x47;
+const VIEW_COLOR: u8 = 0x7f;
 const TEXT_COLOR: u8 = 0x17;
 const HIGHLIGHT: u8 = 0x13;
 
@@ -192,6 +195,34 @@ pub enum MenuHandle {
 pub enum SaveLoadGame {
     Save(usize, String),
     Load(usize),
+}
+
+pub struct GameStateUpdate {
+    pub save_load: Option<SaveLoadGame>,
+    pub projection_config: ProjectionConfig,
+    pub ray_cast: RayCast,
+}
+
+impl GameStateUpdate {
+    pub fn with_render_update(prj: ProjectionConfig, rc: RayCast) -> GameStateUpdate {
+        GameStateUpdate {
+            save_load: None,
+            projection_config: prj,
+            ray_cast: rc,
+        }
+    }
+
+    pub fn with_save_load(
+        prj: ProjectionConfig,
+        rc: RayCast,
+        save_load: Option<SaveLoadGame>,
+    ) -> GameStateUpdate {
+        GameStateUpdate {
+            save_load,
+            projection_config: prj,
+            ray_cast: rc,
+        }
+    }
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Hash, Debug)]
@@ -557,14 +588,16 @@ pub async fn control_panel(
     ticker: &Ticker,
     game_state: &mut GameState,
     sound: &mut Sound,
+    rc: RayCast,
     rdr: &VGARenderer,
     input: &Input,
+    prj: ProjectionConfig,
     assets: &Assets,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
     scan: NumCode,
-) -> Option<SaveLoadGame> {
+) -> GameStateUpdate {
     // TODO scan code handling
     sound.play_music(Music::WONDERIN, assets, loader);
     setup_control_panel(win_state, menu_state);
@@ -572,6 +605,8 @@ pub async fn control_panel(
     let mut menu_stack: Vec<Menu> = Vec::new();
     menu_stack.push(menu_state.selected);
 
+    let mut prj_return = prj;
+    let mut rc_return = rc;
     // MAIN MENU LOOP
     loop {
         let menu_opt = menu_stack.last();
@@ -605,6 +640,15 @@ pub async fn control_panel(
                         )
                         .await
                     }
+                    MainMenuItem::ChangeView => {
+                        let (handle, prj_new, rc_new) = cp_change_view(
+                            ticker, rdr, sound, rc_return, assets, input, win_state, prj_return,
+                        )
+                        .await;
+                        prj_return = prj_new;
+                        rc_return = rc_new;
+                        handle
+                    }
                     MainMenuItem::ViewScores => {
                         cp_view_scores(wolf_config, rdr, sound, assets, input, win_state, loader)
                             .await
@@ -624,12 +668,12 @@ pub async fn control_panel(
                     menu_stack.pop();
                 }
                 MenuHandle::BackToGameLoop(save_load) => {
-                    return save_load;
+                    return GameStateUpdate::with_save_load(prj_return, rc_return, save_load);
                 }
                 _ => { /* ignore */ }
             }
         } else {
-            return None; // back to game loop
+            return GameStateUpdate::with_render_update(prj_return, rc_return); // back to game loop
         }
     }
 }
@@ -665,6 +709,8 @@ async fn cp_main_menu(
         return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::LoadGame));
     } else if handle == MenuHandle::Selected(MainMenuItem::SaveGame.pos()) {
         return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::SaveGame));
+    } else if handle == MenuHandle::Selected(MainMenuItem::ChangeView.pos()) {
+        return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::ChangeView));
     } else if handle == MenuHandle::Selected(MainMenuItem::ViewScores.pos()) {
         return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::ViewScores));
     } else if handle == MenuHandle::Selected(MainMenuItem::BackTo.pos()) {
@@ -1261,6 +1307,90 @@ async fn menu_quit(
 
     draw_main_menu(rdr, win_state, menu_state)
 }
+
+async fn cp_change_view(
+    ticker: &Ticker,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    rc: RayCast,
+    assets: &Assets,
+    input: &Input,
+    win_state: &mut WindowState,
+    prj: ProjectionConfig,
+) -> (MenuHandle, ProjectionConfig, RayCast) {
+    let old_view = (prj.view_width / 16) as u16;
+    let mut new_view = old_view;
+    draw_change_view(rdr, win_state, new_view).await;
+
+    loop {
+        // TODO CheckPause()
+        let ci = read_any_control(input);
+        match ci.dir {
+            ControlDirection::South | ControlDirection::West => {
+                new_view -= 1;
+                if new_view < 4 {
+                    new_view = 4;
+                }
+                show_view_size(rdr, new_view);
+                sound.play_sound(SoundName::HITWALL, assets);
+                tic_delay(ticker, input, 10).await;
+            }
+            ControlDirection::North | ControlDirection::East => {
+                new_view += 1;
+                if new_view > 19 {
+                    new_view = 19;
+                }
+                show_view_size(rdr, new_view);
+                sound.play_sound(SoundName::HITWALL, assets);
+                tic_delay(ticker, input, 10).await;
+            }
+            _ => { /* ignore */ }
+        }
+
+        // TODO PicturePause
+
+        // TODO Check mouse button
+        if input.key_pressed(NumCode::Return) {
+            rdr.fade_out().await;
+            break;
+        } else if input.key_pressed(NumCode::Escape) {
+            sound.play_sound(SoundName::ESCPRESSED, assets);
+            rdr.fade_out().await;
+            return (MenuHandle::OpenMenu(Menu::Top), prj, rc);
+        }
+    }
+
+    let mut prj_return = prj;
+    let mut rc_return = rc;
+    if old_view != new_view {
+        sound.play_sound(SoundName::SHOOT, assets);
+        message(rdr, win_state, "Thinking...");
+        prj_return = new_view_size(new_view);
+        rc_return = init_ray_cast(prj_return.view_width);
+    }
+
+    sound.play_sound(SoundName::SHOOT, assets);
+    rdr.fade_out().await;
+    return (MenuHandle::OpenMenu(Menu::Top), prj_return, rc_return);
+}
+
+async fn draw_change_view(rdr: &VGARenderer, win_state: &mut WindowState, view_size: u16) {
+    rdr.bar(0, 160, 320, 40, VIEW_COLOR);
+    show_view_size(rdr, view_size);
+
+    win_state.print_y = 161;
+    win_state.window_x = 0;
+    win_state.window_y = 320;
+    win_state.set_font_color(HIGHLIGHT, BKGD_COLOR);
+
+    c_print(rdr, win_state, "Use arrows to size\n");
+    c_print(rdr, win_state, "ENTER to accept\n");
+    c_print(rdr, win_state, "ESC to cancel");
+
+    rdr.fade_in().await;
+}
+
+// helper
 
 async fn confirm(
     ticker: &Ticker,
