@@ -772,6 +772,7 @@ async fn check_keys(
         input.clear_keys_down();
         input.ack().await;
         win_state.debug_ok = true;
+        draw_all_play_border_sides(rdr, &prj);
         return GameStateUpdate::with_render_update(prj, rc);
     }
 
@@ -819,11 +820,6 @@ async fn check_keys(
 
         rdr.set_buffer_offset(prev_buffer);
         return GameStateUpdate::with_render_update(prj, rc);
-    }
-
-    // iw key combos
-    if input.key_pressed(NumCode::Alt) && input.key_pressed(NumCode::F) {
-        println!("would go to fullscreen, if it would be implemented")
     }
 
     return GameStateUpdate::with_render_update(prj, rc);
