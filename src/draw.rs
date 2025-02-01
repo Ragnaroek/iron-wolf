@@ -1018,7 +1018,8 @@ fn draw_scaleds(
     let vis = &level_state.spotvis;
     let tile = &level_state.level.tile_map;
     let player_angle = level_state.player().angle;
-    for obj in &mut level_state.actors {
+    for i in 1..level_state.actors.len() {
+        let obj = &mut level_state.actors[i];
         if obj.state.expect("state").sprite.is_none() {
             continue; // no shape
         }
@@ -1141,7 +1142,8 @@ fn transform_actor(consts: &RayCastConsts, prj: &ProjectionConfig, obj: &mut Obj
         return;
     }
 
-    obj.view_x = prj.center_x as i32 + ny * prj.scale / nx;
+    let (ny_scale, _) = ny.overflowing_mul(prj.scale);
+    obj.view_x = prj.center_x as i32 + ny_scale / nx;
 
     // calculate height (heightnumerator/(nx>>8))
     obj.view_height = prj.height_numerator / (nx >> 8);
