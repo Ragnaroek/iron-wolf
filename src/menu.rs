@@ -2,7 +2,7 @@ use std::{ascii, collections::HashMap, str};
 use vga::input::NumCode;
 
 use crate::assets::{is_sod, GraphicNum, Music, SoundName, WolfVariant};
-use crate::config::WolfConfig;
+use crate::config::{write_wolf_config, WolfConfig};
 use crate::def::{Assets, Difficulty, GameState, WindowState};
 use crate::draw::{init_ray_cast, RayCast};
 use crate::input::{read_control, ControlDirection, ControlInfo, Input};
@@ -584,7 +584,7 @@ fn placeholder() -> ItemType {
 
 /// Wolfenstein Control Panel!  Ta Da!
 pub async fn control_panel(
-    wolf_config: &WolfConfig,
+    wolf_config: &mut WolfConfig,
     ticker: &Ticker,
     game_state: &mut GameState,
     sound: &mut Sound,
@@ -642,7 +642,16 @@ pub async fn control_panel(
                     }
                     MainMenuItem::ChangeView => {
                         let (handle, prj_new, rc_new) = cp_change_view(
-                            ticker, rdr, sound, rc_return, assets, input, win_state, prj_return,
+                            wolf_config,
+                            ticker,
+                            rdr,
+                            sound,
+                            rc_return,
+                            assets,
+                            input,
+                            win_state,
+                            prj_return,
+                            loader,
                         )
                         .await;
                         prj_return = prj_new;
@@ -1309,6 +1318,7 @@ async fn menu_quit(
 }
 
 async fn cp_change_view(
+    wolf_config: &mut WolfConfig,
     ticker: &Ticker,
     rdr: &VGARenderer,
     sound: &mut Sound,
@@ -1317,6 +1327,7 @@ async fn cp_change_view(
     input: &Input,
     win_state: &mut WindowState,
     prj: ProjectionConfig,
+    loader: &dyn Loader,
 ) -> (MenuHandle, ProjectionConfig, RayCast) {
     let old_view = (prj.view_width / 16) as u16;
     let mut new_view = old_view;
@@ -1367,6 +1378,8 @@ async fn cp_change_view(
         message(rdr, win_state, "Thinking...");
         prj_return = new_view_size(new_view);
         rc_return = init_ray_cast(prj_return.view_width);
+        wolf_config.viewsize = new_view;
+        write_wolf_config(loader, wolf_config).expect("write config");
     }
 
     sound.play_sound(SoundName::SHOOT, assets);
