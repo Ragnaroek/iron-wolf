@@ -398,6 +398,7 @@ pub fn setup_game_level(
                     90 | 92 | 94 | 96 | 98 | 100 => spawn_door(
                         &mut tile_map,
                         &mut map_segs,
+                        &mut actor_at,
                         doornum,
                         x,
                         y,
@@ -407,6 +408,7 @@ pub fn setup_game_level(
                     91 | 93 | 95 | 97 | 99 | 101 => spawn_door(
                         &mut tile_map,
                         &mut map_segs,
+                        &mut actor_at,
                         doornum,
                         x,
                         y,

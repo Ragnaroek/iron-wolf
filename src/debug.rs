@@ -86,3 +86,24 @@ pub fn debug_actor_at(level_state: &LevelState, x: usize, y: usize, width: usize
         println!();
     }
 }
+
+pub fn debug_spot_vis(level_state: &LevelState, x: usize, y: usize, width: usize, height: usize) {
+    print!("   |");
+    for w in 0..width {
+        print!("{:>3}|", x + w);
+    }
+    println!();
+
+    for h in 0..height {
+        print!("{:>3}|", y + h);
+        for w in 0..width {
+            let vis = level_state.spotvis[x + w][y + h];
+            if vis {
+                print!("   |")
+            } else {
+                print!("###|")
+            }
+        }
+        println!();
+    }
+}

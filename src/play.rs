@@ -22,19 +22,14 @@ use crate::assets::Music;
 use crate::assets::{GraphicNum, GAMEPAL};
 use crate::config::WolfConfig;
 use crate::debug::debug_keys;
-use crate::def::ActiveType;
-use crate::def::IWConfig;
-use crate::def::ObjType;
-use crate::def::WindowState;
 use crate::def::{
-    Assets, At, Button, Control, ControlState, GameState, LevelState, ObjKey, PlayState, ANGLES,
-    ANGLE_QUAD, FINE_ANGLES, FL_NEVERMARK, FL_NONMARK, FOCAL_LENGTH, GLOBAL1, NUM_BUTTONS,
-    SCREENLOC, STATUS_LINES, TILEGLOBAL,
+    ActiveType, Assets, At, Button, Control, ControlState, GameState, IWConfig, LevelState, ObjKey,
+    ObjType, PlayState, WindowState, ANGLES, ANGLE_QUAD, FINE_ANGLES, FL_NEVERMARK, FL_NONMARK,
+    FOCAL_LENGTH, GLOBAL1, NUM_BUTTONS, SCREENLOC, STATUS_LINES, TILEGLOBAL,
 };
 use crate::draw::{three_d_refresh, RayCast};
 use crate::fixed::{new_fixed, new_fixed_u32, Fixed};
-use crate::input;
-use crate::input::Input;
+use crate::input::{self, Input};
 use crate::inter::clear_split_vwb;
 use crate::loader::Loader;
 use crate::menu::control_panel;

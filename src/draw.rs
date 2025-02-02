@@ -8,8 +8,8 @@ use tracing::instrument;
 use crate::act2::S_DEATH_CAM;
 use crate::agent::get_bonus;
 use crate::def::{
-    Assets, ClassType, DoorLock, DoorType, GameState, Level, LevelState, ObjType, Sprite,
-    StaticType, VisObj, ANGLES, DIR_ANGLE, FINE_ANGLES, FL_BONUS, FL_VISABLE, FOCAL_LENGTH,
+    ActiveType, Assets, ClassType, DoorLock, DoorType, GameState, Level, LevelState, ObjType,
+    Sprite, StaticType, VisObj, ANGLES, DIR_ANGLE, FINE_ANGLES, FL_BONUS, FL_VISABLE, FOCAL_LENGTH,
     MAP_SIZE, MIN_DIST, NUM_WEAPONS, TILEGLOBAL, TILESHIFT,
 };
 use crate::fixed::{fixed_by_frac, new_fixed_i32, Fixed};
@@ -1036,6 +1036,7 @@ fn draw_scaleds(
             || (vis[obj.tilex][obj.tiley - 1] && tile[obj.tilex][obj.tiley - 1] == 0)
             || (vis[obj.tilex + 1][obj.tiley - 1] && tile[obj.tilex + 1][obj.tiley - 1] == 0)
         {
+            obj.active = ActiveType::Yes;
             transform_actor(consts, prj, obj);
             if obj.view_height == 0 {
                 continue; // too close or far away

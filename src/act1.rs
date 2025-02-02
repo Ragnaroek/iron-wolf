@@ -317,6 +317,7 @@ fn recursive_connect(level_state: &mut LevelState, area_num: usize) {
 pub fn spawn_door(
     tile_map: &mut Vec<Vec<u16>>,
     map_segs: &mut MapSegs,
+    actor_at: &mut Vec<Vec<At>>,
     doornum: usize,
     tile_x: usize,
     tile_y: usize,
@@ -327,7 +328,10 @@ pub fn spawn_door(
         panic!("64+ doors on level!") //TODO replace with Quit
     }
 
-    tile_map[tile_x][tile_y] = (doornum | 0x80) as u16;
+    let door_val = (doornum | 0x80) as u16;
+    actor_at[tile_x][tile_y] = At::Wall(door_val);
+    tile_map[tile_x][tile_y] = door_val;
+
     let map_lookup = tile_y * MAP_SIZE + tile_x;
     if vertical {
         map_segs.segs[0][map_lookup] = map_segs.segs[0][map_lookup - 1]; // set area number

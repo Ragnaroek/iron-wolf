@@ -685,8 +685,8 @@ pub fn move_obj(
             }
             DirType::NoDir => { /* do nothing */ }
         }
-        obj.distance -= mov;
     }
+    level_state.update_obj(k, |obj| obj.distance -= mov);
 }
 
 /// Called by actors that ARE NOT chasing the player.  If the player
