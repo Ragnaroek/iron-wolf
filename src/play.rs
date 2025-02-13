@@ -11,36 +11,36 @@ use tracing::info_span;
 #[cfg(feature = "tracing")]
 use tracing::instrument;
 
-use vga::input::NumCode;
 use vga::VGA;
+use vga::input::NumCode;
 
 use crate::act1::{move_doors, move_push_walls};
 use crate::agent::{
     draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_score, draw_weapon,
 };
 use crate::assets::Music;
-use crate::assets::{GraphicNum, GAMEPAL};
+use crate::assets::{GAMEPAL, GraphicNum};
 use crate::config::WolfConfig;
 use crate::debug::debug_keys;
 use crate::def::{
-    ActiveType, Assets, At, Button, Control, ControlState, GameState, IWConfig, LevelState, ObjKey,
-    ObjType, PlayState, WindowState, ANGLES, ANGLE_QUAD, FINE_ANGLES, FL_NEVERMARK, FL_NONMARK,
-    FOCAL_LENGTH, GLOBAL1, NUM_BUTTONS, SCREENLOC, STATUS_LINES, TILEGLOBAL,
+    ANGLE_QUAD, ANGLES, ActiveType, Assets, At, Button, Control, ControlState, FINE_ANGLES,
+    FL_NEVERMARK, FL_NONMARK, FOCAL_LENGTH, GLOBAL1, GameState, IWConfig, LevelState, NUM_BUTTONS,
+    ObjKey, ObjType, PlayState, SCREENLOC, STATUS_LINES, TILEGLOBAL, WindowState,
 };
-use crate::draw::{three_d_refresh, RayCast};
-use crate::fixed::{new_fixed, new_fixed_u32, Fixed};
+use crate::draw::{RayCast, three_d_refresh};
+use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::input::{self, Input};
 use crate::inter::clear_split_vwb;
 use crate::loader::Loader;
-use crate::menu::control_panel;
-use crate::menu::message;
 use crate::menu::GameStateUpdate;
+use crate::menu::LSA_X;
+use crate::menu::LSA_Y;
 use crate::menu::Menu;
 use crate::menu::MenuState;
 use crate::menu::SaveLoadGame;
-use crate::menu::LSA_X;
-use crate::menu::LSA_Y;
-use crate::scale::{setup_scaling, CompiledScaler};
+use crate::menu::control_panel;
+use crate::menu::message;
+use crate::scale::{CompiledScaler, setup_scaling};
 use crate::sd::Sound;
 use crate::start::load_the_game;
 use crate::start::save_the_game;
@@ -334,7 +334,6 @@ pub async fn play_loop(
         win_state,
         rdr,
         input,
-        &prj_param,
         assets,
         loader,
         save_load_param,
@@ -426,7 +425,6 @@ pub async fn play_loop(
             win_state,
             rdr,
             input,
-            &prj,
             assets,
             loader,
             update.save_load,
@@ -484,7 +482,6 @@ async fn handle_save_load(
     win_state: &mut WindowState,
     rdr: &VGARenderer,
     input: &Input,
-    prj: &ProjectionConfig,
     assets: &Assets,
     loader: &dyn Loader,
     save_load: Option<SaveLoadGame>,
@@ -499,7 +496,6 @@ async fn handle_save_load(
                     win_state,
                     rdr,
                     input,
-                    prj,
                     assets,
                     loader,
                     which,

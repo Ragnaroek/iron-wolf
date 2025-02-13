@@ -5,15 +5,15 @@ use vga::{SCReg, VGABuilder};
 use crate::assets;
 use crate::config;
 use crate::def::{
-    new_game_state, ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction,
-    DoorLock, DoorType, GameState, LevelState, ObjKey, ObjType, Sprite, StaticKind, StaticType,
-    WeaponType, MAP_SIZE, NUM_AREAS,
+    ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction, DoorLock, DoorType,
+    GameState, LevelState, MAP_SIZE, NUM_AREAS, ObjKey, ObjType, Sprite, StaticKind, StaticType,
+    WeaponType, new_game_state,
 };
 use crate::fixed::{new_fixed, new_fixed_i32};
 use crate::game::setup_game_level;
 use crate::loader::{DiskLoader, Loader};
 use crate::play::ProjectionConfig;
-use crate::start::{save_the_game, OBJ_TYPE_LEN, STAT_TYPE_LEN};
+use crate::start::{OBJ_TYPE_LEN, STAT_TYPE_LEN, save_the_game};
 use crate::vga_render::{self, VGARenderer};
 
 use super::new_view_size;
@@ -35,16 +35,15 @@ fn test_do_load_and_save_save0() {
         patch_path: None,
     };
 
-    let (prj, rdr, assets) = start_test_iw(&loader);
+    let (_, rdr, assets) = start_test_iw(&loader);
 
     let mut game_state = new_game_state();
     game_state.difficulty = Difficulty::Baby;
     game_state.episode = episode; // set this here so that correct level is set up in 'setup_game_level' call
     game_state.map_on = map_on;
-    let mut level_state_init =
-        setup_game_level(&prj, &mut game_state, &assets).expect("level state");
+    let mut level_state_init = setup_game_level(&mut game_state, &assets).expect("level state");
 
-    let mut level_state = setup_game_level(&prj, &mut game_state, &assets).expect("level state");
+    let mut level_state = setup_game_level(&mut game_state, &assets).expect("level state");
 
     // reset actor data, to modify them and check that they are read correctly in.
     // otherwise level_state_init.actors == level_state.actors, even if nothing is read and copied.
@@ -62,7 +61,6 @@ fn test_do_load_and_save_save0() {
         &mut level_state,
         &mut game_state,
         &rdr,
-        &prj,
         &assets,
         &loader,
         0,
@@ -89,7 +87,6 @@ fn test_do_load_and_save_save0() {
         &mut level_state,
         &mut game_state,
         &rdr,
-        &prj,
         &assets,
         &loader,
         9, /*only difference to load before*/
@@ -366,17 +363,16 @@ fn test_do_load_save1() {
         patch_path: None,
     };
 
-    let (prj, rdr, assets) = start_test_iw(&loader);
+    let (_, rdr, assets) = start_test_iw(&loader);
 
     let mut game_state = new_game_state();
-    let mut level_state = setup_game_level(&prj, &mut game_state, &assets).expect("level state");
+    let mut level_state = setup_game_level(&mut game_state, &assets).expect("level state");
 
     game_state.loaded_game = true;
     let checksum_passed = do_load(
         &mut level_state,
         &mut game_state,
         &rdr,
-        &prj,
         &assets,
         &loader,
         1,

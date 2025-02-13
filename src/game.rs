@@ -6,22 +6,22 @@ use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{spawn_boss, spawn_dead_guard, spawn_patrol, spawn_stand};
 use crate::agent::{
     draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_weapon,
+    spawn_player, thrust_player,
 };
-use crate::agent::{spawn_player, thrust};
 use crate::assets::load_map_from_assets;
 use crate::config::WolfConfig;
 use crate::def::{
-    Assets, At, ControlState, Difficulty, DoorLock, EnemyType, GameState, IWConfig, Level,
-    LevelState, ObjType, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState,
-    AMBUSH_TILE, ANGLES, MAP_SIZE, MAX_DOORS, MAX_STATS, NUM_AREAS, PLAYER_KEY,
+    AMBUSH_TILE, ANGLES, Assets, At, ControlState, Difficulty, DoorLock, EnemyType, GameState,
+    IWConfig, Level, LevelState, MAP_SIZE, MAX_DOORS, MAX_STATS, NUM_AREAS, ObjType, PlayState,
+    Sprite, StaticType, VisObj, WeaponType, WindowState,
 };
-use crate::draw::{three_d_refresh, RayCast};
+use crate::draw::{RayCast, three_d_refresh};
 use crate::input::Input;
 use crate::inter::{check_highscore, level_completed, preload_graphics, victory};
 use crate::loader::Loader;
 use crate::menu::{MenuState, SaveLoadGame};
 use crate::play::{
-    draw_play_screen, finish_palette_shifts, new_control_state, play_loop, ProjectionConfig, SONGS,
+    ProjectionConfig, SONGS, draw_play_screen, finish_palette_shifts, new_control_state, play_loop,
 };
 use crate::sd::Sound;
 use crate::user::HighScore;
@@ -70,7 +70,7 @@ pub async fn game_loop(
     let mut prj = prj_param;
     let mut rc = rc_param;
     'game_loop: loop {
-        let mut level_state = setup_game_level(&prj, game_state, assets).unwrap();
+        let mut level_state = setup_game_level(game_state, assets).unwrap();
 
         win_state.in_game = true;
 
@@ -224,7 +224,7 @@ async fn died(
     assets: &Assets,
 ) {
     game_state.weapon = None; // take away weapon
-                              //TODO SD_PlaySound(PLAYERDEATHSND)
+    //TODO SD_PlaySound(PLAYERDEATHSND)
 
     let player = level_state.player();
     let killer_obj = level_state.obj(game_state.killer_obj.expect("killer obj key be present"));
@@ -346,11 +346,7 @@ async fn died(
     }
 }
 
-pub fn setup_game_level(
-    prj: &ProjectionConfig,
-    game_state: &mut GameState,
-    assets: &Assets,
-) -> Result<LevelState, String> {
+pub fn setup_game_level(game_state: &mut GameState, assets: &Assets) -> Result<LevelState, String> {
     if !game_state.loaded_game {
         game_state.time_count = 0;
         game_state.secret_total = 0;
@@ -491,7 +487,7 @@ pub fn setup_game_level(
         last_attacker: None,
     };
 
-    thrust(PLAYER_KEY, &mut level_state, game_state, prj, 0, 0); // set some variables
+    thrust_player(&mut level_state); // set some variables
 
     Ok(level_state)
 }

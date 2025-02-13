@@ -12,28 +12,28 @@ use vga::util::tokio_runtime;
 use vga::{SCReg, VGABuilder};
 
 use crate::act2::get_state_by_id;
-use crate::assets::{self, GraphicNum, GAMEPAL, SIGNON};
+use crate::assets::{self, GAMEPAL, GraphicNum, SIGNON};
 use crate::config::WolfConfig;
 use crate::def::{
-    new_game_state, ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction,
-    DoorLock, DoorType, GameState, IWConfig, LevelRatio, LevelState, ObjKey, ObjType, Sprite,
-    StaticKind, StaticType, WeaponType, WindowState, HEIGHT_RATIO, MAP_SIZE, MAX_DOORS, MAX_STATS,
-    NUM_AREAS,
+    ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction, DoorLock, DoorType,
+    GameState, HEIGHT_RATIO, IWConfig, LevelRatio, LevelState, MAP_SIZE, MAX_DOORS, MAX_STATS,
+    NUM_AREAS, ObjKey, ObjType, Sprite, StaticKind, StaticType, WeaponType, WindowState,
+    new_game_state,
 };
-use crate::draw::{init_ray_cast, RayCast};
+use crate::draw::{RayCast, init_ray_cast};
 use crate::fixed::{new_fixed_u16, new_fixed_u32};
 use crate::game::{game_loop, setup_game_level};
 use crate::input::{self, Input};
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::menu::{
-    check_for_episodes, control_panel, initial_menu_state, intro_song, message, MenuState,
+    MenuState, check_for_episodes, control_panel, initial_menu_state, intro_song, message,
 };
-use crate::play::{self, draw_play_border, ProjectionConfig};
+use crate::play::{self, ProjectionConfig, draw_play_border};
 use crate::sd::Sound;
 use crate::time;
 use crate::us1::c_print;
-use crate::util::{new_data_reader_with_offset, new_data_writer, DataReader, DataWriter};
+use crate::util::{DataReader, DataWriter, new_data_reader_with_offset, new_data_writer};
 use crate::vga_render::{self, VGARenderer};
 use crate::vl;
 use crate::{config, sd};
@@ -44,7 +44,7 @@ const DOOR_TYPE_LEN: usize = 10;
 const LEVEL_RATIO_TYPE_LEN: usize = 10;
 const SAVEGAME_NAME_LEN: usize = 32;
 
-static STR_SAVE_CHEAT : &'static str = "Your Save Game file is,\nshall we say, \"corrupted\".\nBut I'll let you go on and\nplay anyway....";
+static STR_SAVE_CHEAT: &'static str = "Your Save Game file is,\nshall we say, \"corrupted\".\nBut I'll let you go on and\nplay anyway....";
 
 // state for the disk animation in the load/save screen
 struct DiskAnim {
@@ -591,24 +591,13 @@ pub async fn load_the_game(
     win_state: &mut WindowState,
     rdr: &VGARenderer,
     input: &Input,
-    prj: &ProjectionConfig,
     assets: &Assets,
     loader: &dyn Loader,
     which: usize,
     x: usize,
     y: usize,
 ) {
-    let checksums_matched = do_load(
-        level_state,
-        game_state,
-        rdr,
-        prj,
-        assets,
-        loader,
-        which,
-        x,
-        y,
-    );
+    let checksums_matched = do_load(level_state, game_state, rdr, assets, loader, which, x, y);
     if !checksums_matched {
         message(rdr, win_state, &STR_SAVE_CHEAT);
 
@@ -621,7 +610,6 @@ pub fn do_load(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     rdr: &VGARenderer,
-    prj: &ProjectionConfig,
     assets: &Assets,
     loader: &dyn Loader,
     which: usize,
@@ -643,7 +631,7 @@ pub fn do_load(
     let (offset, checksum) = do_read_checksum(reader, offset, checksum);
 
     disk_anim.disk_flop_anim(rdr);
-    *level_state = setup_game_level(prj, game_state, assets).expect("set up game level"); // TODO replace expect with Quit()
+    *level_state = setup_game_level(game_state, assets).expect("set up game level"); // TODO replace expect with Quit()
 
     // load tilemap
     for x in 0..MAP_SIZE {

@@ -1,16 +1,16 @@
 use crate::act1::{operate_door, push_wall};
 use crate::act2::spawn_bj_victory;
-use crate::assets::{face_pic, n_pic, weapon_pic, GraphicNum, SoundName};
+use crate::assets::{GraphicNum, SoundName, face_pic, n_pic, weapon_pic};
 use crate::def::{
-    Assets, At, Button, ClassType, ControlState, Difficulty, Dir, DirType, GameState, LevelState,
-    ObjKey, ObjType, PlayState, Sprite, StateType, StaticKind, StaticType, WeaponType,
-    ALT_ELEVATOR_TILE, ANGLES, ANGLES_I32, ELEVATOR_TILE, EXIT_TILE, EXTRA_POINTS, FL_NEVERMARK,
-    FL_SHOOTABLE, FL_VISABLE, MAP_SIZE, MIN_DIST, PLAYER_SIZE, PUSHABLE_TILE, SCREENLOC,
-    STATUS_LINES, TILEGLOBAL, TILESHIFT,
+    ALT_ELEVATOR_TILE, ANGLES, ANGLES_I32, Assets, At, Button, ClassType, ControlState, Difficulty,
+    Dir, DirType, ELEVATOR_TILE, EXIT_TILE, EXTRA_POINTS, FL_NEVERMARK, FL_SHOOTABLE, FL_VISABLE,
+    GameState, LevelState, MAP_SIZE, MIN_DIST, ObjKey, ObjType, PLAYER_SIZE, PUSHABLE_TILE,
+    PlayState, SCREENLOC, STATUS_LINES, Sprite, StateType, StaticKind, StaticType, TILEGLOBAL,
+    TILESHIFT, WeaponType,
 };
 use crate::fixed::{fixed_by_frac, new_fixed_i32};
 use crate::game::AREATILE;
-use crate::play::{start_bonus_flash, start_damage_flash, ProjectionConfig};
+use crate::play::{ProjectionConfig, start_bonus_flash, start_damage_flash};
 use crate::sd::Sound;
 use crate::state::{check_line, damage_actor};
 use crate::user::rnd_t;
@@ -167,7 +167,15 @@ fn t_attack(
         control_state.button_state[Button::Attack as usize] = false;
     }
 
-    control_movement(k, level_state, game_state, control_state, prj);
+    control_movement(
+        k,
+        level_state,
+        game_state,
+        sound,
+        control_state,
+        prj,
+        assets,
+    );
 
     if game_state.victory_flag {
         return;
@@ -419,7 +427,15 @@ fn t_player(
         cmd_fire(level_state, game_state, control_state);
     }
 
-    control_movement(k, level_state, game_state, control_state, prj);
+    control_movement(
+        k,
+        level_state,
+        game_state,
+        sound,
+        control_state,
+        prj,
+        assets,
+    );
     if game_state.victory_flag {
         return;
     }
@@ -495,7 +511,7 @@ fn cmd_use(
             game_state.play_state = PlayState::Completed;
         }
         level_state.level.tile_map[check_x][check_y] += 1; // flip switch [to animate the lever to move up]
-                                                           // TODO SD_PlaySound(LEVELDONESND) && WaitSoundDone
+        // TODO SD_PlaySound(LEVELDONESND) && WaitSoundDone
     }
 
     if !control_state.button_held(Button::Use) && doornum & 0x80 != 0 {
@@ -610,8 +626,10 @@ fn control_movement(
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
+    sound: &mut Sound,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
+    assets: &Assets,
 ) {
     level_state.thrustspeed = 0;
 
@@ -643,7 +661,9 @@ fn control_movement(
             k,
             level_state,
             game_state,
+            sound,
             prj,
+            assets,
             ob.angle,
             -control_y * MOVE_SCALE,
         )
@@ -656,7 +676,9 @@ fn control_movement(
             k,
             level_state,
             game_state,
+            sound,
             prj,
+            assets,
             angle,
             control_y * BACKMOVE_SCALE,
         );
@@ -674,11 +696,29 @@ fn victory_tile(level_state: &mut LevelState, game_state: &mut GameState) {
     game_state.victory_flag = true;
 }
 
+pub fn thrust_player(level_state: &mut LevelState) -> usize {
+    let offset = {
+        let player = level_state.mut_player();
+        player.tilex = player.x as usize >> TILESHIFT; // scale to tile values
+        player.tiley = player.y as usize >> TILESHIFT;
+        player.tiley * MAP_SIZE + player.tilex
+    };
+
+    let area = level_state.level.map_segs.segs[0][offset] - AREATILE;
+
+    let player = level_state.mut_player();
+    player.area_number = area as usize;
+
+    offset
+}
+
 pub fn thrust(
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
+    sound: &mut Sound,
     prj: &ProjectionConfig,
+    assets: &Assets,
     angle: i32,
     speed_param: i32,
 ) {
@@ -695,26 +735,16 @@ pub fn thrust(
     let x_move = fixed_by_frac(speed, prj.cos(angle as usize));
     let y_move = -fixed_by_frac(speed, prj.sin(angle as usize));
 
-    clip_move(k, level_state, x_move.to_i32(), y_move.to_i32());
+    clip_move(
+        k,
+        level_state,
+        sound,
+        assets,
+        x_move.to_i32(),
+        y_move.to_i32(),
+    );
 
-    {
-        let player = level_state.mut_player();
-        player.tilex = player.x as usize >> TILESHIFT; // scale to tile values
-        player.tiley = player.y as usize >> TILESHIFT;
-    }
-
-    let (area, offset) = {
-        let player = level_state.player();
-        let offset = player.tiley * MAP_SIZE + player.tilex;
-        (
-            level_state.level.map_segs.segs[0][offset] - AREATILE,
-            offset,
-        )
-    };
-
-    let player = level_state.mut_player();
-    player.area_number = area as usize;
-
+    let offset = thrust_player(level_state);
     if level_state.level.map_segs.segs[1][offset] == EXIT_TILE {
         victory_tile(level_state, game_state);
     }
@@ -900,7 +930,14 @@ fn give_ammo(game_state: &mut GameState, rdr: &VGARenderer, ammo: i32) {
     draw_ammo(game_state, rdr);
 }
 
-fn clip_move(k: ObjKey, level_state: &mut LevelState, x_move: i32, y_move: i32) {
+fn clip_move(
+    k: ObjKey,
+    level_state: &mut LevelState,
+    sound: &mut Sound,
+    assets: &Assets,
+    x_move: i32,
+    y_move: i32,
+) {
     let (base_x, base_y) = {
         let ob = level_state.obj(k);
         (ob.x, ob.y)
@@ -912,7 +949,9 @@ fn clip_move(k: ObjKey, level_state: &mut LevelState, x_move: i32, y_move: i32) 
     }
     // TODO add noclip check here (for cheats)
 
-    // TODO Play HITWALLSND sound here
+    if !sound.is_sound_playing().is_some() {
+        sound.play_sound(SoundName::HITWALL, assets);
+    }
 
     set_move(k, level_state, base_x + x_move, base_y);
     if try_move(k, level_state) {

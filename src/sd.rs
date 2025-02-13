@@ -71,6 +71,7 @@ pub struct Sound {
     opl: Arc<Mutex<OPL>>,
     mix_config: Arc<Mutex<DigiMixConfig>>,
     rt: Arc<Runtime>,
+    sound_playing: Arc<Mutex<Option<SoundName>>>,
 }
 
 #[cfg(feature = "web")]
@@ -106,6 +107,7 @@ pub fn startup(rt: Arc<Runtime>) -> Result<Sound, String> {
         mix_config: Arc::new(Mutex::new(mix_config)),
         modes: default_modes(),
         rt,
+        sound_playing: Arc::new(Mutex::new(None)),
     })
 }
 
@@ -116,6 +118,11 @@ pub fn startup(_: Arc<Runtime>) -> Result<Sound, String> {
 
 #[cfg(feature = "sdl")]
 impl Sound {
+    pub fn is_sound_playing(&mut self) -> Option<SoundName> {
+        let playing_mon = self.sound_playing.lock().unwrap();
+        *playing_mon
+    }
+
     pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) {
         let mode_mon = self.modes.lock().unwrap();
         let may_digi_sound = assets.digi_sounds.get(&sound);
@@ -123,13 +130,22 @@ impl Sound {
             let digi_sound = may_digi_sound.expect("some digi sound");
             let data_clone = digi_sound.chunk.clone();
             let channel = self.get_channel_for_digi(digi_sound.channel);
+            let playing_mutex = self.sound_playing.clone();
             self.rt.spawn_blocking(move || {
                 let chunk = mixer::Chunk::from_raw_buffer(data_clone).expect("chunk");
+                {
+                    let mut m = playing_mutex.lock().unwrap();
+                    *m = Some(sound);
+                }
+
                 channel.play(&chunk, 0).expect("play digi sound");
                 // TODO inefficient. Only exists to keep the chunk referenced and not collected
                 // Real fix would be to make Chunk in SDL sync so that this works properly and
                 // the chunk can be prepared in the digi sound setup.
                 while channel.is_playing() {}
+
+                let mut m = playing_mutex.lock().unwrap();
+                *m = None
             });
         } else {
             if mode_mon.sound == SoundMode::AdLib {
@@ -283,6 +299,10 @@ fn map_audio_format(format: mixer::AudioFormat) -> AudioFormat {
 
 #[cfg(feature = "web")]
 impl Sound {
+    pub fn is_sound_playing(&mut self) -> Option<SoundName> {
+        todo!("impl is_sound_playing for web");
+    }
+
     pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) {
         todo!("impl play sound web");
     }
