@@ -1,4 +1,8 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    sync::{Arc, Mutex},
+    thread::sleep,
+    time::Duration,
+};
 
 use tokio::runtime::Runtime;
 
@@ -142,7 +146,9 @@ impl Sound {
                 // TODO inefficient. Only exists to keep the chunk referenced and not collected
                 // Real fix would be to make Chunk in SDL sync so that this works properly and
                 // the chunk can be prepared in the digi sound setup.
-                while channel.is_playing() {}
+                while channel.is_playing() {
+                    sleep(Duration::from_millis(1));
+                }
 
                 let mut m = playing_mutex.lock().unwrap();
                 *m = None
