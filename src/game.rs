@@ -21,7 +21,8 @@ use crate::inter::{check_highscore, level_completed, preload_graphics, victory};
 use crate::loader::Loader;
 use crate::menu::{MenuState, SaveLoadGame};
 use crate::play::{
-    ProjectionConfig, SONGS, draw_play_screen, finish_palette_shifts, new_control_state, play_loop,
+    ProjectionConfig, draw_play_screen, finish_palette_shifts, new_control_state, play_loop,
+    start_music,
 };
 use crate::sd::Sound;
 use crate::user::HighScore;
@@ -74,8 +75,7 @@ pub async fn game_loop(
 
         win_state.in_game = true;
 
-        let track = SONGS[game_state.map_on + game_state.episode * 10];
-        sound.play_music(track, assets, loader);
+        start_music(game_state, sound, assets, loader);
 
         if !game_state.died {
             preload_graphics(ticker, iw_config, &game_state, &prj, input, rdr).await;

@@ -796,8 +796,13 @@ async fn check_keys(
         win_state.set_font_color(0, 15);
         input.clear_keys_down();
         draw_play_screen(game_state, rdr, &update.projection_config).await;
-        //TODO stargame and loadedgame handling
-        rdr.fade_in().await;
+        if !game_state.start_game && !game_state.loaded_game {
+            rdr.fade_in().await;
+            start_music(game_state, sound, assets, loader);
+        }
+
+        //TODO loadedgame special handling here
+
         return update;
     }
 
@@ -992,4 +997,14 @@ pub async fn finish_palette_shifts(game_state: &mut GameState, vga: &VGA) {
         game_state.pal_shifted = false;
         set_palette(vga, &GAMEPAL);
     }
+}
+
+pub fn start_music(
+    game_state: &mut GameState,
+    sound: &mut Sound,
+    assets: &Assets,
+    loader: &dyn Loader,
+) {
+    let track = SONGS[game_state.map_on + game_state.episode * 10];
+    sound.play_music(track, assets, loader);
 }

@@ -4,7 +4,7 @@ use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::map::{MapFileType, MapSegs, MapType};
 use crate::play::ProjectionConfig;
 use crate::sd::Sound;
-use crate::vga_render::{VGARenderer, PAGE_1_START, PAGE_2_START, PAGE_3_START};
+use crate::vga_render::{PAGE_1_START, PAGE_2_START, PAGE_3_START, VGARenderer};
 use opl::AdlSound;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -313,6 +313,7 @@ pub struct LevelRatio {
 /// State across the whole game
 pub struct GameState {
     pub loaded_game: bool,
+    pub start_game: bool,
 
     pub died: bool,
     pub difficulty: Difficulty,
@@ -386,6 +387,7 @@ pub fn new_game_state() -> GameState {
 
     GameState {
         loaded_game: false,
+        start_game: false,
         died: false,
         map_on: 0,
         difficulty: Difficulty::Hard,
