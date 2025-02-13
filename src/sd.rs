@@ -150,9 +150,15 @@ impl Sound {
         let offset = assets.audio_headers[variant.start_music + trackno];
         let len = assets.audio_headers[variant.start_music + trackno + 1] - offset;
 
-        let track_data = loader
-            .load_wolf_file_slice(WolfFile::AudioData, (offset + 2) as u64, (len - 2) as usize)
+        //read the full chunk with size bytes at the beginning and tags at the end
+        let track_chunk = loader
+            .load_wolf_file_slice(WolfFile::AudioData, offset as u64, len as usize)
             .expect("load track data");
+
+        let track_size = u16::from_le_bytes(track_chunk[0..2].try_into().unwrap()) as usize;
+
+        let mut track_data = vec![0; track_size];
+        track_data.copy_from_slice(&track_chunk[2..(track_size + 2)]);
 
         let mut opl_mon = self.opl.lock().unwrap();
         opl_mon.play_imf(track_data).expect("play imf")
