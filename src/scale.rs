@@ -4,7 +4,7 @@ mod scale_test;
 
 use crate::gamedata::{SpriteData, SpritePost};
 use crate::play::ProjectionConfig;
-use crate::vga_render::{VGARenderer, SCREENBWIDE};
+use crate::vga_render::{SCREENBWIDE, VGARenderer};
 
 pub static MAP_MASKS_1: [u8; 4 * 8] = [
     1, 3, 7, 15, 15, 15, 15, 15, 2, 6, 14, 14, 14, 14, 14, 14, 4, 12, 12, 12, 12, 12, 12, 12, 8, 8,

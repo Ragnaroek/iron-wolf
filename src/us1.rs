@@ -3,9 +3,9 @@ use vga::input::NumCode;
 use crate::assets::Font;
 use crate::def::WindowState;
 use crate::input::Input;
-use crate::time::{Ticker, TICK_BASE};
+use crate::time::{TICK_BASE, Ticker};
 use crate::vga_render::VGARenderer;
-use crate::vh::{draw_tile_8, WHITE};
+use crate::vh::{WHITE, draw_tile_8};
 
 const MAX_STRING: usize = 128; // Maximum input string size
 

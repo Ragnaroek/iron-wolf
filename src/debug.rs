@@ -98,11 +98,7 @@ pub fn debug_spot_vis(level_state: &LevelState, x: usize, y: usize, width: usize
         print!("{:>3}|", y + h);
         for w in 0..width {
             let vis = level_state.spotvis[x + w][y + h];
-            if vis {
-                print!("   |")
-            } else {
-                print!("###|")
-            }
+            if vis { print!("   |") } else { print!("###|") }
         }
         println!();
     }

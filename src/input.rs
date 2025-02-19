@@ -2,7 +2,7 @@ use vga::input::{self, NumCode};
 
 use std::sync::{Arc, Mutex};
 
-use super::time::{get_count, TimeCount};
+use super::time::{TimeCount, get_count};
 
 #[derive(PartialEq)]
 pub enum ControlDirection {

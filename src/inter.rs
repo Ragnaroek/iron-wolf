@@ -1,13 +1,13 @@
 use std::ascii::Char;
 
 use crate::agent::{draw_level, draw_score, give_points};
-use crate::assets::{num_pic, GraphicNum, Music};
-use crate::config::{write_wolf_config, WolfConfig, MAX_HIGH_NAME, MAX_SCORES};
-use crate::def::{Assets, Difficulty, GameState, IWConfig, WindowState, STATUS_LINES};
+use crate::assets::{GraphicNum, Music, num_pic};
+use crate::config::{MAX_HIGH_NAME, MAX_SCORES, WolfConfig, write_wolf_config};
+use crate::def::{Assets, Difficulty, GameState, IWConfig, STATUS_LINES, WindowState};
 use crate::input::Input;
 use crate::loader::Loader;
-use crate::menu::{clear_ms_screen, draw_stripes, BORDER_COLOR, READ_HCOLOR};
-use crate::play::{draw_all_play_border, ProjectionConfig};
+use crate::menu::{BORDER_COLOR, READ_HCOLOR, clear_ms_screen, draw_stripes};
+use crate::play::{ProjectionConfig, draw_all_play_border};
 use crate::sd::Sound;
 use crate::start::quit;
 use crate::text::end_text;

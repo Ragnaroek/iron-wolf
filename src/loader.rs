@@ -1,4 +1,4 @@
-use crate::assets::{file_name, WolfFile, WolfVariant};
+use crate::assets::{WolfFile, WolfVariant, file_name};
 use crate::patch::{self, PatchConfig};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};

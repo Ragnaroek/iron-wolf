@@ -3,13 +3,13 @@
 mod act2_test;
 
 use crate::act1::open_door;
-use crate::agent::{take_damage, S_ATTACK, S_PLAYER};
+use crate::agent::{S_ATTACK, S_PLAYER, take_damage};
 use crate::assets::SoundName;
 use crate::def::{
-    ActiveType, Assets, At, ClassType, ControlState, Difficulty, DirType, DoorAction, EnemyType,
-    GameState, LevelState, ObjKey, ObjType, PlayState, Sprite, StateType, AMBUSH_TILE, FL_AMBUSH,
-    FL_SHOOTABLE, FL_VISABLE, ICON_ARROWS, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, RUN_SPEED,
-    SPD_DOG, SPD_PATROL, TILEGLOBAL, TILESHIFT,
+    AMBUSH_TILE, ActiveType, Assets, At, ClassType, ControlState, Difficulty, DirType, DoorAction,
+    EnemyType, FL_AMBUSH, FL_SHOOTABLE, FL_VISABLE, GameState, ICON_ARROWS, LevelState, MAP_SIZE,
+    MIN_ACTOR_DIST, NUM_ENEMIES, ObjKey, ObjType, PlayState, RUN_SPEED, SPD_DOG, SPD_PATROL,
+    Sprite, StateType, TILEGLOBAL, TILESHIFT,
 };
 use crate::game::AREATILE;
 use crate::map::MapSegs;

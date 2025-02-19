@@ -11,9 +11,9 @@ use crate::act2::{
 use crate::agent::{give_points, take_damage};
 use crate::assets::SoundName;
 use crate::def::{
-    Assets, At, ClassType, DirType, GameState, LevelState, ObjKey, ObjType, StateType, StaticKind,
-    WeaponType, FL_AMBUSH, FL_ATTACKMODE, FL_FIRSTATTACK, FL_NONMARK, FL_SHOOTABLE, MAP_SIZE,
-    MIN_ACTOR_DIST, SPD_PATROL, TILEGLOBAL, TILESHIFT, UNSIGNEDSHIFT,
+    Assets, At, ClassType, DirType, FL_AMBUSH, FL_ATTACKMODE, FL_FIRSTATTACK, FL_NONMARK,
+    FL_SHOOTABLE, GameState, LevelState, MAP_SIZE, MIN_ACTOR_DIST, ObjKey, ObjType, SPD_PATROL,
+    StateType, StaticKind, TILEGLOBAL, TILESHIFT, UNSIGNEDSHIFT, WeaponType,
 };
 use crate::fixed::new_fixed_i32;
 use crate::game::AREATILE;

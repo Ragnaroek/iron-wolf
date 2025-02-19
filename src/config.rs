@@ -10,7 +10,7 @@ use super::def::IWConfig;
 use super::user;
 use super::util;
 
-use vga::input::{to_numcode, NumCode};
+use vga::input::{NumCode, to_numcode};
 
 pub const IW_CONFIG_FILE_NAME: &str = "iw_config.toml";
 pub const CONFIG_DATA: &'static str = "CONFIG.WL6";

@@ -5,7 +5,7 @@ use std::str;
 
 use opl::{AdlSound, Instrument};
 
-use crate::assets::{SoundName, DIGI_MAP};
+use crate::assets::{DIGI_MAP, SoundName};
 use crate::def::DigiSound;
 use crate::sd::{DigiInfo, Sound};
 use crate::{assets::WolfVariant, util};

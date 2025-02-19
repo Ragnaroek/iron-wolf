@@ -8,13 +8,13 @@ use tracing::instrument;
 use crate::act2::S_DEATH_CAM;
 use crate::agent::get_bonus;
 use crate::def::{
-    ActiveType, Assets, ClassType, DoorLock, DoorType, GameState, Level, LevelState, ObjType,
-    Sprite, StaticType, VisObj, ANGLES, DIR_ANGLE, FINE_ANGLES, FL_BONUS, FL_VISABLE, FOCAL_LENGTH,
-    MAP_SIZE, MIN_DIST, NUM_WEAPONS, TILEGLOBAL, TILESHIFT,
+    ANGLES, ActiveType, Assets, ClassType, DIR_ANGLE, DoorLock, DoorType, FINE_ANGLES, FL_BONUS,
+    FL_VISABLE, FOCAL_LENGTH, GameState, Level, LevelState, MAP_SIZE, MIN_DIST, NUM_WEAPONS,
+    ObjType, Sprite, StaticType, TILEGLOBAL, TILESHIFT, VisObj,
 };
-use crate::fixed::{fixed_by_frac, new_fixed_i32, Fixed};
+use crate::fixed::{Fixed, fixed_by_frac, new_fixed_i32};
 use crate::play::ProjectionConfig;
-use crate::scale::{scale_shape, simple_scale_shape, MAP_MASKS_1};
+use crate::scale::{MAP_MASKS_1, scale_shape, simple_scale_shape};
 use crate::sd::Sound;
 use crate::time::{self, Ticker};
 use crate::vga_render::{self, VGARenderer};
@@ -471,14 +471,14 @@ impl RayCast {
                     DirJmp::HorizEntry
                 } else {
                     DirJmp::VertEntry
-                }
+                };
             }
             Op::JGE => {
                 return if self.dx >= self.bp {
                     DirJmp::HorizEntry
                 } else {
                     DirJmp::VertEntry
-                }
+                };
             }
         }
     }
@@ -490,14 +490,14 @@ impl RayCast {
                     DirJmp::VertEntry
                 } else {
                     DirJmp::HorizEntry
-                }
+                };
             }
             Op::JGE => {
                 return if self.cx >= self.bx {
                     DirJmp::VertEntry
                 } else {
                     DirJmp::HorizEntry
-                }
+                };
             }
         }
     }
@@ -931,19 +931,11 @@ pub fn hit_vert_push_wall(
 }
 
 fn horiz_wall(i: usize) -> usize {
-    if i == 0 {
-        0
-    } else {
-        (i - 1) * 2
-    }
+    if i == 0 { 0 } else { (i - 1) * 2 }
 }
 
 fn vert_wall(i: usize) -> usize {
-    if i == 0 {
-        0
-    } else {
-        (i - 1) * 2 + 1
-    }
+    if i == 0 { 0 } else { (i - 1) * 2 + 1 }
 }
 
 #[cfg_attr(feature = "tracing", instrument(skip_all))]
@@ -1126,8 +1118,8 @@ fn transform_actor(consts: &RayCastConsts, prj: &ProjectionConfig, obj: &mut Obj
     let gxt = fixed_by_frac(gx, consts.view_cos);
     let gyt = fixed_by_frac(gy, consts.view_sin);
     let nx = gxt.to_i32() - gyt.to_i32() - ACTOR_SIZE; // fudge the shape forward a bit, because
-                                                       // the midpoint could put parts of the shape
-                                                       // into an adjacent wall
+    // the midpoint could put parts of the shape
+    // into an adjacent wall
     let gxt = fixed_by_frac(gx, consts.view_sin);
     let gyt = fixed_by_frac(gy, consts.view_cos);
     let ny = gyt.to_i32() + gxt.to_i32();

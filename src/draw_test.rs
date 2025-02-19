@@ -1,9 +1,9 @@
 use crate::agent::S_PLAYER;
 use crate::def::{
-    ClassType, DirType, DoorAction, DoorLock, DoorType, Level, LevelState, ObjType, FL_NEVERMARK,
-    MAP_SIZE,
+    ClassType, DirType, DoorAction, DoorLock, DoorType, FL_NEVERMARK, Level, LevelState, MAP_SIZE,
+    ObjType,
 };
-use crate::draw::{calc_height, init_ray_cast, init_ray_cast_consts, Hit, Op};
+use crate::draw::{Hit, Op, calc_height, init_ray_cast, init_ray_cast_consts};
 use crate::fixed::new_fixed_i32;
 use crate::map::MapSegs;
 use crate::start::new_view_size;

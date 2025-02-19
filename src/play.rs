@@ -489,7 +489,6 @@ async fn handle_save_load(
     if let Some(what) = save_load {
         match what {
             SaveLoadGame::Load(which) => {
-                game_state.loaded_game = true;
                 load_the_game(
                     level_state,
                     game_state,
@@ -801,7 +800,11 @@ async fn check_keys(
             start_music(game_state, sound, assets, loader);
         }
 
-        //TODO loadedgame special handling here
+        if game_state.loaded_game {
+            game_state.play_state = PlayState::Abort;
+        }
+
+        //TODO reset lasttimecount and doe some mouse present check
 
         return update;
     }

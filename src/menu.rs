@@ -1,11 +1,11 @@
 use std::{ascii, collections::HashMap, str};
 use vga::input::NumCode;
 
-use crate::assets::{is_sod, GraphicNum, Music, SoundName, WolfVariant};
-use crate::config::{write_wolf_config, WolfConfig};
+use crate::assets::{GraphicNum, Music, SoundName, WolfVariant, is_sod};
+use crate::config::{WolfConfig, write_wolf_config};
 use crate::def::{Assets, Difficulty, GameState, WindowState};
-use crate::draw::{init_ray_cast, RayCast};
-use crate::input::{read_control, ControlDirection, ControlInfo, Input};
+use crate::draw::{RayCast, init_ray_cast};
+use crate::input::{ControlDirection, ControlInfo, Input, read_control};
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::play::ProjectionConfig;
@@ -630,7 +630,8 @@ pub async fn control_panel(
                     }
                     MainMenuItem::LoadGame => {
                         cp_load_game(
-                            ticker, rdr, sound, assets, input, win_state, menu_state, loader,
+                            ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
+                            loader,
                         )
                         .await
                     }
@@ -677,6 +678,7 @@ pub async fn control_panel(
                     menu_stack.pop();
                 }
                 MenuHandle::BackToGameLoop(save_load) => {
+                    rdr.fade_out().await;
                     return GameStateUpdate::with_save_load(prj_return, rc_return, save_load);
                 }
                 _ => { /* ignore */ }
@@ -924,6 +926,7 @@ async fn draw_sound_menu(
 
 async fn cp_load_game(
     ticker: &Ticker,
+    game_state: &mut GameState,
     rdr: &VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
@@ -950,6 +953,7 @@ async fn cp_load_game(
         if let MenuHandle::Selected(which) = load_handle {
             if state[which].available {
                 draw_ls_action(rdr, win_state, false);
+                game_state.loaded_game = true;
                 sound.play_sound(SoundName::SHOOT, assets);
                 return MenuHandle::BackToGameLoop(Some(SaveLoadGame::Load(which)));
             } // else: loop back to handle_menu

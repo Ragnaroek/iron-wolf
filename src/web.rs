@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use wasm_bindgen::prelude::*;
 
-use crate::assets::{self, file_name, WolfFile, WolfVariant};
+use crate::assets::{self, WolfFile, WolfVariant, file_name};
 use crate::config;
 use crate::gamedata;
 use crate::loader::Loader;

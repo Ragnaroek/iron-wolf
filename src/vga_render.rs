@@ -1,15 +1,15 @@
 #[cfg(feature = "tracing")]
 use tracing::instrument;
 
-use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
 
 use vga::{CRTReg, SCReg, VGA};
 
 use crate::assets::{Font, TileData, WolfVariant};
 use crate::time;
 
-use super::assets::{Graphic, GraphicNum, GAMEPAL};
+use super::assets::{GAMEPAL, Graphic, GraphicNum};
 use super::vl;
 
 pub const SCREENBWIDE: usize = 80;

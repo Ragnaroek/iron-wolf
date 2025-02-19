@@ -44,13 +44,15 @@ pub fn new_ticker(rt: Arc<Runtime>) -> Ticker {
     let ref_time = Arc::new(Mutex::new(Instant::now()));
     let ref_time_t = ref_time.clone();
 
-    rt.spawn_blocking(move || loop {
-        std::thread::sleep(TICK_SAMPLE_RATE);
-        let ref_time = ref_time_t.lock().unwrap();
-        let elapsed = ref_time.elapsed().as_millis_f64();
-        drop(ref_time);
-        let tics = (elapsed / TARGET_MILLIS) as u64;
-        time_t.store(tics, std::sync::atomic::Ordering::Relaxed);
+    rt.spawn_blocking(move || {
+        loop {
+            std::thread::sleep(TICK_SAMPLE_RATE);
+            let ref_time = ref_time_t.lock().unwrap();
+            let elapsed = ref_time.elapsed().as_millis_f64();
+            drop(ref_time);
+            let tics = (elapsed / TARGET_MILLIS) as u64;
+            time_t.store(tics, std::sync::atomic::Ordering::Relaxed);
+        }
     });
 
     Ticker {

@@ -1,6 +1,6 @@
 use vga::input::NumCode;
 
-use crate::assets::{GraphicNum, GAMEPAL};
+use crate::assets::{GAMEPAL, GraphicNum};
 use crate::start::quit;
 use crate::us1::{draw_string, measure_string};
 use crate::vl;

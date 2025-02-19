@@ -5,7 +5,7 @@ use vga::VGA;
 use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{spawn_boss, spawn_dead_guard, spawn_patrol, spawn_stand};
 use crate::agent::{
-    draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_weapon,
+    draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_score, draw_weapon,
     spawn_player, thrust_player,
 };
 use crate::assets::load_map_from_assets;
@@ -68,10 +68,29 @@ pub async fn game_loop(
 
     draw_play_screen(&game_state, rdr, &prj_param).await;
 
+    let mut level_state = setup_game_level(game_state, assets).unwrap();
+
     let mut prj = prj_param;
     let mut rc = rc_param;
+    let mut restart = false;
     'game_loop: loop {
-        let mut level_state = setup_game_level(game_state, assets).unwrap();
+        if restart {
+            restart = false;
+            draw_play_screen(game_state, rdr, &prj).await;
+            game_state.died = false;
+        }
+
+        if !game_state.loaded_game {
+            game_state.score = game_state.old_score;
+        }
+        draw_score(game_state, rdr);
+
+        game_state.start_game = false;
+        if game_state.loaded_game {
+            game_state.loaded_game = false;
+        } else {
+            level_state = setup_game_level(game_state, assets).unwrap();
+        }
 
         win_state.in_game = true;
 
@@ -113,6 +132,11 @@ pub async fn game_loop(
         rc = rc_play;
 
         win_state.in_game = false;
+
+        if game_state.start_game || game_state.loaded_game {
+            restart = true;
+            continue;
+        }
 
         match game_state.play_state {
             PlayState::Completed | PlayState::SecretLevel => {
@@ -195,8 +219,8 @@ pub async fn game_loop(
 
                 return (prj, rc);
             }
-            PlayState::Warped => {
-                // do nothing
+            PlayState::Warped | PlayState::Abort => {
+                // do nothing and loop around the game loop
             }
             _ => panic!("not implemented end with state {:?}", game_state.play_state),
         }

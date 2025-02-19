@@ -1,8 +1,8 @@
 use crate::{
     assets::SoundName,
     def::{
-        Assets, At, Dir, DoorAction, DoorLock, DoorType, GameState, LevelState, Sprite, StaticInfo,
-        StaticKind, StaticType, FL_BONUS, MAP_SIZE, MAX_STATS, MIN_DIST, NUM_AREAS, TILESHIFT,
+        Assets, At, Dir, DoorAction, DoorLock, DoorType, FL_BONUS, GameState, LevelState, MAP_SIZE,
+        MAX_STATS, MIN_DIST, NUM_AREAS, Sprite, StaticInfo, StaticKind, StaticType, TILESHIFT,
     },
     game::AREATILE,
     map::MapSegs,
@@ -665,7 +665,7 @@ pub fn push_wall(
     game_state.push_wall_pos = 0;
     level_state.level.tile_map[check_x][check_y] |= 0xC0;
     level_state.level.info_map[check_x][check_y] = 0; // remove P tile info
-                                                      //TODO SD_PlaySound(PUSHWALLSND)
+    //TODO SD_PlaySound(PUSHWALLSND)
 }
 
 pub fn move_push_walls(level_state: &mut LevelState, game_state: &mut GameState, tics: u64) {
