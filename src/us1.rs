@@ -257,7 +257,7 @@ pub fn line_input(
             let len = input_str.len();
             let (w, _) = measure_string(font, &input_str);
 
-            if !c.is_whitespace()
+            if is_print(c)
                 && len < MAX_STRING
                 && ((max_chars == 0) || (len < max_chars))
                 && ((max_width == 0) || (w < max_width))
@@ -306,6 +306,10 @@ pub fn line_input(
     input.clear_keys_down();
 
     return (input_str, !result);
+}
+
+fn is_print(c: char) -> bool {
+    c == ' ' || !c.is_whitespace()
 }
 
 struct Cursor {
