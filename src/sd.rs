@@ -127,8 +127,22 @@ impl Sound {
         *playing_mon
     }
 
-    pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) {
+    pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
         let mode_mon = self.modes.lock().unwrap();
+
+        // check priority
+        {
+            let playing_mon = self.sound_playing.lock().unwrap();
+            if playing_mon.is_some() {
+                let playing_prio =
+                    assets.audio_sounds[playing_mon.expect("playing sound") as usize].priority;
+                let new_sound_prio = assets.audio_sounds[sound as usize].priority;
+                if new_sound_prio < playing_prio {
+                    return false;
+                }
+            }
+        }
+
         let may_digi_sound = assets.digi_sounds.get(&sound);
         if may_digi_sound.is_some() && mode_mon.digi == DigiMode::SoundBlaster {
             let digi_sound = may_digi_sound.expect("some digi sound");
@@ -160,6 +174,8 @@ impl Sound {
                 mon.play_adl(sound.clone()).expect("play sound file");
             }
         }
+
+        true
     }
 
     pub fn play_music(&mut self, track: Music, assets: &Assets, loader: &dyn Loader) {
@@ -309,7 +325,7 @@ impl Sound {
         todo!("impl is_sound_playing for web");
     }
 
-    pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) {
+    pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
         todo!("impl play sound web");
     }
 

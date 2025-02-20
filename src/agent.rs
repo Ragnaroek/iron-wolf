@@ -306,9 +306,15 @@ fn gun_attack(
     assets: &Assets,
 ) {
     match game_state.weapon {
-        Some(WeaponType::Pistol) => sound.play_sound(SoundName::ATKPISTOL, assets),
-        Some(WeaponType::MachineGun) => sound.play_sound(SoundName::ATKMACHINEGUN, assets),
-        Some(WeaponType::ChainGun) => sound.play_sound(SoundName::ATKGATLING, assets),
+        Some(WeaponType::Pistol) => {
+            sound.play_sound(SoundName::ATKPISTOL, assets);
+        }
+        Some(WeaponType::MachineGun) => {
+            sound.play_sound(SoundName::ATKMACHINEGUN, assets);
+        }
+        Some(WeaponType::ChainGun) => {
+            sound.play_sound(SoundName::ATKGATLING, assets);
+        }
         _ => { /* ignore anything else */ }
     }
     game_state.made_noise = true;

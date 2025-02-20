@@ -1909,14 +1909,24 @@ fn t_shoot(
 
     let obj = level_state.obj(k);
     match obj.class {
-        ClassType::SS => sound.play_sound(SoundName::SSFIRE, assets),
-        ClassType::Gift | ClassType::Fat => sound.play_sound(SoundName::MISSILEFIRE, assets),
-        ClassType::MechaHitler | ClassType::RealHitler | ClassType::Boss => {
-            sound.play_sound(SoundName::BOSSFIRE, assets)
+        ClassType::SS => {
+            sound.play_sound(SoundName::SSFIRE, assets);
         }
-        ClassType::Schabb => sound.play_sound(SoundName::SCHABBSTHROW, assets),
-        ClassType::Fake => sound.play_sound(SoundName::FLAMETHROWER, assets),
-        _ => sound.play_sound(SoundName::NAZIFIRE, assets),
+        ClassType::Gift | ClassType::Fat => {
+            sound.play_sound(SoundName::MISSILEFIRE, assets);
+        }
+        ClassType::MechaHitler | ClassType::RealHitler | ClassType::Boss => {
+            sound.play_sound(SoundName::BOSSFIRE, assets);
+        }
+        ClassType::Schabb => {
+            sound.play_sound(SoundName::SCHABBSTHROW, assets);
+        }
+        ClassType::Fake => {
+            sound.play_sound(SoundName::FLAMETHROWER, assets);
+        }
+        _ => {
+            sound.play_sound(SoundName::NAZIFIRE, assets);
+        }
     }
 }
 
@@ -1933,9 +1943,15 @@ fn a_death_scream(
 ) {
     let obj = level_state.obj(k);
     match obj.class {
-        ClassType::Mutant => sound.play_sound(SoundName::AHHHG, assets),
-        ClassType::SS => sound.play_sound(SoundName::LEBEN, assets),
-        ClassType::Boss => sound.play_sound(SoundName::MUTTI, assets),
+        ClassType::Mutant => {
+            sound.play_sound(SoundName::AHHHG, assets);
+        }
+        ClassType::SS => {
+            sound.play_sound(SoundName::LEBEN, assets);
+        }
+        ClassType::Boss => {
+            sound.play_sound(SoundName::MUTTI, assets);
+        }
         _ => todo!("death scream missing: {:?}", obj.class),
     }
 }
