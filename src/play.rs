@@ -458,6 +458,10 @@ fn update_game_state(
 ) {
     poll_controls(control_state, tics, input);
 
+    // actor thinking
+
+    game_state.made_noise = false;
+
     move_doors(level_state, game_state, sound, assets, tics);
     move_push_walls(level_state, game_state, tics);
 

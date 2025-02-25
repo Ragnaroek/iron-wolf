@@ -697,6 +697,7 @@ pub fn move_obj(
 pub fn sight_player(
     k: ObjKey,
     level_state: &mut LevelState,
+    game_state: &mut GameState,
     sound: &mut Sound,
     assets: &Assets,
     tics: u64,
@@ -723,8 +724,7 @@ pub fn sight_player(
             }
             level_state.update_obj(k, |obj| obj.flags &= !FL_AMBUSH);
         } else {
-            // TODO impl noise check!
-            if !check_sight(k, level_state) {
+            if !game_state.made_noise && !check_sight(k, level_state) {
                 return false;
             }
         }

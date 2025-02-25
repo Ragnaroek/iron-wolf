@@ -1352,7 +1352,7 @@ fn t_path(
     _: &ProjectionConfig,
     assets: &Assets,
 ) {
-    if sight_player(k, level_state, sound, assets, tics) {
+    if sight_player(k, level_state, game_state, sound, assets, tics) {
         return;
     }
 
@@ -1546,14 +1546,14 @@ fn t_stand(
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
-    _: &mut GameState,
+    game_state: &mut GameState,
     sound: &mut Sound,
     _: &VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
 ) {
-    sight_player(k, level_state, sound, assets, tics);
+    sight_player(k, level_state, game_state, sound, assets, tics);
 }
 
 fn t_chase(
