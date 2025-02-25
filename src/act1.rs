@@ -696,9 +696,7 @@ pub fn move_push_walls(level_state: &mut LevelState, game_state: &mut GameState,
             match game_state.push_wall_dir {
                 Dir::North => {
                     game_state.push_wall_y -= 1;
-                    if level_state.actor_at[game_state.push_wall_x][game_state.push_wall_y - 1]
-                        != At::Nothing
-                    {
+                    if check_actor_at(level_state, game_state, 0, -1) {
                         game_state.push_wall_state = 0;
                         return;
                     }
@@ -709,9 +707,7 @@ pub fn move_push_walls(level_state: &mut LevelState, game_state: &mut GameState,
                 }
                 Dir::East => {
                     game_state.push_wall_x += 1;
-                    if level_state.actor_at[game_state.push_wall_x + 1][game_state.push_wall_y]
-                        != At::Nothing
-                    {
+                    if check_actor_at(level_state, game_state, 1, 0) {
                         game_state.push_wall_state = 0;
                         return;
                     }
@@ -722,9 +718,7 @@ pub fn move_push_walls(level_state: &mut LevelState, game_state: &mut GameState,
                 }
                 Dir::South => {
                     game_state.push_wall_y += 1;
-                    if level_state.actor_at[game_state.push_wall_x][game_state.push_wall_y + 1]
-                        != At::Nothing
-                    {
+                    if check_actor_at(level_state, game_state, 0, 1) {
                         game_state.push_wall_state = 0;
                         return;
                     }
@@ -735,9 +729,7 @@ pub fn move_push_walls(level_state: &mut LevelState, game_state: &mut GameState,
                 }
                 Dir::West => {
                     game_state.push_wall_x -= 1;
-                    if level_state.actor_at[game_state.push_wall_x - 1][game_state.push_wall_y]
-                        != At::Nothing
-                    {
+                    if check_actor_at(level_state, game_state, -1, 0) {
                         game_state.push_wall_state = 0;
                         return;
                     }
@@ -752,4 +744,20 @@ pub fn move_push_walls(level_state: &mut LevelState, game_state: &mut GameState,
         }
     }
     game_state.push_wall_pos = ((game_state.push_wall_state / 2) & 63) as i32;
+}
+
+fn check_actor_at(
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    x_delta: isize,
+    y_delta: isize,
+) -> bool {
+    let px = game_state.push_wall_x.strict_add_signed(x_delta);
+    let py = game_state.push_wall_y.strict_add_signed(y_delta);
+
+    if px >= MAP_SIZE || py >= MAP_SIZE {
+        return true;
+    }
+
+    level_state.actor_at[px][py] != At::Nothing
 }
