@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::act1::{operate_door, push_wall};
 use crate::act2::spawn_bj_victory;
 use crate::assets::{GraphicNum, SoundName, face_pic, n_pic, weapon_pic};
@@ -511,13 +513,19 @@ fn cmd_use(
         // use elevator
         control_state.set_button_held(Button::Use, true);
 
-        if level_state.level.tile_map[player.tilex][player.tiley] == ALT_ELEVATOR_TILE {
+        if level_state.level.map_segs.segs[0][player.tiley * MAP_SIZE + player.tilex]
+            == ALT_ELEVATOR_TILE
+        {
             game_state.play_state = PlayState::SecretLevel;
         } else {
             game_state.play_state = PlayState::Completed;
         }
         level_state.level.tile_map[check_x][check_y] += 1; // flip switch [to animate the lever to move up]
-        // TODO SD_PlaySound(LEVELDONESND) && WaitSoundDone
+
+        sound.play_sound(SoundName::LEVELDONE, assets);
+        while sound.is_sound_playing().is_some() {
+            std::thread::sleep(Duration::from_millis(1));
+        }
     }
 
     if !control_state.button_held(Button::Use) && doornum & 0x80 != 0 {

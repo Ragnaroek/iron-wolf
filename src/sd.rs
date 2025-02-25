@@ -132,7 +132,7 @@ impl Sound {
 
         // check priority
         {
-            let playing_mon = self.sound_playing.lock().unwrap();
+            let mut playing_mon = self.sound_playing.lock().unwrap();
             if playing_mon.is_some() {
                 let playing_prio =
                     assets.audio_sounds[playing_mon.expect("playing sound") as usize].priority;
@@ -141,6 +141,8 @@ impl Sound {
                     return false;
                 }
             }
+
+            *playing_mon = Some(sound) // This sound _will_ be played
         }
 
         let may_digi_sound = assets.digi_sounds.get(&sound);
@@ -151,10 +153,6 @@ impl Sound {
             let playing_mutex = self.sound_playing.clone();
             self.rt.spawn_blocking(move || {
                 let chunk = mixer::Chunk::from_raw_buffer(data_clone).expect("chunk");
-                {
-                    let mut m = playing_mutex.lock().unwrap();
-                    *m = Some(sound);
-                }
 
                 channel.play(&chunk, 0).expect("play digi sound");
                 // TODO inefficient. Only exists to keep the chunk referenced and not collected
@@ -169,9 +167,19 @@ impl Sound {
             });
         } else {
             if mode_mon.sound == SoundMode::AdLib {
-                let sound = &assets.audio_sounds[sound as usize];
-                let mut mon = self.opl.lock().unwrap();
-                mon.play_adl(sound.clone()).expect("play sound file");
+                let sound = assets.audio_sounds[sound as usize].clone();
+                let playing_mutex = self.sound_playing.clone();
+                let opl_mutex = self.opl.clone();
+                self.rt.spawn_blocking(move || {
+                    let mut mon = opl_mutex.lock().unwrap();
+                    mon.play_adl(sound).expect("play sound file");
+                    while mon.is_adl_playing().expect("playing state") {
+                        sleep(Duration::from_millis(1));
+                    }
+
+                    let mut m = playing_mutex.lock().unwrap();
+                    *m = None
+                });
             }
         }
 
