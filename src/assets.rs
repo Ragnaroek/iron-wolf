@@ -132,8 +132,8 @@ pub enum SoundName {
     SELECTWPN,     // 1
     SELECTITEM,    // 2
     HEARTBEAT,     // 3
-    MOVEGUN2,      // 4 !!placed
-    MOVEGUN1,      // 5 !!placed
+    MOVEGUN2,      // 4
+    MOVEGUN1,      // 5
     NOWAY,         // 6
     NAZIHITPLAYER, // 7
     SCHABBSTHROW,  // 8

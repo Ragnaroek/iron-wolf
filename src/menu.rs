@@ -769,6 +769,8 @@ async fn cp_new_game(
             rdr.fade_out().await;
             return episode_handle;
         }
+
+        // TODO Shareware support + hint messge how to order the game
     }
 }
 

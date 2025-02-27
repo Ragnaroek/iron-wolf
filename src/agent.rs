@@ -504,7 +504,15 @@ fn cmd_use(
     }
 
     if level_state.level.info_map[check_x][check_y] == PUSHABLE_TILE {
-        push_wall(level_state, game_state, check_x, check_y, dir);
+        push_wall(
+            level_state,
+            game_state,
+            sound,
+            assets,
+            check_x,
+            check_y,
+            dir,
+        );
         return;
     }
 

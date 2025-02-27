@@ -609,6 +609,8 @@ fn horiz_door_areas(level_state: &LevelState, tile_x: usize, tile_y: usize) -> (
 pub fn push_wall(
     level_state: &mut LevelState,
     game_state: &mut GameState,
+    sound: &mut Sound,
+    assets: &Assets,
     check_x: usize,
     check_y: usize,
     dir: Dir,
@@ -625,7 +627,7 @@ pub fn push_wall(
     match dir {
         Dir::North => {
             if level_state.actor_at[check_x][check_y - 1] != At::Nothing {
-                // TODO SD_PlaySound(NOWAYSND)
+                sound.play_sound(SoundName::NOWAY, assets);
                 return;
             }
             level_state.actor_at[check_x][check_y - 1] = At::Wall(old_tile);
@@ -633,7 +635,7 @@ pub fn push_wall(
         }
         Dir::East => {
             if level_state.actor_at[check_x + 1][check_y] != At::Nothing {
-                // TODO SD_PlaySound(NOWAYSND)
+                sound.play_sound(SoundName::NOWAY, assets);
                 return;
             }
             level_state.actor_at[check_x + 1][check_y] = At::Wall(old_tile);
@@ -641,7 +643,7 @@ pub fn push_wall(
         }
         Dir::South => {
             if level_state.actor_at[check_x][check_y + 1] != At::Nothing {
-                // TODO SD_PlaySound(NOWAYSND)
+                sound.play_sound(SoundName::NOWAY, assets);
                 return;
             }
             level_state.actor_at[check_x][check_y + 1] = At::Wall(old_tile);
@@ -649,7 +651,7 @@ pub fn push_wall(
         }
         Dir::West => {
             if level_state.actor_at[check_x - 1][check_y] != At::Nothing {
-                // TODO SD_PlaySound(NOWAYSND)
+                sound.play_sound(SoundName::NOWAY, assets);
                 return;
             }
             level_state.actor_at[check_x - 1][check_y] = At::Wall(old_tile);
@@ -665,7 +667,8 @@ pub fn push_wall(
     game_state.push_wall_pos = 0;
     level_state.level.tile_map[check_x][check_y] |= 0xC0;
     level_state.level.info_map[check_x][check_y] = 0; // remove P tile info
-    //TODO SD_PlaySound(PUSHWALLSND)
+
+    sound.play_sound(SoundName::PUSHWALL, assets);
 }
 
 pub fn move_push_walls(level_state: &mut LevelState, game_state: &mut GameState, tics: u64) {
