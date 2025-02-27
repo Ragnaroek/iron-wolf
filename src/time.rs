@@ -97,7 +97,7 @@ impl Ticker {
             let get_start = Instant::now();
             new_time = get_count(&self.time_count);
             get_times += Instant::now() - get_start;
-            tics = new_time - last_time_count;
+            tics = new_time.saturating_sub(last_time_count);
             if tics != 0 {
                 break;
             }
