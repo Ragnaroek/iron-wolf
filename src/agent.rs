@@ -6,9 +6,9 @@ use crate::assets::{GraphicNum, SoundName, face_pic, n_pic, weapon_pic};
 use crate::def::{
     ALT_ELEVATOR_TILE, ANGLES, ANGLES_I32, Assets, At, Button, ClassType, ControlState, Difficulty,
     Dir, DirType, ELEVATOR_TILE, EXIT_TILE, EXTRA_POINTS, FL_NEVERMARK, FL_SHOOTABLE, FL_VISABLE,
-    GameState, LevelState, MAP_SIZE, MIN_DIST, ObjKey, ObjType, PLAYER_SIZE, PUSHABLE_TILE,
-    PlayState, SCREENLOC, STATUS_LINES, Sprite, StateType, StaticKind, StaticType, TILEGLOBAL,
-    TILESHIFT, WeaponType,
+    GameState, LevelState, MAP_SIZE, MIN_ACTOR_DIST, MIN_DIST, ObjKey, ObjType, PLAYER_SIZE,
+    PUSHABLE_TILE, PlayState, SCREENLOC, STATUS_LINES, Sprite, StateType, StaticKind, StaticType,
+    TILEGLOBAL, TILESHIFT, WeaponType,
 };
 use crate::fixed::{fixed_by_frac, new_fixed_i32};
 use crate::game::AREATILE;
@@ -983,10 +983,10 @@ fn clip_move(
 fn try_move(k: ObjKey, level_state: &mut LevelState) -> bool {
     let ob = level_state.obj(k);
 
-    let xl = (ob.x - PLAYER_SIZE) >> TILESHIFT;
-    let yl = (ob.y - PLAYER_SIZE) >> TILESHIFT;
-    let xh = (ob.x + PLAYER_SIZE) >> TILESHIFT;
-    let yh = (ob.y + PLAYER_SIZE) >> TILESHIFT;
+    let mut xl = (ob.x - PLAYER_SIZE) >> TILESHIFT;
+    let mut yl = (ob.y - PLAYER_SIZE) >> TILESHIFT;
+    let mut xh = (ob.x + PLAYER_SIZE) >> TILESHIFT;
+    let mut yh = (ob.y + PLAYER_SIZE) >> TILESHIFT;
 
     // check for solid walls
     for y in yl..=yh {
@@ -997,7 +997,40 @@ fn try_move(k: ObjKey, level_state: &mut LevelState) -> bool {
         }
     }
 
-    // TODO check for actors
+    // check for actors
+
+    if yl > 0 {
+        yl -= 1;
+    }
+    if yh < (MAP_SIZE - 1) as i32 {
+        yh += 1;
+    }
+    if xl > 0 {
+        xl -= 1;
+    }
+    if xh < (MAP_SIZE - 1) as i32 {
+        xh += 1;
+    }
+
+    for y in yl..=yh {
+        for x in xl..=xh {
+            if let At::Obj(k) = level_state.actor_at[x as usize][y as usize] {
+                let check = level_state.obj(k);
+                if (check.flags & FL_SHOOTABLE) != 0 {
+                    let delta_x = ob.x - check.x;
+                    if delta_x < -MIN_ACTOR_DIST || delta_x > MIN_ACTOR_DIST {
+                        continue;
+                    }
+                    let delta_y = ob.y - check.y;
+                    if delta_y < -MIN_ACTOR_DIST || delta_y > MIN_ACTOR_DIST {
+                        continue;
+                    }
+
+                    return false;
+                }
+            }
+        }
+    }
 
     return true;
 }
