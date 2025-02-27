@@ -412,43 +412,43 @@ fn close_door(doornum: usize, level_state: &mut LevelState, sound: &mut Sound, a
     let door = &level_state.doors[doornum];
     if door.vertical {
         if p_tile_y == tile_y {
-            if (p_x + MIN_DIST >> TILESHIFT) as usize == tile_x {
+            if ((p_x + MIN_DIST) >> TILESHIFT) as usize == tile_x {
                 return;
             }
-            if (p_y - MIN_DIST >> TILESHIFT) as usize == tile_x {
+            if ((p_x - MIN_DIST) >> TILESHIFT) as usize == tile_x {
                 return;
             }
         }
         let check = level_state.actor_at[tile_x - 1][tile_y];
         if let At::Obj(k) = check {
-            if (level_state.obj(k).x + MIN_DIST >> TILESHIFT) as usize == tile_x {
+            if ((level_state.obj(k).x + MIN_DIST) >> TILESHIFT) as usize == tile_x {
                 return;
             }
         }
         let check = level_state.actor_at[tile_x + 1][tile_y];
         if let At::Obj(k) = check {
-            if (level_state.obj(k).x - MIN_DIST >> TILESHIFT) as usize == tile_x {
+            if ((level_state.obj(k).x - MIN_DIST) >> TILESHIFT) as usize == tile_x {
                 return;
             }
         }
     } else {
         if p_tile_x == tile_x {
-            if (p_y + MIN_DIST >> TILESHIFT) as usize == tile_y {
+            if ((p_y + MIN_DIST) >> TILESHIFT) as usize == tile_y {
                 return;
             }
-            if (p_y - MIN_DIST >> TILESHIFT) as usize == tile_y {
+            if ((p_y - MIN_DIST) >> TILESHIFT) as usize == tile_y {
                 return;
             }
         }
         let check = level_state.actor_at[tile_x][tile_y - 1];
         if let At::Obj(k) = check {
-            if (level_state.obj(k).y + MIN_DIST >> TILESHIFT) as usize == tile_y {
+            if ((level_state.obj(k).y + MIN_DIST) >> TILESHIFT) as usize == tile_y {
                 return;
             }
         }
         let check = level_state.actor_at[tile_x][tile_y + 1];
         if let At::Obj(k) = check {
-            if (level_state.obj(k).y - MIN_DIST >> TILESHIFT) as usize == tile_y {
+            if ((level_state.obj(k).y - MIN_DIST) >> TILESHIFT) as usize == tile_y {
                 return;
             }
         }

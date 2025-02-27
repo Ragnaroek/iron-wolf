@@ -991,10 +991,7 @@ fn try_move(k: ObjKey, level_state: &mut LevelState) -> bool {
     // check for solid walls
     for y in yl..=yh {
         for x in xl..=xh {
-            if match level_state.actor_at[x as usize][y as usize] {
-                At::Wall(_) => true,
-                _ => false,
-            } {
+            if let At::Wall(_) = level_state.actor_at[x as usize][y as usize] {
                 return false;
             }
         }
