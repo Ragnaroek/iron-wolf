@@ -27,7 +27,8 @@ use crate::input::{self, Input};
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::menu::{
-    MenuState, check_for_episodes, control_panel, initial_menu_state, intro_song, message,
+    MenuState, check_for_episodes, control_panel, initial_menu_state, intro_screen, intro_song,
+    message,
 };
 use crate::play::{self, ProjectionConfig, draw_play_border};
 use crate::sd::Sound;
@@ -162,6 +163,8 @@ async fn init_game(
 ) -> ProjectionConfig {
     vl::set_palette(vga, GAMEPAL);
     signon_screen(vga);
+
+    intro_screen(rdr);
 
     let prj = new_view_size(wolf_config.viewsize);
 

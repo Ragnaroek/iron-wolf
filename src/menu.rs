@@ -19,6 +19,11 @@ use crate::vh::{vw_hlin, vw_vlin};
 
 const NUM_SAVE_GAMES: usize = 10;
 
+const MAIN_COLOR: u8 = 0x6c;
+const EMS_COLOR: u8 = MAIN_COLOR;
+const XMS_COLOR: u8 = MAIN_COLOR;
+const FILL_COLOR: u8 = 14;
+
 const STRIPE: u8 = 0x2c;
 pub const BORDER_COLOR: u8 = 0x29;
 const BORDER2_COLOR: u8 = 0x23;
@@ -1864,4 +1869,45 @@ pub fn intro_song(variant: &WolfVariant) -> Music {
     } else {
         Music::NAZINOR
     }
+}
+
+////////////////////////////////////////////////////////////////////
+//
+// HANDLE INTRO SCREEN (SYSTEM CONFIG)
+//
+////////////////////////////////////////////////////////////////////
+pub fn intro_screen(rdr: &VGARenderer) {
+    // DRAW MAIN MEMORY
+    for i in 0..10 {
+        // iw assumes that there is always enough main memory
+        rdr.bar(49, 163 - 8 * i, 6, 5, MAIN_COLOR - i as u8);
+    }
+
+    // DRAW EMS MEMORY
+    for i in 0..10 {
+        // iw assumes that there is always enough EMS memory
+        rdr.bar(89, 163 - 8 * i, 6, 5, EMS_COLOR - i as u8);
+    }
+
+    // DRAW XMS MEMORY
+    for i in 0..10 {
+        // iw assumes that there is always enough XMS memory
+        rdr.bar(129, 163 - 8 * i, 6, 5, XMS_COLOR - i as u8);
+    }
+
+    // FILL BOXES
+    // assume mouse always present
+    rdr.bar(164, 82, 12, 2, FILL_COLOR);
+
+    //joystick never present, as there is no controler support a.t.m
+    //rdr.bar(164, 105, 12, 2, FILL_COLOR);
+
+    // Adlib never present, as there is always soundblaster emulation
+    //rdr.bar(164, 128, 12, 2, FILL_COLOR);
+
+    // SoundBlaster always present through emulation
+    rdr.bar(164, 151, 12, 2, FILL_COLOR);
+
+    // SoundSource never present, as there is no emulation for it yet
+    //rdr.bar(164, 174, 12, 2, FILL_COLOR);
 }
