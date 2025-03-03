@@ -1,4 +1,6 @@
+use std::time::Duration;
 use std::{ascii, collections::HashMap, str};
+use tokio::time::sleep;
 use vga::input::NumCode;
 
 use crate::assets::{GraphicNum, Music, SoundName, WolfVariant, is_sod};
@@ -660,6 +662,7 @@ pub async fn control_panel(
                     MainMenuItem::ChangeView => {
                         let (handle, prj_new, rc_new) = cp_change_view(
                             wolf_config,
+                            iw_config,
                             ticker,
                             rdr,
                             sound,
@@ -1371,6 +1374,7 @@ async fn menu_quit(
 
 async fn cp_change_view(
     wolf_config: &mut WolfConfig,
+    iw_config: &IWConfig,
     ticker: &Ticker,
     rdr: &VGARenderer,
     sound: &mut Sound,
@@ -1414,7 +1418,6 @@ async fn cp_change_view(
 
         // TODO Check mouse button
         if input.key_pressed(NumCode::Return) {
-            rdr.fade_out().await;
             break;
         } else if input.key_pressed(NumCode::Escape) {
             sound.play_sound(SoundName::ESCPRESSED, assets);
@@ -1428,6 +1431,9 @@ async fn cp_change_view(
     if old_view != new_view {
         sound.play_sound(SoundName::SHOOT, assets);
         message(rdr, win_state, "Thinking...");
+        if !iw_config.options.fast_loading {
+            sleep(Duration::from_millis(2500)).await;
+        }
         prj_return = new_view_size(new_view);
         rc_return = init_ray_cast(prj_return.view_width);
         wolf_config.viewsize = new_view;
