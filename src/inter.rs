@@ -1000,7 +1000,7 @@ async fn preload(ticker: &time::Ticker, iw_config: &IWConfig, rdr: &VGARenderer)
             rdr.bar(x + 5, y + height - 3, w, 2, 0x37); //SECONDCOLOR
             rdr.bar(x + 5, y + height - 3, w - 1, 1, 0x32);
         }
-        if !iw_config.options.fast_psyched {
+        if !iw_config.options.fast_loading {
             ticker.tics(1).await;
         }
     }

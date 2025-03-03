@@ -19,7 +19,7 @@ use crate::draw::{RayCast, three_d_refresh};
 use crate::input::Input;
 use crate::inter::{check_highscore, level_completed, preload_graphics, victory};
 use crate::loader::Loader;
-use crate::menu::{MenuState, SaveLoadGame};
+use crate::menu::MenuState;
 use crate::play::{
     ProjectionConfig, draw_play_screen, finish_palette_shifts, new_control_state, play_loop,
     start_music,
@@ -50,6 +50,7 @@ pub async fn game_loop(
     ticker: &time::Ticker,
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
+    level_state: &mut LevelState,
     game_state: &mut GameState,
     vga: &VGA,
     sound: &mut Sound,
@@ -61,14 +62,10 @@ pub async fn game_loop(
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
-    save_load_param: Option<SaveLoadGame>,
 ) -> (ProjectionConfig, RayCast) {
-    let mut save_load = save_load_param;
     let mut control_state: ControlState = new_control_state();
 
     draw_play_screen(&game_state, rdr, &prj_param).await;
-
-    let mut level_state = setup_game_level(game_state, assets).unwrap();
 
     let mut prj = prj_param;
     let mut rc = rc_param;
@@ -89,7 +86,7 @@ pub async fn game_loop(
         if game_state.loaded_game {
             game_state.loaded_game = false;
         } else {
-            level_state = setup_game_level(game_state, assets).unwrap();
+            *level_state = setup_game_level(game_state, assets).unwrap();
         }
 
         win_state.in_game = true;
@@ -111,7 +108,7 @@ pub async fn game_loop(
             wolf_config,
             iw_config,
             ticker,
-            &mut level_state,
+            level_state,
             game_state,
             win_state,
             menu_state,
@@ -124,10 +121,8 @@ pub async fn game_loop(
             prj,
             assets,
             loader,
-            save_load,
         )
         .await;
-        save_load = None;
         prj = prj_play;
         rc = rc_play;
 
@@ -166,7 +161,7 @@ pub async fn game_loop(
             PlayState::Died => {
                 died(
                     ticker,
-                    &mut level_state,
+                    level_state,
                     game_state,
                     &mut rc,
                     rdr,

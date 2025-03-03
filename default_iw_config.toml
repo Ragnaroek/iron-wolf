@@ -21,9 +21,10 @@ vanilla = true
 # disable some waits on launch
 no_wait = false
 
-# disable the (fake) psyched animation that simulates
-# the original experience
-fast_psyched = false
+# disable the (fake) loading animations that simulates
+# the original experience (you will probably not see the
+# savegame load, psyched or thinking screen if you enable this)
+fast_loading = false
 
 # enable debug key
 # This is a shortcurt for providing the -goobers flag

@@ -4,6 +4,7 @@ use vga::{SCReg, VGABuilder};
 
 use crate::assets;
 use crate::config;
+use crate::config::default_iw_config;
 use crate::def::{
     ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction, DoorLock, DoorType,
     GameState, LevelState, MAP_SIZE, NUM_AREAS, ObjKey, ObjType, Sprite, StaticKind, StaticType,
@@ -45,6 +46,9 @@ fn test_do_load_and_save_save0() {
 
     let mut level_state = setup_game_level(&mut game_state, &assets).expect("level state");
 
+    let mut iw_config = default_iw_config().expect("config");
+    iw_config.options.fast_loading = true;
+
     // reset actor data, to modify them and check that they are read correctly in.
     // otherwise level_state_init.actors == level_state.actors, even if nothing is read and copied.
     for actor in &mut level_state.actors {
@@ -58,6 +62,7 @@ fn test_do_load_and_save_save0() {
     game_state.push_wall_state = 666;
     game_state.loaded_game = true;
     let checksum_passed = do_load(
+        &iw_config,
         &mut level_state,
         &mut game_state,
         &rdr,
@@ -79,11 +84,22 @@ fn test_do_load_and_save_save0() {
 
     // save the state as save9 and check if it is the ~same as save0 (there are some differences in an iw
     // save saved game)
-    save_the_game(&level_state, &game_state, &rdr, &loader, 9, "e1m2", 0, 0);
+    save_the_game(
+        &iw_config,
+        &level_state,
+        &game_state,
+        &rdr,
+        &loader,
+        9,
+        "e1m2",
+        0,
+        0,
+    );
     check_written_save_0(&loader);
 
     // load save9 again, it should result in the same game state as the load of save0
     let checksum_passed = do_load(
+        &iw_config,
         &mut level_state,
         &mut game_state,
         &rdr,
@@ -368,8 +384,12 @@ fn test_do_load_save1() {
     let mut game_state = new_game_state();
     let mut level_state = setup_game_level(&mut game_state, &assets).expect("level state");
 
+    let mut iw_config = default_iw_config().expect("config");
+    iw_config.options.fast_loading = true;
+
     game_state.loaded_game = true;
     let checksum_passed = do_load(
+        &iw_config,
         &mut level_state,
         &mut game_state,
         &rdr,

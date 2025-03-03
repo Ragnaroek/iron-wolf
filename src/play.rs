@@ -25,11 +25,11 @@ use crate::debug::debug_keys;
 use crate::def::{
     ANGLE_QUAD, ANGLES, ActiveType, Assets, At, Button, Control, ControlState, FINE_ANGLES,
     FL_NEVERMARK, FL_NONMARK, FOCAL_LENGTH, GLOBAL1, GameState, IWConfig, LevelState, NUM_BUTTONS,
-    ObjKey, ObjType, PlayState, SCREENLOC, STATUS_LINES, TILEGLOBAL, WindowState,
+    ObjKey, PlayState, SCREENLOC, STATUS_LINES, TILEGLOBAL, WindowState,
 };
 use crate::draw::{RayCast, three_d_refresh};
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
-use crate::input::{self, Input};
+use crate::input::{self};
 use crate::inter::clear_split_vwb;
 use crate::loader::Loader;
 use crate::menu::GameStateUpdate;
@@ -37,13 +37,11 @@ use crate::menu::LSA_X;
 use crate::menu::LSA_Y;
 use crate::menu::Menu;
 use crate::menu::MenuState;
-use crate::menu::SaveLoadGame;
 use crate::menu::control_panel;
 use crate::menu::message;
 use crate::scale::{CompiledScaler, setup_scaling};
 use crate::sd::Sound;
 use crate::start::load_the_game;
-use crate::start::save_the_game;
 use crate::time;
 use crate::time::TARGET_FRAME_DURATION;
 use crate::us1::draw_window;
@@ -313,7 +311,6 @@ pub async fn play_loop(
     prj_param: ProjectionConfig,
     assets: &Assets,
     loader: &dyn Loader,
-    save_load_param: Option<SaveLoadGame>,
 ) -> (ProjectionConfig, RayCast) {
     let shifts = init_colour_shifts();
 
@@ -327,18 +324,6 @@ pub async fn play_loop(
     ticker.clear_count();
     input.clear_keys_down();
     clear_palette_shifts(game_state);
-
-    handle_save_load(
-        level_state,
-        game_state,
-        win_state,
-        rdr,
-        input,
-        assets,
-        loader,
-        save_load_param,
-    )
-    .await;
 
     let mut prj = prj_param;
     let mut rc = rc_param;
@@ -409,8 +394,8 @@ pub async fn play_loop(
             assets,
             win_state,
             menu_state,
+            level_state,
             game_state,
-            level_state.player(),
             input,
             prj,
             loader,
@@ -419,17 +404,23 @@ pub async fn play_loop(
         prj = update.projection_config;
         rc = update.ray_cast;
 
-        handle_save_load(
-            level_state,
-            game_state,
-            win_state,
-            rdr,
-            input,
-            assets,
-            loader,
-            update.save_load,
-        )
-        .await;
+        if let Some(which) = update.load {
+            load_the_game(
+                iw_config,
+                level_state,
+                game_state,
+                win_state,
+                rdr,
+                input,
+                assets,
+                loader,
+                which,
+                LSA_X + 8,
+                LSA_Y + 5,
+            )
+            .await;
+            update_status_bar(game_state, rdr);
+        }
 
         game_state.time_count += tics;
 
@@ -477,50 +468,6 @@ fn update_game_state(
             prj,
             assets,
         );
-    }
-}
-
-async fn handle_save_load(
-    level_state: &mut LevelState,
-    game_state: &mut GameState,
-    win_state: &mut WindowState,
-    rdr: &VGARenderer,
-    input: &Input,
-    assets: &Assets,
-    loader: &dyn Loader,
-    save_load: Option<SaveLoadGame>,
-) {
-    if let Some(what) = save_load {
-        match what {
-            SaveLoadGame::Load(which) => {
-                load_the_game(
-                    level_state,
-                    game_state,
-                    win_state,
-                    rdr,
-                    input,
-                    assets,
-                    loader,
-                    which,
-                    LSA_X + 8,
-                    LSA_Y + 5,
-                )
-                .await;
-                update_status_bar(game_state, rdr);
-            }
-            SaveLoadGame::Save(which, name) => {
-                save_the_game(
-                    level_state,
-                    game_state,
-                    rdr,
-                    loader,
-                    which,
-                    &name,
-                    LSA_X + 8,
-                    LSA_Y + 5,
-                );
-            }
-        }
     }
 }
 
@@ -749,8 +696,8 @@ async fn check_keys(
     assets: &Assets,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
+    level_state: &mut LevelState,
     game_state: &mut GameState,
-    player: &ObjType,
     input: &input::Input,
     prj: ProjectionConfig,
     loader: &dyn Loader,
@@ -780,7 +727,9 @@ async fn check_keys(
         rdr.set_buffer_offset(rdr.active_buffer());
         let update = control_panel(
             wolf_config,
+            iw_config,
             ticker,
+            level_state,
             game_state,
             sound,
             rc,
@@ -819,7 +768,15 @@ async fn check_keys(
 
         win_state.font_number = 0;
         win_state.set_font_color(0, 15);
-        debug_keys(ticker, rdr, win_state, game_state, player, input).await;
+        debug_keys(
+            ticker,
+            rdr,
+            win_state,
+            game_state,
+            level_state.player(),
+            input,
+        )
+        .await;
 
         rdr.set_buffer_offset(prev_buffer);
         return GameStateUpdate::with_render_update(prj, rc);

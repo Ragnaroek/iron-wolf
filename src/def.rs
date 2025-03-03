@@ -693,7 +693,7 @@ pub struct IWConfigOptions {
     #[serde(default)]
     pub no_wait: bool,
     #[serde(default)]
-    pub fast_psyched: bool,
+    pub fast_loading: bool,
     #[serde(default)]
     pub enable_debug: bool,
     #[serde(default = "true_default")]

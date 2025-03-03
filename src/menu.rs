@@ -3,14 +3,14 @@ use vga::input::NumCode;
 
 use crate::assets::{GraphicNum, Music, SoundName, WolfVariant, is_sod};
 use crate::config::{WolfConfig, write_wolf_config};
-use crate::def::{Assets, Difficulty, GameState, WindowState};
+use crate::def::{Assets, Difficulty, GameState, IWConfig, LevelState, WindowState};
 use crate::draw::{RayCast, init_ray_cast};
 use crate::input::{ControlDirection, ControlInfo, Input, read_control};
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::play::ProjectionConfig;
 use crate::sd::{DigiMode, MusicMode, Sound, SoundMode};
-use crate::start::{new_view_size, quit, show_view_size};
+use crate::start::{load_the_game, new_view_size, quit, save_the_game, show_view_size};
 use crate::time::Ticker;
 use crate::us1::{c_print, line_input, print};
 use crate::user::rnd_t;
@@ -193,17 +193,11 @@ pub enum MenuHandle {
     OpenMenu(Menu),
     Selected(usize),
     QuitMenu,
-    BackToGameLoop(Option<SaveLoadGame>),
-}
-
-#[derive(PartialEq, Debug)]
-pub enum SaveLoadGame {
-    Save(usize, String),
-    Load(usize),
+    BackToGameLoop(Option<usize>),
 }
 
 pub struct GameStateUpdate {
-    pub save_load: Option<SaveLoadGame>,
+    pub load: Option<usize>,
     pub projection_config: ProjectionConfig,
     pub ray_cast: RayCast,
 }
@@ -211,19 +205,15 @@ pub struct GameStateUpdate {
 impl GameStateUpdate {
     pub fn with_render_update(prj: ProjectionConfig, rc: RayCast) -> GameStateUpdate {
         GameStateUpdate {
-            save_load: None,
+            load: None,
             projection_config: prj,
             ray_cast: rc,
         }
     }
 
-    pub fn with_save_load(
-        prj: ProjectionConfig,
-        rc: RayCast,
-        save_load: Option<SaveLoadGame>,
-    ) -> GameStateUpdate {
+    pub fn with_load(prj: ProjectionConfig, rc: RayCast, load: Option<usize>) -> GameStateUpdate {
         GameStateUpdate {
-            save_load,
+            load,
             projection_config: prj,
             ray_cast: rc,
         }
@@ -590,7 +580,9 @@ fn placeholder() -> ItemType {
 /// Wolfenstein Control Panel!  Ta Da!
 pub async fn control_panel(
     wolf_config: &mut WolfConfig,
+    iw_config: &IWConfig,
     ticker: &Ticker,
+    level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
     rc: RayCast,
@@ -635,14 +627,33 @@ pub async fn control_panel(
                     }
                     MainMenuItem::LoadGame => {
                         cp_load_game(
-                            ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
+                            iw_config,
+                            ticker,
+                            level_state,
+                            game_state,
+                            rdr,
+                            sound,
+                            assets,
+                            input,
+                            win_state,
+                            menu_state,
                             loader,
                         )
                         .await
                     }
                     MainMenuItem::SaveGame => {
                         cp_save_game(
-                            ticker, rdr, sound, assets, input, win_state, menu_state, loader,
+                            iw_config,
+                            ticker,
+                            level_state,
+                            game_state,
+                            rdr,
+                            sound,
+                            assets,
+                            input,
+                            win_state,
+                            menu_state,
+                            loader,
                         )
                         .await
                     }
@@ -682,9 +693,9 @@ pub async fn control_panel(
                 MenuHandle::QuitMenu => {
                     menu_stack.pop();
                 }
-                MenuHandle::BackToGameLoop(save_load) => {
+                MenuHandle::BackToGameLoop(load) => {
                     rdr.fade_out().await;
-                    return GameStateUpdate::with_save_load(prj_return, rc_return, save_load);
+                    return GameStateUpdate::with_load(prj_return, rc_return, load);
                 }
                 _ => { /* ignore */ }
             }
@@ -932,7 +943,9 @@ async fn draw_sound_menu(
 // Load & Save
 
 async fn cp_load_game(
+    iw_config: &IWConfig,
     ticker: &Ticker,
+    level_state: &mut LevelState,
     game_state: &mut GameState,
     rdr: &VGARenderer,
     sound: &mut Sound,
@@ -961,8 +974,22 @@ async fn cp_load_game(
             if state[which].available {
                 draw_ls_action(rdr, win_state, false);
                 game_state.loaded_game = true;
+                load_the_game(
+                    iw_config,
+                    level_state,
+                    game_state,
+                    win_state,
+                    rdr,
+                    input,
+                    assets,
+                    loader,
+                    which,
+                    LSA_X + 8,
+                    LSA_Y + 5,
+                )
+                .await;
                 sound.play_sound(SoundName::SHOOT, assets);
-                return MenuHandle::BackToGameLoop(Some(SaveLoadGame::Load(which)));
+                return MenuHandle::BackToGameLoop(Some(which));
             } // else: loop back to handle_menu
         } else {
             // ESC pressed
@@ -996,7 +1023,10 @@ async fn cp_view_scores(
 }
 
 async fn cp_save_game(
+    iw_config: &IWConfig,
     ticker: &Ticker,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
     rdr: &VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
@@ -1066,8 +1096,19 @@ async fn cp_save_game(
             );
             if !escape {
                 draw_ls_action(rdr, win_state, true);
+                save_the_game(
+                    iw_config,
+                    level_state,
+                    game_state,
+                    rdr,
+                    loader,
+                    which,
+                    &input,
+                    LSA_X + 8,
+                    LSA_Y + 5,
+                );
                 win_state.font_number = 1;
-                return MenuHandle::BackToGameLoop(Some(SaveLoadGame::Save(which, input)));
+                return MenuHandle::BackToGameLoop(None);
             } else {
                 //TODO repaint entry
                 //TODO SD_PlaySound(ESCPRESSEDSND)
