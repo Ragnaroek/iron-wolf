@@ -147,9 +147,11 @@ impl Sound {
 
         let may_digi_sound = assets.digi_sounds.get(&sound);
         if may_digi_sound.is_some() && mode_mon.digi == DigiMode::SoundBlaster {
+            println!("playing digi sound = {:?}", sound);
             let digi_sound = may_digi_sound.expect("some digi sound");
             let data_clone = digi_sound.chunk.clone();
             let channel = self.get_channel_for_digi(digi_sound.channel);
+            channel.halt();
             let playing_mutex = self.sound_playing.clone();
             self.rt.spawn_blocking(move || {
                 let chunk = mixer::Chunk::from_raw_buffer(data_clone).expect("chunk");
@@ -167,16 +169,26 @@ impl Sound {
             });
         } else {
             if mode_mon.sound == SoundMode::AdLib {
-                let sound = assets.audio_sounds[sound as usize].clone();
+                let adl_sound = assets.audio_sounds[sound as usize].clone();
                 let playing_mutex = self.sound_playing.clone();
                 let opl_mutex = self.opl.clone();
-                self.rt.spawn_blocking(move || {
-                    let mut mon = opl_mutex.lock().unwrap();
-                    mon.play_adl(sound).expect("play sound file");
-                    while mon.is_adl_playing().expect("playing state") {
-                        sleep(Duration::from_millis(1));
-                    }
+                {
+                    // abort the currently playing sound (if any)
+                    let mut opl = opl_mutex.lock().unwrap();
+                    opl.stop_adl().expect("stop adl");
+                }
 
+                self.rt.spawn_blocking(move || {
+                    {
+                        let mut opl = opl_mutex.lock().unwrap();
+                        opl.play_adl(adl_sound).expect("play sound file");
+                    }
+                    let mut is_playing = true;
+                    while is_playing {
+                        sleep(Duration::from_millis(1));
+                        let mut opl = opl_mutex.lock().unwrap();
+                        is_playing = opl.is_adl_playing().expect("playing state");
+                    }
                     let mut m = playing_mutex.lock().unwrap();
                     *m = None
                 });

@@ -37,7 +37,7 @@ cfg-if = "1.0"
 toml = "0.8.19"
 tokio = { version = "1.43.0", features = ["rt", "time"] }
 vga-emu = "0.7.6"                                         # { path = "../vga-emu/" }
-opl-emu = "0.2.5"                                         # { path = "../opl-emu/" }
+opl-emu = "0.2.6"                                         # { path = "../opl-emu/" }
 
 # feature tracing
 tracing = { version = "0.1.41", optional = true, default-features = false, features = [
