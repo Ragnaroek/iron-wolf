@@ -635,7 +635,8 @@ pub async fn level_completed(
                     sound.play_sound(SoundName::ENDBONUS1, assets);
                 }
                 while sound.is_sound_playing().is_some() {
-                    fake_sound_breathe(ticker, rdr, &mut bj_breather);
+                    bj_breather.poll_breathe(ticker, rdr);
+                    //fake_sound_breathe(ticker, rdr, &mut bj_breather);
                 }
 
                 if input.check_ack() {

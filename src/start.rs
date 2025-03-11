@@ -689,8 +689,12 @@ pub fn do_load(
             } else if at_val < 256 {
                 level_state.actor_at[x][y] = At::Wall(at_val);
             } else {
-                level_state.actor_at[x][y] = At::Obj(ObjKey(at_val as usize));
-                at_vals.push(at_val);
+                if !at_vals.contains(&at_val) {
+                    level_state.actor_at[x][y] = At::Obj(ObjKey(at_val as usize));
+                    at_vals.push(at_val);
+                } else {
+                    level_state.actor_at[x][y] = At::Nothing;
+                }
             }
         }
     }

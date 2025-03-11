@@ -746,7 +746,6 @@ pub fn thrust(
     speed_param: i32,
 ) {
     //TODO reset funnyticount (only for Spear?)
-
     level_state.thrustspeed += speed_param;
 
     let speed = new_fixed_i32(if speed_param >= MIN_DIST * 2 {
