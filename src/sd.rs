@@ -127,27 +127,16 @@ impl Sound {
         *playing_mon
     }
 
-    pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
-        let mode_mon = self.modes.lock().unwrap();
-
-        // check priority
+    pub fn force_play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
         {
-            let mut playing_mon = self.sound_playing.lock().unwrap();
-            if playing_mon.is_some() {
-                let playing_prio =
-                    assets.audio_sounds[playing_mon.expect("playing sound") as usize].priority;
-                let new_sound_prio = assets.audio_sounds[sound as usize].priority;
-                if new_sound_prio < playing_prio {
-                    return false;
-                }
-            }
-
-            *playing_mon = Some(sound) // This sound _will_ be played
+            let mut playing = self.sound_playing.lock().unwrap();
+            *playing = Some(sound); // This sound _will_ be played
         }
+
+        let mode_mon = self.modes.lock().unwrap();
 
         let may_digi_sound = assets.digi_sounds.get(&sound);
         if may_digi_sound.is_some() && mode_mon.digi == DigiMode::SoundBlaster {
-            println!("playing digi sound = {:?}", sound);
             let digi_sound = may_digi_sound.expect("some digi sound");
             let data_clone = digi_sound.chunk.clone();
             let channel = self.get_channel_for_digi(digi_sound.channel);
@@ -196,6 +185,23 @@ impl Sound {
         }
 
         true
+    }
+
+    pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
+        // check priority
+        {
+            let playing = self.sound_playing.lock().unwrap();
+            if playing.is_some() {
+                let playing_prio =
+                    assets.audio_sounds[playing.expect("playing sound") as usize].priority;
+                let new_sound_prio = assets.audio_sounds[sound as usize].priority;
+                if new_sound_prio < playing_prio {
+                    return false;
+                }
+            }
+        }
+
+        self.force_play_sound(sound, assets)
     }
 
     pub fn play_music(&mut self, track: Music, assets: &Assets, loader: &dyn Loader) {
@@ -343,6 +349,10 @@ fn map_audio_format(format: mixer::AudioFormat) -> AudioFormat {
 impl Sound {
     pub fn is_sound_playing(&mut self) -> Option<SoundName> {
         todo!("impl is_sound_playing for web");
+    }
+
+    pub fn force_play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
+        todo!("impl force play sound web");
     }
 
     pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {

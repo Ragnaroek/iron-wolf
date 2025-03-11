@@ -1,7 +1,7 @@
 use std::ascii::Char;
 
 use crate::agent::{draw_level, draw_score, give_points};
-use crate::assets::{GraphicNum, Music, num_pic};
+use crate::assets::{GraphicNum, Music, SoundName, num_pic};
 use crate::config::{MAX_HIGH_NAME, MAX_SCORES, WolfConfig, write_wolf_config};
 use crate::def::{Assets, Difficulty, GameState, IWConfig, STATUS_LINES, WindowState};
 use crate::input::Input;
@@ -552,12 +552,13 @@ pub async fn level_completed(
     sound: &mut Sound,
     assets: &Assets,
     win_state: &mut WindowState,
+    loader: &dyn Loader,
 ) {
     rdr.set_buffer_offset(rdr.active_buffer());
 
     clear_split_vwb(win_state);
     rdr.bar(0, 0, 320, 200 - STATUS_LINES, 127);
-    // TODO StartCPMusic(ENDLEVEL_MUS)
+    sound.play_music(Music::ENDLEVEL, assets, loader);
 
     input.clear_keys_down();
     input.start_ack();
@@ -568,7 +569,6 @@ pub async fn level_completed(
 
     let mut bj_breather = new_bj_breather();
     if game_state.map_on < 8 {
-        // CURR: Imple write function and write "floor\ncompleted"!!!
         write(rdr, 14, 2, "floor\ncompleted");
         write(rdr, 14, 7, "bonus     0");
         write(rdr, 16, 10, "time");
@@ -632,8 +632,9 @@ pub async fn level_completed(
                 let x = 36 - str.len() * 2;
                 write(rdr, x, 7, &str);
                 if i % (PAR_AMOUNT / 10) == 0 {
-                    // TODO PlaySound(ENDBONUS1SND)
-                    // TODO Breath while sound is playing, code is a dummy implementation
+                    sound.play_sound(SoundName::ENDBONUS1, assets);
+                }
+                while sound.is_sound_playing().is_some() {
                     fake_sound_breathe(ticker, rdr, &mut bj_breather);
                 }
 
@@ -656,8 +657,10 @@ pub async fn level_completed(
                 }
             }
 
-            // TODO PlaySound(ENDBONUS2SND)
-            fake_sound_breathe(ticker, rdr, &mut bj_breather);
+            sound.play_sound(SoundName::ENDBONUS2, assets);
+            while sound.is_sound_playing().is_some() {
+                fake_sound_breathe(ticker, rdr, &mut bj_breather);
+            }
         }
 
         // KILL RATIO
@@ -692,14 +695,15 @@ pub async fn level_completed(
             let str = bonus.to_string();
             let x = (RATIO_XX - 1) - str.len() * 2;
             write(rdr, x, 7, &str);
-            // TODO SD_PlaySound(PERCENT100SND)
+            sound.play_sound(SoundName::PERCENT100, assets);
         } else if kill_ratio == 0 {
-            // TODO SD_StopSound()
-            // TODO SD_PlaySound(NOBONUSSND)
+            sound.force_play_sound(SoundName::NOBONUS, assets);
         } else {
-            // TODO SD_PlaySound(ENDBONUS2SND)
+            sound.play_sound(SoundName::ENDBONUS2, assets);
         }
-        fake_sound_breathe(ticker, rdr, &mut bj_breather);
+        while sound.is_sound_playing().is_some() {
+            fake_sound_breathe(ticker, rdr, &mut bj_breather);
+        }
 
         // SECRET RATIO
         for i in 0..=secret_ratio {
@@ -732,12 +736,14 @@ pub async fn level_completed(
             let str = bonus.to_string();
             let x = (RATIO_XX - 1) - str.len() * 2;
             write(rdr, x, 7, &str);
-            // TODO SD_PlaySound(PERCENT100SND)
+            sound.play_sound(SoundName::PERCENT100, assets);
         } else if secret_ratio == 0 {
-            // TODO SD_StopSound()
-            // TODO SD_PlaySound(NOBONUSSND)
+            sound.force_play_sound(SoundName::NOBONUS, assets);
         } else {
-            // TODO SD_PlaySound(ENDBONUS2SND)
+            sound.play_sound(SoundName::ENDBONUS2, assets);
+        }
+        while sound.is_sound_playing().is_some() {
+            fake_sound_breathe(ticker, rdr, &mut bj_breather);
         }
 
         // TREASURE RATIO
@@ -771,11 +777,14 @@ pub async fn level_completed(
             let str = bonus.to_string();
             let x = (RATIO_XX - 1) - str.len() * 2;
             write(rdr, x, 7, &str);
-            // TODO SD_PlaySound(PERCENT100SND)
+            sound.play_sound(SoundName::PERCENT100, assets);
         } else if treasure_ratio == 0 {
-            // TODO SD_StopSound()
-            // TODO SD_PlaySound(NOBONUSSND)
+            sound.force_play_sound(SoundName::NOBONUS, assets);
         }
+        while sound.is_sound_playing().is_some() {
+            fake_sound_breathe(ticker, rdr, &mut bj_breather);
+        }
+
         return done_normal_level_complete(
             ticker,
             rdr,

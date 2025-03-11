@@ -140,7 +140,7 @@ pub async fn game_loop(
                 vw_fade_out(vga).await;
 
                 level_completed(
-                    ticker, rdr, input, game_state, &prj, sound, assets, win_state,
+                    ticker, rdr, input, game_state, &prj, sound, assets, win_state, loader,
                 )
                 .await;
 
