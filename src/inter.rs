@@ -636,7 +636,6 @@ pub async fn level_completed(
                 }
                 while sound.is_sound_playing().is_some() {
                     bj_breather.poll_breathe(ticker, rdr);
-                    //fake_sound_breathe(ticker, rdr, &mut bj_breather);
                 }
 
                 if input.check_ack() {
@@ -660,7 +659,7 @@ pub async fn level_completed(
 
             sound.play_sound(SoundName::ENDBONUS2, assets);
             while sound.is_sound_playing().is_some() {
-                fake_sound_breathe(ticker, rdr, &mut bj_breather);
+                bj_breather.poll_breathe(ticker, rdr);
             }
         }
 
@@ -670,7 +669,10 @@ pub async fn level_completed(
             let x = RATIO_XX - str.len() * 2;
             write(rdr, x, 14, &str);
             if i % 10 == 0 {
-                fake_sound_breathe(ticker, rdr, &mut bj_breather);
+                sound.play_sound(SoundName::ENDBONUS1, assets);
+                while sound.is_sound_playing().is_some() {
+                    bj_breather.poll_breathe(ticker, rdr);
+                }
             }
 
             if input.check_ack() {
@@ -703,7 +705,7 @@ pub async fn level_completed(
             sound.play_sound(SoundName::ENDBONUS2, assets);
         }
         while sound.is_sound_playing().is_some() {
-            fake_sound_breathe(ticker, rdr, &mut bj_breather);
+            bj_breather.poll_breathe(ticker, rdr);
         }
 
         // SECRET RATIO
@@ -712,7 +714,10 @@ pub async fn level_completed(
             let x = RATIO_XX - str.len() * 2;
             write(rdr, x, 16, &str);
             if i % 10 == 0 {
-                fake_sound_breathe(ticker, rdr, &mut bj_breather);
+                sound.play_sound(SoundName::ENDBONUS1, assets);
+                while sound.is_sound_playing().is_some() {
+                    bj_breather.poll_breathe(ticker, rdr);
+                }
             }
             if input.check_ack() {
                 return done_normal_level_complete(
@@ -744,7 +749,7 @@ pub async fn level_completed(
             sound.play_sound(SoundName::ENDBONUS2, assets);
         }
         while sound.is_sound_playing().is_some() {
-            fake_sound_breathe(ticker, rdr, &mut bj_breather);
+            bj_breather.poll_breathe(ticker, rdr);
         }
 
         // TREASURE RATIO
@@ -753,7 +758,10 @@ pub async fn level_completed(
             let x = RATIO_XX - str.len() * 2;
             write(rdr, x, 18, &str);
             if i % 10 == 0 {
-                fake_sound_breathe(ticker, rdr, &mut bj_breather);
+                sound.play_sound(SoundName::ENDBONUS1, assets);
+                while sound.is_sound_playing().is_some() {
+                    bj_breather.poll_breathe(ticker, rdr);
+                }
             }
             if input.check_ack() {
                 return done_normal_level_complete(
@@ -783,7 +791,7 @@ pub async fn level_completed(
             sound.force_play_sound(SoundName::NOBONUS, assets);
         }
         while sound.is_sound_playing().is_some() {
-            fake_sound_breathe(ticker, rdr, &mut bj_breather);
+            bj_breather.poll_breathe(ticker, rdr);
         }
 
         return done_normal_level_complete(
@@ -811,15 +819,6 @@ pub async fn level_completed(
     give_points(game_state, rdr, sound, assets, 15000);
 
     return finish_level_complete(ticker, rdr, input, game_state, prj, &mut bj_breather).await;
-}
-
-// placeholder for starting a sound, waiting for it to complete
-// and letting BJ breathe.
-fn fake_sound_breathe(ticker: &time::Ticker, rdr: &VGARenderer, bj_breather: &mut BjBreather) {
-    let start = ticker.get_count();
-    while (ticker.get_count() - start) < 50 {
-        bj_breather.poll_breathe(ticker, rdr);
-    }
 }
 
 async fn done_normal_level_complete(
