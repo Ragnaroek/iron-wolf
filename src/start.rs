@@ -70,7 +70,7 @@ impl DiskAnim {
         self.which = !self.which;
 
         if !iw_config.options.fast_loading {
-            sleep(Duration::from_millis(10));
+            sleep(Duration::from_millis(40));
         }
     }
 }
