@@ -102,8 +102,7 @@ pub fn load_all_textures<M: Read + Seek>(
     headers: &GamedataHeaders,
 ) -> Result<Vec<TextureData>, String> {
     let mut result = Vec::with_capacity(headers.sprite_start as usize);
-
-    for i in 0..(headers.sprite_start - 1) {
+    for i in 0..headers.sprite_start {
         let texture = load_texture(data, &headers.headers[i as usize])?;
         result.push(texture);
     }
