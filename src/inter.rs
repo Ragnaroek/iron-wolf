@@ -600,7 +600,7 @@ pub async fn level_completed(
         rdr.pic(i, 10 * 8, num_pic((min % 10) as usize));
         i += 2 * 8;
         write(rdr, i / 8, 10, ":");
-        i += 2 * 8;
+        i += 1 * 8;
         rdr.pic(i, 10 * 8, num_pic((sec / 10) as usize));
         i += 2 * 8;
         rdr.pic(i, 10 * 8, num_pic((sec % 10) as usize));
