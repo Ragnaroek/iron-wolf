@@ -566,26 +566,12 @@ pub fn wall_refresh(
                 &level_state,
                 assets,
             ),
-            Hit::VerticalPushWall => hit_vert_push_wall(
-                &mut scaler_state,
-                rc,
-                &consts,
-                pixx,
-                prj,
-                rdr,
-                &level_state,
-                assets,
-            ),
-            Hit::HorizontalPushWall => hit_horiz_push_wall(
-                &mut scaler_state,
-                rc,
-                &consts,
-                pixx,
-                prj,
-                rdr,
-                &level_state,
-                assets,
-            ),
+            Hit::VerticalPushWall => {
+                hit_vert_push_wall(&mut scaler_state, rc, &consts, pixx, prj, rdr, assets)
+            }
+            Hit::HorizontalPushWall => {
+                hit_horiz_push_wall(&mut scaler_state, rc, &consts, pixx, prj, rdr, assets)
+            }
         }
     }
 }
@@ -869,7 +855,6 @@ pub fn hit_horiz_push_wall(
     pixx: usize,
     prj: &ProjectionConfig,
     rdr: &VGARenderer,
-    level_state: &LevelState,
     assets: &Assets,
 ) {
     let mut post_source = (rc.x_intercept >> 4) & 0xFC0;
@@ -883,6 +868,8 @@ pub fn hit_horiz_push_wall(
 
     let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, consts);
     rc.wall_height[pixx] = height;
+
+    // TODO  if (lasttilehit == tilehit) in the same wall type as last time, so check for optimized draw
 
     if scaler_state.last_side {
         scale_post(scaler_state, height, prj, rdr, assets);
@@ -903,7 +890,6 @@ pub fn hit_vert_push_wall(
     pixx: usize,
     prj: &ProjectionConfig,
     rdr: &VGARenderer,
-    level_state: &LevelState,
     assets: &Assets,
 ) {
     let mut post_source = (rc.y_intercept >> 4) & 0xFC0;
@@ -917,6 +903,8 @@ pub fn hit_vert_push_wall(
 
     let height = calc_height(prj.height_numerator, rc.x_intercept, rc.y_intercept, consts);
     rc.wall_height[pixx] = height;
+
+    // TODO if (lasttilehit == tilehit) in the same wall type as last time, so check for optimized draw
 
     if scaler_state.last_side {
         scale_post(scaler_state, height, prj, rdr, assets);
