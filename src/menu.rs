@@ -597,15 +597,95 @@ pub async fn control_panel(
     loader: &dyn Loader,
     scan: NumCode,
 ) -> GameStateUpdate {
-    // TODO scan code handling
     sound.play_music(Music::WONDERIN, assets, loader);
     setup_control_panel(win_state, menu_state);
+
+    let mut prj_return = prj;
+    let mut rc_return = rc;
+
+    let f_key_handle = match scan {
+        NumCode::F1 => todo!("show helpscreen"),
+        NumCode::F2 => Some(
+            cp_save_game(
+                iw_config,
+                ticker,
+                level_state,
+                game_state,
+                rdr,
+                sound,
+                assets,
+                input,
+                win_state,
+                menu_state,
+                loader,
+            )
+            .await,
+        ),
+        NumCode::F3 => Some(
+            cp_load_game(
+                iw_config,
+                ticker,
+                level_state,
+                game_state,
+                rdr,
+                sound,
+                assets,
+                input,
+                win_state,
+                menu_state,
+                loader,
+            )
+            .await,
+        ),
+        NumCode::F4 => Some(
+            cp_sound(
+                ticker, rdr, sound, assets, input, win_state, menu_state, loader,
+            )
+            .await,
+        ),
+        NumCode::F5 => {
+            let (handle, prj, rc) = cp_change_view(
+                wolf_config,
+                iw_config,
+                ticker,
+                rdr,
+                sound,
+                rc_return,
+                assets,
+                input,
+                win_state,
+                prj_return,
+                loader,
+            )
+            .await;
+
+            prj_return = prj;
+            rc_return = rc;
+            Some(handle)
+        }
+        NumCode::F6 => {
+            todo!("show cp_control_panel")
+        }
+        _ => None,
+    };
+    if let Some(handle) = f_key_handle {
+        match handle {
+            MenuHandle::QuitMenu | MenuHandle::OpenMenu(_) => {
+                // overrule any OpenMenu from the quick keys and return alway to the game
+                rdr.fade_out().await;
+                return GameStateUpdate::with_load(prj_return, rc_return, None);
+            }
+            MenuHandle::BackToGameLoop(load) => {
+                rdr.fade_out().await;
+                return GameStateUpdate::with_load(prj_return, rc_return, load);
+            }
+            _ => { /* ignore */ }
+        }
+    }
 
     let mut menu_stack: Vec<Menu> = Vec::new();
     menu_stack.push(menu_state.selected);
 
-    let mut prj_return = prj;
-    let mut rc_return = rc;
     // MAIN MENU LOOP
     loop {
         let menu_opt = menu_stack.last();

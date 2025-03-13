@@ -718,9 +718,17 @@ async fn check_keys(
     }
 
     let scan = input.last_scan();
-
-    // TODO Check for FX keys pressed (let scan = input.one_of_key_pressed())
-    if scan == NumCode::Escape {
+    if scan == NumCode::F1
+        || scan == NumCode::F2
+        || scan == NumCode::F3
+        || scan == NumCode::F4
+        || scan == NumCode::F5
+        || scan == NumCode::F6
+        || scan == NumCode::F7
+        || scan == NumCode::F8
+        || scan == NumCode::F9
+        || scan == NumCode::Escape
+    {
         rdr.fade_out().await;
         menu_state.select_menu(Menu::Top);
         let prev_buffer = rdr.buffer_offset();
@@ -760,7 +768,7 @@ async fn check_keys(
         //TODO reset lasttimecount and doe some mouse present check
 
         return update;
-    }
+    };
 
     if input.key_pressed(NumCode::Tab) && (win_state.debug_ok || iw_config.options.enable_debug) {
         let prev_buffer = rdr.buffer_offset();
