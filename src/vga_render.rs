@@ -7,6 +7,7 @@ use std::sync::atomic::AtomicUsize;
 use vga::{CRTReg, SCReg, VGA};
 
 use crate::assets::{Font, TileData, WolfVariant};
+use crate::input::Input;
 use crate::time;
 
 use super::assets::{GAMEPAL, Graphic, GraphicNum};
@@ -228,6 +229,7 @@ impl VGARenderer {
     pub async fn fizzle_fade(
         &self,
         ticker: &time::Ticker,
+        input: &Input,
         source: usize,
         dest: usize,
         width: usize,
@@ -239,11 +241,13 @@ impl VGARenderer {
         let mut rnd_val: u32 = 1;
         let pix_per_frame = 64000 / frames;
 
-        // TODO init StartAck() for abortable fizzle_fade
-
         ticker.clear_count();
         let mut frame = 0;
         loop {
+            if abortable && input.check_ack() {
+                return true;
+            }
+
             for _ in 0..pix_per_frame {
                 let mut ax: u32 = rnd_val & 0xFFFF;
                 let mut dx: u32 = (rnd_val >> 16) & 0xFFFF;

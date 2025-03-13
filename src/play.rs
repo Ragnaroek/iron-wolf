@@ -378,6 +378,7 @@ pub async fn play_loop(
             level_state,
             &mut rc,
             rdr,
+            input,
             sound,
             &prj,
             assets,

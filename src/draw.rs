@@ -13,6 +13,7 @@ use crate::def::{
     ObjType, Sprite, StaticType, TILEGLOBAL, TILESHIFT, VisObj,
 };
 use crate::fixed::{Fixed, fixed_by_frac, new_fixed_i32};
+use crate::input::Input;
 use crate::play::ProjectionConfig;
 use crate::scale::{MAP_MASKS_1, scale_shape, simple_scale_shape};
 use crate::sd::Sound;
@@ -583,6 +584,7 @@ pub async fn three_d_refresh(
     level_state: &mut LevelState,
     rc: &mut RayCast,
     rdr: &VGARenderer,
+    input: &Input,
     sound: &mut Sound,
     prj: &ProjectionConfig,
     assets: &Assets,
@@ -611,6 +613,7 @@ pub async fn three_d_refresh(
     if game_state.fizzle_in {
         rdr.fizzle_fade(
             ticker,
+            input,
             rdr.buffer_offset(),
             rdr.active_buffer() + prj.screenofs,
             prj.view_width,

@@ -292,7 +292,18 @@ async fn died(
             if player.angle >= ANGLES as i32 {
                 player.angle -= ANGLES as i32;
             }
-            three_d_refresh(ticker, game_state, level_state, rc, rdr, sound, prj, assets).await;
+            three_d_refresh(
+                ticker,
+                game_state,
+                level_state,
+                rc,
+                rdr,
+                input,
+                sound,
+                prj,
+                assets,
+            )
+            .await;
         }
     } else {
         // rotate counterclockwise
@@ -316,7 +327,18 @@ async fn died(
             if player.angle < 0 {
                 player.angle += ANGLES as i32;
             }
-            three_d_refresh(ticker, game_state, level_state, rc, rdr, sound, prj, assets).await;
+            three_d_refresh(
+                ticker,
+                game_state,
+                level_state,
+                rc,
+                rdr,
+                input,
+                sound,
+                prj,
+                assets,
+            )
+            .await;
         }
     }
 
@@ -331,6 +353,7 @@ async fn died(
     input.clear_keys_down();
     rdr.fizzle_fade(
         ticker,
+        input,
         source_buffer,
         rdr.active_buffer() + prj.screenofs,
         prj.view_width,
