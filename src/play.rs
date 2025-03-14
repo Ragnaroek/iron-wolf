@@ -27,6 +27,8 @@ use crate::def::{
     FL_NEVERMARK, FL_NONMARK, FOCAL_LENGTH, GLOBAL1, GameState, IWConfig, LevelState, NUM_BUTTONS,
     ObjKey, PlayState, SCREENLOC, STATUS_LINES, TILEGLOBAL, WindowState,
 };
+use crate::draw::RayCastConsts;
+use crate::draw::init_ray_cast_consts;
 use crate::draw::{RayCast, three_d_refresh};
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
 use crate::input::{self};
@@ -343,6 +345,9 @@ pub async fn play_loop(
             tics = 1;
         }
 
+        let player = level_state.player();
+        let rc_consts = init_ray_cast_consts(&prj, player, game_state.push_wall_pos);
+
         #[cfg(feature = "tracing")]
         span.in_scope(|| {
             update_game_state(
@@ -354,6 +359,7 @@ pub async fn play_loop(
                 rdr,
                 input,
                 &prj,
+                &rc_consts,
                 assets,
             )
         });
@@ -367,6 +373,7 @@ pub async fn play_loop(
             rdr,
             input,
             &prj,
+            &rc_consts,
             assets,
         );
 
@@ -381,6 +388,7 @@ pub async fn play_loop(
             input,
             sound,
             &prj,
+            &rc_consts,
             assets,
         )
         .await;
@@ -446,6 +454,7 @@ fn update_game_state(
     rdr: &VGARenderer,
     input: &input::Input,
     prj: &ProjectionConfig,
+    rc_consts: &RayCastConsts,
     assets: &Assets,
 ) {
     poll_controls(control_state, tics, input);
@@ -454,7 +463,7 @@ fn update_game_state(
 
     game_state.made_noise = false;
 
-    move_doors(level_state, game_state, sound, assets, tics);
+    move_doors(level_state, game_state, sound, assets, rc_consts, tics);
     move_push_walls(level_state, game_state, tics);
 
     for i in 0..level_state.actors.len() {
@@ -467,6 +476,7 @@ fn update_game_state(
             rdr,
             control_state,
             prj,
+            rc_consts,
             assets,
         );
     }
@@ -481,6 +491,7 @@ fn do_actor(
     rdr: &VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
+    rc_consts: &RayCastConsts,
     assets: &Assets,
 ) {
     if level_state.obj(k).active == ActiveType::No
@@ -511,6 +522,7 @@ fn do_actor(
                 control_state,
                 prj,
                 assets,
+                rc_consts,
             );
             if level_state.obj(k).state.is_none() {
                 return;
@@ -547,6 +559,7 @@ fn do_actor(
                 control_state,
                 prj,
                 assets,
+                rc_consts,
             );
             if level_state.obj(k).state.is_none() {
                 return;
@@ -576,6 +589,7 @@ fn do_actor(
             control_state,
             prj,
             assets,
+            rc_consts,
         );
         if level_state.obj(k).state.is_none() {
             return;

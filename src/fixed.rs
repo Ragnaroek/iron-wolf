@@ -55,6 +55,24 @@ impl std::ops::Neg for Fixed {
     }
 }
 
+impl std::ops::Sub for Fixed {
+    type Output = Self;
+
+    fn sub(self, rhs: Fixed) -> Self::Output {
+        let (v, _) = self.0.overflowing_sub(rhs.0);
+        new_fixed_i32(v)
+    }
+}
+
+impl std::ops::Add for Fixed {
+    type Output = Self;
+
+    fn add(self, rhs: Fixed) -> Self::Output {
+        let (v, _) = self.0.overflowing_add(rhs.0);
+        new_fixed_i32(v)
+    }
+}
+
 pub fn fixed_mul(a: Fixed, b: Fixed) -> Fixed {
     new_fixed_i32(((a.to_i32() as i64 * b.to_i32() as i64) + 0x8000 >> 16) as i32)
 }

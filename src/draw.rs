@@ -74,8 +74,8 @@ pub struct RayCastConsts {
     pub mid_angle: i32,
     pub view_sin: Fixed,
     pub view_cos: Fixed,
-    pub view_x: i32,
-    pub view_y: i32,
+    pub view_x: i32, // TODO make Fixed type
+    pub view_y: i32, // TODO make Fixed type
     pub focal_tx: i32,
     pub focal_ty: i32,
     pub x_partialdown: i32,
@@ -587,21 +587,19 @@ pub async fn three_d_refresh(
     input: &Input,
     sound: &mut Sound,
     prj: &ProjectionConfig,
+    rc_consts: &RayCastConsts,
     assets: &Assets,
 ) {
     rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
 
-    let player = level_state.player();
-    let consts = init_ray_cast_consts(prj, player, game_state.push_wall_pos);
-
     clear_screen(game_state, rdr, prj);
-    wall_refresh(level_state, rc, &consts, rdr, prj, assets);
+    wall_refresh(level_state, rc, rc_consts, rdr, prj, assets);
 
     draw_scaleds(
         level_state,
         game_state,
         &rc.wall_height,
-        &consts,
+        rc_consts,
         rdr,
         sound,
         prj,

@@ -1,3 +1,7 @@
+#[cfg(test)]
+#[path = "./sd_test.rs"]
+mod sd_test;
+
 use std::{
     sync::{Arc, Mutex},
     thread::sleep,
@@ -9,7 +13,10 @@ use tokio::runtime::Runtime;
 use crate::{
     assets::{DigiChannel, Music, SoundName, WolfFile},
     def::{Assets, DigiSound, ObjType, TILESHIFT},
+    draw::RayCastConsts,
+    fixed::{Fixed, fixed_by_frac, new_fixed_i32},
     loader::Loader,
+    start::quit,
 };
 
 use opl::OPL;
@@ -21,6 +28,104 @@ use sdl2::mixer::{self, Channel};
 
 const ORIG_SAMPLE_RATE: i32 = 7042;
 const MAX_TRACKS: usize = 10;
+
+const ATABLE_MAX: i32 = 15;
+
+const RIGHT_TABLE: [[u8; ATABLE_MAX as usize * 2]; ATABLE_MAX as usize] = [
+    [
+        8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 7, 7, 6, 0, 0, 0, 0, 0, 1, 3, 5, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 7, 6, 4, 0, 0, 0, 0, 0, 2, 4, 6, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 6, 6, 4, 1, 0, 0, 0, 1, 2, 4, 6, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 7, 6, 5, 4, 2, 1, 0, 1, 2, 3, 5, 7, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 6, 5, 4, 3, 2, 2, 3, 3, 5, 6, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 6, 6, 5, 4, 4, 4, 4, 5, 6, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 6, 6, 5, 5, 5, 6, 6, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 6, 6, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+];
+
+const LEFT_TABLE: [[u8; ATABLE_MAX as usize * 2]; ATABLE_MAX as usize] = [
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 5, 3, 1, 0, 0, 0, 0, 0, 6, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 6, 4, 2, 0, 0, 0, 0, 0, 4, 6, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 6, 4, 2, 1, 0, 0, 0, 1, 4, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 7, 5, 3, 2, 1, 0, 1, 2, 4, 5, 6, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 6, 5, 3, 3, 2, 2, 3, 4, 5, 6, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 6, 5, 4, 4, 4, 4, 5, 6, 6, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 6, 6, 5, 5, 5, 6, 6, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 6, 6, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+    [
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    ],
+];
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
 pub enum SoundMode {
@@ -42,6 +147,7 @@ pub enum MusicMode {
     AdLib,
 }
 
+#[derive(Copy, Clone)]
 struct Modes {
     sound: SoundMode,
     digi: DigiMode,
@@ -76,6 +182,8 @@ pub struct Sound {
     mix_config: Arc<Mutex<DigiMixConfig>>,
     rt: Arc<Runtime>,
     sound_playing: Arc<Mutex<Option<SoundName>>>,
+    left_pos: u8,
+    right_pos: u8,
 }
 
 #[cfg(feature = "web")]
@@ -112,6 +220,8 @@ pub fn startup(rt: Arc<Runtime>) -> Result<Sound, String> {
         modes: default_modes(),
         rt,
         sound_playing: Arc::new(Mutex::new(None)),
+        left_pos: 0,
+        right_pos: 0,
     })
 }
 
@@ -133,18 +243,21 @@ impl Sound {
             *playing = Some(sound); // This sound _will_ be played
         }
 
-        let mode_mon = self.modes.lock().unwrap();
+        let modes = {
+            let mode_mon = self.modes.lock().unwrap();
+            *mode_mon
+        };
 
         let may_digi_sound = assets.digi_sounds.get(&sound);
-        if may_digi_sound.is_some() && mode_mon.digi == DigiMode::SoundBlaster {
+        if may_digi_sound.is_some() && modes.digi == DigiMode::SoundBlaster {
             let digi_sound = may_digi_sound.expect("some digi sound");
             let data_clone = digi_sound.chunk.clone();
-            let channel = self.get_channel_for_digi(digi_sound.channel);
+            let mut channel = self.get_channel_for_digi(digi_sound.channel);
             channel.halt();
+            self.set_position(&mut channel).expect("set sound position");
             let playing_mutex = self.sound_playing.clone();
             self.rt.spawn_blocking(move || {
                 let chunk = mixer::Chunk::from_raw_buffer(data_clone).expect("chunk");
-
                 channel.play(&chunk, 0).expect("play digi sound");
                 // TODO inefficient. Only exists to keep the chunk referenced and not collected
                 // Real fix would be to make Chunk in SDL sync so that this works properly and
@@ -157,7 +270,7 @@ impl Sound {
                 *m = None
             });
         } else {
-            if mode_mon.sound == SoundMode::AdLib {
+            if modes.sound == SoundMode::AdLib {
                 let adl_sound = assets.audio_sounds[sound as usize].clone();
                 let playing_mutex = self.sound_playing.clone();
                 let opl_mutex = self.opl.clone();
@@ -185,6 +298,28 @@ impl Sound {
         }
 
         true
+    }
+
+    fn set_position(&mut self, channel: &mut Channel) -> Result<(), String> {
+        if self.left_pos > 15
+            || self.right_pos > 15
+            || (self.left_pos == 15 && self.right_pos == 15)
+        {
+            quit(Some("set_position: Illegal position"));
+        }
+
+        println!("#### left = {}, right = {}", self.left_pos, self.right_pos);
+
+        channel.set_panning(
+            ((15 - self.left_pos) << 4) + 15,
+            ((15 - self.right_pos) << 4) + 15,
+        )?;
+
+        // reset to default for next sound
+        self.left_pos = 0;
+        self.right_pos = 0;
+
+        Ok(())
     }
 
     pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
@@ -249,29 +384,53 @@ impl Sound {
         &mut self,
         sound: SoundName,
         assets: &Assets,
+        rc_consts: &RayCastConsts,
         tile_x: usize,
         tile_y: usize,
+    ) {
+        let gx = new_fixed_i32(((tile_x as i32) << TILESHIFT) + (1 << (TILESHIFT - 1)));
+        let gy = new_fixed_i32(((tile_y as i32) << TILESHIFT) + (1 << (TILESHIFT - 1)));
+        self.play_sound_loc_global(sound, assets, rc_consts, gx, gy);
+    }
+
+    pub fn play_sound_loc_actor(
+        &mut self,
+        sound: SoundName,
+        assets: &Assets,
+        rc_consts: &RayCastConsts,
+        obj: &ObjType,
     ) {
         self.play_sound_loc_global(
             sound,
             assets,
-            (tile_x << TILESHIFT) + (1 << (TILESHIFT - 1)),
-            (tile_y << TILESHIFT) + (1 << (TILESHIFT - 1)),
+            rc_consts,
+            new_fixed_i32(obj.x),
+            new_fixed_i32(obj.y),
         );
-    }
-
-    pub fn play_sound_loc_actor(&mut self, sound: SoundName, assets: &Assets, obj: &ObjType) {
-        self.play_sound_loc_global(sound, assets, obj.x as usize, obj.y as usize);
     }
 
     fn play_sound_loc_global(
         &mut self,
         sound: SoundName,
         assets: &Assets,
-        tile_x: usize,
-        tile_y: usize,
+        rc_consts: &RayCastConsts,
+        gx: Fixed,
+        gy: Fixed,
     ) {
-        // TODO set sound location and position for digitized sounds
+        let (left, right) = sound_loc(rc_consts, gx, gy);
+        println!(
+            "### gx={}, gy={}, viewx={}, viewy={}, viewcos={}, viewsin={} => ({}, {})",
+            gx.to_i32(),
+            gy.to_i32(),
+            rc_consts.view_x,
+            rc_consts.view_y,
+            rc_consts.view_cos.to_i32(),
+            rc_consts.view_sin.to_i32(),
+            left,
+            right,
+        );
+        self.left_pos = left;
+        self.right_pos = right;
         self.play_sound(sound, assets);
     }
 
@@ -345,6 +504,42 @@ fn map_audio_format(format: mixer::AudioFormat) -> AudioFormat {
     }
 }
 
+fn sound_loc(rc_consts: &RayCastConsts, gx_param: Fixed, gy_param: Fixed) -> (u8, u8) {
+    let view_x = new_fixed_i32(rc_consts.view_x);
+    let view_y = new_fixed_i32(rc_consts.view_y);
+
+    let gx = gx_param - view_x;
+    let gy = gy_param - view_y;
+
+    // calculate newx
+    let xt = fixed_by_frac(gx, rc_consts.view_cos);
+    let yt = fixed_by_frac(gy, rc_consts.view_sin);
+    let mut x = (xt - yt).to_i32() >> TILESHIFT;
+
+    // calculate newy
+    let xt = fixed_by_frac(gx, rc_consts.view_sin);
+    let yt = fixed_by_frac(gy, rc_consts.view_cos);
+    let mut y = (yt + xt).to_i32() >> TILESHIFT;
+
+    if y >= ATABLE_MAX {
+        y = ATABLE_MAX - 1;
+    } else if y <= -ATABLE_MAX {
+        y = -ATABLE_MAX;
+    }
+
+    if x < 0 {
+        x = -x;
+    }
+    if x >= ATABLE_MAX {
+        x = ATABLE_MAX - 1;
+    }
+
+    (
+        LEFT_TABLE[x as usize][(y + ATABLE_MAX) as usize],
+        RIGHT_TABLE[x as usize][(y + ATABLE_MAX) as usize],
+    )
+}
+
 #[cfg(feature = "web")]
 impl Sound {
     pub fn is_sound_playing(&mut self) -> Option<SoundName> {
@@ -367,13 +562,21 @@ impl Sound {
         &mut self,
         sound: SoundName,
         assets: &Assets,
+        rc_consts: &RayCastConsts,
+
         tile_x: usize,
         tile_y: usize,
     ) {
         todo!("impl play sound loc tile web");
     }
 
-    pub fn play_sound_loc_actor(&mut self, sound: SoundName, assets: &Assets, obj: &ObjType) {
+    pub fn play_sound_loc_actor(
+        &mut self,
+        sound: SoundName,
+        assets: &Assets,
+        rc_consts: &RayCastConsts,
+        obj: &ObjType,
+    ) {
         todo!("impl play sound actor web");
     }
 
@@ -381,6 +584,7 @@ impl Sound {
         &mut self,
         sound: SoundName,
         assets: &Assets,
+        rc_consts: &RayCastConsts,
         tile_x: usize,
         tile_y: usize,
     ) {

@@ -11,6 +11,7 @@ use crate::def::{
     MIN_ACTOR_DIST, NUM_ENEMIES, ObjKey, ObjType, PlayState, RUN_SPEED, SPD_DOG, SPD_PATROL,
     Sprite, StateType, TILEGLOBAL, TILESHIFT,
 };
+use crate::draw::RayCastConsts;
 use crate::game::AREATILE;
 use crate::map::MapSegs;
 use crate::play::ProjectionConfig;
@@ -1351,8 +1352,9 @@ fn t_path(
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
 ) {
-    if sight_player(k, level_state, game_state, sound, assets, tics) {
+    if sight_player(k, level_state, game_state, sound, assets, rc_consts, tics) {
         return;
     }
 
@@ -1415,6 +1417,7 @@ fn t_dog_chase(
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
+    _: &RayCastConsts,
 ) {
     let (player_tile_x, player_tile_y) = {
         let player = level_state.player();
@@ -1488,6 +1491,7 @@ fn t_bite(
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
+    _: &RayCastConsts,
 ) {
     // TODO PlaySoundLocActor(DOGATTACKSND,ob)
 
@@ -1552,8 +1556,9 @@ fn t_stand(
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
 ) {
-    sight_player(k, level_state, game_state, sound, assets, tics);
+    sight_player(k, level_state, game_state, sound, assets, rc_consts, tics);
 }
 
 fn t_chase(
@@ -1566,6 +1571,7 @@ fn t_chase(
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
+    _: &RayCastConsts,
 ) {
     if game_state.victory_flag {
         return;
@@ -1859,6 +1865,7 @@ fn t_shoot(
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
+    _: &RayCastConsts,
 ) {
     let obj = level_state.obj(k);
     if !level_state.area_by_player[obj.area_number] {
@@ -1940,6 +1947,7 @@ fn a_death_scream(
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
+    _: &RayCastConsts,
 ) {
     let obj = level_state.obj(k);
     match obj.class {
@@ -2098,6 +2106,7 @@ fn t_bj_run(
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
+    _: &RayCastConsts,
 ) {
     let mut mov = BJ_RUN_SPEED * tics as i32;
     while mov > 0 {
@@ -2134,6 +2143,7 @@ fn t_bj_jump(
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
+    _: &RayCastConsts,
 ) {
     let mov = BJ_JUMP_SPEED * tics as i32;
     move_obj(k, level_state, game_state, rdr, mov, tics);
@@ -2149,9 +2159,10 @@ fn t_bj_yell(
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
 ) {
     let obj = level_state.obj(k);
-    sound.play_sound_loc_actor(SoundName::YEAH, assets, obj); // JAB
+    sound.play_sound_loc_actor(SoundName::YEAH, assets, rc_consts, obj); // JAB
 }
 
 fn t_bj_done(
@@ -2164,6 +2175,7 @@ fn t_bj_done(
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
+    _: &RayCastConsts,
 ) {
     game_state.play_state = PlayState::Victorious;
 }

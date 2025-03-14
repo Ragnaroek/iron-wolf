@@ -1,3 +1,7 @@
+#[cfg(test)]
+#[path = "./map_test.rs"]
+mod map_test;
+
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Seek, SeekFrom};
 

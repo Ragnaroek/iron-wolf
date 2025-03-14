@@ -4,6 +4,7 @@ use crate::{
         Assets, At, Dir, DoorAction, DoorLock, DoorType, FL_BONUS, GameState, LevelState, MAP_SIZE,
         MAX_STATS, MIN_DIST, NUM_AREAS, Sprite, StaticInfo, StaticKind, StaticType, TILESHIFT,
     },
+    draw::RayCastConsts,
     game::AREATILE,
     map::MapSegs,
     sd::Sound,
@@ -361,6 +362,7 @@ pub fn operate_door(
     game_state: &mut GameState,
     sound: &mut Sound,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
 ) {
     let door: &mut DoorType = &mut level_state.doors[doornum];
 
@@ -377,7 +379,9 @@ pub fn operate_door(
 
     match door.action {
         DoorAction::Closed | DoorAction::Closing => open_door(door),
-        DoorAction::Open | DoorAction::Opening => close_door(doornum, level_state, sound, assets),
+        DoorAction::Open | DoorAction::Opening => {
+            close_door(doornum, level_state, sound, assets, rc_consts)
+        }
     }
 }
 
@@ -389,7 +393,13 @@ pub fn open_door(door: &mut DoorType) {
     }
 }
 
-fn close_door(doornum: usize, level_state: &mut LevelState, sound: &mut Sound, assets: &Assets) {
+fn close_door(
+    doornum: usize,
+    level_state: &mut LevelState,
+    sound: &mut Sound,
+    assets: &Assets,
+    rc_consts: &RayCastConsts,
+) {
     // don't close on anything solid
     let (tile_x, tile_y) = {
         let door = &level_state.doors[doornum as usize];
@@ -459,7 +469,13 @@ fn close_door(doornum: usize, level_state: &mut LevelState, sound: &mut Sound, a
     let area = (level_state.level.map_segs.segs[0][door.tile_y * MAP_SIZE + door.tile_x] - AREATILE)
         as usize;
     if level_state.area_by_player[area] {
-        sound.play_sound_loc_tile(SoundName::CLOSEDOOR, assets, door.tile_x, door.tile_y);
+        sound.play_sound_loc_tile(
+            SoundName::CLOSEDOOR,
+            assets,
+            rc_consts,
+            door.tile_x,
+            door.tile_y,
+        );
     }
 
     door.action = DoorAction::Closing;
@@ -472,6 +488,7 @@ pub fn move_doors(
     game_state: &mut GameState,
     sound: &mut Sound,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
     tics: u64,
 ) {
     if game_state.victory_flag {
@@ -481,8 +498,10 @@ pub fn move_doors(
 
     for doornum in 0..level_state.doors.len() {
         match level_state.doors[doornum].action {
-            DoorAction::Open => door_open(doornum, level_state, sound, assets, tics),
-            DoorAction::Opening => door_opening(doornum, level_state, sound, assets, tics),
+            DoorAction::Open => door_open(doornum, level_state, sound, assets, rc_consts, tics),
+            DoorAction::Opening => {
+                door_opening(doornum, level_state, sound, assets, rc_consts, tics)
+            }
             DoorAction::Closing => door_closing(doornum, level_state, tics),
             DoorAction::Closed => { /* do nothing here */ }
         }
@@ -494,12 +513,13 @@ fn door_open(
     level_state: &mut LevelState,
     sound: &mut Sound,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
     tics: u64,
 ) {
     level_state.doors[doornum as usize].tic_count += tics as u32;
 
     if level_state.doors[doornum as usize].tic_count >= OPENTICS {
-        close_door(doornum, level_state, sound, assets);
+        close_door(doornum, level_state, sound, assets, rc_consts);
     }
 }
 
@@ -508,6 +528,7 @@ fn door_opening(
     level_state: &mut LevelState,
     sound: &mut Sound,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
     tics: u64,
 ) {
     let door = &level_state.doors[doornum as usize];
@@ -527,7 +548,13 @@ fn door_opening(
 
         if level_state.area_by_player[area1] {
             let door = &level_state.doors[doornum as usize];
-            sound.play_sound_loc_tile(SoundName::OPENDOOR, assets, door.tile_x, door.tile_y);
+            sound.play_sound_loc_tile(
+                SoundName::OPENDOOR,
+                assets,
+                rc_consts,
+                door.tile_x,
+                door.tile_y,
+            );
         }
     }
 

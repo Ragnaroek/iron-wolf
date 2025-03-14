@@ -1,4 +1,5 @@
 use crate::assets::{DigiChannel, SoundName};
+use crate::draw::RayCastConsts;
 use crate::fixed::Fixed;
 use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::map::{MapFileType, MapSegs, MapType};
@@ -737,6 +738,7 @@ type Think = fn(
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
 );
 
 type Action = fn(
@@ -749,6 +751,7 @@ type Action = fn(
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
 );
 
 #[derive(Eq, PartialEq, Debug)]

@@ -15,6 +15,7 @@ use crate::def::{
     FL_SHOOTABLE, GameState, LevelState, MAP_SIZE, MIN_ACTOR_DIST, ObjKey, ObjType, SPD_PATROL,
     StateType, StaticKind, TILEGLOBAL, TILESHIFT, UNSIGNEDSHIFT, WeaponType,
 };
+use crate::draw::RayCastConsts;
 use crate::fixed::new_fixed_i32;
 use crate::game::AREATILE;
 use crate::map::MapSegs;
@@ -700,6 +701,7 @@ pub fn sight_player(
     game_state: &mut GameState,
     sound: &mut Sound,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
     tics: u64,
 ) -> bool {
     let obj = level_state.obj(k);
@@ -766,18 +768,24 @@ pub fn sight_player(
         return false;
     }
 
-    first_sighting(k, level_state, sound, assets);
+    first_sighting(k, level_state, sound, assets, rc_consts);
     true
 }
 
 /// Puts an actor into attack mode and possibly reverses the direction
 /// if the player is behind it
-pub fn first_sighting(k: ObjKey, level_state: &mut LevelState, sound: &mut Sound, assets: &Assets) {
+pub fn first_sighting(
+    k: ObjKey,
+    level_state: &mut LevelState,
+    sound: &mut Sound,
+    assets: &Assets,
+    rc_consts: &RayCastConsts,
+) {
     // react to the player
     let obj = level_state.mut_obj(k);
     match obj.class {
         ClassType::Guard => {
-            sound.play_sound_loc_actor(SoundName::HALT, assets, obj);
+            sound.play_sound_loc_actor(SoundName::HALT, assets, rc_consts, obj);
             new_state(obj, &S_GRDCHASE1);
             obj.speed *= 3; // go faster when chasing player
         }
@@ -786,17 +794,17 @@ pub fn first_sighting(k: ObjKey, level_state: &mut LevelState, sound: &mut Sound
             obj.speed *= 3;
         }
         ClassType::Dog => {
-            sound.play_sound_loc_actor(SoundName::DOGBARK, assets, obj);
+            sound.play_sound_loc_actor(SoundName::DOGBARK, assets, rc_consts, obj);
             new_state(obj, &S_DOGCHASE1);
             obj.speed *= 2; // go faster when chasing player
         }
         ClassType::SS => {
-            sound.play_sound_loc_actor(SoundName::SCHUTZAD, assets, obj);
+            sound.play_sound_loc_actor(SoundName::SCHUTZAD, assets, rc_consts, obj);
             new_state(obj, &S_SSCHASE1);
             obj.speed *= 4;
         }
         ClassType::Boss => {
-            sound.play_sound_loc_actor(SoundName::GUTENTAG, assets, obj);
+            sound.play_sound_loc_actor(SoundName::GUTENTAG, assets, rc_consts, obj);
             new_state(obj, &S_BOSSCHASE1);
             obj.speed = SPD_PATROL * 3;
         }
@@ -999,6 +1007,7 @@ pub fn damage_actor(
     rdr: &VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
     damage_param: usize,
 ) {
     game_state.made_noise = true;
@@ -1014,7 +1023,7 @@ pub fn damage_actor(
         kill_actor(k, level_state, game_state, rdr, sound, assets);
     } else {
         if level_state.obj(k).flags & FL_ATTACKMODE == 0 {
-            first_sighting(k, level_state, sound, assets); // put into combat mode
+            first_sighting(k, level_state, sound, assets, rc_consts); // put into combat mode
         }
 
         let obj = level_state.mut_obj(k);

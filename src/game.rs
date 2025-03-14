@@ -15,7 +15,7 @@ use crate::def::{
     IWConfig, Level, LevelState, MAP_SIZE, MAX_DOORS, MAX_STATS, NUM_AREAS, ObjType, PlayState,
     Sprite, StaticType, VisObj, WeaponType, WindowState,
 };
-use crate::draw::{RayCast, three_d_refresh};
+use crate::draw::{RayCast, RayCastConsts, init_ray_cast_consts, three_d_refresh};
 use crate::input::Input;
 use crate::inter::{check_highscore, level_completed, preload_graphics, victory};
 use crate::loader::Loader;
@@ -159,6 +159,8 @@ pub async fn game_loop(
                 }
             }
             PlayState::Died => {
+                let player = level_state.player();
+                let rc_consts = init_ray_cast_consts(&prj, player, game_state.push_wall_pos);
                 died(
                     ticker,
                     level_state,
@@ -169,6 +171,7 @@ pub async fn game_loop(
                     &prj,
                     input,
                     assets,
+                    &rc_consts,
                 )
                 .await;
                 if game_state.lives > -1 {
@@ -241,6 +244,7 @@ async fn died(
     prj: &ProjectionConfig,
     input: &Input,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
 ) {
     game_state.weapon = None; // take away weapon
     //TODO SD_PlaySound(PLAYERDEATHSND)
@@ -301,6 +305,7 @@ async fn died(
                 input,
                 sound,
                 prj,
+                rc_consts,
                 assets,
             )
             .await;
@@ -336,6 +341,7 @@ async fn died(
                 input,
                 sound,
                 prj,
+                rc_consts,
                 assets,
             )
             .await;
