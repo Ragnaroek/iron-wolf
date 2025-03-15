@@ -308,8 +308,6 @@ impl Sound {
             quit(Some("set_position: Illegal position"));
         }
 
-        println!("#### left = {}, right = {}", self.left_pos, self.right_pos);
-
         channel.set_panning(
             ((15 - self.left_pos) << 4) + 15,
             ((15 - self.right_pos) << 4) + 15,
@@ -418,17 +416,6 @@ impl Sound {
         gy: Fixed,
     ) {
         let (left, right) = sound_loc(rc_consts, gx, gy);
-        println!(
-            "### gx={}, gy={}, viewx={}, viewy={}, viewcos={}, viewsin={} => ({}, {})",
-            gx.to_i32(),
-            gy.to_i32(),
-            rc_consts.view_x,
-            rc_consts.view_y,
-            rc_consts.view_cos.to_i32(),
-            rc_consts.view_sin.to_i32(),
-            left,
-            right,
-        );
         self.left_pos = left;
         self.right_pos = right;
         self.play_sound(sound, assets);

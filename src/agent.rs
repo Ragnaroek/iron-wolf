@@ -568,7 +568,7 @@ fn cmd_use(
 }
 
 pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
-    let r = ObjType {
+    let mut player = ObjType {
         class: ClassType::Player,
         distance: 0,
         area_number: 0,
@@ -594,9 +594,13 @@ pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
         hitpoints: 0, // player hitpoints are maintained in GameState::health
     };
 
+    if player.angle < 0 {
+        player.angle += ANGLES as i32;
+    }
+
     //TODO init_areas
 
-    r
+    player
 }
 
 pub fn take_damage(
