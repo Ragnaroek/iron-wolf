@@ -364,8 +364,13 @@ pub async fn victory(
     sr /= 8;
     tr /= 8;
 
-    let min = sec as usize / 60;
-    let sec = sec as usize % 60;
+    let mut min = sec as usize / 60;
+    let mut sec = sec as usize % 60;
+
+    if min > 99 {
+        min = 99;
+        sec = 99;
+    }
 
     let mut i = TIME_X * 8 + 1;
     rdr.pic(i, TIME_Y * 8, num_pic(min / 10));
