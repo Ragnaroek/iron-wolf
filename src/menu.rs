@@ -264,6 +264,12 @@ impl MenuState {
             f(state)
         }
     }
+
+    // reset state to initial state (top menu).
+    // Cursor positions are kept.
+    pub fn reset(&mut self) {
+        self.selected = Menu::Top;
+    }
 }
 
 type MenuRoutine = fn(&VGARenderer, usize);

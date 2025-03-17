@@ -193,6 +193,8 @@ pub async fn game_loop(
                 )
                 .await;
 
+                menu_state.reset();
+
                 return (prj, rc);
             }
             PlayState::Victorious => {
@@ -213,7 +215,9 @@ pub async fn game_loop(
                 )
                 .await;
 
-                // TODO MainMenu viewscores manipulation?
+                menu_state.reset();
+
+                // TODO MainMenu viewscores text manipulation?
 
                 return (prj, rc);
             }
