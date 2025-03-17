@@ -448,8 +448,9 @@ pub fn num_pic(n: usize) -> GraphicNum {
         4 => GraphicNum::NUM4PIC,
         5 => GraphicNum::NUM5PIC,
         6 => GraphicNum::NUM6PIC,
-        8 => GraphicNum::NUM7PIC,
-        9 => GraphicNum::NUM8PIC,
+        7 => GraphicNum::NUM7PIC,
+        8 => GraphicNum::NUM8PIC,
+        9 => GraphicNum::NUM9PIC,
         _ => GraphicNum::NBLANKPIC,
     }
 }
