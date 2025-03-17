@@ -676,28 +676,65 @@ fn control_movement(
 ) {
     level_state.thrustspeed = 0;
 
-    // TODO Impl strafing
-
     // side to side move
-    let control_x = control_state.control.x;
-    let control_y = control_state.control.y;
+    if control_state.button_state(Button::Strafe) {
+        // strafing
+        let ob = level_state.obj(k);
 
-    control_state.angle_frac += control_x;
-    let angle_units = control_state.angle_frac / ANGLE_SCALE;
-    control_state.angle_frac -= angle_units * ANGLE_SCALE;
-
-    {
-        let ob = level_state.mut_obj(k);
-        ob.angle -= angle_units;
-        if ob.angle >= ANGLES as i32 {
-            ob.angle -= ANGLES as i32;
+        if control_state.control.x > 0 {
+            let mut angle = ob.angle - ANGLES_I32 / 4;
+            if angle < 0 {
+                angle += ANGLES_I32;
+            }
+            thrust(
+                k,
+                level_state,
+                game_state,
+                sound,
+                prj,
+                assets,
+                angle,
+                control_state.control.x * MOVE_SCALE,
+            ); // move to left
+        } else if control_state.control.x < 0 {
+            let mut angle = ob.angle + ANGLES_I32 / 4;
+            if angle >= ANGLES_I32 {
+                angle -= ANGLES_I32;
+            }
+            thrust(
+                k,
+                level_state,
+                game_state,
+                sound,
+                prj,
+                assets,
+                angle,
+                -control_state.control.x * MOVE_SCALE,
+            ); // move to right
         }
-        if ob.angle < 0 {
-            ob.angle += ANGLES as i32;
+    } else {
+        // not strafing
+        let control_x = control_state.control.x;
+
+        control_state.angle_frac += control_x;
+        let angle_units = control_state.angle_frac / ANGLE_SCALE;
+        control_state.angle_frac -= angle_units * ANGLE_SCALE;
+
+        {
+            let ob = level_state.mut_obj(k);
+            ob.angle -= angle_units;
+            if ob.angle >= ANGLES as i32 {
+                ob.angle -= ANGLES as i32;
+            }
+            if ob.angle < 0 {
+                ob.angle += ANGLES as i32;
+            }
         }
     }
 
     // forward/backwards move
+
+    let control_y = control_state.control.y;
     let ob = level_state.obj(k);
     if control_y < 0 {
         thrust(
