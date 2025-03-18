@@ -278,7 +278,7 @@ derive_from! {
         CLOADSAVEDISKPIC = 23,
         CDISKLOADING1PIC = 24,
         CDISKLOADING2PIC = 25,
-
+        CCONTROLPIC = 26,
         CLOADGAMEPIC = 28,
         CSAVEGAMEPIC = 29,
         CEPISODE1PIC = 30,

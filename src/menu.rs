@@ -72,6 +72,12 @@ const NE_Y: usize = 23;
 const NE_W: usize = 320 - NE_X * 2;
 const NE_H: usize = 200 - NE_Y * 2;
 
+const CTL_X: usize = 24;
+const CTL_Y: usize = 70;
+const CTL_W: usize = 284;
+const CTL_H: usize = 13 * 7 - 7;
+const CTL_INDENT: usize = 56;
+
 static END_STRINGS: [&'static str; 9] = [
     "Dost thou wish to\nleave with such hasty\nabandon?",
     "Chickening out...\nalready?",
@@ -189,6 +195,23 @@ impl SoundItem {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+#[repr(usize)]
+enum ControlItem {
+    MouseEnabled = 0,
+    JoystickEnabled = 1,
+    JoystickPort2 = 2,
+    GamepadEnabled = 3,
+    MouseSensitivity = 4,
+    CustomizeControls = 5,
+}
+
+impl ControlItem {
+    pub fn pos(self) -> usize {
+        self as usize
+    }
+}
+
 #[derive(PartialEq, Debug)]
 pub enum MenuHandle {
     None,
@@ -226,7 +249,9 @@ impl GameStateUpdate {
 pub enum Menu {
     Top,
     MainMenu(MainMenuItem),
+    //sub-menues
     DifficultySelect,
+    CustomizeControls,
 }
 
 pub struct MenuStateEntry {
@@ -554,6 +579,49 @@ fn initial_load_save_menu() -> MenuStateEntry {
     }
 }
 
+fn initial_ctl_menu() -> MenuStateEntry {
+    MenuStateEntry {
+        items: vec![
+            ItemType {
+                item: 0,
+                active: ItemActivity::Active,
+                string: "Mouse Enabled",
+            },
+            ItemType {
+                item: 1,
+                active: ItemActivity::Active,
+                string: "Joystick Enabled",
+            },
+            ItemType {
+                item: 2,
+                active: ItemActivity::Active,
+                string: "Use joystick port 2",
+            },
+            ItemType {
+                item: 3,
+                active: ItemActivity::Active,
+                string: "Gravis GamePad Enabled",
+            },
+            ItemType {
+                item: 4,
+                active: ItemActivity::Active,
+                string: "Mouse Sensitivity",
+            },
+            ItemType {
+                item: 5,
+                active: ItemActivity::Active,
+                string: "Customize controls",
+            },
+        ],
+        state: ItemInfo {
+            x: CTL_X,
+            y: CTL_Y,
+            cur_pos: 0,
+            indent: CTL_INDENT,
+        },
+    }
+}
+
 pub fn initial_menu_state() -> MenuState {
     MenuState {
         selected: Menu::Top,
@@ -568,6 +636,7 @@ pub fn initial_menu_state() -> MenuState {
                 Menu::MainMenu(MainMenuItem::LoadGame),
                 initial_load_save_menu(),
             ),
+            (Menu::MainMenu(MainMenuItem::Control), initial_ctl_menu()),
             (
                 Menu::MainMenu(MainMenuItem::SaveGame),
                 initial_load_save_menu(),
@@ -669,9 +738,12 @@ pub async fn control_panel(
             rc_return = rc;
             Some(handle)
         }
-        NumCode::F6 => {
-            todo!("show cp_control_panel")
-        }
+        NumCode::F6 => Some(
+            cp_control(
+                ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
+            )
+            .await,
+        ),
         _ => None,
     };
     if let Some(handle) = f_key_handle {
@@ -710,6 +782,12 @@ pub async fn control_panel(
                     MainMenuItem::Sound => {
                         cp_sound(
                             ticker, rdr, sound, assets, input, win_state, menu_state, loader,
+                        )
+                        .await
+                    }
+                    MainMenuItem::Control => {
+                        cp_control(
+                            ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
                         )
                         .await
                     }
@@ -776,6 +854,12 @@ pub async fn control_panel(
                     )
                     .await
                 }
+                Menu::CustomizeControls => {
+                    cp_customize_controls(
+                        ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
+                    )
+                    .await
+                }
             };
             match handle {
                 MenuHandle::OpenMenu(menu) => menu_stack.push(menu),
@@ -792,6 +876,37 @@ pub async fn control_panel(
             return GameStateUpdate::with_render_update(prj_return, rc_return); // back to game loop
         }
     }
+}
+
+async fn cp_customize_controls(
+    ticker: &Ticker,
+    game_state: &mut GameState,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+    input: &Input,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+) -> MenuHandle {
+    // draw costumize screen
+
+    println!("### customize controls");
+
+    let handle = handle_menu(
+        ticker,
+        rdr,
+        sound,
+        assets,
+        input,
+        win_state,
+        menu_state,
+        draw_new_game_diff,
+    )
+    .await;
+
+    // TODO handle selects
+
+    return handle;
 }
 
 async fn cp_main_menu(
@@ -821,6 +936,8 @@ async fn cp_main_menu(
         return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::NewGame));
     } else if handle == MenuHandle::Selected(MainMenuItem::Sound.pos()) {
         return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::Sound));
+    } else if handle == MenuHandle::Selected(MainMenuItem::Control.pos()) {
+        return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::Control));
     } else if handle == MenuHandle::Selected(MainMenuItem::LoadGame.pos()) {
         return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::LoadGame));
     } else if handle == MenuHandle::Selected(MainMenuItem::SaveGame.pos()) {
@@ -1439,6 +1556,140 @@ fn episode_pic(i: usize) -> GraphicNum {
     }
 }
 
+async fn cp_control(
+    ticker: &Ticker,
+    game_state: &mut GameState,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+    input: &Input,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+) -> MenuHandle {
+    draw_ctl_screen(rdr, win_state, menu_state).await;
+    input.ack().await; // TODO wait_key_up?? what is the difference to ack?
+
+    loop {
+        let handle = handle_menu(
+            ticker,
+            rdr,
+            sound,
+            assets,
+            input,
+            win_state,
+            menu_state,
+            no_op_routine,
+        )
+        .await;
+
+        if let MenuHandle::Selected(which) = handle {
+            if which == ControlItem::MouseEnabled.pos() {
+                // TODO handle mouse enable
+            }
+            if which == ControlItem::JoystickEnabled.pos() {
+                // TODO handle joystick enable
+            }
+            if which == ControlItem::JoystickPort2.pos() {
+                // TODO handle joystick enable
+            }
+            if which == ControlItem::GamepadEnabled.pos() {
+                // TODO handle gamepad enable
+            }
+            if which == ControlItem::MouseSensitivity.pos() {
+                // TODO handle mouse sensitiviy
+            }
+            if which == ControlItem::CustomizeControls.pos() {
+                return MenuHandle::OpenMenu(Menu::CustomizeControls);
+            }
+        } else {
+            // ESC pressed
+            rdr.fade_out().await;
+            return handle;
+        }
+    }
+}
+
+async fn draw_ctl_screen(
+    rdr: &VGARenderer,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+) {
+    clear_ms_screen(rdr);
+    draw_stripes(rdr, 10);
+    rdr.pic(80, 0, GraphicNum::CCONTROLPIC);
+    rdr.pic(112, 184, GraphicNum::CMOUSELBACKPIC);
+
+    cp_draw_window(rdr, CTL_X - 8, CTL_Y - 5, CTL_W, CTL_H, BKGD_COLOR);
+
+    win_state.window_x = 0;
+    win_state.window_w = 320;
+    win_state.set_font_color(TEXT_COLOR, BKGD_COLOR);
+
+    let mouse_enabled = false;
+    let joystick_enabled = false;
+
+    menu_state.update_menu(Menu::MainMenu(MainMenuItem::Control), |entry| {
+        // no gamepad support at the moment, always disable
+        if !joystick_enabled {
+            entry.items[1].active = ItemActivity::Deactive;
+            entry.items[2].active = ItemActivity::Deactive;
+            entry.items[3].active = ItemActivity::Deactive;
+        }
+
+        // no mouse support at the moment, always disable
+        if !mouse_enabled {
+            entry.items[0].active = ItemActivity::Deactive;
+            entry.items[4].active = ItemActivity::Deactive;
+        }
+    });
+
+    menu_state.select_menu(Menu::MainMenu(MainMenuItem::Control));
+    draw_menu(rdr, win_state, menu_state);
+
+    let x = CTL_X + CTL_INDENT - 24;
+    let y = CTL_Y + 3;
+    if mouse_enabled {
+        rdr.pic(x, y, GraphicNum::CSELECTEDPIC);
+    } else {
+        rdr.pic(x, y, GraphicNum::CNOTSELECTEDPIC);
+    }
+
+    let y = CTL_Y + 16;
+    if joystick_enabled {
+        rdr.pic(x, y, GraphicNum::CSELECTEDPIC);
+    } else {
+        rdr.pic(x, y, GraphicNum::CNOTSELECTEDPIC);
+    }
+
+    let y = CTL_Y + 29;
+    if joystick_enabled {
+        rdr.pic(x, y, GraphicNum::CSELECTEDPIC);
+    } else {
+        rdr.pic(x, y, GraphicNum::CNOTSELECTEDPIC);
+    }
+
+    let y = CTL_Y + 42;
+    if joystick_enabled {
+        rdr.pic(x, y, GraphicNum::CSELECTEDPIC);
+    } else {
+        rdr.pic(x, y, GraphicNum::CNOTSELECTEDPIC);
+    }
+
+    // PICK FIRST AVAILABLE SPOT
+    let menu = menu_state
+        .menues
+        .get_mut(&Menu::MainMenu(MainMenuItem::Control))
+        .expect("control menue");
+    for i in 0..6 {
+        if menu.items[i].active == ItemActivity::Active {
+            menu.state.cur_pos = i;
+            break;
+        }
+    }
+
+    draw_menu_gun(rdr, &menu.state);
+}
+
 async fn menu_quit(
     ticker: &Ticker,
     rdr: &VGARenderer,
@@ -1783,6 +2034,11 @@ fn erase_gun(
     win_state.print_x = selected.state.x + selected.state.indent;
     win_state.print_y = selected.state.y + which_pos * 13;
     print(rdr, win_state, selected.items[which_pos].string);
+}
+
+fn draw_menu_gun(rdr: &VGARenderer, item_info: &ItemInfo) {
+    let y = item_info.y + item_info.cur_pos * 13 - 2;
+    rdr.pic(item_info.x, y, GraphicNum::CCURSOR1PIC);
 }
 
 fn draw_gun(
