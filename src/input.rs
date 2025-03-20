@@ -2,6 +2,8 @@ use vga::input::{self, NumCode};
 
 use std::sync::{Arc, Mutex};
 
+use crate::{config::WolfConfig, def::NUM_BUTTONS};
+
 use super::time::{TimeCount, get_count};
 
 #[derive(PartialEq)]
@@ -23,13 +25,26 @@ pub struct ControlInfo {
 
 pub struct Input {
     time: TimeCount,
+    pub mouse_enabled: bool,
+    pub joystick_enabled: bool,
     pub input_monitoring: Arc<Mutex<input::InputMonitoring>>,
+
+    pub button_scan: [NumCode; NUM_BUTTONS],
+    pub dir_scan: [NumCode; 4],
 }
 
-pub fn init(time: TimeCount, input_monitoring: Arc<Mutex<input::InputMonitoring>>) -> Input {
+pub fn init(
+    time: TimeCount,
+    input_monitoring: Arc<Mutex<input::InputMonitoring>>,
+    wolf_config: &WolfConfig,
+) -> Input {
     Input {
         time,
+        mouse_enabled: true,
+        joystick_enabled: false,
         input_monitoring,
+        button_scan: wolf_config.buttonscan.clone(),
+        dir_scan: wolf_config.dirscan.clone(),
     }
 }
 

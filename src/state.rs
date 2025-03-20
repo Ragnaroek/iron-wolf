@@ -369,6 +369,20 @@ pub fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
         });
         return true;
     }
+
+    let obj = level_state.obj(k);
+    if level_state.level.map_segs.segs[0][obj.tiley * MAP_SIZE + obj.tilex] < AREATILE {
+        let obj = level_state.obj(k);
+        println!(
+            "will panic: k = {:?}, class = {:?}, segs[0]={}, x={}, y={}",
+            k,
+            obj.class,
+            level_state.level.map_segs.segs[0][obj.tiley * MAP_SIZE + obj.tilex],
+            obj.tilex,
+            obj.tiley,
+        )
+    }
+
     let area = {
         let obj = level_state.obj(k);
         (level_state.level.map_segs.segs[0][obj.tiley * MAP_SIZE + obj.tilex] - AREATILE) as usize

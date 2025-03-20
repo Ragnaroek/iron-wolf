@@ -76,16 +76,13 @@ const NUM_WHITE_SHIFTS: usize = 3;
 const WHITE_STEPS: i32 = 20;
 const WHITE_TICS: i32 = 6;
 
-static BUTTON_SCAN: [NumCode; NUM_BUTTONS] = [
-    NumCode::Control,
-    NumCode::Alt,
-    NumCode::RShift,
-    NumCode::Space,
-    NumCode::Num1,
-    NumCode::Num2,
-    NumCode::Num3,
-    NumCode::Num4,
+pub static BUTTON_MOUSE: [Button; 4] = [
+    Button::Attack,
+    Button::Strafe,
+    Button::Use,
+    Button::NoButton,
 ];
+pub static BUTTON_JOY: [Button; 4] = [Button::Attack, Button::Strafe, Button::Use, Button::Run];
 
 // LIST OF SONGS FOR EACH VERSION
 pub static SONGS: [Music; 6 * 10] = [
@@ -467,6 +464,8 @@ fn update_game_state(
     move_push_walls(level_state, game_state, tics);
 
     for i in 0..level_state.actors.len() {
+        //let actor = &level_state.actors[i];
+        //println!("do actor x={},y={},k={:?},class={:?}", actor.tilex, actor.tiley, i, actor.class);
         do_actor(
             ObjKey(i),
             tics,
@@ -839,7 +838,7 @@ fn poll_controls(state: &mut ControlState, tics: u64, input: &input::Input) {
 
 fn poll_keyboard_buttons(state: &mut ControlState, input: &input::Input) {
     for i in 0..NUM_BUTTONS {
-        state.button_state[i] = input.key_pressed(BUTTON_SCAN[i])
+        state.button_state[i] = input.key_pressed(input.button_scan[i])
     }
 }
 

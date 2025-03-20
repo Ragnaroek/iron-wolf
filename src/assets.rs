@@ -279,6 +279,7 @@ derive_from! {
         CDISKLOADING1PIC = 24,
         CDISKLOADING2PIC = 25,
         CCONTROLPIC = 26,
+        CCUSTOMIZEPIC = 27,
         CLOADGAMEPIC = 28,
         CSAVEGAMEPIC = 29,
         CEPISODE1PIC = 30,

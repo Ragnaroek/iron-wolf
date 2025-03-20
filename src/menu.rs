@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicI32, Ordering};
 use std::time::Duration;
 use std::{ascii, collections::HashMap, str};
 use tokio::time::sleep;
@@ -10,7 +11,7 @@ use crate::draw::{RayCast, init_ray_cast};
 use crate::input::{ControlDirection, ControlInfo, Input, read_control};
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
-use crate::play::ProjectionConfig;
+use crate::play::{BUTTON_JOY, BUTTON_MOUSE, ProjectionConfig};
 use crate::sd::{DigiMode, MusicMode, Sound, SoundMode};
 use crate::start::{load_the_game, new_view_size, quit, save_the_game, show_view_size};
 use crate::time::Ticker;
@@ -78,6 +79,11 @@ const CTL_W: usize = 284;
 const CTL_H: usize = 13 * 7 - 7;
 const CTL_INDENT: usize = 56;
 
+const CST_X: usize = 20;
+const CST_Y: usize = 48;
+const CST_START: usize = 60;
+const CST_SPC: usize = 60;
+
 static END_STRINGS: [&'static str; 9] = [
     "Dost thou wish to\nleave with such hasty\nabandon?",
     "Chickening out...\nalready?",
@@ -99,14 +105,57 @@ static STR_EMPTY: &'static str = "      - empty -";
 static STR_LOADING: &'static str = "Loading...";
 static STR_SAVING: &'static str = "Saving...";
 
-static COLOR_HLITE: [u8; 4] = [DEACTIVE, HIGHLIGHT, READ_HCOLOR, 0x67];
+static STR_CRUN: &'static str = "Run";
+static STR_COPEN: &'static str = "Open";
+static STR_CFIRE: &'static str = "Fire";
+static STR_CSTRAFE: &'static str = "Strafe\n";
 
+static STR_LEFT: &'static str = "Left";
+static STR_RIGHT: &'static str = "Right";
+static STR_FRWD: &'static str = "Frwd";
+static STR_BKWD: &'static str = "Bkwrd\n";
+
+static COLOR_HLITE: [u8; 4] = [DEACTIVE, HIGHLIGHT, READ_HCOLOR, 0x67];
 static COLOR_NORML: [u8; 4] = [DEACTIVE, TEXT_COLOR, READ_COLOR, 0x6b];
+
+static MB_ARRAY: [&'static str; 4] = ["b0", "b1", "b2", "b3"];
+
+#[repr(usize)]
+#[derive(Copy, Clone)]
+enum ButtonOrder {
+    Fire,
+    Strafe,
+    Run,
+    Open,
+}
+
+static BUTTON_ORDER: [ButtonOrder; 4] = [
+    ButtonOrder::Run,
+    ButtonOrder::Open,
+    ButtonOrder::Fire,
+    ButtonOrder::Strafe,
+];
+
+#[repr(usize)]
+#[derive(Copy, Clone)]
+enum MoveOrder {
+    Fwrd,
+    Right,
+    Bkwd,
+    Left,
+}
+
+static MOVE_ORDER: [MoveOrder; 4] = [
+    MoveOrder::Left,
+    MoveOrder::Right,
+    MoveOrder::Fwrd,
+    MoveOrder::Bkwd,
+];
 
 pub struct ItemInfo {
     pub x: usize,
     pub y: usize,
-    pub cur_pos: usize,
+    pub cur_pos: Option<usize>,
     pub indent: usize,
 }
 
@@ -297,9 +346,16 @@ impl MenuState {
     }
 }
 
-type MenuRoutine = fn(&VGARenderer, usize);
+type MenuRoutine = fn(&VGARenderer, &Input, &mut WindowState, &mut MenuState, usize);
 
-fn no_op_routine(_rdr: &VGARenderer, _which: usize) {}
+fn no_op_routine(
+    _rdr: &VGARenderer,
+    _input: &Input,
+    _win_state: &mut WindowState,
+    _menu_state: &mut MenuState,
+    _which: usize,
+) {
+}
 
 // MainItems
 fn initial_main_menu() -> MenuStateEntry {
@@ -354,7 +410,7 @@ fn initial_main_menu() -> MenuStateEntry {
         state: ItemInfo {
             x: MENU_X,
             y: MENU_Y,
-            cur_pos: MainMenuItem::NewGame.pos(),
+            cur_pos: Some(MainMenuItem::NewGame.pos()),
             indent: 24,
         },
     }
@@ -403,7 +459,7 @@ fn initial_episode_menu() -> MenuStateEntry {
         state: ItemInfo {
             x: NE_X,
             y: NE_Y,
-            cur_pos: EpisodeItem::Episode1.pos(),
+            cur_pos: Some(EpisodeItem::Episode1.pos()),
             indent: 88,
         },
     }
@@ -437,7 +493,7 @@ fn initial_difficulty_menu() -> MenuStateEntry {
         state: ItemInfo {
             x: NM_X,
             y: NM_Y,
-            cur_pos: DifficultyItem::BringEmOn.pos(),
+            cur_pos: Some(DifficultyItem::BringEmOn.pos()),
             indent: 24,
         },
     }
@@ -510,7 +566,7 @@ fn initial_sound_menu() -> MenuStateEntry {
         state: ItemInfo {
             x: SM_X,
             y: SM_Y1,
-            cur_pos: SoundItem::SoundEffectNone.pos(),
+            cur_pos: Some(SoundItem::SoundEffectNone.pos()),
             indent: 52,
         },
     }
@@ -573,7 +629,7 @@ fn initial_load_save_menu() -> MenuStateEntry {
         state: ItemInfo {
             x: LSM_X,
             y: LSM_Y,
-            cur_pos: 0,
+            cur_pos: Some(0),
             indent: 24,
         },
     }
@@ -616,8 +672,66 @@ fn initial_ctl_menu() -> MenuStateEntry {
         state: ItemInfo {
             x: CTL_X,
             y: CTL_Y,
-            cur_pos: 0,
+            cur_pos: None,
             indent: CTL_INDENT,
+        },
+    }
+}
+
+pub fn initial_customize_controls_menu() -> MenuStateEntry {
+    MenuStateEntry {
+        items: vec![
+            ItemType {
+                item: 0,
+                active: ItemActivity::Active,
+                string: "",
+            },
+            ItemType {
+                item: 1,
+                active: ItemActivity::Deactive,
+                string: "",
+            },
+            ItemType {
+                item: 2,
+                active: ItemActivity::Deactive,
+                string: "",
+            },
+            ItemType {
+                item: 3,
+                active: ItemActivity::Active,
+                string: "",
+            },
+            ItemType {
+                item: 4,
+                active: ItemActivity::Deactive,
+                string: "",
+            },
+            ItemType {
+                item: 5,
+                active: ItemActivity::Deactive,
+                string: "",
+            },
+            ItemType {
+                item: 6,
+                active: ItemActivity::Active,
+                string: "",
+            },
+            ItemType {
+                item: 7,
+                active: ItemActivity::Deactive,
+                string: "",
+            },
+            ItemType {
+                item: 8,
+                active: ItemActivity::Active,
+                string: "",
+            },
+        ],
+        state: ItemInfo {
+            x: 8,
+            y: CST_Y + 13 * 2,
+            cur_pos: None,
+            indent: 0,
         },
     }
 }
@@ -637,6 +751,7 @@ pub fn initial_menu_state() -> MenuState {
                 initial_load_save_menu(),
             ),
             (Menu::MainMenu(MainMenuItem::Control), initial_ctl_menu()),
+            (Menu::CustomizeControls, initial_customize_controls_menu()),
             (
                 Menu::MainMenu(MainMenuItem::SaveGame),
                 initial_load_save_menu(),
@@ -888,10 +1003,9 @@ async fn cp_customize_controls(
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) -> MenuHandle {
-    // draw costumize screen
+    draw_custom_screen(rdr, input, win_state, menu_state).await;
 
-    println!("### customize controls");
-
+    menu_state.select_menu(Menu::CustomizeControls);
     let handle = handle_menu(
         ticker,
         rdr,
@@ -900,13 +1014,265 @@ async fn cp_customize_controls(
         input,
         win_state,
         menu_state,
-        draw_new_game_diff,
+        fixup_custom,
     )
     .await;
 
     // TODO handle selects
 
     return handle;
+}
+
+async fn draw_custom_screen(
+    rdr: &VGARenderer,
+    input: &Input,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+) {
+    clear_ms_screen(rdr);
+    win_state.window_x = 0;
+    win_state.window_w = 320;
+
+    rdr.pic(112, 184, GraphicNum::CMOUSELBACKPIC);
+    draw_stripes(rdr, 10);
+    rdr.pic(80, 0, GraphicNum::CCUSTOMIZEPIC);
+
+    // MOUSE
+    win_state.set_font_color(READ_COLOR, BKGD_COLOR);
+    win_state.window_x = 0;
+    win_state.window_w = 320;
+
+    // MOUSE
+    win_state.print_y = CST_Y;
+    c_print(rdr, win_state, "Mouse\n");
+    win_state.set_font_color(TEXT_COLOR, BKGD_COLOR);
+    win_state.print_x = CST_START;
+    print(rdr, win_state, STR_CRUN);
+    win_state.print_x = CST_START + CST_SPC * 1;
+    print(rdr, win_state, STR_COPEN);
+    win_state.print_x = CST_START + CST_SPC * 2;
+    print(rdr, win_state, STR_CFIRE);
+    win_state.print_x = CST_START + CST_SPC * 3;
+    print(rdr, win_state, STR_CSTRAFE);
+    cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
+    draw_cust_mouse(rdr, input, win_state, menu_state, false);
+    print(rdr, win_state, "\n");
+
+    // JOYSTICK/PAD
+    win_state.set_font_color(READ_COLOR, BKGD_COLOR);
+    c_print(rdr, win_state, "Joystick/Gravis GamePad\n");
+    win_state.set_font_color(TEXT_COLOR, BKGD_COLOR);
+    win_state.print_x = CST_START;
+    print(rdr, win_state, STR_CRUN);
+    win_state.print_x = CST_START + CST_SPC * 1;
+    print(rdr, win_state, STR_COPEN);
+    win_state.print_x = CST_START + CST_SPC * 2;
+    print(rdr, win_state, STR_CFIRE);
+    win_state.print_x = CST_START + CST_SPC * 3;
+    print(rdr, win_state, STR_CSTRAFE);
+    cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
+    draw_cust_joy(rdr, input, win_state, menu_state, false);
+    print(rdr, win_state, "\n");
+
+    // KEYBOARD
+    win_state.set_font_color(READ_COLOR, BKGD_COLOR);
+    c_print(rdr, win_state, "Keyboard\n");
+    win_state.set_font_color(TEXT_COLOR, BKGD_COLOR);
+    win_state.print_x = CST_START;
+    print(rdr, win_state, STR_CRUN);
+    win_state.print_x = CST_START + CST_SPC * 1;
+    print(rdr, win_state, STR_COPEN);
+    win_state.print_x = CST_START + CST_SPC * 2;
+    print(rdr, win_state, STR_CFIRE);
+    win_state.print_x = CST_START + CST_SPC * 3;
+    print(rdr, win_state, STR_CSTRAFE);
+    cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
+    draw_cust_keybd(rdr, input, win_state, false);
+    print(rdr, win_state, "\n");
+
+    // KEYBOARD MOVE KEYS
+    win_state.set_font_color(TEXT_COLOR, BKGD_COLOR);
+    win_state.print_x = CST_START;
+    print(rdr, win_state, STR_LEFT);
+    win_state.print_x = CST_START + CST_SPC * 1;
+    print(rdr, win_state, STR_RIGHT);
+    win_state.print_x = CST_START + CST_SPC * 2;
+    print(rdr, win_state, STR_FRWD);
+    win_state.print_x = CST_START + CST_SPC * 3;
+    print(rdr, win_state, STR_BKWD);
+    cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
+    draw_cust_keys(rdr, input, win_state, false);
+
+    // PICK STARTING POINT IN MENU
+    let menu = menu_state
+        .menues
+        .get_mut(&Menu::CustomizeControls)
+        .expect("customize control menue");
+
+    if menu.state.cur_pos.is_none() {
+        for i in 0..menu.items.len() {
+            if menu.items[i].active == ItemActivity::Active {
+                menu.state.cur_pos = Some(i);
+                break;
+            }
+        }
+    }
+
+    rdr.fade_in().await;
+}
+
+// FIXUP GUN CURSOR OVERDRAW SHIT
+fn fixup_custom(
+    rdr: &VGARenderer,
+    input: &Input,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+    which: usize,
+) {
+    static LAST_WHICH: AtomicI32 = AtomicI32::new(-1);
+
+    let y = CST_Y + 26 + which * 13;
+    vw_hlin(rdr, 7, 32, y - 1, DEACTIVE);
+    vw_hlin(rdr, 7, 32, y + 12, BORDER2_COLOR);
+    vw_hlin(rdr, 7, 32, y - 2, BORDER_COLOR);
+    vw_hlin(rdr, 7, 32, y + 13, BORDER_COLOR);
+
+    match which {
+        0 => draw_cust_mouse(rdr, input, win_state, menu_state, true),
+        3 => draw_cust_joy(rdr, input, win_state, menu_state, true),
+        6 => draw_cust_keybd(rdr, input, win_state, true),
+        8 => draw_cust_keys(rdr, input, win_state, true),
+        _ => {}
+    }
+
+    let last_which = LAST_WHICH.load(Ordering::Relaxed);
+    if last_which >= 0 {
+        let y = CST_Y + 26 + last_which as usize * 23;
+        vw_hlin(rdr, 7, 32, y - 1, DEACTIVE);
+        vw_hlin(rdr, 7, 32, y + 12, BORDER2_COLOR);
+        vw_hlin(rdr, 7, 32, y - 2, BORDER_COLOR);
+        vw_hlin(rdr, 7, 32, y + 13, BORDER_COLOR);
+
+        if last_which as usize != which {
+            match last_which {
+                0 => draw_cust_mouse(rdr, input, win_state, menu_state, false),
+                3 => draw_cust_joy(rdr, input, win_state, menu_state, false),
+                6 => draw_cust_keybd(rdr, input, win_state, false),
+                8 => draw_cust_keys(rdr, input, win_state, false),
+                _ => {}
+            }
+        }
+    }
+
+    LAST_WHICH.store(which as i32, Ordering::Relaxed);
+}
+
+fn draw_cust_mouse(
+    rdr: &VGARenderer,
+    input: &Input,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+    hilight: bool,
+) {
+    let color = if hilight { HIGHLIGHT } else { TEXT_COLOR };
+    win_state.set_font_color(color, BKGD_COLOR);
+
+    let menu = menu_state
+        .menues
+        .get_mut(&Menu::CustomizeControls)
+        .expect("customize control menue");
+
+    if !input.mouse_enabled {
+        win_state.set_font_color(DEACTIVE, BKGD_COLOR);
+        menu.items[0].active = ItemActivity::Deactive;
+    } else {
+        menu.items[0].active = ItemActivity::Active;
+    }
+
+    win_state.print_y = CST_Y + 13 * 2;
+    for i in 0..4 {
+        print_cust_mouse(rdr, win_state, i);
+    }
+}
+
+fn print_cust_mouse(rdr: &VGARenderer, win_state: &mut WindowState, i: usize) {
+    for j in 0..4 {
+        if BUTTON_ORDER[i] as usize == BUTTON_MOUSE[j] as usize {
+            win_state.print_x = CST_START + CST_SPC * i;
+            print(rdr, win_state, MB_ARRAY[j]);
+            break;
+        }
+    }
+}
+
+fn draw_cust_joy(
+    rdr: &VGARenderer,
+    input: &Input,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+    hilight: bool,
+) {
+    let color = if hilight { HIGHLIGHT } else { TEXT_COLOR };
+    win_state.set_font_color(color, BKGD_COLOR);
+
+    let menu = menu_state
+        .menues
+        .get_mut(&Menu::CustomizeControls)
+        .expect("customize control menue");
+
+    if !input.joystick_enabled {
+        win_state.set_font_color(DEACTIVE, BKGD_COLOR);
+        menu.items[3].active = ItemActivity::Deactive;
+    } else {
+        menu.items[3].active = ItemActivity::Active;
+    }
+
+    win_state.print_y = CST_Y + 13 * 5;
+    for i in 0..4 {
+        print_cust_joy(rdr, win_state, i);
+    }
+}
+
+fn print_cust_joy(rdr: &VGARenderer, win_state: &mut WindowState, i: usize) {
+    for j in 0..4 {
+        if BUTTON_ORDER[i] as usize == BUTTON_JOY[j] as usize {
+            win_state.print_x = CST_START + CST_SPC * i;
+            print(rdr, win_state, MB_ARRAY[j]);
+            break;
+        }
+    }
+}
+
+fn draw_cust_keybd(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, hilight: bool) {
+    let color = if hilight { HIGHLIGHT } else { TEXT_COLOR };
+    win_state.set_font_color(color, BKGD_COLOR);
+
+    win_state.print_y = CST_Y + 13 * 8;
+    for i in 0..4 {
+        print_cust_keybd(rdr, input, win_state, i);
+    }
+}
+
+fn print_cust_keybd(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, i: usize) {
+    let scan = input.button_scan[i];
+    win_state.print_x = CST_START + CST_SPC * i;
+    print(rdr, win_state, numcode_name(scan));
+}
+
+fn draw_cust_keys(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, hilight: bool) {
+    let color = if hilight { HIGHLIGHT } else { TEXT_COLOR };
+    win_state.set_font_color(color, BKGD_COLOR);
+
+    win_state.print_y = CST_Y + 13 * 10;
+    for i in 0..4 {
+        print_cust_keys(rdr, input, win_state, i);
+    }
+}
+
+fn print_cust_keys(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, i: usize) {
+    let scan = input.dir_scan[MOVE_ORDER[i] as usize];
+    win_state.print_x = CST_START + CST_SPC * i;
+    print(rdr, win_state, numcode_name(scan));
 }
 
 async fn cp_main_menu(
@@ -1442,7 +1808,13 @@ fn print_ls_entry(
     win_state.font_number = 1;
 }
 
-fn draw_new_game_diff(rdr: &VGARenderer, which: usize) {
+fn draw_new_game_diff(
+    rdr: &VGARenderer,
+    _: &Input,
+    _: &mut WindowState,
+    _: &mut MenuState,
+    which: usize,
+) {
     rdr.pic(NM_X + 185, NM_Y + 7, difficulty_pic(which));
 }
 
@@ -1500,12 +1872,8 @@ async fn draw_difficulty_select(
     menu_state.select_menu(Menu::DifficultySelect);
     draw_menu(rdr, win_state, menu_state);
 
-    menu_state.selected_state().state.cur_pos;
-    rdr.pic(
-        NM_X + 185,
-        NM_Y + 7,
-        difficulty_pic(menu_state.selected_state().state.cur_pos),
-    );
+    let pos = menu_state.selected_state().state.cur_pos.unwrap_or(0);
+    rdr.pic(NM_X + 185, NM_Y + 7, difficulty_pic(pos));
     rdr.fade_in().await;
 }
 
@@ -1566,7 +1934,7 @@ async fn cp_control(
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) -> MenuHandle {
-    draw_ctl_screen(rdr, win_state, menu_state).await;
+    draw_ctl_screen(rdr, input, win_state, menu_state).await;
     input.ack().await; // TODO wait_key_up?? what is the difference to ack?
 
     loop {
@@ -1611,6 +1979,7 @@ async fn cp_control(
 
 async fn draw_ctl_screen(
     rdr: &VGARenderer,
+    input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
@@ -1625,19 +1994,16 @@ async fn draw_ctl_screen(
     win_state.window_w = 320;
     win_state.set_font_color(TEXT_COLOR, BKGD_COLOR);
 
-    let mouse_enabled = false;
-    let joystick_enabled = false;
-
     menu_state.update_menu(Menu::MainMenu(MainMenuItem::Control), |entry| {
         // no gamepad support at the moment, always disable
-        if !joystick_enabled {
+        if !input.joystick_enabled {
             entry.items[1].active = ItemActivity::Deactive;
             entry.items[2].active = ItemActivity::Deactive;
             entry.items[3].active = ItemActivity::Deactive;
         }
 
         // no mouse support at the moment, always disable
-        if !mouse_enabled {
+        if !input.mouse_enabled {
             entry.items[0].active = ItemActivity::Deactive;
             entry.items[4].active = ItemActivity::Deactive;
         }
@@ -1648,28 +2014,28 @@ async fn draw_ctl_screen(
 
     let x = CTL_X + CTL_INDENT - 24;
     let y = CTL_Y + 3;
-    if mouse_enabled {
+    if input.mouse_enabled {
         rdr.pic(x, y, GraphicNum::CSELECTEDPIC);
     } else {
         rdr.pic(x, y, GraphicNum::CNOTSELECTEDPIC);
     }
 
     let y = CTL_Y + 16;
-    if joystick_enabled {
+    if input.joystick_enabled {
         rdr.pic(x, y, GraphicNum::CSELECTEDPIC);
     } else {
         rdr.pic(x, y, GraphicNum::CNOTSELECTEDPIC);
     }
 
     let y = CTL_Y + 29;
-    if joystick_enabled {
+    if input.joystick_enabled {
         rdr.pic(x, y, GraphicNum::CSELECTEDPIC);
     } else {
         rdr.pic(x, y, GraphicNum::CNOTSELECTEDPIC);
     }
 
     let y = CTL_Y + 42;
-    if joystick_enabled {
+    if input.joystick_enabled {
         rdr.pic(x, y, GraphicNum::CSELECTEDPIC);
     } else {
         rdr.pic(x, y, GraphicNum::CNOTSELECTEDPIC);
@@ -1680,10 +2046,14 @@ async fn draw_ctl_screen(
         .menues
         .get_mut(&Menu::MainMenu(MainMenuItem::Control))
         .expect("control menue");
-    for i in 0..6 {
-        if menu.items[i].active == ItemActivity::Active {
-            menu.state.cur_pos = i;
-            break;
+    if menu.state.cur_pos.is_none()
+        || menu.items[menu.state.cur_pos.unwrap()].active != ItemActivity::Active
+    {
+        for i in 0..6 {
+            if menu.items[i].active == ItemActivity::Active {
+                menu.state.cur_pos = Some(i);
+                break;
+            }
         }
     }
 
@@ -1872,7 +2242,7 @@ async fn handle_menu(
     input.clear_keys_down();
 
     if let MenuHandle::Selected(which_pos) = handle {
-        menu_state.update_selected(|selected| selected.state.cur_pos = which_pos);
+        menu_state.update_selected(|selected| selected.state.cur_pos = Some(which_pos));
     }
     handle
 }
@@ -1887,14 +2257,18 @@ async fn handle_menu_loop(
     menu_state: &mut MenuState,
     routine: MenuRoutine,
 ) -> MenuHandle {
-    let selected = menu_state.selected_state();
-
-    let mut which_pos = selected.state.cur_pos;
-    let x = selected.state.x & 8_usize.wrapping_neg();
-    let base_y = selected.state.y - 2;
+    let (mut which_pos, x, base_y) = {
+        let selected = menu_state.selected_state();
+        let which_pos = selected.state.cur_pos.unwrap_or(0);
+        let x = selected.state.x & 8_usize.wrapping_neg();
+        let base_y = selected.state.y - 2;
+        (which_pos, x, base_y)
+    };
     let mut y = base_y + which_pos * 13;
-
     rdr.pic(x, y, GraphicNum::CCURSOR1PIC);
+
+    // CALL CUSTOM ROUTINE IF IT IS NEEDED
+    routine(rdr, input, win_state, menu_state, which_pos);
 
     let mut shape = GraphicNum::CCURSOR1PIC;
     let mut timer = 8;
@@ -1914,7 +2288,7 @@ async fn handle_menu_loop(
                 timer = 70;
             }
             rdr.pic(x, y, shape);
-            routine(rdr, which_pos);
+            routine(rdr, input, win_state, menu_state, which_pos);
         }
 
         // TODO CheckPause
@@ -1922,57 +2296,65 @@ async fn handle_menu_loop(
         // TODO check key presses
 
         let ci = read_any_control(input);
-
         match ci.dir {
             ControlDirection::North => {
-                erase_gun(rdr, win_state, selected, x, y, which_pos);
+                erase_gun(rdr, win_state, menu_state.selected_state(), x, y, which_pos);
 
-                if which_pos > 0 && selected.items[which_pos - 1].active != ItemActivity::Deactive {
+                if which_pos > 0
+                    && menu_state.selected_state().items[which_pos - 1].active
+                        != ItemActivity::Deactive
+                {
                     y -= 6;
                     draw_half_step(ticker, rdr, sound, assets, x, y).await;
                 }
 
                 loop {
                     if which_pos == 0 {
-                        which_pos = selected.items.len() - 1;
+                        which_pos = menu_state.selected_state().items.len() - 1;
                     } else {
                         which_pos -= 1;
                     }
 
-                    if selected.items[which_pos].active != ItemActivity::Deactive {
+                    if menu_state.selected_state().items[which_pos].active != ItemActivity::Deactive
+                    {
                         break;
                     }
                 }
+
                 y = draw_gun(
-                    rdr, sound, assets, win_state, selected, x, y, which_pos, base_y, routine,
+                    rdr, sound, assets, input, win_state, menu_state, x, y, which_pos, base_y,
+                    routine,
                 );
 
                 // WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
                 tic_delay(ticker, input, 20).await;
             }
             ControlDirection::South => {
-                erase_gun(rdr, win_state, selected, x, y, which_pos);
+                erase_gun(rdr, win_state, menu_state.selected_state(), x, y, which_pos);
 
-                if which_pos != selected.items.len() - 1
-                    && selected.items[which_pos + 1].active != ItemActivity::Deactive
+                if which_pos != menu_state.selected_state().items.len() - 1
+                    && menu_state.selected_state().items[which_pos + 1].active
+                        != ItemActivity::Deactive
                 {
                     y += 6;
                     draw_half_step(ticker, rdr, sound, assets, x, y).await;
                 }
 
                 loop {
-                    if which_pos == selected.items.len() - 1 {
+                    if which_pos == menu_state.selected_state().items.len() - 1 {
                         which_pos = 0;
                     } else {
                         which_pos += 1;
                     }
 
-                    if selected.items[which_pos].active != ItemActivity::Deactive {
+                    if menu_state.selected_state().items[which_pos].active != ItemActivity::Deactive
+                    {
                         break;
                     }
                 }
                 y = draw_gun(
-                    rdr, sound, assets, win_state, selected, x, y, which_pos, base_y, routine,
+                    rdr, sound, assets, input, win_state, menu_state, x, y, which_pos, base_y,
+                    routine,
                 );
 
                 // WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
@@ -2037,7 +2419,7 @@ fn erase_gun(
 }
 
 fn draw_menu_gun(rdr: &VGARenderer, item_info: &ItemInfo) {
-    let y = item_info.y + item_info.cur_pos * 13 - 2;
+    let y = item_info.y + item_info.cur_pos.unwrap_or(0) * 13 - 2;
     rdr.pic(item_info.x, y, GraphicNum::CCURSOR1PIC);
 }
 
@@ -2045,24 +2427,28 @@ fn draw_gun(
     rdr: &VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
+    input: &Input,
     win_state: &mut WindowState,
-    selected: &MenuStateEntry,
+    menu_state: &mut MenuState,
     x: usize,
     y: usize,
     which_pos: usize,
     base_y: usize,
     routine: MenuRoutine,
 ) -> usize {
+    let selected = menu_state.selected_state();
+
     rdr.bar(x - 1, y, 25, 16, BKGD_COLOR);
     let new_y = base_y + which_pos * 13;
     rdr.pic(x, new_y, GraphicNum::CCURSOR1PIC);
+
     set_text_color(win_state, &selected.items, which_pos, true);
 
     win_state.print_x = selected.state.x + selected.state.indent;
     win_state.print_y = selected.state.y + which_pos * 13;
     print(rdr, win_state, selected.items[which_pos].string);
 
-    routine(rdr, which_pos);
+    routine(rdr, input, win_state, menu_state, which_pos);
 
     sound.play_sound(SoundName::MOVEGUN2, assets);
 
@@ -2116,7 +2502,7 @@ fn draw_main_menu(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &m
 
 fn draw_menu(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &MenuState) {
     let selected = menu_state.selected_state();
-    let which = selected.state.cur_pos;
+    let which = selected.state.cur_pos.unwrap_or(0);
 
     let x = selected.state.x + selected.state.indent;
     win_state.window_x = x;
@@ -2299,4 +2685,13 @@ pub fn intro_screen(rdr: &VGARenderer) {
 
     // SoundSource never present, as there is no emulation for it yet
     //rdr.bar(164, 174, 12, 2, FILL_COLOR);
+}
+
+fn numcode_name(scan: NumCode) -> &'static str {
+    match scan {
+        NumCode::Escape => "Esc",
+        NumCode::BackSpace => "BkSp",
+        // TODO map remaining names
+        _ => "?",
+    }
 }

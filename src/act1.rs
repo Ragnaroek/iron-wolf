@@ -228,7 +228,6 @@ pub fn spawn_static(
     stat_type: usize,
 ) -> StaticType {
     let info = &STAT_INFO[stat_type];
-
     let mut flags = 0;
     if info.kind == StaticKind::Block {
         actor_at[tile_x][tile_y] = At::Wall(1); // Blocked

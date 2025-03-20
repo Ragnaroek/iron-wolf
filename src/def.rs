@@ -254,7 +254,7 @@ impl ControlState {
 
 // nums here are an index into ControlState::button_state
 #[repr(usize)]
-#[derive(Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Button {
     NoButton = usize::MAX,
     Attack = 0,
@@ -910,6 +910,7 @@ derive_from! {
     }
 }
 
+#[derive(Debug)]
 pub struct StaticInfo {
     pub sprite: Sprite,
     pub kind: StaticKind,

@@ -88,7 +88,11 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
 
     let ticker = time::new_ticker(rt_ref.clone());
     let input_monitoring = Arc::new(Mutex::new(vga::input::new_input_monitoring()));
-    let input = input::init(ticker.time_count.clone(), input_monitoring.clone());
+    let input = input::init(
+        ticker.time_count.clone(),
+        input_monitoring.clone(),
+        &wolf_config,
+    );
 
     let mut win_state = initial_window_state();
     let mut menu_state = initial_menu_state();
