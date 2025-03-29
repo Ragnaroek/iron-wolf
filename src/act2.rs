@@ -1236,7 +1236,7 @@ pub static S_BOSSSHOOT8: StateType = StateType {
     next: Some(&S_BOSSCHASE1),
 };
 
-pub static STATES: [&'static StateType; 94] = [
+pub static STATES: [&'static StateType; 111] = [
     &S_PLAYER,
     &S_ATTACK,
     &S_GRDSTAND,
@@ -1284,6 +1284,23 @@ pub static STATES: [&'static StateType; 94] = [
     &S_DOGDEAD,
     &S_OFCSTAND,
     &S_MUTSTAND,
+    &S_MUTPAIN,
+    &S_MUTPAIN1,
+    &S_MUTSHOOT1,
+    &S_MUTSHOOT2,
+    &S_MUTSHOOT3,
+    &S_MUTSHOOT4,
+    &S_MUTCHASE1,
+    &S_MUTCHASE1S,
+    &S_MUTCHASE2,
+    &S_MUTCHASE3,
+    &S_MUTCHASE3S,
+    &S_MUTCHASE4,
+    &S_MUTDIE1,
+    &S_MUTDIE2,
+    &S_MUTDIE3,
+    &S_MUTDIE4,
+    &S_MUTDIE5,
     &S_SSSTAND,
     &S_SSPATH1,
     &S_SSPATH1S,
@@ -1339,7 +1356,7 @@ pub fn get_state_by_id(id: u16) -> Option<&'static StateType> {
             return Some(&s);
         }
     }
-    return None;
+    None
 }
 
 fn t_path(

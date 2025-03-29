@@ -27,10 +27,10 @@ coverage-sdl:
 ## Testing
 
 test-sdl:
-	cargo test --features sdl
+	RUST_BACKTRACE=1 cargo test --features sdl
 
 test-web:
-	cargo test --features web
+	RUST_BACKTRACE=1 cargo test --features web
 
 test-all: build-sdl-tracing test-sdl test-web
 

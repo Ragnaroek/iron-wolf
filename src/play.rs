@@ -464,8 +464,6 @@ fn update_game_state(
     move_push_walls(level_state, game_state, tics);
 
     for i in 0..level_state.actors.len() {
-        //let actor = &level_state.actors[i];
-        //println!("do actor x={},y={},k={:?},class={:?}", actor.tilex, actor.tiley, i, actor.class);
         do_actor(
             ObjKey(i),
             tics,
@@ -510,7 +508,17 @@ fn do_actor(
     // non transitional object
 
     if level_state.obj(k).tic_count == 0 {
-        if let Some(think) = level_state.obj(k).state.expect("state").think {
+        if let Some(think) = level_state
+            .obj(k)
+            .state
+            .expect(&format!(
+                "state,k={:?}, class={:?}, is={}",
+                k,
+                level_state.obj(k).class,
+                level_state.obj(k).state.is_some(),
+            ))
+            .think
+        {
             think(
                 k,
                 tics,
