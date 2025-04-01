@@ -13,6 +13,7 @@ use crate::def::{
 use crate::draw::RayCastConsts;
 use crate::fixed::{fixed_by_frac, new_fixed_i32};
 use crate::game::AREATILE;
+use crate::map;
 use crate::play::{ProjectionConfig, start_bonus_flash, start_damage_flash};
 use crate::sd::Sound;
 use crate::state::{check_line, damage_actor};
@@ -567,24 +568,31 @@ fn cmd_use(
     }
 }
 
-pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
+pub fn spawn_player(
+    tile_x: usize,
+    tile_y: usize,
+    map_data: &map::MapSegs,
+    area_by_player: &mut Vec<bool>,
+    dir: i32,
+) -> ObjType {
+    let area_number = (map_data.segs[0][tile_y * MAP_SIZE + tile_x] - AREATILE) as usize;
     let mut player = ObjType {
         class: ClassType::Player,
         distance: 0,
-        area_number: 0,
+        area_number,
         active: crate::def::ActiveType::Yes,
         tic_count: 0,
         angle: (1 - dir) * 90,
         flags: FL_NEVERMARK,
         pitch: 0,
-        tilex,
-        tiley,
+        tilex: tile_x,
+        tiley: tile_y,
         view_x: 0,
         view_height: 0,
         trans_x: new_fixed_i32(0),
         trans_y: new_fixed_i32(0),
-        x: ((tilex as i32) << TILESHIFT) + TILEGLOBAL / 2,
-        y: ((tiley as i32) << TILESHIFT) + TILEGLOBAL / 2,
+        x: ((tile_x as i32) << TILESHIFT) + TILEGLOBAL / 2,
+        y: ((tile_y as i32) << TILESHIFT) + TILEGLOBAL / 2,
         speed: 0,
         dir: DirType::NoDir,
         temp1: 0,
@@ -598,9 +606,14 @@ pub fn spawn_player(tilex: usize, tiley: usize, dir: i32) -> ObjType {
         player.angle += ANGLES as i32;
     }
 
-    //TODO init_areas
+    init_areas(player, area_by_player);
 
     player
+}
+
+fn init_areas(player: ObjType, area_by_player: &mut Vec<bool>) {
+    area_by_player.fill(false); // clear it (makes a difference if there multiple player positions and only the last is kept)
+    area_by_player[player.area_number] = true;
 }
 
 pub fn take_damage(

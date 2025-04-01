@@ -471,11 +471,14 @@ pub fn setup_game_level(game_state: &mut GameState, assets: &Assets) -> Result<L
         }
     }
 
+    let mut area_by_player = vec![false; NUM_AREAS];
+
     let (actors, statics, info_map) = scan_info_plane(
         &mut tile_map,
         &mut map_segs,
         game_state,
         &mut actor_at,
+        &mut area_by_player,
         game_state.difficulty,
     );
 
@@ -524,7 +527,7 @@ pub fn setup_game_level(game_state: &mut GameState, assets: &Assets) -> Result<L
         actor_at,
         doors,
         area_connect: vec![vec![0; NUM_AREAS]; NUM_AREAS],
-        area_by_player: vec![false; NUM_AREAS],
+        area_by_player,
         statics,
         spotvis: vec![vec![false; MAP_SIZE]; MAP_SIZE],
         vislist: vec![
@@ -562,6 +565,7 @@ fn scan_info_plane(
     map_data: &mut map::MapSegs,
     game_state: &mut GameState,
     actor_at: &mut Vec<Vec<At>>,
+    area_by_player: &mut Vec<bool>,
     difficulty: Difficulty,
 ) -> (Vec<ObjType>, Vec<StaticType>, Vec<Vec<u16>>) {
     let mut player = None;
@@ -580,7 +584,13 @@ fn scan_info_plane(
             match tile {
                 19..=22 => {
                     // player start position
-                    player = Some(spawn_player(x, y, NORTH + (tile - 19) as i32))
+                    player = Some(spawn_player(
+                        x,
+                        y,
+                        map_data,
+                        area_by_player,
+                        NORTH + (tile - 19) as i32,
+                    ))
                 }
                 23..=74 => {
                     // statics
