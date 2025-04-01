@@ -591,6 +591,66 @@ pub static S_MUTSTAND: StateType = StateType {
     next: Some(&S_MUTSTAND),
 };
 
+pub static S_MUTPATH1: StateType = StateType {
+    id: 1401,
+    rotate: 1,
+    sprite: Some(Sprite::MutantW11),
+    tic_time: 20,
+    think: Some(t_path),
+    action: None,
+    next: Some(&S_MUTPATH1S),
+};
+
+pub static S_MUTPATH1S: StateType = StateType {
+    id: 1402,
+    rotate: 1,
+    sprite: Some(Sprite::MutantW11),
+    tic_time: 5,
+    think: None,
+    action: None,
+    next: Some(&S_MUTPATH2),
+};
+
+pub static S_MUTPATH2: StateType = StateType {
+    id: 1403,
+    rotate: 1,
+    sprite: Some(Sprite::MutantW21),
+    tic_time: 15,
+    think: Some(t_path),
+    action: None,
+    next: Some(&S_MUTPATH3),
+};
+
+pub static S_MUTPATH3: StateType = StateType {
+    id: 1404,
+    rotate: 1,
+    sprite: Some(Sprite::MutantW31),
+    tic_time: 20,
+    think: Some(t_path),
+    action: None,
+    next: Some(&S_MUTPATH3S),
+};
+
+pub static S_MUTPATH3S: StateType = StateType {
+    id: 1405,
+    rotate: 1,
+    sprite: Some(Sprite::MutantW31),
+    tic_time: 5,
+    think: None,
+    action: None,
+    next: Some(&S_MUTPATH4),
+};
+
+pub static S_MUTPATH4: StateType = StateType {
+    id: 1406,
+    rotate: 1,
+    sprite: Some(Sprite::MutantW41),
+    tic_time: 15,
+    think: Some(t_path),
+    action: None,
+    next: Some(&S_MUTPATH1),
+};
+
 pub static S_MUTPAIN: StateType = StateType {
     id: 1407,
     rotate: 2,
@@ -1236,7 +1296,7 @@ pub static S_BOSSSHOOT8: StateType = StateType {
     next: Some(&S_BOSSCHASE1),
 };
 
-pub static STATES: [&'static StateType; 111] = [
+pub static STATES: [&'static StateType; 117] = [
     &S_PLAYER,
     &S_ATTACK,
     &S_GRDSTAND,
@@ -1284,6 +1344,12 @@ pub static STATES: [&'static StateType; 111] = [
     &S_DOGDEAD,
     &S_OFCSTAND,
     &S_MUTSTAND,
+    &S_MUTPATH1,
+    &S_MUTPATH1S,
+    &S_MUTPATH2,
+    &S_MUTPATH3,
+    &S_MUTPATH3S,
+    &S_MUTPATH4,
     &S_MUTPAIN,
     &S_MUTPAIN1,
     &S_MUTSHOOT1,
@@ -1809,23 +1875,18 @@ pub fn spawn_patrol(
         EnemyType::SS => {
             let mut obj = spawn_new_obj(map_data, x_tile, y_tile, &S_SSPATH1, ClassType::SS);
             obj.speed = SPD_PATROL;
-            // TODO check loadedgame
             if !game_state.loaded_game {
                 game_state.kill_total += 1;
             }
             obj
         }
         EnemyType::Mutant => {
-            todo!("spawn with &S_MUTPATH1");
-            /*
-            let obj = spawn_new_obj(x_tile, y_tile, &S_MUTPATH1, ClassType::Mutant);
+            let mut obj = spawn_new_obj(map_data, x_tile, y_tile, &S_MUTPATH1, ClassType::Mutant);
             obj.speed = SPD_PATROL;
-            // TODO check loadedgame
             if !game_state.loaded_game {
                 game_state.kill_total += 1;
             }
             obj
-            */
         }
         EnemyType::Dog => {
             let mut obj = spawn_new_obj(map_data, x_tile, y_tile, &S_DOGPATH1, ClassType::Dog);

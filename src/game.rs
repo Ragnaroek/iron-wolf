@@ -940,7 +940,17 @@ fn scan_info_plane(
                     );
                 }
                 220..=223 => {
-                    todo!("patrol mutant");
+                    spawn_patrol(
+                        map_data,
+                        EnemyType::Mutant,
+                        &mut actors,
+                        actor_at,
+                        game_state,
+                        x,
+                        y,
+                        tile - 220,
+                        difficulty,
+                    );
                 }
                 224 => {
                     todo!("ghost blinky");
@@ -972,7 +982,19 @@ fn scan_info_plane(
                     }
                 }
                 238..=241 => {
-                    todo!("mutant");
+                    if difficulty >= Difficulty::Medium {
+                        spawn_patrol(
+                            map_data,
+                            EnemyType::Mutant,
+                            &mut actors,
+                            actor_at,
+                            game_state,
+                            x,
+                            y,
+                            tile - 238,
+                            difficulty,
+                        );
+                    }
                 }
                 //nothing on 242 to 251
                 252..=255 => {
@@ -992,7 +1014,19 @@ fn scan_info_plane(
                     }
                 }
                 256..=259 => {
-                    todo!("mutant");
+                    if difficulty >= Difficulty::Hard {
+                        spawn_patrol(
+                            map_data,
+                            EnemyType::Mutant,
+                            &mut actors,
+                            actor_at,
+                            game_state,
+                            x,
+                            y,
+                            tile - 256,
+                            difficulty,
+                        );
+                    }
                 }
                 _ => {
                     // nothing to do here
