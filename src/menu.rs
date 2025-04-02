@@ -1935,7 +1935,8 @@ async fn cp_control(
     menu_state: &mut MenuState,
 ) -> MenuHandle {
     draw_ctl_screen(rdr, input, win_state, menu_state).await;
-    input.ack().await; // TODO wait_key_up?? what is the difference to ack?
+
+    // TODO WaitKeyUp what for? I don't get it.
 
     loop {
         let handle = handle_menu(
