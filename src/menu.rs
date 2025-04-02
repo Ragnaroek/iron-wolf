@@ -1147,7 +1147,7 @@ fn fixup_custom(
 
     let last_which = LAST_WHICH.load(Ordering::Relaxed);
     if last_which >= 0 {
-        let y = CST_Y + 26 + last_which as usize * 23;
+        let y = CST_Y + 26 + last_which as usize * 13;
         vw_hlin(rdr, 7, 32, y - 1, DEACTIVE);
         vw_hlin(rdr, 7, 32, y + 12, BORDER2_COLOR);
         vw_hlin(rdr, 7, 32, y - 2, BORDER_COLOR);
@@ -2277,7 +2277,6 @@ async fn handle_menu_loop(
     let exit;
     loop {
         // CHANGE GUN SHAPE
-
         if ticker.get_count() > timer {
             ticker.clear_count();
             if shape == GraphicNum::CCURSOR1PIC {
