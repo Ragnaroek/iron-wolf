@@ -720,9 +720,9 @@ checksum = "579a42fc0b8e0c63b76519a339be31bed574929511fa53c1a3acae26eb258f29"
 
 [[package]]
 name = "vga-emu"
-version = "0.7.6"
+version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "004599c74410b79a22701ea94c741fcee9f262ff5e932d036686442c36696ea0"
+checksum = "7b806d5a38932696c24abc9e15e59fad7d0908028507d03bf0ab768de5cf28ef"
 dependencies = [
  "js-sys",
  "sdl2",
