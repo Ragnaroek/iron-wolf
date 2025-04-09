@@ -87,8 +87,8 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, patch_config)?;
 
     let ticker = time::new_ticker(rt_ref.clone());
-    let input_monitoring = Arc::new(Mutex::new(vga::input::new_input_monitoring()));
-    let input = input::init(
+    let input_monitoring = Arc::new(Mutex::new(vga::input::InputMonitoring::new()));
+    let mut input = input::init(
         ticker.time_count.clone(),
         input_monitoring.clone(),
         &wolf_config,
@@ -129,7 +129,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
             &mut sound,
             rc,
             &rdr,
-            &input,
+            &mut input,
             prj,
             &assets,
             &mut win_state,
@@ -236,7 +236,7 @@ async fn demo_loop(
     sound: &mut Sound,
     rc_param: RayCast,
     rdr: &VGARenderer,
-    input: &input::Input,
+    input: &mut input::Input,
     prj_param: ProjectionConfig,
     assets: &Assets,
     win_state: &mut WindowState,

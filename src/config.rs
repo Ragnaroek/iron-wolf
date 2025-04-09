@@ -2,6 +2,7 @@
 #[path = "./config_test.rs"]
 mod config_test;
 
+use crate::def::{Button, NUM_BUTTONS, NUM_MOUSE_BUTTONS};
 use crate::{assets::WolfFile, loader::Loader};
 use std::fs;
 use std::path::Path;
@@ -73,8 +74,8 @@ pub struct WolfConfig {
     pub joystick_port: u16,
 
     pub dirscan: [NumCode; 4],
-    pub buttonscan: [NumCode; 8],
-    pub buttonmouse: [NumCode; 4],
+    pub buttonscan: [NumCode; NUM_BUTTONS],
+    pub buttonmouse: [Button; NUM_MOUSE_BUTTONS],
     pub buttonjoy: [NumCode; 4],
 
     pub viewsize: u16,
@@ -105,11 +106,11 @@ pub fn write_wolf_config(loader: &dyn Loader, wolf_config: &WolfConfig) -> Resul
     for i in 0..4 {
         writer.write_u16(numcode_to_u16(wolf_config.dirscan[i]));
     }
-    for i in 0..8 {
+    for i in 0..NUM_BUTTONS {
         writer.write_u16(numcode_to_u16(wolf_config.buttonscan[i]));
     }
-    for i in 0..4 {
-        writer.write_u16(numcode_to_u16(wolf_config.buttonmouse[i]));
+    for i in 0..NUM_MOUSE_BUTTONS {
+        writer.write_u16(button_to_u16(wolf_config.buttonmouse[i]));
     }
     for i in 0..4 {
         writer.write_u16(numcode_to_u16(wolf_config.buttonjoy[i]));
@@ -126,6 +127,14 @@ pub fn numcode_to_u16(code: NumCode) -> u16 {
         0xFFFF
     } else {
         code as u16
+    }
+}
+
+fn button_to_u16(button: Button) -> u16 {
+    if button == Button::NoButton {
+        0xFFFF
+    } else {
+        button as u16
     }
 }
 
@@ -165,13 +174,13 @@ pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
     for i in 0..4 {
         dirscan[i] = to_numcode(reader.read_u16() as u8);
     }
-    let mut buttonscan = [NumCode::None; 8];
-    for i in 0..8 {
+    let mut buttonscan = [NumCode::None; NUM_BUTTONS];
+    for i in 0..NUM_BUTTONS {
         buttonscan[i] = to_numcode(reader.read_u16() as u8);
     }
-    let mut buttonmouse = [NumCode::None; 4];
-    for i in 0..4 {
-        buttonmouse[i] = to_numcode(reader.read_u16() as u8);
+    let mut buttonmouse = [Button::NoButton; NUM_MOUSE_BUTTONS];
+    for i in 0..NUM_MOUSE_BUTTONS {
+        buttonmouse[i] = Button::from_usize(reader.read_u16() as usize);
     }
     let mut buttonjoy = [NumCode::None; 4];
     for i in 0..4 {

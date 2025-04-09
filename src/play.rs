@@ -76,12 +76,6 @@ const NUM_WHITE_SHIFTS: usize = 3;
 const WHITE_STEPS: i32 = 20;
 const WHITE_TICS: i32 = 6;
 
-pub static BUTTON_MOUSE: [Button; 4] = [
-    Button::Attack,
-    Button::Strafe,
-    Button::Use,
-    Button::NoButton,
-];
 pub static BUTTON_JOY: [Button; 4] = [Button::Attack, Button::Strafe, Button::Use, Button::Run];
 
 // LIST OF SONGS FOR EACH VERSION
@@ -306,7 +300,7 @@ pub async fn play_loop(
     sound: &mut Sound,
     rc_param: RayCast,
     rdr: &VGARenderer,
-    input: &input::Input,
+    input: &mut input::Input,
     prj_param: ProjectionConfig,
     assets: &Assets,
     loader: &dyn Loader,
@@ -720,7 +714,7 @@ async fn check_keys(
     menu_state: &mut MenuState,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    input: &input::Input,
+    input: &mut input::Input,
     prj: ProjectionConfig,
     loader: &dyn Loader,
 ) -> GameStateUpdate {

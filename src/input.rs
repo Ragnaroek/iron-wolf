@@ -1,8 +1,11 @@
-use vga::input::{self, NumCode};
+use vga::input::{self, MouseButton, NumCode};
 
 use std::sync::{Arc, Mutex};
 
-use crate::{config::WolfConfig, def::NUM_BUTTONS};
+use crate::{
+    config::WolfConfig,
+    def::{Button, NUM_BUTTONS, NUM_MOUSE_BUTTONS},
+};
 
 use super::time::{TimeCount, get_count};
 
@@ -20,6 +23,10 @@ pub enum ControlDirection {
 }
 
 pub struct ControlInfo {
+    pub button_0: bool,
+    pub button_1: bool,
+    pub button_2: bool,
+    pub button_3: bool,
     pub dir: ControlDirection,
 }
 
@@ -30,6 +37,7 @@ pub struct Input {
     pub input_monitoring: Arc<Mutex<input::InputMonitoring>>,
 
     pub button_scan: [NumCode; NUM_BUTTONS],
+    pub button_mouse: [Button; NUM_MOUSE_BUTTONS],
     pub dir_scan: [NumCode; 4],
 }
 
@@ -44,6 +52,7 @@ pub fn init(
         joystick_enabled: false,
         input_monitoring,
         button_scan: wolf_config.buttonscan.clone(),
+        button_mouse: wolf_config.buttonmouse.clone(),
         dir_scan: wolf_config.dirscan.clone(),
     }
 }
@@ -52,8 +61,8 @@ impl Input {
     pub async fn wait_user_input(&self, delay: u64) -> bool {
         let last_count = get_count(&self.time);
         {
-            let mut mon = self.input_monitoring.lock().unwrap();
-            mon.clear_keyboard();
+            let mut input = self.input_monitoring.lock().unwrap();
+            input.clear_keyboard();
         }
         loop {
             if self.check_ack() {
@@ -72,63 +81,68 @@ impl Input {
     }
 
     pub fn start_ack(&self) {
-        let mut mon = self.input_monitoring.lock().unwrap();
-        mon.clear_keyboard();
-        // TODO clear mouse and joystick buttons
+        let mut input = self.input_monitoring.lock().unwrap();
+        input.clear_keyboard();
+        input.clear_mouse();
+        // TODO clear joystick buttons
     }
 
     pub fn check_ack(&self) -> bool {
-        let mon = self.input_monitoring.lock().unwrap();
-        mon.any_key_pressed()
+        let input = self.input_monitoring.lock().unwrap();
+        input.any_key_pressed()
+    }
+
+    pub fn mouse_button_pressed(&self, button: MouseButton) -> bool {
+        let input = self.input_monitoring.lock().unwrap();
+        input.mouse_button_pressed(button)
     }
 
     pub fn key_pressed(&self, code: NumCode) -> bool {
-        let mon = self.input_monitoring.lock().unwrap();
-        mon.key_pressed(code)
+        let input = self.input_monitoring.lock().unwrap();
+        input.key_pressed(code)
     }
 
     pub fn clear_keys_down(&self) {
-        let mut mon = self.input_monitoring.lock().unwrap();
-        mon.clear_keyboard();
-        mon.keyboard.last_scan = NumCode::None;
-        mon.keyboard.last_ascii = '\0';
+        let mut input = self.input_monitoring.lock().unwrap();
+        input.clear_keyboard();
+        input.keyboard.last_scan = NumCode::None;
+        input.keyboard.last_ascii = '\0';
     }
 
     pub fn clear_last_scan(&self) {
-        let mut mon = self.input_monitoring.lock().unwrap();
-        mon.keyboard.last_scan = NumCode::None;
+        let mut input = self.input_monitoring.lock().unwrap();
+        input.keyboard.last_scan = NumCode::None;
     }
 
     pub fn last_scan(&self) -> NumCode {
-        let mon = self.input_monitoring.lock().unwrap();
-        mon.keyboard.last_scan
+        let input = self.input_monitoring.lock().unwrap();
+        input.keyboard.last_scan
     }
 
     pub fn clear_last_ascii(&self) {
-        let mut mon = self.input_monitoring.lock().unwrap();
-        mon.keyboard.last_ascii = '\0';
+        let mut input = self.input_monitoring.lock().unwrap();
+        input.keyboard.last_ascii = '\0';
     }
 
     // Returns the 0 char if nothing is set
     pub fn last_ascii(&self) -> char {
-        let mon = self.input_monitoring.lock().unwrap();
-        mon.keyboard.last_ascii
+        let input = self.input_monitoring.lock().unwrap();
+        input.keyboard.last_ascii
     }
 }
 
-pub fn read_control(input: &Input) -> ControlInfo {
-    let dir;
+//	read_control() - Reads the device associated with the specified
+//	player and fills in the control info struct
+pub fn read_control(input: &Input, ci: &mut ControlInfo) {
     if input.key_pressed(NumCode::UpArrow) {
-        dir = ControlDirection::North;
+        ci.dir = ControlDirection::North;
     } else if input.key_pressed(NumCode::DownArrow) {
-        dir = ControlDirection::South;
+        ci.dir = ControlDirection::South;
     } else if input.key_pressed(NumCode::LeftArrow) {
-        dir = ControlDirection::West;
+        ci.dir = ControlDirection::West;
     } else if input.key_pressed(NumCode::RightArrow) {
-        dir = ControlDirection::East;
+        ci.dir = ControlDirection::East;
     } else {
-        dir = ControlDirection::None;
+        ci.dir = ControlDirection::None;
     }
-
-    ControlInfo { dir }
 }

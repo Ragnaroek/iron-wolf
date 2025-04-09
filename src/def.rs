@@ -48,6 +48,7 @@ pub const FOCAL_LENGTH: i32 = 0x5700;
 pub const FINE_ANGLES: usize = 3600;
 
 pub const NUM_BUTTONS: usize = 8;
+pub const NUM_MOUSE_BUTTONS: usize = 4;
 pub const NUM_WEAPONS: usize = 4;
 
 pub const FL_SHOOTABLE: u8 = 1;

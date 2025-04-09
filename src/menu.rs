@@ -2,16 +2,16 @@ use std::sync::atomic::{AtomicI32, Ordering};
 use std::time::Duration;
 use std::{ascii, collections::HashMap, str};
 use tokio::time::sleep;
-use vga::input::NumCode;
+use vga::input::{MouseButton, NumCode};
 
 use crate::assets::{GraphicNum, Music, SoundName, WolfVariant, is_sod};
 use crate::config::{WolfConfig, write_wolf_config};
-use crate::def::{Assets, Difficulty, GameState, IWConfig, LevelState, WindowState};
+use crate::def::{Assets, Button, Difficulty, GameState, IWConfig, LevelState, WindowState};
 use crate::draw::{RayCast, init_ray_cast};
 use crate::input::{ControlDirection, ControlInfo, Input, read_control};
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
-use crate::play::{BUTTON_JOY, BUTTON_MOUSE, ProjectionConfig};
+use crate::play::{BUTTON_JOY, ProjectionConfig};
 use crate::sd::{DigiMode, MusicMode, Sound, SoundMode};
 use crate::start::{load_the_game, new_view_size, quit, save_the_game, show_view_size};
 use crate::time::Ticker;
@@ -79,7 +79,6 @@ const CTL_W: usize = 284;
 const CTL_H: usize = 13 * 7 - 7;
 const CTL_INDENT: usize = 56;
 
-const CST_X: usize = 20;
 const CST_Y: usize = 48;
 const CST_START: usize = 60;
 const CST_SPC: usize = 60;
@@ -119,6 +118,14 @@ static COLOR_HLITE: [u8; 4] = [DEACTIVE, HIGHLIGHT, READ_HCOLOR, 0x67];
 static COLOR_NORML: [u8; 4] = [DEACTIVE, TEXT_COLOR, READ_COLOR, 0x6b];
 
 static MB_ARRAY: [&'static str; 4] = ["b0", "b1", "b2", "b3"];
+
+#[derive(PartialEq)]
+enum InputType {
+    Mouse,
+    Joystick,
+    KeyboardButtons,
+    KeyboardMove,
+}
 
 #[repr(usize)]
 #[derive(Copy, Clone)]
@@ -779,7 +786,7 @@ pub async fn control_panel(
     sound: &mut Sound,
     rc: RayCast,
     rdr: &VGARenderer,
-    input: &Input,
+    input: &mut Input,
     prj: ProjectionConfig,
     assets: &Assets,
     win_state: &mut WindowState,
@@ -999,7 +1006,7 @@ async fn cp_customize_controls(
     rdr: &VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
+    input: &mut Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) -> MenuHandle {
@@ -1018,9 +1025,256 @@ async fn cp_customize_controls(
     )
     .await;
 
-    // TODO handle selects
-
+    match &handle {
+        MenuHandle::Selected(0) => {
+            define_mouse_btns(ticker, rdr, sound, assets, input, win_state, menu_state);
+            draw_cust_mouse(rdr, input, win_state, menu_state, true);
+        }
+        // TODO handle other selects
+        other => {
+            todo!("other selected = {:?}", other)
+        }
+    }
     return handle;
+}
+
+fn define_mouse_btns(
+    ticker: &Ticker,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+    input: &mut Input,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+) {
+    enter_ctrl_data(
+        ticker,
+        rdr,
+        sound,
+        assets,
+        input,
+        win_state,
+        menu_state,
+        2,
+        [false, true, true, true],
+        draw_cust_mouse,
+        print_cust_mouse,
+        InputType::Mouse,
+    );
+}
+
+type DrawRoutine = fn(
+    rdr: &VGARenderer,
+    input: &Input,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+    hilight: bool,
+);
+
+type PrintRoutine = fn(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, i: usize);
+
+fn enter_ctrl_data(
+    ticker: &Ticker,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+    input: &mut Input,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+    index: usize,
+    allowed: [bool; 4],
+    draw_routine: DrawRoutine,
+    print_routine: PrintRoutine,
+    input_type: InputType,
+) {
+    sound.play_sound(SoundName::SHOOT, assets);
+    input.clear_keys_down();
+
+    win_state.print_y = CST_Y + 13 * index;
+    let mut exit = false;
+    let mut redraw = true;
+
+    // FIND FIRST SPOT IN ALLOWED ARRAY
+    let mut which = 0;
+    for i in 0..4 {
+        if allowed[i] {
+            which = i;
+            break;
+        }
+    }
+
+    let mut x = CST_START + CST_SPC * which;
+
+    loop {
+        if redraw {
+            x = CST_START + CST_SPC * which;
+            cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
+            draw_routine(rdr, input, win_state, menu_state, true);
+            cp_draw_window(rdr, x - 2, win_state.print_y, CST_SPC, 11, TEXT_COLOR);
+            draw_outline(rdr, x - 2, win_state.print_y, CST_SPC, 11, 0, HIGHLIGHT);
+            win_state.set_font_color(0, TEXT_COLOR);
+            print_routine(rdr, input, win_state, which);
+            win_state.print_x = x;
+            wait_key_up(input);
+            redraw = false;
+        }
+
+        let mut ci = read_any_control(input);
+
+        if input_type == InputType::Mouse || input_type == InputType::Joystick {
+            if input.key_pressed(NumCode::Return)
+                || input.key_pressed(NumCode::Control)
+                || input.key_pressed(NumCode::Alt)
+            {
+                input.clear_keys_down();
+                ci.button_0 = false;
+                ci.button_1 = false;
+            }
+        }
+
+        // CHANGE BUTTON VALUE?
+        if (ci.button_0 || ci.button_1 || ci.button_2 || ci.button_3)
+            || (input_type == InputType::KeyboardButtons || input_type == InputType::KeyboardMove)
+                && input.last_scan() == NumCode::Return
+        {
+            let mut picked = false;
+            ticker.clear_count();
+            let mut tick = false;
+            win_state.set_font_color(0, TEXT_COLOR);
+
+            loop {
+                if input_type == InputType::KeyboardButtons || input_type == InputType::KeyboardMove
+                {
+                    input.clear_keys_down();
+                }
+
+                if ticker.get_count() > 10 {
+                    if !tick {
+                        rdr.bar(x, win_state.print_y + 1, CST_SPC - 2, 10, TEXT_COLOR);
+                    } else {
+                        win_state.print_x = x;
+                        print(rdr, win_state, "?");
+                        sound.play_sound(SoundName::HITWALL, assets);
+                    }
+                    tick = !tick;
+                    ticker.clear_count();
+                }
+
+                // WHICH TYPE OF INPUT DO WE PROCESS?
+                match input_type {
+                    InputType::Mouse => {
+                        let mut result = None;
+                        if input.mouse_button_pressed(MouseButton::Left) {
+                            result = Some(MouseButton::Left)
+                        } else if input.mouse_button_pressed(MouseButton::Right) {
+                            result = Some(MouseButton::Right)
+                        } else if input.mouse_button_pressed(MouseButton::Middle) {
+                            result = Some(MouseButton::Middle)
+                        }
+
+                        if let Some(button) = result {
+                            for z in 0..4 {
+                                if BUTTON_ORDER[which] as usize == input.button_mouse[z] as usize {
+                                    input.button_mouse[which] = Button::NoButton;
+                                    break;
+                                }
+                            }
+
+                            input.button_mouse[button as usize - 1] =
+                                Button::from_usize(BUTTON_ORDER[which] as usize);
+                            picked = true;
+                            sound.play_sound(SoundName::SHOOTDOOR, assets);
+                        }
+                    }
+                    InputType::Joystick => {
+                        todo!("enter joystick");
+                    }
+                    InputType::KeyboardButtons => {
+                        todo!("enter keyboard buttons");
+                    }
+                    InputType::KeyboardMove => {
+                        todo!("enter keyboard move");
+                    }
+                }
+
+                // EXIT INPUT?
+                if input.key_pressed(NumCode::Escape) {
+                    picked = true;
+                }
+
+                if picked {
+                    break;
+                }
+            }
+
+            win_state.set_font_color(TEXT_COLOR, BKGD_COLOR);
+            redraw = true;
+            wait_key_up(input);
+        }
+
+        if ci.button_1 || input.key_pressed(NumCode::Escape) {
+            exit = true;
+        }
+
+        // MOVE TO ANOTHER SPOT?
+
+        match ci.dir {
+            ControlDirection::West => {
+                loop {
+                    if which == 0 {
+                        which = 3;
+                    } else {
+                        which -= 1;
+                    }
+                    if allowed[which] {
+                        break;
+                    }
+                }
+                redraw = true;
+                sound.play_sound(SoundName::MOVEGUN1, assets);
+                loop {
+                    let ci = read_any_control(input);
+                    if ci.dir == ControlDirection::None {
+                        break;
+                    }
+                }
+                input.clear_keys_down();
+            }
+            ControlDirection::East => {
+                loop {
+                    if which == 3 {
+                        which = 0;
+                    } else {
+                        which += 1;
+                    }
+                    if allowed[which] {
+                        break;
+                    }
+                }
+                redraw = true;
+                sound.play_sound(SoundName::MOVEGUN1, assets);
+                loop {
+                    let ci = read_any_control(input);
+                    if ci.dir == ControlDirection::None {
+                        break;
+                    }
+                }
+                input.clear_keys_down();
+            }
+            ControlDirection::North | ControlDirection::South => {
+                exit = true;
+            }
+            _ => { /* ignore */ }
+        }
+
+        if exit {
+            break;
+        }
+    }
+
+    sound.play_sound(SoundName::ESCPRESSED, assets);
+    wait_key_up(input);
+    cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
 }
 
 async fn draw_custom_screen(
@@ -1191,13 +1445,13 @@ fn draw_cust_mouse(
 
     win_state.print_y = CST_Y + 13 * 2;
     for i in 0..4 {
-        print_cust_mouse(rdr, win_state, i);
+        print_cust_mouse(rdr, input, win_state, i);
     }
 }
 
-fn print_cust_mouse(rdr: &VGARenderer, win_state: &mut WindowState, i: usize) {
+fn print_cust_mouse(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, i: usize) {
     for j in 0..4 {
-        if BUTTON_ORDER[i] as usize == BUTTON_MOUSE[j] as usize {
+        if BUTTON_ORDER[i] as usize == input.button_mouse[j] as usize {
             win_state.print_x = CST_START + CST_SPC * i;
             print(rdr, win_state, MB_ARRAY[j]);
             break;
@@ -1936,7 +2190,7 @@ async fn cp_control(
 ) -> MenuHandle {
     draw_ctl_screen(rdr, input, win_state, menu_state).await;
 
-    // TODO WaitKeyUp what for? I don't get it.
+    wait_key_up(input);
 
     loop {
         let handle = handle_menu(
@@ -2456,8 +2710,40 @@ fn draw_gun(
 }
 
 fn read_any_control(input: &Input) -> ControlInfo {
-    read_control(input)
-    // TODO also read mouse and joystick input
+    let mut ci = ControlInfo {
+        button_0: false,
+        button_1: false,
+        button_2: false,
+        button_3: false,
+        dir: ControlDirection::None,
+    };
+    read_control(input, &mut ci);
+
+    if input.mouse_enabled {
+        ci.button_0 = input.mouse_button_pressed(MouseButton::Left);
+        ci.button_1 = input.mouse_button_pressed(MouseButton::Right);
+        ci.button_2 = input.mouse_button_pressed(MouseButton::Middle);
+        // TODO read mouse direction
+    }
+
+    // TODO read joystick input
+    ci
+}
+
+fn wait_key_up(input: &Input) {
+    loop {
+        let ci = read_any_control(input);
+        let something_pressed = ci.button_0
+            | ci.button_1
+            | ci.button_2
+            | ci.button_3
+            | input.key_pressed(NumCode::Space)
+            | input.key_pressed(NumCode::Return)
+            | input.key_pressed(NumCode::Escape);
+        if !something_pressed {
+            return;
+        }
+    }
 }
 
 fn setup_control_panel(win_state: &mut WindowState, menu_state: &mut MenuState) {

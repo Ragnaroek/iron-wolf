@@ -56,7 +56,7 @@ pub async fn game_loop(
     sound: &mut Sound,
     rc_param: RayCast,
     rdr: &VGARenderer,
-    input: &Input,
+    input: &mut Input,
     prj_param: ProjectionConfig,
     assets: &Assets,
     win_state: &mut WindowState,
