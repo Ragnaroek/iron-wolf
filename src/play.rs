@@ -31,6 +31,10 @@ use crate::draw::RayCastConsts;
 use crate::draw::init_ray_cast_consts;
 use crate::draw::{RayCast, three_d_refresh};
 use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
+use crate::input::DIR_SCAN_EAST;
+use crate::input::DIR_SCAN_NORTH;
+use crate::input::DIR_SCAN_SOUTH;
+use crate::input::DIR_SCAN_WEST;
 use crate::input::{self};
 use crate::inter::clear_split_vwb;
 use crate::loader::Loader;
@@ -845,23 +849,22 @@ fn poll_keyboard_buttons(state: &mut ControlState, input: &input::Input) {
 }
 
 fn poll_keyboard_move(state: &mut ControlState, input: &input::Input, tics: u64) {
-    //TODO impl button mapping, uses hardcoded buttons as for now
     let move_factor = if state.button_state[Button::Run as usize] {
         RUN_MOVE * tics
     } else {
         BASE_MOVE * tics
     } as i32;
 
-    if input.key_pressed(NumCode::UpArrow) {
+    if input.key_pressed(input.dir_scan[DIR_SCAN_NORTH]) {
         state.control.y -= move_factor;
     }
-    if input.key_pressed(NumCode::DownArrow) {
+    if input.key_pressed(input.dir_scan[DIR_SCAN_SOUTH]) {
         state.control.y += move_factor;
     }
-    if input.key_pressed(NumCode::LeftArrow) {
+    if input.key_pressed(input.dir_scan[DIR_SCAN_WEST]) {
         state.control.x -= move_factor;
     }
-    if input.key_pressed(NumCode::RightArrow) {
+    if input.key_pressed(input.dir_scan[DIR_SCAN_EAST]) {
         state.control.x += move_factor;
     }
 }

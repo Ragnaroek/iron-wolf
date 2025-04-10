@@ -41,6 +41,12 @@ pub struct Input {
     pub dir_scan: [NumCode; 4],
 }
 
+// Indexes into the Input.dir_scan array for the up, down, left, right buttons
+pub const DIR_SCAN_NORTH: usize = 0;
+pub const DIR_SCAN_EAST: usize = 1;
+pub const DIR_SCAN_SOUTH: usize = 2;
+pub const DIR_SCAN_WEST: usize = 3;
+
 pub fn init(
     time: TimeCount,
     input_monitoring: Arc<Mutex<input::InputMonitoring>>,

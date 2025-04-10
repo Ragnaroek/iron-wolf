@@ -977,7 +977,7 @@ pub async fn control_panel(
                     .await
                 }
                 Menu::CustomizeControls => {
-                    cp_customize_controls(
+                    cp_custom_controls(
                         ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
                     )
                     .await
@@ -1000,7 +1000,7 @@ pub async fn control_panel(
     }
 }
 
-async fn cp_customize_controls(
+async fn cp_custom_controls(
     ticker: &Ticker,
     game_state: &mut GameState,
     rdr: &VGARenderer,
@@ -1030,10 +1030,18 @@ async fn cp_customize_controls(
             define_mouse_btns(ticker, rdr, sound, assets, input, win_state, menu_state);
             draw_cust_mouse(rdr, input, win_state, menu_state, true);
         }
-        // TODO handle other selects
-        other => {
-            todo!("other selected = {:?}", other)
+        MenuHandle::Selected(3) => {
+            todo!("implement joystick button change");
         }
+        MenuHandle::Selected(6) => {
+            define_key_btns(ticker, rdr, sound, assets, input, win_state, menu_state);
+            draw_cust_keybd(rdr, input, win_state, menu_state, false);
+        }
+        MenuHandle::Selected(8) => {
+            define_key_move(ticker, rdr, sound, assets, input, win_state, menu_state);
+            draw_cust_keys(rdr, input, win_state, menu_state, false);
+        }
+        _ => { /* do nothing */ }
     }
     return handle;
 }
@@ -1060,6 +1068,56 @@ fn define_mouse_btns(
         draw_cust_mouse,
         print_cust_mouse,
         InputType::Mouse,
+    );
+}
+
+fn define_key_btns(
+    ticker: &Ticker,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+    input: &mut Input,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+) {
+    enter_ctrl_data(
+        ticker,
+        rdr,
+        sound,
+        assets,
+        input,
+        win_state,
+        menu_state,
+        8,
+        [true, true, true, true],
+        draw_cust_keybd,
+        print_cust_keybd,
+        InputType::KeyboardButtons,
+    );
+}
+
+fn define_key_move(
+    ticker: &Ticker,
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+    input: &mut Input,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+) {
+    enter_ctrl_data(
+        ticker,
+        rdr,
+        sound,
+        assets,
+        input,
+        win_state,
+        menu_state,
+        10,
+        [true, true, true, true],
+        draw_cust_keys,
+        print_cust_keys,
+        InputType::KeyboardMove,
     );
 }
 
@@ -1190,10 +1248,22 @@ fn enter_ctrl_data(
                         todo!("enter joystick");
                     }
                     InputType::KeyboardButtons => {
-                        todo!("enter keyboard buttons");
+                        let last_scan = input.last_scan();
+                        if last_scan != NumCode::None {
+                            input.button_scan[BUTTON_ORDER[which] as usize] = last_scan;
+                            picked = true;
+                            sound.play_sound(SoundName::SHOOT, assets);
+                            input.clear_keys_down();
+                        }
                     }
                     InputType::KeyboardMove => {
-                        todo!("enter keyboard move");
+                        let last_scan = input.last_scan();
+                        if last_scan != NumCode::None {
+                            input.dir_scan[MOVE_ORDER[which] as usize] = last_scan;
+                            picked = true;
+                            sound.play_sound(SoundName::SHOOT, assets);
+                            input.clear_keys_down();
+                        }
                     }
                 }
 
@@ -1341,7 +1411,7 @@ async fn draw_custom_screen(
     win_state.print_x = CST_START + CST_SPC * 3;
     print(rdr, win_state, STR_CSTRAFE);
     cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
-    draw_cust_keybd(rdr, input, win_state, false);
+    draw_cust_keybd(rdr, input, win_state, menu_state, false);
     print(rdr, win_state, "\n");
 
     // KEYBOARD MOVE KEYS
@@ -1355,7 +1425,7 @@ async fn draw_custom_screen(
     win_state.print_x = CST_START + CST_SPC * 3;
     print(rdr, win_state, STR_BKWD);
     cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
-    draw_cust_keys(rdr, input, win_state, false);
+    draw_cust_keys(rdr, input, win_state, menu_state, false);
 
     // PICK STARTING POINT IN MENU
     let menu = menu_state
@@ -1394,8 +1464,8 @@ fn fixup_custom(
     match which {
         0 => draw_cust_mouse(rdr, input, win_state, menu_state, true),
         3 => draw_cust_joy(rdr, input, win_state, menu_state, true),
-        6 => draw_cust_keybd(rdr, input, win_state, true),
-        8 => draw_cust_keys(rdr, input, win_state, true),
+        6 => draw_cust_keybd(rdr, input, win_state, menu_state, true),
+        8 => draw_cust_keys(rdr, input, win_state, menu_state, true),
         _ => {}
     }
 
@@ -1411,8 +1481,8 @@ fn fixup_custom(
             match last_which {
                 0 => draw_cust_mouse(rdr, input, win_state, menu_state, false),
                 3 => draw_cust_joy(rdr, input, win_state, menu_state, false),
-                6 => draw_cust_keybd(rdr, input, win_state, false),
-                8 => draw_cust_keys(rdr, input, win_state, false),
+                6 => draw_cust_keybd(rdr, input, win_state, menu_state, false),
+                8 => draw_cust_keys(rdr, input, win_state, menu_state, false),
                 _ => {}
             }
         }
@@ -1497,7 +1567,13 @@ fn print_cust_joy(rdr: &VGARenderer, win_state: &mut WindowState, i: usize) {
     }
 }
 
-fn draw_cust_keybd(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, hilight: bool) {
+fn draw_cust_keybd(
+    rdr: &VGARenderer,
+    input: &Input,
+    win_state: &mut WindowState,
+    _: &mut MenuState,
+    hilight: bool,
+) {
     let color = if hilight { HIGHLIGHT } else { TEXT_COLOR };
     win_state.set_font_color(color, BKGD_COLOR);
 
@@ -1508,12 +1584,18 @@ fn draw_cust_keybd(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState
 }
 
 fn print_cust_keybd(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, i: usize) {
-    let scan = input.button_scan[i];
     win_state.print_x = CST_START + CST_SPC * i;
+    let scan = input.button_scan[BUTTON_ORDER[i] as usize];
     print(rdr, win_state, numcode_name(scan));
 }
 
-fn draw_cust_keys(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, hilight: bool) {
+fn draw_cust_keys(
+    rdr: &VGARenderer,
+    input: &Input,
+    win_state: &mut WindowState,
+    _: &mut MenuState,
+    hilight: bool,
+) {
     let color = if hilight { HIGHLIGHT } else { TEXT_COLOR };
     win_state.set_font_color(color, BKGD_COLOR);
 
