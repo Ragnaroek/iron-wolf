@@ -8,7 +8,7 @@ use crate::agent::{
     draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_score, draw_weapon,
     spawn_player, thrust_player,
 };
-use crate::assets::load_map_from_assets;
+use crate::assets::{SoundName, load_map_from_assets};
 use crate::config::WolfConfig;
 use crate::def::{
     AMBUSH_TILE, ANGLES, Assets, At, ControlState, Difficulty, DoorLock, EnemyType, GameState,
@@ -251,7 +251,7 @@ async fn died(
     rc_consts: &RayCastConsts,
 ) {
     game_state.weapon = None; // take away weapon
-    //TODO SD_PlaySound(PLAYERDEATHSND)
+    sound.play_sound(SoundName::PLAYERDEATH, assets);
 
     let player = level_state.player();
     let killer_obj = level_state.obj(game_state.killer_obj.expect("killer obj key be present"));

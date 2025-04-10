@@ -2035,6 +2035,9 @@ fn a_death_scream(
         ClassType::SS => {
             sound.play_sound(SoundName::LEBEN, assets);
         }
+        ClassType::Dog => {
+            sound.play_sound(SoundName::DOGDEATH, assets);
+        }
         ClassType::Boss => {
             sound.play_sound(SoundName::MUTTI, assets);
         }

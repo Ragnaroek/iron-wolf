@@ -129,23 +129,23 @@ pub fn file_name(file: WolfFile, variant: &WolfVariant) -> String {
 #[derive(Eq, PartialEq, Hash, Clone, Copy, Debug)]
 pub enum SoundName {
     HITWALL,       // 0
-    SELECTWPN,     // 1
-    SELECTITEM,    // 2
-    HEARTBEAT,     // 3
+    SELECTWPN,     // 1 //unused
+    SELECTITEM,    // 2 //unused
+    HEARTBEAT,     // 3 //unused
     MOVEGUN2,      // 4
     MOVEGUN1,      // 5
     NOWAY,         // 6
-    NAZIHITPLAYER, // 7
+    NAZIHITPLAYER, // 7 //unused
     SCHABBSTHROW,  // 8
     PLAYERDEATH,   // 9
     DOGDEATH,      // 10
     ATKGATLING,    // 11
     GETKEY,        // 12
-    NOITEM,        // 13
-    WALK1,         // 14
-    WALK2,         // 15
-    TAKEDAMAGE,    // 16
-    GAMEOVER,      // 17
+    NOITEM,        // 13 //unused
+    WALK1,         // 14 //unused
+    WALK2,         // 15 //unused
+    TAKEDAMAGE,    // 16 //unused
+    GAMEOVER,      // 17 //unused
     OPENDOOR,      // 18
     CLOSEDOOR,     // 19
     DONOTHING,     // 20
@@ -155,8 +155,8 @@ pub enum SoundName {
     ATKPISTOL,     // 24
     DEATHSCREAM3,  // 25
     ATKMACHINEGUN, // 26
-    HITENEMY,      // 27
-    SHOOTDOOR,     // 28
+    HITENEMY,      // 27 //unused
+    SHOOTDOOR,     // 28 //unused
     DEATHSCREAM1,  // 29
     GETMACHINE,    // 30
     GETAMMO,       // 31

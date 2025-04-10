@@ -564,7 +564,7 @@ fn cmd_use(
             rc_consts,
         );
     } else {
-        // TODO SD_PlaySound(DONOTHINGSND)
+        sound.play_sound(SoundName::DONOTHING, assets);
     }
 }
 
