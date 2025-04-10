@@ -73,10 +73,10 @@ pub struct WolfConfig {
     pub joystick_progressive: u16,
     pub joystick_port: u16,
 
-    pub dirscan: [NumCode; 4],
-    pub buttonscan: [NumCode; NUM_BUTTONS],
-    pub buttonmouse: [Button; NUM_MOUSE_BUTTONS],
-    pub buttonjoy: [NumCode; 4],
+    pub dir_scan: [NumCode; 4],
+    pub button_scan: [NumCode; NUM_BUTTONS],
+    pub button_mouse: [Button; NUM_MOUSE_BUTTONS],
+    pub button_joy: [NumCode; 4],
 
     pub viewsize: u16,
     pub mouse_adjustment: u16,
@@ -104,16 +104,16 @@ pub fn write_wolf_config(loader: &dyn Loader, wolf_config: &WolfConfig) -> Resul
     writer.write_u16(wolf_config.joystick_port);
 
     for i in 0..4 {
-        writer.write_u16(numcode_to_u16(wolf_config.dirscan[i]));
+        writer.write_u16(numcode_to_u16(wolf_config.dir_scan[i]));
     }
     for i in 0..NUM_BUTTONS {
-        writer.write_u16(numcode_to_u16(wolf_config.buttonscan[i]));
+        writer.write_u16(numcode_to_u16(wolf_config.button_scan[i]));
     }
     for i in 0..NUM_MOUSE_BUTTONS {
-        writer.write_u16(button_to_u16(wolf_config.buttonmouse[i]));
+        writer.write_u16(button_to_u16(wolf_config.button_mouse[i]));
     }
     for i in 0..4 {
-        writer.write_u16(numcode_to_u16(wolf_config.buttonjoy[i]));
+        writer.write_u16(numcode_to_u16(wolf_config.button_joy[i]));
     }
 
     writer.write_u16(wolf_config.viewsize);
@@ -170,21 +170,21 @@ pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
     let joystick_progressive = reader.read_u16();
     let joystick_port = reader.read_u16();
 
-    let mut dirscan = [NumCode::None; 4];
+    let mut dir_scan = [NumCode::None; 4];
     for i in 0..4 {
-        dirscan[i] = to_numcode(reader.read_u16() as u8);
+        dir_scan[i] = to_numcode(reader.read_u16() as u8);
     }
-    let mut buttonscan = [NumCode::None; NUM_BUTTONS];
+    let mut button_scan = [NumCode::None; NUM_BUTTONS];
     for i in 0..NUM_BUTTONS {
-        buttonscan[i] = to_numcode(reader.read_u16() as u8);
+        button_scan[i] = to_numcode(reader.read_u16() as u8);
     }
-    let mut buttonmouse = [Button::NoButton; NUM_MOUSE_BUTTONS];
+    let mut button_mouse = [Button::NoButton; NUM_MOUSE_BUTTONS];
     for i in 0..NUM_MOUSE_BUTTONS {
-        buttonmouse[i] = Button::from_usize(reader.read_u16() as usize);
+        button_mouse[i] = Button::from_usize(reader.read_u16() as usize);
     }
-    let mut buttonjoy = [NumCode::None; 4];
+    let mut button_joy = [NumCode::None; 4];
     for i in 0..4 {
-        buttonjoy[i] = to_numcode(reader.read_u16() as u8);
+        button_joy[i] = to_numcode(reader.read_u16() as u8);
     }
     let viewsize = reader.read_u16();
     let mouse_adjustment = reader.read_u16();
@@ -199,10 +199,10 @@ pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
         joypad_enabled,
         joystick_progressive,
         joystick_port,
-        dirscan,
-        buttonscan,
-        buttonmouse,
-        buttonjoy,
+        dir_scan,
+        button_scan,
+        button_mouse,
+        button_joy,
         viewsize,
         mouse_adjustment,
     }

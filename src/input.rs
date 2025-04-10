@@ -57,9 +57,9 @@ pub fn init(
         mouse_enabled: true,
         joystick_enabled: false,
         input_monitoring,
-        button_scan: wolf_config.buttonscan.clone(),
-        button_mouse: wolf_config.buttonmouse.clone(),
-        dir_scan: wolf_config.dirscan.clone(),
+        button_scan: wolf_config.button_scan.clone(),
+        button_mouse: wolf_config.button_mouse.clone(),
+        dir_scan: wolf_config.dir_scan.clone(),
     }
 }
 

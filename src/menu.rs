@@ -860,12 +860,9 @@ pub async fn control_panel(
             rc_return = rc;
             Some(handle)
         }
-        NumCode::F6 => Some(
-            cp_control(
-                ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
-            )
-            .await,
-        ),
+        NumCode::F6 => {
+            Some(cp_control(ticker, rdr, sound, assets, input, win_state, menu_state).await)
+        }
         _ => None,
     };
     if let Some(handle) = f_key_handle {
@@ -908,10 +905,7 @@ pub async fn control_panel(
                         .await
                     }
                     MainMenuItem::Control => {
-                        cp_control(
-                            ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
-                        )
-                        .await
+                        cp_control(ticker, rdr, sound, assets, input, win_state, menu_state).await
                     }
                     MainMenuItem::LoadGame => {
                         cp_load_game(
@@ -978,7 +972,15 @@ pub async fn control_panel(
                 }
                 Menu::CustomizeControls => {
                     cp_custom_controls(
-                        ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
+                        wolf_config,
+                        ticker,
+                        rdr,
+                        sound,
+                        assets,
+                        input,
+                        win_state,
+                        menu_state,
+                        loader,
                     )
                     .await
                 }
@@ -1001,14 +1003,15 @@ pub async fn control_panel(
 }
 
 async fn cp_custom_controls(
+    wolf_config: &mut WolfConfig,
     ticker: &Ticker,
-    game_state: &mut GameState,
     rdr: &VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
     input: &mut Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
+    loader: &dyn Loader,
 ) -> MenuHandle {
     draw_custom_screen(rdr, input, win_state, menu_state).await;
 
@@ -1025,24 +1028,32 @@ async fn cp_custom_controls(
     )
     .await;
 
-    match &handle {
-        MenuHandle::Selected(0) => {
-            define_mouse_btns(ticker, rdr, sound, assets, input, win_state, menu_state);
-            draw_cust_mouse(rdr, input, win_state, menu_state, true);
+    if let MenuHandle::Selected(which) = &handle {
+        match which {
+            0 => {
+                define_mouse_btns(ticker, rdr, sound, assets, input, win_state, menu_state);
+                draw_cust_mouse(rdr, input, win_state, menu_state, true);
+            }
+            3 => {
+                todo!("implement joystick button change");
+            }
+            6 => {
+                define_key_btns(ticker, rdr, sound, assets, input, win_state, menu_state);
+                draw_cust_keybd(rdr, input, win_state, menu_state, false);
+            }
+            8 => {
+                define_key_move(ticker, rdr, sound, assets, input, win_state, menu_state);
+                draw_cust_keys(rdr, input, win_state, menu_state, false);
+            }
+            _ => { /* do nothing */ }
         }
-        MenuHandle::Selected(3) => {
-            todo!("implement joystick button change");
-        }
-        MenuHandle::Selected(6) => {
-            define_key_btns(ticker, rdr, sound, assets, input, win_state, menu_state);
-            draw_cust_keybd(rdr, input, win_state, menu_state, false);
-        }
-        MenuHandle::Selected(8) => {
-            define_key_move(ticker, rdr, sound, assets, input, win_state, menu_state);
-            draw_cust_keys(rdr, input, win_state, menu_state, false);
-        }
-        _ => { /* do nothing */ }
+
+        wolf_config.button_mouse = input.button_mouse.clone();
+        wolf_config.button_scan = input.button_scan.clone();
+        wolf_config.dir_scan = input.dir_scan.clone();
+        write_wolf_config(loader, wolf_config).expect("write config");
     }
+
     return handle;
 }
 
@@ -2262,7 +2273,6 @@ fn episode_pic(i: usize) -> GraphicNum {
 
 async fn cp_control(
     ticker: &Ticker,
-    game_state: &mut GameState,
     rdr: &VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
