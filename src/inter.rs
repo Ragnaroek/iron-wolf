@@ -639,7 +639,7 @@ pub async fn level_completed(
                 if i % (PAR_AMOUNT / 10) == 0 {
                     sound.play_sound(SoundName::ENDBONUS1, assets);
                 }
-                while sound.is_sound_playing().is_some() {
+                while sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(ticker, rdr);
                 }
 
@@ -663,7 +663,7 @@ pub async fn level_completed(
             }
 
             sound.play_sound(SoundName::ENDBONUS2, assets);
-            while sound.is_sound_playing().is_some() {
+            while sound.is_any_sound_playing() {
                 bj_breather.poll_breathe(ticker, rdr);
             }
         }
@@ -675,7 +675,7 @@ pub async fn level_completed(
             write(rdr, x, 14, &str);
             if i % 10 == 0 {
                 sound.play_sound(SoundName::ENDBONUS1, assets);
-                while sound.is_sound_playing().is_some() {
+                while sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(ticker, rdr);
                 }
             }
@@ -709,7 +709,7 @@ pub async fn level_completed(
         } else {
             sound.play_sound(SoundName::ENDBONUS2, assets);
         }
-        while sound.is_sound_playing().is_some() {
+        while sound.is_any_sound_playing() {
             bj_breather.poll_breathe(ticker, rdr);
         }
 
@@ -720,7 +720,7 @@ pub async fn level_completed(
             write(rdr, x, 16, &str);
             if i % 10 == 0 {
                 sound.play_sound(SoundName::ENDBONUS1, assets);
-                while sound.is_sound_playing().is_some() {
+                while sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(ticker, rdr);
                 }
             }
@@ -753,7 +753,7 @@ pub async fn level_completed(
         } else {
             sound.play_sound(SoundName::ENDBONUS2, assets);
         }
-        while sound.is_sound_playing().is_some() {
+        while sound.is_any_sound_playing() {
             bj_breather.poll_breathe(ticker, rdr);
         }
 
@@ -764,7 +764,7 @@ pub async fn level_completed(
             write(rdr, x, 18, &str);
             if i % 10 == 0 {
                 sound.play_sound(SoundName::ENDBONUS1, assets);
-                while sound.is_sound_playing().is_some() {
+                while sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(ticker, rdr);
                 }
             }
@@ -795,7 +795,7 @@ pub async fn level_completed(
         } else if treasure_ratio == 0 {
             sound.force_play_sound(SoundName::NOBONUS, assets);
         }
-        while sound.is_sound_playing().is_some() {
+        while sound.is_any_sound_playing() {
             bj_breather.poll_breathe(ticker, rdr);
         }
 

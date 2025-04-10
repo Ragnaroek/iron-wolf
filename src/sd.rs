@@ -232,9 +232,18 @@ pub fn startup(_: Arc<Runtime>) -> Result<Sound, String> {
 
 #[cfg(feature = "sdl")]
 impl Sound {
-    pub fn is_sound_playing(&mut self) -> Option<SoundName> {
+    pub fn is_sound_playing(&mut self, sound: SoundName) -> bool {
         let playing_mon = self.sound_playing.lock().unwrap();
-        *playing_mon
+        if let Some(playing_sound) = *playing_mon {
+            playing_sound == sound
+        } else {
+            false
+        }
+    }
+
+    pub fn is_any_sound_playing(&mut self) -> bool {
+        let playing_mon = self.sound_playing.lock().unwrap();
+        playing_mon.is_some()
     }
 
     pub fn force_play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
@@ -529,8 +538,12 @@ fn sound_loc(rc_consts: &RayCastConsts, gx_param: Fixed, gy_param: Fixed) -> (u8
 
 #[cfg(feature = "web")]
 impl Sound {
-    pub fn is_sound_playing(&mut self) -> Option<SoundName> {
+    pub fn is_sound_playing(&mut self, sound: SoundName) -> bool {
         todo!("impl is_sound_playing for web");
+    }
+
+    pub fn is_any_sound_playing(&mut self) -> bool {
+        todo!("impl is_any_sound_playing for web");
     }
 
     pub fn force_play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {

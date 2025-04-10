@@ -153,7 +153,7 @@ fn t_attack(
     assets: &Assets,
     rc_consts: &RayCastConsts,
 ) {
-    update_face(tics, game_state, rdr);
+    update_face(tics, game_state, sound, rdr);
 
     if game_state.victory_flag {
         victory_spin(tics, level_state);
@@ -433,7 +433,7 @@ fn t_player(
         return;
     }
 
-    update_face(tics, game_state, rdr);
+    update_face(tics, game_state, sound, rdr);
     check_weapon_change(game_state, rdr, control_state);
 
     if control_state.button_state(Button::Use) {
@@ -548,7 +548,7 @@ fn cmd_use(
         level_state.level.tile_map[check_x][check_y] += 1; // flip switch [to animate the lever to move up]
 
         sound.play_sound(SoundName::LEVELDONE, assets);
-        while sound.is_sound_playing().is_some() {
+        while sound.is_any_sound_playing() {
             std::thread::sleep(Duration::from_millis(1));
         }
     }
@@ -1042,7 +1042,7 @@ fn clip_move(
     }
     // TODO add noclip check here (for cheats)
 
-    if !sound.is_sound_playing().is_some() {
+    if !sound.is_any_sound_playing() {
         sound.play_sound(SoundName::HITWALL, assets);
     }
 
@@ -1151,8 +1151,10 @@ pub fn draw_face(state: &GameState, rdr: &VGARenderer) {
 }
 
 /// Calls draw face if time to change
-fn update_face(tics: u64, state: &mut GameState, rdr: &VGARenderer) {
-    // TODO Check if GETGATLINGSND is playing
+fn update_face(tics: u64, state: &mut GameState, sound: &mut Sound, rdr: &VGARenderer) {
+    if sound.is_sound_playing(SoundName::GETGATLING) {
+        return;
+    }
 
     state.face_count += tics;
     if state.face_count > rnd_t() as u64 {
