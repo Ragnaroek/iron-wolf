@@ -1569,14 +1569,14 @@ fn t_bite(
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut Sound,
+    sound: &mut Sound,
     rdr: &VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
-    _: &Assets,
+    assets: &Assets,
     _: &RayCastConsts,
 ) {
-    // TODO PlaySoundLocActor(DOGATTACKSND,ob)
+    sound.play_sound(SoundName::DOGATTACK, assets);
 
     let mut dx = level_state.player().x - level_state.obj(k).x;
     if dx < 0 {
@@ -2041,6 +2041,14 @@ fn a_death_scream(
         ClassType::Boss => {
             sound.play_sound(SoundName::MUTTI, assets);
         }
+        // TODO realhitlerobj EVASND
+        // TODO mechahilterobj SCHEISTSND
+        // TODO schabbobj MEINGOTTSND
+        // TODO fakeobj HITLERHASND
+        // TODO officerobj NEINSOVASSND
+        // TODO giftobj DONNERSND
+        // TODO gretelobj MEINSND
+        // TODO fatobj ROSESND
         _ => todo!("death scream missing: {:?}", obj.class),
     }
 }
@@ -2243,7 +2251,7 @@ fn t_bj_yell(
     rc_consts: &RayCastConsts,
 ) {
     let obj = level_state.obj(k);
-    sound.play_sound_loc_actor(SoundName::YEAH, assets, rc_consts, obj); // JAB
+    sound.play_sound_loc_actor(SoundName::YEAH, assets, rc_consts, obj);
 }
 
 fn t_bj_done(

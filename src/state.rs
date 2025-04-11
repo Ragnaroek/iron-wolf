@@ -822,6 +822,14 @@ pub fn first_sighting(
             new_state(obj, &S_BOSSCHASE1);
             obj.speed = SPD_PATROL * 3;
         }
+        // TODO mechahitlerobj, DIESND
+        // TODO realhitlerobj, DIESND
+        // TODO fakeobj, TOT_HUNDSND
+        // TODO schabbobj, SCHABBSHASND
+        // TODO officerobj, SPIONSND
+        // TODO giftobj EINESND
+        // TODO fatobj ERLAUBENSND
+        // TODO gretelobj KEINSND
         _ => panic!(
             "first sight for class type not implemented: {:?}",
             obj.class

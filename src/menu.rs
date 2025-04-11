@@ -2030,7 +2030,7 @@ async fn cp_save_game(
                 return MenuHandle::BackToGameLoop(None);
             } else {
                 //TODO repaint entry
-                //TODO SD_PlaySound(ESCPRESSEDSND)
+                sound.play_sound(SoundName::ESCPRESSED, assets);
                 continue;
             }
         } else {

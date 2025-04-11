@@ -177,7 +177,7 @@ pub enum SoundName {
     PUSHWALL,      // 46
     NOBONUS,       // 47
     PERCENT100,    // 48
-    BOSSACTIVE,    // 49
+    BOSSACTIVE,    // 49 //unused
     MUTTI,         // 50
     SCHUTZAD,      // 51
     AHHHG,         // 52
@@ -199,7 +199,7 @@ pub enum SoundName {
     DOGATTACK,     // 68
     FLAMETHROWER,  // 69
     MECHSTEP,      // 70
-    GOOBS,         // 71
+    GOOBS,         // 71 //unused
     YEAH,          // 72
     DEATHSCREAM4,  // 73
     DEATHSCREAM5,  // 74

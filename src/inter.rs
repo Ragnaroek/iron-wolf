@@ -794,6 +794,8 @@ pub async fn level_completed(
             sound.play_sound(SoundName::PERCENT100, assets);
         } else if treasure_ratio == 0 {
             sound.force_play_sound(SoundName::NOBONUS, assets);
+        } else {
+            sound.play_sound(SoundName::ENDBONUS2, assets);
         }
         while sound.is_any_sound_playing() {
             bj_breather.poll_breathe(ticker, rdr);
