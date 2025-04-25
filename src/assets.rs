@@ -4,7 +4,7 @@ use std::io::Cursor;
 
 use serde::{Deserialize, Serialize};
 
-use crate::def::{Assets, WeaponType, derive_from};
+use crate::def::{Assets, IWConfig, WeaponType, derive_from};
 use crate::gamedata;
 use crate::loader::Loader;
 use crate::map::{MapFileType, MapSegs, MapType, load_map, load_map_headers, load_map_offsets};
@@ -78,7 +78,6 @@ pub static W3D6: WolfVariant = WolfVariant {
     start_end_text: 143,
 };
 
-// TODO Put this behind conditional compilation (once Spear of Destiny support is started)?
 pub static SOD: WolfVariant = WolfVariant {
     file_ending: SOD_FILE_ENDING,
     num_episodes: 4,
@@ -89,6 +88,28 @@ pub static SOD: WolfVariant = WolfVariant {
     start_digi_sound: 162,
     start_end_text: 168,
 };
+
+pub fn derive_variant(iw_config: &IWConfig) -> Result<&'static WolfVariant, String> {
+    let mut data_path = iw_config.data.wolf3d_data.clone();
+    data_path.push(file_name(WolfFile::GameData, &W3D6));
+    if data_path.try_exists().map_err(|e| e.to_string())? {
+        return Ok(&W3D6);
+    }
+
+    data_path.pop();
+    data_path.push(file_name(WolfFile::GameData, &SOD));
+    if data_path.try_exists().map_err(|e| e.to_string())? {
+        return Ok(&SOD);
+    }
+
+    data_path.pop();
+    data_path.push(file_name(WolfFile::GameData, &W3D1));
+    if data_path.try_exists().map_err(|e| e.to_string())? {
+        return Ok(&W3D1);
+    }
+
+    Err("no Wolfenstein variant recognized".to_string())
+}
 
 pub fn is_sod(variant: &WolfVariant) -> bool {
     variant.file_ending == SOD_FILE_ENDING

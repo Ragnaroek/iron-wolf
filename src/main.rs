@@ -7,7 +7,7 @@ use tracing_appender;
 #[cfg(feature = "tracing")]
 use tracing_subscriber;
 
-use iw::assets;
+use iw::assets::derive_variant;
 use iw::config::read_iw_config;
 use iw::loader::DiskLoader;
 use iw::start::iw_start;
@@ -16,8 +16,8 @@ fn main() -> Result<(), String> {
     #[cfg(feature = "tracing")]
     let _guard = setup_tracing();
 
-    let variant = &assets::W3D6; // TODO determine this with conditional compilation or derive from the file endings
     let iw_config = read_iw_config()?;
+    let variant = derive_variant(&iw_config)?;
     let loader = DiskLoader {
         variant,
         data_path: iw_config.data.wolf3d_data.clone(),
