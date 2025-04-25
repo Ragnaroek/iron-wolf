@@ -51,6 +51,7 @@ pub struct WolfVariant {
     pub start_adlib_sound: usize,
     pub start_digi_sound: usize,
     pub start_end_text: usize,
+    pub graphic_num_shift: usize, // relative to the W3D6 graphic definitions
 }
 
 static SOD_FILE_ENDING: &str = "SOD";
@@ -58,15 +59,15 @@ static SOD_FILE_ENDING: &str = "SOD";
 pub static W3D1: WolfVariant = WolfVariant {
     file_ending: "WL1",
     num_episodes: 1,
-    num_pics: 139,
+    num_pics: 144,
     start_pics: 3,
-    start_music: 207,
+    start_music: 261,
     start_adlib_sound: 87,
     start_digi_sound: 174,
     start_end_text: 155,
+    graphic_num_shift: 12,
 };
 
-// TODO Demo file support WL1 and WL3??
 pub static W3D6: WolfVariant = WolfVariant {
     file_ending: "WL6",
     num_episodes: 6,
@@ -76,6 +77,7 @@ pub static W3D6: WolfVariant = WolfVariant {
     start_adlib_sound: 87,
     start_digi_sound: 174,
     start_end_text: 143,
+    graphic_num_shift: 0,
 };
 
 pub static SOD: WolfVariant = WolfVariant {
@@ -87,6 +89,7 @@ pub static SOD: WolfVariant = WolfVariant {
     start_adlib_sound: 81,
     start_digi_sound: 162,
     start_end_text: 168,
+    graphic_num_shift: 0,
 };
 
 pub fn derive_variant(iw_config: &IWConfig) -> Result<&'static WolfVariant, String> {
@@ -239,7 +242,7 @@ pub enum SoundName {
 }
 
 #[repr(usize)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Music {
     CORNER,   // 0
     DUNGEON,  // 1

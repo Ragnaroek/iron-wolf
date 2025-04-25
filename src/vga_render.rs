@@ -205,7 +205,7 @@ impl VGARenderer {
 
     pub fn pic(&self, x: usize, y: usize, graph_num: GraphicNum) {
         let pic_num = graph_num as usize - self.variant.start_pics;
-        let graphic = &self.graphics[pic_num as usize];
+        let graphic = &self.graphics[pic_num as usize + self.variant.graphic_num_shift];
         self.mem_to_screen(&graphic.data, graphic.width, graphic.height, x & !7, y);
     }
 
