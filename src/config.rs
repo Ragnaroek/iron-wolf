@@ -4,6 +4,7 @@ mod config_test;
 
 use crate::def::{Button, NUM_BUTTONS, NUM_MOUSE_BUTTONS};
 use crate::{assets::WolfFile, loader::Loader};
+use std::env;
 use std::fs;
 use std::path::Path;
 
@@ -21,21 +22,41 @@ pub const MAX_SCORES: usize = 7;
 // Load the config from the config file if it exists.
 // Returns the default config (vanila mode) if no config
 // file can be found.
-// Checks the current working dir for the presence of a
+// Checks first the arguments for a config file and after that
+// the current working dir for the presence of a
 // iw_config.toml file.
 pub fn read_iw_config() -> Result<IWConfig, String> {
+    if let Some(conf_env) = check_config_env() {
+        let path = Path::new(&conf_env);
+        return read_conf_file(&path);
+    }
+
     let conf_file = Path::new(IW_CONFIG_FILE_NAME);
     if conf_file.exists() {
-        let content = fs::read_to_string(conf_file).map_err(|e| e.to_string())?;
-        let config: IWConfig = toml::from_str(&content).map_err(|e| e.to_string())?;
-        Ok(config)
+        read_conf_file(conf_file)
     } else {
         default_iw_config()
     }
 }
 
+fn read_conf_file(conf_file: &Path) -> Result<IWConfig, String> {
+    let content = fs::read_to_string(conf_file).map_err(|e| e.to_string())?;
+    let config: IWConfig = toml::from_str(&content).map_err(|e| e.to_string())?;
+    Ok(config)
+}
+
 pub fn default_iw_config() -> Result<IWConfig, String> {
     toml::from_str("vanilla = true").map_err(|e| e.to_string())
+}
+
+fn check_config_env() -> Option<String> {
+    let mut args = env::args();
+    while let Some(arg) = args.next() {
+        if arg == "-config" {
+            return args.next();
+        }
+    }
+    None
 }
 
 #[derive(Copy, Clone)]

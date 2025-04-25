@@ -16,7 +16,7 @@ fn main() -> Result<(), String> {
     #[cfg(feature = "tracing")]
     let _guard = setup_tracing();
 
-    let variant = &assets::W3D6; // TODO determine this with conditional compilation
+    let variant = &assets::W3D6; // TODO determine this with conditional compilation or derive from the file endings
     let iw_config = read_iw_config()?;
     let loader = DiskLoader {
         variant,

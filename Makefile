@@ -8,6 +8,9 @@ build-sdl-tracing:
 run-sdl:
 	RUST_BACKTRACE=1 cargo run --features sdl -- -goobers
 
+run-sdl-shareware:
+	RUST_BACKTRACE=1 cargo run --features sdl -- -config ./shareware_config.toml
+
 run-sdl-tracing:
 		cargo run --features sdl,tracing
 
