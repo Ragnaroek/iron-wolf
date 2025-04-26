@@ -4,7 +4,7 @@ use std::{ascii, collections::HashMap, str};
 use tokio::time::sleep;
 use vga::input::{MouseButton, NumCode};
 
-use crate::assets::{GraphicNum, Music, SoundName, W3D1, W3D3, W3D6, WolfVariant, is_sod};
+use crate::assets::{GraphicNum, Music, SoundName, W3D3, W3D6, WolfVariant, is_sod};
 use crate::config::{WolfConfig, write_wolf_config};
 use crate::def::{Assets, Button, Difficulty, GameState, IWConfig, LevelState, WindowState};
 use crate::draw::{RayCast, init_ray_cast};
@@ -166,11 +166,12 @@ pub struct ItemInfo {
     pub indent: usize,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum ItemActivity {
     Deactive,
     Active,
     Highlight,
+    EpisodeTeaser,
 }
 
 pub struct ItemType {
@@ -435,31 +436,31 @@ fn initial_episode_menu() -> MenuStateEntry {
             placeholder(),
             ItemType {
                 item: EpisodeItem::Episode2.pos(),
-                active: ItemActivity::Deactive,
+                active: ItemActivity::EpisodeTeaser,
                 string: "Episode 2\nOperation: Eisenfaust",
             },
             placeholder(),
             ItemType {
                 item: EpisodeItem::Episode3.pos(),
-                active: ItemActivity::Deactive,
+                active: ItemActivity::EpisodeTeaser,
                 string: "Episode 3\nDie, Fuhrer, Die!",
             },
             placeholder(),
             ItemType {
                 item: EpisodeItem::Episode4.pos(),
-                active: ItemActivity::Deactive,
+                active: ItemActivity::EpisodeTeaser,
                 string: "Episode 4\nA Dark Secret",
             },
             placeholder(),
             ItemType {
                 item: EpisodeItem::Episode5.pos(),
-                active: ItemActivity::Deactive,
+                active: ItemActivity::EpisodeTeaser,
                 string: "Episode 5\nTrail of the Madman",
             },
             placeholder(),
             ItemType {
                 item: EpisodeItem::Episode6.pos(),
-                active: ItemActivity::Deactive,
+                active: ItemActivity::EpisodeTeaser,
                 string: "Episode 6\nConfrontation",
             },
         ],
@@ -1696,16 +1697,31 @@ async fn cp_new_game(
         )
         .await;
         if let MenuHandle::Selected(episode_selected) = episode_handle {
-            sound.play_sound(SoundName::SHOOT, assets);
-            //TODO confirm dialog if already in a game
-            game_state.episode = episode_selected / 2;
-            return MenuHandle::OpenMenu(Menu::DifficultySelect);
+            let new_game_menu = menu_state
+                .menues
+                .get(&Menu::MainMenu(MainMenuItem::NewGame))
+                .expect("NewGame menu not found");
+
+            if new_game_menu.items[episode_selected].active == ItemActivity::EpisodeTeaser {
+                sound.play_sound(SoundName::NOWAY, assets);
+                message(
+                    rdr,
+                    win_state,
+                    "Please select \"Read This!\"\nfrom the Options menu to\nfind out how to order this\nepisode from Apogee.",
+                );
+                input.clear_keys_down();
+                input.ack().await;
+                continue;
+            } else {
+                sound.play_sound(SoundName::SHOOT, assets);
+                //TODO confirm dialog if already in a game
+                game_state.episode = episode_selected / 2;
+                return MenuHandle::OpenMenu(Menu::DifficultySelect);
+            };
         } else {
             rdr.fade_out().await;
             return episode_handle;
         }
-
-        // TODO Shareware support + hint messge how to order the game
     }
 }
 
@@ -2919,6 +2935,7 @@ fn active_ix(active: ItemActivity) -> usize {
         ItemActivity::Deactive => 0,
         ItemActivity::Active => 1,
         ItemActivity::Highlight => 2,
+        ItemActivity::EpisodeTeaser => 3,
     }
 }
 
