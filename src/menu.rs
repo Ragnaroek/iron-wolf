@@ -4,7 +4,7 @@ use std::{ascii, collections::HashMap, str};
 use tokio::time::sleep;
 use vga::input::{MouseButton, NumCode};
 
-use crate::assets::{GraphicNum, Music, SoundName, WolfVariant, is_sod};
+use crate::assets::{GraphicNum, Music, SoundName, W3D1, W3D3, W3D6, WolfVariant, is_sod};
 use crate::config::{WolfConfig, write_wolf_config};
 use crate::def::{Assets, Button, Difficulty, GameState, IWConfig, LevelState, WindowState};
 use crate::draw::{RayCast, init_ray_cast};
@@ -3005,13 +3005,17 @@ fn draw_outline(
     vw_vlin(rdr, y, y + height, x + width, color1);
 }
 
-pub fn check_for_episodes(menu_state: &mut MenuState) {
-    //TODO Actually check what data versions there are and enable the menues based on this
+pub fn check_for_episodes(menu_state: &mut MenuState, variant: &WolfVariant) {
     menu_state.update_menu(Menu::MainMenu(MainMenuItem::NewGame), |entry| {
-        for i in 0..entry.items.len() {
-            if i % 2 == 0 {
-                entry.items[i].active = ItemActivity::Active;
-            }
+        entry.items[0].active = ItemActivity::Active;
+        if variant.file_ending == W3D3.file_ending || variant.file_ending == W3D6.file_ending {
+            entry.items[2].active = ItemActivity::Active;
+            entry.items[4].active = ItemActivity::Active;
+        }
+        if variant.file_ending == W3D6.file_ending {
+            entry.items[6].active = ItemActivity::Active;
+            entry.items[8].active = ItemActivity::Active;
+            entry.items[10].active = ItemActivity::Active;
         }
     })
 }

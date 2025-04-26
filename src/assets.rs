@@ -68,6 +68,19 @@ pub static W3D1: WolfVariant = WolfVariant {
     graphic_num_shift: 12,
 };
 
+// TOOD define W3D3 version data
+pub static W3D3: WolfVariant = WolfVariant {
+    file_ending: "WL3",
+    num_episodes: 3,
+    num_pics: 0,
+    start_pics: 0,
+    start_music: 0,
+    start_adlib_sound: 0,
+    start_digi_sound: 0,
+    start_end_text: 0,
+    graphic_num_shift: 0,
+};
+
 pub static W3D6: WolfVariant = WolfVariant {
     file_ending: "WL6",
     num_episodes: 6,
@@ -111,7 +124,7 @@ pub fn derive_variant(iw_config: &IWConfig) -> Result<&'static WolfVariant, Stri
         return Ok(&W3D1);
     }
 
-    Err("no Wolfenstein variant recognized".to_string())
+    Err("NO WOLFENSTEIN 3-D DATA FILES to be found!".to_string())
 }
 
 pub fn is_sod(variant: &WolfVariant) -> bool {
