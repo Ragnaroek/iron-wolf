@@ -203,10 +203,14 @@ impl VGARenderer {
         self.vga.write_mem(dest, color);
     }
 
-    pub fn pic(&self, x: usize, y: usize, graph_num: GraphicNum) {
-        let pic_num = graph_num as usize - self.variant.start_pics;
-        let graphic = &self.graphics[pic_num as usize + self.variant.graphic_num_shift];
+    pub fn pic_lump(&self, x: usize, y: usize, lump: usize) {
+        let pic_num = lump - self.variant.start_pics;
+        let graphic = &self.graphics[pic_num as usize];
         self.mem_to_screen(&graphic.data, graphic.width, graphic.height, x & !7, y);
+    }
+
+    pub fn pic(&self, x: usize, y: usize, graph_num: GraphicNum) {
+        self.pic_lump(x, y, self.variant.graphic_lump_map[graph_num as usize]);
     }
 
     pub fn debug_pic(&self, data: &Vec<u8>) {

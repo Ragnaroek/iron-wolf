@@ -50,17 +50,19 @@ impl LayoutContext {
     }
 }
 
-struct Text {
+#[derive(Debug)]
+struct Page {
     text: Vec<char>,
+}
+
+struct Text<'a> {
+    chars: &'a Vec<char>,
     ptr: usize, // index of the next char!
 }
 
-impl Text {
-    fn new(str: &str) -> Text {
-        Text {
-            text: str.chars().collect(),
-            ptr: 0,
-        }
+impl<'a> Text<'a> {
+    fn new(chars: &'a Vec<char>) -> Text<'a> {
+        Text { chars, ptr: 0 }
     }
 
     fn prev(&mut self) -> Option<char> {
@@ -68,60 +70,65 @@ impl Text {
             return None;
         }
         self.ptr -= 1;
-        Some(self.text[self.ptr])
+        Some(self.chars[self.ptr])
     }
 
     fn next(&mut self) -> Option<char> {
-        if self.ptr >= self.text.len() {
+        if self.ptr >= self.chars.len() {
             return None;
         }
-        let ch = Some(self.text[self.ptr]);
+        let ch = Some(self.chars[self.ptr]);
         self.ptr += 1;
         ch
     }
 
     fn peek(&self) -> Option<char> {
-        if self.ptr >= self.text.len() {
+        if self.ptr >= self.chars.len() {
             return None;
         }
-        Some(self.text[self.ptr])
-    }
-
-    fn skip_whitespace(&mut self) {
-        loop {
-            if let Some(ch) = self.peek() {
-                if ch.is_whitespace() {
-                    self.next();
-                } else {
-                    break;
-                }
-            } else {
-                break;
-            }
-        }
+        Some(self.chars[self.ptr])
     }
 }
 
-pub async fn end_text(rdr: &VGARenderer, input: &Input, which: usize) {
-    show_article(rdr, input, which).await;
-
+pub async fn help_screens(rdr: &VGARenderer, input: &Input) {
+    show_article(rdr, input, 0).await;
     rdr.fade_out().await;
+}
+
+pub async fn end_text(rdr: &VGARenderer, input: &Input, which: usize) {
+    show_article(rdr, input, which + 1).await;
+    rdr.fade_out().await;
+}
+
+fn pages(str: &str) -> Vec<Page> {
+    let mut pages = Vec::new();
+    let raw_pages: Vec<&str> = str.split("^P").collect();
+    for raw_page in raw_pages {
+        if !raw_page.trim().is_empty() {
+            let text = "^P".to_string() + raw_page;
+            pages.push(Page {
+                text: text.chars().collect(),
+            })
+        }
+    }
+    pages
 }
 
 async fn show_article(rdr: &VGARenderer, input: &Input, which: usize) {
     rdr.bar(0, 0, 320, 200, BACK_COLOR);
 
-    let mut text = Text::new(&rdr.texts[which]);
+    let pages = pages(&rdr.texts[which]);
 
     let mut layout_ctx = LayoutContext::new();
-    layout_ctx.num_pages = 2;
+    layout_ctx.num_pages = pages.len();
 
     let mut new_page = true;
     let mut first_page = true;
     loop {
         if new_page {
             new_page = false;
-            page_layout(&mut layout_ctx, rdr, &mut text, true);
+            let page = layout_ctx.page_num - 1;
+            page_layout(&mut layout_ctx, rdr, &pages[page], true);
         }
 
         if first_page {
@@ -130,11 +137,11 @@ async fn show_article(rdr: &VGARenderer, input: &Input, which: usize) {
         }
 
         input.ack().await;
-        match input.last_scan() {
+        let last_scan = input.last_scan();
+        match last_scan {
             NumCode::Escape => break,
             NumCode::UpArrow | NumCode::PgUp | NumCode::LeftArrow => {
-                if layout_ctx.page_num > 1 {
-                    back_page(&mut text);
+                if layout_ctx.page_num >= 1 {
                     layout_ctx.page_num -= 1;
                     new_page = true;
                 }
@@ -153,12 +160,7 @@ async fn show_article(rdr: &VGARenderer, input: &Input, which: usize) {
 }
 
 /// Clears the screen, draws the pics on the page, and word wraps the text.
-fn page_layout(
-    layout_ctx: &mut LayoutContext,
-    rdr: &VGARenderer,
-    text: &mut Text,
-    show_number: bool,
-) {
+fn page_layout(layout_ctx: &mut LayoutContext, rdr: &VGARenderer, page: &Page, show_number: bool) {
     rdr.bar(0, 0, 320, 200, BACK_COLOR);
     rdr.pic(0, 0, GraphicNum::HTOPWINDOWPIC);
     rdr.pic(0, 8, GraphicNum::HLEFTWINDOWPIC);
@@ -174,13 +176,7 @@ fn page_layout(
     layout_ctx.row_on = 0;
     layout_ctx.layout_done = false;
 
-    // make sure we are starting layout text (^P first command)
-    text.skip_whitespace();
-    let ch0 = text.next();
-    if ch0 != Some('^') || text.next() != Some('P') {
-        quit(Some("PageLayout: Text not headed with ^P"));
-    }
-
+    let text = &mut Text::new(&page.text);
     rip_to_eol(text);
 
     loop {
@@ -231,16 +227,6 @@ fn page_layout(
     }
 }
 
-fn back_page(text: &mut Text) {
-    loop {
-        let ch0 = text.prev();
-        let ch1 = text.prev().map(|c| c.to_ascii_uppercase());
-        if ch1 == Some('^') && ch0 == Some('P') {
-            return;
-        }
-    }
-}
-
 fn handle_command(
     layout_ctx: &mut LayoutContext,
     rdr: &VGARenderer,
@@ -260,8 +246,8 @@ fn handle_command(
         }
         Some('G') => {
             let g = parse_pic_command(text)?;
-            rdr.pic(g.pic_x & !7, g.pic_y, g.pic_num);
-            let pic_num = g.pic_num as usize - rdr.variant.start_pics;
+            rdr.pic_lump(g.pic_x & !7, g.pic_y, g.pic_lump);
+            let pic_num = g.pic_lump - rdr.variant.start_pics;
             let graphic_data = &rdr.graphics[pic_num];
             // adjust margins
             let pic_mid = g.pic_x + graphic_data.width / 2;
@@ -277,7 +263,7 @@ fn handle_command(
                 bottom = TEXT_ROWS - 1;
             }
 
-            for i in top..bottom {
+            for i in top..=bottom {
                 if pic_mid > SCREEN_MID {
                     layout_ctx.right_margin[i] = margin;
                 } else {
@@ -317,6 +303,10 @@ fn new_line(layout_ctx: &mut LayoutContext, text: &mut Text) {
                     text.prev(); //back up to ^
                     return;
                 }
+            } else {
+                // end of text reached
+                layout_ctx.layout_done = true;
+                return;
             }
         }
     }
@@ -389,7 +379,7 @@ fn handle_word(
 struct G {
     pic_y: usize,
     pic_x: usize,
-    pic_num: GraphicNum,
+    pic_lump: usize,
 }
 
 fn parse_pic_command(text: &mut Text) -> Result<G, String> {
@@ -401,19 +391,12 @@ fn parse_pic_command(text: &mut Text) -> Result<G, String> {
     if text.next() != Some(',') {
         return Err("expected , in pic command".to_string());
     }
-    let g_val = parse_number(text)?;
-    let pic_num = GraphicNum::try_from(g_val);
-    if pic_num.is_err() {
-        return Err(format!(
-            "illegal graphic chunk id in G command: {:?}",
-            g_val
-        ));
-    }
+    let pic_lump = parse_number(text)?;
     rip_to_eol(text);
     Ok(G {
         pic_y,
         pic_x,
-        pic_num: pic_num.unwrap(),
+        pic_lump,
     })
 }
 

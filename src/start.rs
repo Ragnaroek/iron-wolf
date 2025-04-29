@@ -95,7 +95,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     );
 
     let mut win_state = initial_window_state();
-    let mut menu_state = initial_menu_state();
+    let mut menu_state = initial_menu_state(loader.variant());
 
     check_for_episodes(&mut menu_state, loader.variant());
 

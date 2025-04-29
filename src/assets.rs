@@ -4,7 +4,7 @@ use std::io::Cursor;
 
 use serde::{Deserialize, Serialize};
 
-use crate::def::{Assets, IWConfig, WeaponType, derive_from};
+use crate::def::{Assets, IWConfig, WeaponType};
 use crate::gamedata;
 use crate::loader::Loader;
 use crate::map::{MapFileType, MapSegs, MapType, load_map, load_map_headers, load_map_offsets};
@@ -43,66 +43,352 @@ pub enum WolfFile {
 // Contains everything from the generated header from the original.
 #[derive(Debug)]
 pub struct WolfVariant {
+    pub id: usize, // for fast comparison
     pub file_ending: &'static str,
     pub num_episodes: usize,
     pub num_pics: usize,
+    pub help_text_lump_id: Option<usize>, // if None, "Read This!" will not be shown
     pub start_pics: usize,
     pub start_music: usize,
     pub start_adlib_sound: usize,
     pub start_digi_sound: usize,
     pub start_end_text: usize,
-    pub graphic_num_shift: usize, // relative to the W3D6 graphic definitions
+    pub graphic_lump_map: &'static [usize; NUM_GRAPHICS],
 }
 
 static SOD_FILE_ENDING: &str = "SOD";
 
 pub static W3D1: WolfVariant = WolfVariant {
+    id: 100,
     file_ending: "WL1",
     num_episodes: 1,
     num_pics: 144,
+    help_text_lump_id: Some(150),
     start_pics: 3,
     start_music: 261,
     start_adlib_sound: 87,
     start_digi_sound: 174,
     start_end_text: 155,
-    graphic_num_shift: 12,
+    graphic_lump_map: &W3D1_LUMP_MAP,
 };
+
+static W3D1_LUMP_MAP: [usize; NUM_GRAPHICS] = [
+    0,  // NONE
+    3,  // HBJPIC
+    4,  // HCASTLEPIC
+    11, // HBLAZEPIC
+    17, // HTOPWINDOWPIC
+    18, // HLEFTWINDOWPIC
+    19, // HRIGHTWINDOWPIC
+    20, // HBOTTOMINFOPIC
+    // Lump Start
+    22,  // COPTIONSPIC
+    23,  // CCURSOR1PIC
+    24,  // CCURSOR2PIC
+    25,  // CNOTSELECTEDPIC
+    26,  // CSELECTEDPIC
+    27,  // CFXTITLEPIC
+    28,  // CDIGITITLEPIC
+    29,  // CMUSICTITLEPIC
+    30,  // CMOUSELBACKPIC
+    31,  // CBABYMODEPIC
+    32,  // CEASYPIC
+    33,  // CNORMALPIC
+    34,  // CHARDPIC
+    35,  // CLOADSAVEDISKPIC
+    36,  // CDISKLOADING1PIC
+    37,  // CDISKLOADING2PIC
+    38,  // CCONTROLPIC
+    39,  // CCUSTOMIZEPIC
+    40,  // CLOADGAMEPIC
+    41,  // CSAVEGAMEPIC
+    42,  // CEPISODE1PIC
+    43,  // CEPISODE2PIC
+    44,  // CEPISODE3PIC
+    45,  // CEPISODE4PIC
+    46,  // CEPISODE5PIC
+    47,  // CEPISODE6PIC
+    48,  // CCODEPIC
+    49,  // CTIMECODEPIC
+    50,  // CLEVELPIC
+    51,  // CNAMEPIC
+    52,  // CSCOREPIC
+    53,  // CJOY1PIC
+    54,  // CJOY2PIC
+    55,  // GUYPIC
+    56,  // COLONPIC
+    57,  // NUM0PIC
+    58,  // NUM1PIC
+    59,  // NUM2PIC
+    60,  // NUM3PIC
+    61,  // NUM4PIC
+    62,  // NUM5PIC
+    63,  // NUM6PIC
+    64,  // NUM7PIC
+    65,  // NUM8PIC
+    66,  // NUM9PIC
+    67,  // PERCENTPIC
+    68,  // APIC
+    69,  // BPIC
+    70,  // CPIC
+    71,  // DPIC
+    72,  // EPIC
+    73,  // FPIC
+    74,  // GPIC
+    75,  // HPIC
+    76,  // IPIC
+    77,  // JPIC
+    78,  // KPIC
+    79,  // LPIC
+    80,  // MPIC
+    81,  // NPIC
+    82,  // OPIC
+    83,  // PPIC
+    84,  // QPIC
+    85,  // RPIC
+    86,  // SPIC
+    87,  // TPIC
+    88,  // UPIC
+    89,  // VPIC
+    90,  // WPIC
+    91,  // XPIC
+    92,  // YPIC
+    93,  // ZPIC
+    94,  // EXPOINTPIC
+    95,  // APOSTROPHEPIC
+    96,  // GUY2PIC
+    97,  // BJWINSPIC
+    98,  // STATUSBARPIC
+    99,  // TITLEPIC
+    100, // PG13PIC
+    101, // CREDITSPIC
+    102, // HIGHSCOREPIC
+    // Lump Start
+    103, // KNIFEPIC
+    104, // GUNPIC
+    105, // MACHINEGUNPIC
+    106, // GATLINGGUNPIC
+    107, // NOKEYPIC
+    108, // GOLDKEYPIC
+    109, // SILVERKEYPIC
+    110, // NBLANKPIC
+    111, // N0PIC
+    112, // N1PIC
+    113, // N2PIC
+    114, // N3PIC
+    115, // N4PIC
+    116, // N5PIC
+    117, // N6PIC
+    118, // N7PIC
+    119, // N8PIC
+    120, // N9PIC
+    121, // FACE1APIC
+    122, // FACE1BPIC
+    123, // FACE1CPIC
+    124, // FACE2APIC
+    125, // FACE2BPIC
+    126, // FACE2CPIC
+    127, // FACE3APIC
+    128, // FACE3BPIC
+    129, // FACE3CPIC
+    130, // FACE4APIC
+    131, // FACE4BPIC
+    132, // FACE4CPIC
+    133, // FACE5APIC
+    134, // FACE5BPIC
+    135, // FACE5CPIC
+    136, // FACE6APIC
+    137, // FACE6BPIC
+    138, // FACE6CPIC
+    139, // FACE7APIC
+    140, // FACE7BPIC
+    141, // FACE7CPIC
+    142, // FACE8APIC
+    143, // GOTGATLINGPIC
+    144, // MUTANTBJPIC
+    145, // PAUSEDPIC
+    146, // GETPSYCHEDPIC
+];
 
 // TOOD define W3D3 version data
 pub static W3D3: WolfVariant = WolfVariant {
+    id: 300,
     file_ending: "WL3",
     num_episodes: 3,
     num_pics: 0,
+    help_text_lump_id: None,
     start_pics: 0,
     start_music: 0,
     start_adlib_sound: 0,
     start_digi_sound: 0,
     start_end_text: 0,
-    graphic_num_shift: 0,
+    graphic_lump_map: &W3D1_LUMP_MAP, // TODO not correct, a placeholder
 };
 
 pub static W3D6: WolfVariant = WolfVariant {
+    id: 600,
     file_ending: "WL6",
     num_episodes: 6,
     num_pics: 132,
+    help_text_lump_id: None,
     start_pics: 3,
     start_music: 261,
     start_adlib_sound: 87,
     start_digi_sound: 174,
     start_end_text: 143,
-    graphic_num_shift: 0,
+    graphic_lump_map: &W3D6_LUMP_MAP,
 };
 
+static W3D6_LUMP_MAP: [usize; NUM_GRAPHICS] = [
+    0, // NONE
+    3, // HBJPIC
+    4, // HCASTLEPIC
+    5, // HBLAZEPIC
+    6, // HTOPWINDOWPIC
+    7, // HLEFTWINDOWPIC
+    8, // HRIGHTWINDOWPIC
+    9, // HBOTTOMINFOPIC
+    // Lump Start
+    10, // COPTIONSPIC
+    11, // CCURSOR1PIC
+    12, // CCURSOR2PIC
+    13, // CNOTSELECTEDPIC
+    14, // CSELECTEDPIC
+    15, // CFXTITLEPIC
+    16, // CDIGITITLEPIC
+    17, // CMUSICTITLEPIC
+    18, // CMOUSELBACKPIC
+    19, // CBABYMODEPIC
+    20, // CEASYPIC
+    21, // CNORMALPIC
+    22, // CHARDPIC
+    23, // CLOADSAVEDISKPIC
+    24, // CDISKLOADING1PIC
+    25, // CDISKLOADING2PIC
+    26, // CCONTROLPIC
+    27, // CCUSTOMIZEPIC
+    28, // CLOADGAMEPIC
+    29, // CSAVEGAMEPIC
+    30, // CEPISODE1PIC
+    31, // CEPISODE2PIC
+    32, // CEPISODE3PIC
+    33, // CEPISODE4PIC
+    34, // CEPISODE5PIC
+    35, // CEPISODE6PIC
+    36, // CCODEPIC
+    37, // CTIMECODEPIC
+    38, // CLEVELPIC
+    39, // CNAMEPIC
+    40, // CSCOREPIC
+    41, // CJOY1PIC
+    42, // CJOY2PIC
+    43, // GUYPIC
+    44, // COLONPIC
+    45, // NUM0PIC
+    46, // NUM1PIC
+    47, // NUM2PIC
+    48, // NUM3PIC
+    49, // NUM4PIC
+    50, // NUM5PIC
+    51, // NUM6PIC
+    52, // NUM7PIC
+    53, // NUM8PIC
+    54, // NUM9PIC
+    55, // PERCENTPIC
+    56, // APIC
+    57, // BPIC
+    58, // CPIC
+    59, // DPIC
+    60, // EPIC
+    61, // FPIC
+    62, // GPIC
+    63, // HPIC
+    64, // IPIC
+    65, // JPIC
+    66, // KPIC
+    67, // LPIC
+    68, // MPIC
+    69, // NPIC
+    70, // OPIC
+    71, // PPIC
+    72, // QPIC
+    73, // RPIC
+    74, // SPIC
+    75, // TPIC
+    76, // UPIC
+    77, // VPIC
+    78, // WPIC
+    79, // XPIC
+    80, // YPIC
+    81, // ZPIC
+    82, // EXPOINTPIC
+    83, // APOSTROPHEPIC
+    84, // GUY2PIC
+    85, // BJWINSPIC
+    86, // STATUSBARPIC
+    87, // TITLEPIC
+    88, // PG13PIC
+    89, // CREDITSPIC
+    90, // HIGHSCOREPIC
+    // Lump Start
+    91,  // KNIFEPIC
+    92,  // GUNPIC
+    93,  // MACHINEGUNPIC
+    94,  // GATLINGGUNPIC
+    95,  // NOKEYPIC
+    96,  // GOLDKEYPIC
+    97,  // SILVERKEYPIC
+    98,  // NBLANKPIC
+    99,  // N0PIC
+    100, // N1PIC
+    101, // N2PIC
+    102, // N3PIC
+    103, // N4PIC
+    104, // N5PIC
+    105, // N6PIC
+    106, // N7PIC
+    107, // N8PIC
+    108, // N9PIC
+    109, // FACE1APIC
+    110, // FACE1BPIC
+    111, // FACE1CPIC
+    112, // FACE2APIC
+    113, // FACE2BPIC
+    114, // FACE2CPIC
+    115, // FACE3APIC
+    116, // FACE3BPIC
+    117, // FACE3CPIC
+    118, // FACE4APIC
+    119, // FACE4BPIC
+    120, // FACE4CPIC
+    121, // FACE5APIC
+    122, // FACE5BPIC
+    123, // FACE5CPIC
+    124, // FACE6APIC
+    125, // FACE6BPIC
+    126, // FACE6CPIC
+    127, // FACE7APIC
+    128, // FACE7BPIC
+    129, // FACE7CPIC
+    130, // FACE8APIC
+    131, // GOTGATLINGPIC
+    132, // MUTANTBJPIC
+    133, // PAUSEDPIC
+    134, // GETPSYCHEDPIC
+];
+
 pub static SOD: WolfVariant = WolfVariant {
+    id: 1000,
     file_ending: SOD_FILE_ENDING,
     num_episodes: 4,
     num_pics: 147,
+    help_text_lump_id: None,
     start_pics: 3,
     start_music: 243,
     start_adlib_sound: 81,
     start_digi_sound: 162,
     start_end_text: 168,
-    graphic_num_shift: 0,
+    graphic_lump_map: &W3D6_LUMP_MAP, // TODO not correct, a placeholder
 };
 
 pub fn derive_variant(iw_config: &IWConfig) -> Result<&'static WolfVariant, String> {
@@ -128,7 +414,7 @@ pub fn derive_variant(iw_config: &IWConfig) -> Result<&'static WolfVariant, Stri
 }
 
 pub fn is_sod(variant: &WolfVariant) -> bool {
-    variant.file_ending == SOD_FILE_ENDING
+    variant.id == SOD.id
 }
 
 #[derive(Serialize, Deserialize)]
@@ -286,174 +572,170 @@ pub enum Music {
     PACMAN,   // 26
 }
 
-// num values are chunk offsets. They need to be translated to
-// picture offset in the graphics array with GraphicNum::PG13PIC - STARTPICS.
-derive_from! {
-    #[repr(usize)]
-    #[derive(Copy, Clone, PartialEq, Debug)]
-    pub enum GraphicNum {
-        NONE = 0,
-        HBLAZEPIC = 5,
-        HTOPWINDOWPIC = 6,
-        HLEFTWINDOWPIC = 7,
-        HRIGHTWINDOWPIC = 8,
-        HBOTTOMINFOPIC = 9,
-        // Lump Start
-        COPTIONSPIC = 10,
-        CCURSOR1PIC = 11,
-        CCURSOR2PIC = 12,
-        CNOTSELECTEDPIC = 13,
-        CSELECTEDPIC = 14,
-        CFXTITLEPIC = 15,
-        CDIGITITLEPIC = 16,
-        CMUSICTITLEPIC = 17,
-        CMOUSELBACKPIC = 18,
-        CBABYMODEPIC = 19,
-        CEASYPIC = 20,
-        CNORMALPIC = 21,
-        CHARDPIC = 22,
-        CLOADSAVEDISKPIC = 23,
-        CDISKLOADING1PIC = 24,
-        CDISKLOADING2PIC = 25,
-        CCONTROLPIC = 26,
-        CCUSTOMIZEPIC = 27,
-        CLOADGAMEPIC = 28,
-        CSAVEGAMEPIC = 29,
-        CEPISODE1PIC = 30,
-        CEPISODE2PIC = 31,
-        CEPISODE3PIC = 32,
-        CEPISODE4PIC = 33,
-        CEPISODE5PIC = 34,
-        CEPISODE6PIC = 35,
-        CCODEPIC = 36,
-        CTIMECODEPIC = 37,
-        CLEVELPIC = 38,
-        CNAMEPIC = 39,
-        CSCOREPIC = 40,
+pub const NUM_GRAPHICS: usize = 133;
 
-        GUYPIC = 43,
-        COLONPIC = 44,
-        NUM0PIC = 45,
-        NUM1PIC = 46,
-        NUM2PIC = 47,
-        NUM3PIC = 48,
-        NUM4PIC = 49,
-        NUM5PIC = 50,
-        NUM6PIC = 51,
-        NUM7PIC = 52,
-        NUM8PIC = 53,
-        NUM9PIC = 54,
-        PERCENTPIC = 55,
-        APIC = 56,
-        BPIC = 57,
-        CPIC = 58,
-        DPIC = 59,
-        EPIC = 60,
-        FPIC = 61,
-        GPIC = 62,
-        HPIC = 63,
-        IPIC = 64,
-        JPIC = 65,
-        KPIC = 66,
-        LPIC = 67,
-        MPIC = 68,
-        NPIC = 69,
-        OPIC = 70,
-        PPIC = 71,
-        QPIC = 72,
-        RPIC = 73,
-        SPIC = 74,
-        TPIC = 75,
-        UPIC = 76,
-        VPIC = 77,
-        WPIC = 78,
-        XPIC = 79,
-        YPIC = 80,
-        ZPIC = 81,
-        EXPOINTPIC = 82,
-        APOSTROPHEPIC = 83,
-        GUY2PIC = 84,
-        BJWINSPIC = 85,
-        STATUSBARPIC = 86,
-        TITLEPIC = 87,
-        PG13PIC = 88,
-        CREDITSPIC = 89,
-        HIGHSCOREPIC = 90,
-        // TODO add missing pics
-        // Lump Start
-        KNIFEPIC = 91,
-        GUNPIC = 92,
-        MACHINEGUNPIC = 93,
-        GATLINGGUNPIC = 94,
-        NOKEYPIC = 95,
-        GOLDKEYPIC = 96,
-        SILVERKEYPIC = 97,
-        NBLANKPIC = 98,
-        N0PIC = 99,
-        N1PIC = 100,
-        N2PIC = 101,
-        N3PIC = 102,
-        N4PIC = 103,
-        N5PIC = 104,
-        N6PIC = 105,
-        N7PIC = 106,
-        N8PIC = 107,
-        N9PIC = 108,
-        FACE1APIC = 109,
-        FACE1BPIC = 110,
-        FACE1CPIC = 111,
-        FACE2APIC = 112,
-        FACE2BPIC = 113,
-        FACE2CPIC = 114,
-        FACE3APIC = 115,
-        FACE3BPIC = 116,
-        FACE3CPIC = 117,
-        FACE4APIC = 118,
-        FACE4BPIC = 119,
-        FACE4CPIC = 120,
-        FACE5APIC = 121,
-        FACE5BPIC = 122,
-        FACE5CPIC = 123,
-        FACE6APIC = 124,
-        FACE6BPIC = 125,
-        FACE6CPIC = 126,
-        FACE7APIC = 127,
-        FACE7BPIC = 128,
-        FACE7CPIC = 129,
-        FACE8APIC = 130,
-        GOTGATLINGPIC = 131,
-        MUTANTBJPIC = 132,
-        PAUSEDPIC = 133,
-        GETPSYCHEDPIC = 134,
-    }
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum GraphicNum {
+    NONE,
+    HBJPIC,
+    HCASTLEPIC,
+    HBLAZEPIC,
+    HTOPWINDOWPIC,
+    HLEFTWINDOWPIC,
+    HRIGHTWINDOWPIC,
+    HBOTTOMINFOPIC,
+    COPTIONSPIC,
+    CCURSOR1PIC,
+    CCURSOR2PIC,
+    CNOTSELECTEDPIC,
+    CSELECTEDPIC,
+    CFXTITLEPIC,
+    CDIGITITLEPIC,
+    CMUSICTITLEPIC,
+    CMOUSELBACKPIC,
+    CBABYMODEPIC,
+    CEASYPIC,
+    CNORMALPIC,
+    CHARDPIC,
+    CLOADSAVEDISKPIC,
+    CDISKLOADING1PIC,
+    CDISKLOADING2PIC,
+    CCONTROLPIC,
+    CCUSTOMIZEPIC,
+    CLOADGAMEPIC,
+    CSAVEGAMEPIC,
+    CEPISODE1PIC,
+    CEPISODE2PIC,
+    CEPISODE3PIC,
+    CEPISODE4PIC,
+    CEPISODE5PIC,
+    CEPISODE6PIC,
+    CCODEPIC,
+    CTIMECODEPIC,
+    CLEVELPIC,
+    CNAMEPIC,
+    CSCOREPIC,
+    CJOY1PIC,
+    CJOY2PIC,
+    GUYPIC,
+    COLONPIC,
+    NUM0PIC,
+    NUM1PIC,
+    NUM2PIC,
+    NUM3PIC,
+    NUM4PIC,
+    NUM5PIC,
+    NUM6PIC,
+    NUM7PIC,
+    NUM8PIC,
+    NUM9PIC,
+    PERCENTPIC,
+    APIC,
+    BPIC,
+    CPIC,
+    DPIC,
+    EPIC,
+    FPIC,
+    GPIC,
+    HPIC,
+    IPIC,
+    JPIC,
+    KPIC,
+    LPIC,
+    MPIC,
+    NPIC,
+    OPIC,
+    PPIC,
+    QPIC,
+    RPIC,
+    SPIC,
+    TPIC,
+    UPIC,
+    VPIC,
+    WPIC,
+    XPIC,
+    YPIC,
+    ZPIC,
+    EXPOINTPIC,
+    APOSTROPHEPIC,
+    GUY2PIC,
+    BJWINSPIC,
+    STATUSBARPIC,
+    TITLEPIC,
+    PG13PIC,
+    CREDITSPIC,
+    HIGHSCOREPIC,
+    KNIFEPIC,
+    GUNPIC,
+    MACHINEGUNPIC,
+    GATLINGGUNPIC,
+    NOKEYPIC,
+    GOLDKEYPIC,
+    SILVERKEYPIC,
+    NBLANKPIC,
+    N0PIC,
+    N1PIC,
+    N2PIC,
+    N3PIC,
+    N4PIC,
+    N5PIC,
+    N6PIC,
+    N7PIC,
+    N8PIC,
+    N9PIC,
+    FACE1APIC,
+    FACE1BPIC,
+    FACE1CPIC,
+    FACE2APIC,
+    FACE2BPIC,
+    FACE2CPIC,
+    FACE3APIC,
+    FACE3BPIC,
+    FACE3CPIC,
+    FACE4APIC,
+    FACE4BPIC,
+    FACE4CPIC,
+    FACE5APIC,
+    FACE5BPIC,
+    FACE5CPIC,
+    FACE6APIC,
+    FACE6BPIC,
+    FACE6CPIC,
+    FACE7APIC,
+    FACE7BPIC,
+    FACE7CPIC,
+    FACE8APIC,
+    GOTGATLINGPIC,
+    MUTANTBJPIC,
+    PAUSEDPIC,
+    GETPSYCHEDPIC,
 }
 
 pub fn face_pic(n: usize) -> GraphicNum {
-    let offset = GraphicNum::FACE1APIC as usize + n;
-    match offset {
-        109 => GraphicNum::FACE1APIC,
-        110 => GraphicNum::FACE1BPIC,
-        111 => GraphicNum::FACE1CPIC,
-        112 => GraphicNum::FACE2APIC,
-        113 => GraphicNum::FACE2BPIC,
-        114 => GraphicNum::FACE2CPIC,
-        115 => GraphicNum::FACE3APIC,
-        116 => GraphicNum::FACE3BPIC,
-        117 => GraphicNum::FACE3CPIC,
-        118 => GraphicNum::FACE4APIC,
-        119 => GraphicNum::FACE4BPIC,
-        120 => GraphicNum::FACE4CPIC,
-        121 => GraphicNum::FACE5APIC,
-        122 => GraphicNum::FACE5BPIC,
-        123 => GraphicNum::FACE5CPIC,
-        124 => GraphicNum::FACE6APIC,
-        125 => GraphicNum::FACE6BPIC,
-        126 => GraphicNum::FACE6CPIC,
-        127 => GraphicNum::FACE7APIC,
-        128 => GraphicNum::FACE7BPIC,
-        129 => GraphicNum::FACE7CPIC,
-        130 => GraphicNum::FACE8APIC,
-        _ => GraphicNum::FACE1APIC,
+    match n {
+        0 => GraphicNum::FACE1APIC,
+        1 => GraphicNum::FACE1BPIC,
+        2 => GraphicNum::FACE1CPIC,
+        3 => GraphicNum::FACE2APIC,
+        4 => GraphicNum::FACE2BPIC,
+        5 => GraphicNum::FACE2CPIC,
+        6 => GraphicNum::FACE3APIC,
+        7 => GraphicNum::FACE3BPIC,
+        8 => GraphicNum::FACE3CPIC,
+        9 => GraphicNum::FACE4APIC,
+        10 => GraphicNum::FACE4BPIC,
+        11 => GraphicNum::FACE4CPIC,
+        12 => GraphicNum::FACE5APIC,
+        13 => GraphicNum::FACE5BPIC,
+        14 => GraphicNum::FACE5CPIC,
+        15 => GraphicNum::FACE6APIC,
+        16 => GraphicNum::FACE6BPIC,
+        17 => GraphicNum::FACE6CPIC,
+        18 => GraphicNum::FACE7APIC,
+        19 => GraphicNum::FACE7BPIC,
+        20 => GraphicNum::FACE7CPIC,
+        21 => GraphicNum::FACE8APIC,
+        _ => GraphicNum::NUM0PIC, // deliberately a different picture so that it is recognizable in the error case
     }
 }
 
@@ -824,20 +1106,37 @@ pub fn load_all_graphics(
 
     let tile8 = load_tile8(&grstarts, &grdata, &grhuffman)?;
 
-    let mut texts = Vec::with_capacity(variant.num_episodes);
-    for i in variant.start_end_text..(variant.start_end_text + variant.num_episodes) {
-        let (pos, compressed) = data_sizes(i, &grstarts)?;
-        let source = &grdata[pos..(pos + compressed)];
-        let expanded = expand_chunk(i, source, &grhuffman);
+    let mut texts = Vec::with_capacity(variant.num_episodes + 1);
+    if let Some(lump_id) = variant.help_text_lump_id {
+        let help_text = load_text(&grdata, &grstarts, &grhuffman, lump_id)?;
+        texts.push(help_text);
+    } else {
+        texts.push("".to_string());
+    }
 
-        if let Some(ascii) = expanded.as_ascii() {
-            texts.push(ascii.as_str().to_owned());
-        } else {
-            return Err("non ascii found in texts".to_owned());
-        }
+    for i in variant.start_end_text..(variant.start_end_text + variant.num_episodes) {
+        let text = load_text(&grdata, &grstarts, &grhuffman, i)?;
+        texts.push(text);
     }
 
     Ok((graphics, fonts, TileData { tile8 }, texts))
+}
+
+fn load_text(
+    grdata: &Vec<u8>,
+    grstarts: &Vec<u8>,
+    grhuffman: &Vec<Huffnode>,
+    graphics_num: usize,
+) -> Result<String, String> {
+    let (pos, compressed) = data_sizes(graphics_num, &grstarts)?;
+    let source = &grdata[pos..(pos + compressed)];
+    let expanded = expand_chunk(graphics_num, source, &grhuffman);
+
+    if let Some(ascii) = expanded.as_ascii() {
+        Ok(ascii.as_str().to_owned())
+    } else {
+        Err("non ascii found in texts".to_owned())
+    }
 }
 
 fn extract_picsizes(

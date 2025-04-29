@@ -4,7 +4,7 @@ use std::{ascii, collections::HashMap, str};
 use tokio::time::sleep;
 use vga::input::{MouseButton, NumCode};
 
-use crate::assets::{GraphicNum, Music, SoundName, W3D3, W3D6, WolfVariant, is_sod};
+use crate::assets::{GraphicNum, Music, SoundName, W3D1, W3D3, W3D6, WolfVariant, is_sod};
 use crate::config::{WolfConfig, write_wolf_config};
 use crate::def::{Assets, Button, Difficulty, GameState, IWConfig, LevelState, WindowState};
 use crate::draw::{RayCast, init_ray_cast};
@@ -14,6 +14,7 @@ use crate::loader::Loader;
 use crate::play::{BUTTON_JOY, ProjectionConfig};
 use crate::sd::{DigiMode, MusicMode, Sound, SoundMode};
 use crate::start::{load_the_game, new_view_size, quit, save_the_game, show_view_size};
+use crate::text::help_screens;
 use crate::time::Ticker;
 use crate::us1::{c_print, line_input, print};
 use crate::user::rnd_t;
@@ -180,7 +181,6 @@ pub struct ItemType {
     pub item: usize,
 }
 
-// usize = position in the main menu of the entry
 #[derive(PartialEq, Eq, Copy, Clone, Hash, Debug)]
 #[repr(usize)]
 pub enum MainMenuItem {
@@ -190,13 +190,14 @@ pub enum MainMenuItem {
     LoadGame = 3,
     SaveGame = 4,
     ChangeView = 5,
-    ViewScores = 6,
-    BackTo = 7,
-    Quit = 8,
+    ReadThis = 6,
+    ViewScores = 7,
+    BackTo = 8,
+    Quit = 9,
 }
 
 impl MainMenuItem {
-    pub fn pos(self) -> usize {
+    pub fn id(self) -> usize {
         self as usize
     }
 }
@@ -316,6 +317,17 @@ pub struct MenuStateEntry {
     pub state: ItemInfo,
 }
 
+impl MenuStateEntry {
+    pub fn find_item(&mut self, id: usize) -> Option<&mut ItemType> {
+        for item in &mut self.items {
+            if item.item == id {
+                return Some(item);
+            }
+        }
+        None
+    }
+}
+
 pub struct MenuState {
     pub selected: Menu,
     pub menues: HashMap<Menu, MenuStateEntry>,
@@ -366,59 +378,70 @@ fn no_op_routine(
 }
 
 // MainItems
-fn initial_main_menu() -> MenuStateEntry {
+fn initial_main_menu(variant: &WolfVariant) -> MenuStateEntry {
+    let mut items = vec![
+        ItemType {
+            item: MainMenuItem::NewGame.id(),
+            active: ItemActivity::Active,
+            string: "New Game",
+        },
+        ItemType {
+            item: MainMenuItem::Sound.id(),
+            active: ItemActivity::Active,
+            string: "Sound",
+        },
+        ItemType {
+            item: MainMenuItem::Control.id(),
+            active: ItemActivity::Active,
+            string: "Control",
+        },
+        ItemType {
+            item: MainMenuItem::LoadGame.id(),
+            active: ItemActivity::Active,
+            string: "Load Game",
+        },
+        ItemType {
+            item: MainMenuItem::SaveGame.id(),
+            active: ItemActivity::Deactive,
+            string: "Save Game",
+        },
+        ItemType {
+            item: MainMenuItem::ChangeView.id(),
+            active: ItemActivity::Active,
+            string: "Change View",
+        },
+    ];
+
+    if variant.id == W3D1.id {
+        items.push(ItemType {
+            item: MainMenuItem::ReadThis.id(),
+            active: ItemActivity::Highlight,
+            string: "Read This!",
+        });
+    }
+
+    items.push(ItemType {
+        item: MainMenuItem::ViewScores.id(),
+        active: ItemActivity::Active,
+        string: "View Scores",
+    });
+    items.push(ItemType {
+        item: MainMenuItem::BackTo.id(),
+        active: ItemActivity::Active,
+        string: BACK_TO_DEMO,
+    });
+    items.push(ItemType {
+        item: MainMenuItem::Quit.id(),
+        active: ItemActivity::Active,
+        string: "Quit",
+    });
+
     MenuStateEntry {
-        items: vec![
-            ItemType {
-                item: MainMenuItem::NewGame.pos(),
-                active: ItemActivity::Active,
-                string: "New Game",
-            },
-            ItemType {
-                item: MainMenuItem::Sound.pos(),
-                active: ItemActivity::Active,
-                string: "Sound",
-            },
-            ItemType {
-                item: MainMenuItem::Control.pos(),
-                active: ItemActivity::Active,
-                string: "Control",
-            },
-            ItemType {
-                item: MainMenuItem::LoadGame.pos(),
-                active: ItemActivity::Active,
-                string: "Load Game",
-            },
-            ItemType {
-                item: MainMenuItem::SaveGame.pos(),
-                active: ItemActivity::Deactive,
-                string: "Save Game",
-            },
-            ItemType {
-                item: MainMenuItem::ChangeView.pos(),
-                active: ItemActivity::Active,
-                string: "Change View",
-            },
-            ItemType {
-                item: MainMenuItem::ViewScores.pos(),
-                active: ItemActivity::Active,
-                string: "View Scores",
-            },
-            ItemType {
-                item: MainMenuItem::BackTo.pos(),
-                active: ItemActivity::Active,
-                string: BACK_TO_DEMO,
-            },
-            ItemType {
-                item: MainMenuItem::Quit.pos(),
-                active: ItemActivity::Active,
-                string: "Quit",
-            },
-        ],
+        items,
         state: ItemInfo {
             x: MENU_X,
             y: MENU_Y,
-            cur_pos: Some(MainMenuItem::NewGame.pos()),
+            cur_pos: Some(MainMenuItem::NewGame.id()),
             indent: 24,
         },
     }
@@ -744,11 +767,11 @@ pub fn initial_customize_controls_menu() -> MenuStateEntry {
     }
 }
 
-pub fn initial_menu_state() -> MenuState {
+pub fn initial_menu_state(variant: &WolfVariant) -> MenuState {
     MenuState {
         selected: Menu::Top,
         menues: HashMap::from([
-            (Menu::Top, initial_main_menu()),
+            (Menu::Top, initial_main_menu(variant)),
             (
                 Menu::MainMenu(MainMenuItem::NewGame),
                 initial_episode_menu(),
@@ -802,7 +825,13 @@ pub async fn control_panel(
     let mut rc_return = rc;
 
     let f_key_handle = match scan {
-        NumCode::F1 => todo!("show helpscreen"),
+        NumCode::F1 => {
+            if loader.variant().help_text_lump_id.is_some() {
+                Some(cp_read_this(rdr, sound, assets, input, loader).await)
+            } else {
+                None
+            }
+        }
         NumCode::F2 => Some(
             cp_save_game(
                 iw_config,
@@ -869,7 +898,7 @@ pub async fn control_panel(
     if let Some(handle) = f_key_handle {
         match handle {
             MenuHandle::QuitMenu | MenuHandle::OpenMenu(_) => {
-                // overrule any OpenMenu from the quick keys and return alway to the game
+                // overrule any OpenMenu from the quick keys and return always to the game
                 rdr.fade_out().await;
                 return GameStateUpdate::with_load(prj_return, rc_return, None);
             }
@@ -959,11 +988,13 @@ pub async fn control_panel(
                         rc_return = rc_new;
                         handle
                     }
+                    MainMenuItem::ReadThis => cp_read_this(rdr, sound, assets, input, loader).await,
                     MainMenuItem::ViewScores => {
                         cp_view_scores(wolf_config, rdr, sound, assets, input, win_state, loader)
                             .await
                     }
-                    _ => todo!("implement other menu selects"),
+                    MainMenuItem::Quit => MenuHandle::QuitMenu,
+                    MainMenuItem::BackTo => MenuHandle::BackToGameLoop(None),
                 },
                 Menu::DifficultySelect => {
                     cp_difficulty_select(
@@ -1001,6 +1032,19 @@ pub async fn control_panel(
             return GameStateUpdate::with_render_update(prj_return, rc_return); // back to game loop
         }
     }
+}
+
+async fn cp_read_this(
+    rdr: &VGARenderer,
+    sound: &mut Sound,
+    assets: &Assets,
+    input: &mut Input,
+    loader: &dyn Loader,
+) -> MenuHandle {
+    sound.play_music(Music::CORNER, assets, loader);
+    help_screens(rdr, input).await;
+    sound.play_music(Music::WONDERIN, assets, loader);
+    MenuHandle::QuitMenu
 }
 
 async fn cp_custom_controls(
@@ -1646,29 +1690,43 @@ async fn cp_main_menu(
         no_op_routine,
     )
     .await;
-    if handle == MenuHandle::Selected(MainMenuItem::NewGame.pos()) {
-        return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::NewGame));
-    } else if handle == MenuHandle::Selected(MainMenuItem::Sound.pos()) {
-        return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::Sound));
-    } else if handle == MenuHandle::Selected(MainMenuItem::Control.pos()) {
-        return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::Control));
-    } else if handle == MenuHandle::Selected(MainMenuItem::LoadGame.pos()) {
-        return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::LoadGame));
-    } else if handle == MenuHandle::Selected(MainMenuItem::SaveGame.pos()) {
-        return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::SaveGame));
-    } else if handle == MenuHandle::Selected(MainMenuItem::ChangeView.pos()) {
-        return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::ChangeView));
-    } else if handle == MenuHandle::Selected(MainMenuItem::ViewScores.pos()) {
-        return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::ViewScores));
-    } else if handle == MenuHandle::Selected(MainMenuItem::BackTo.pos()) {
-        return MenuHandle::BackToGameLoop(None);
-    } else if handle == MenuHandle::QuitMenu
-        || handle == MenuHandle::Selected(MainMenuItem::Quit.pos())
-    {
-        menu_quit(ticker, rdr, sound, assets, input, win_state, menu_state).await;
-        return MenuHandle::QuitMenu;
-    } else {
-        return handle;
+
+    match handle {
+        MenuHandle::Selected(selected) => {
+            let top_menue = &menu_state.menues[&Menu::Top];
+            let selected_item = top_menue.items[selected].item;
+
+            if selected_item == MainMenuItem::NewGame.id() {
+                MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::NewGame))
+            } else if selected_item == MainMenuItem::Sound.id() {
+                return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::Sound));
+            } else if selected_item == MainMenuItem::Control.id() {
+                return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::Control));
+            } else if selected_item == MainMenuItem::LoadGame.id() {
+                return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::LoadGame));
+            } else if selected_item == MainMenuItem::SaveGame.id() {
+                return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::SaveGame));
+            } else if selected_item == MainMenuItem::ChangeView.id() {
+                return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::ChangeView));
+            } else if selected_item == MainMenuItem::ReadThis.id() {
+                return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::ReadThis));
+            } else if selected_item == MainMenuItem::ViewScores.id() {
+                return MenuHandle::OpenMenu(Menu::MainMenu(MainMenuItem::ViewScores));
+            } else if selected_item == MainMenuItem::BackTo.id() {
+                return MenuHandle::BackToGameLoop(None);
+            } else if selected_item == MainMenuItem::Quit.id() {
+                menu_quit(ticker, rdr, sound, assets, input, win_state, menu_state).await;
+                MenuHandle::QuitMenu
+            } else {
+                quit(Some("unknown menu selected"));
+                handle
+            }
+        }
+        MenuHandle::QuitMenu => {
+            menu_quit(ticker, rdr, sound, assets, input, win_state, menu_state).await;
+            MenuHandle::QuitMenu
+        }
+        _ => handle,
     }
 }
 
@@ -2861,7 +2919,10 @@ fn setup_control_panel(win_state: &mut WindowState, menu_state: &mut MenuState) 
 
     if win_state.in_game {
         menu_state.update_menu(Menu::Top, |entry| {
-            entry.items[MainMenuItem::SaveGame.pos()].active = ItemActivity::Active;
+            entry
+                .find_item(MainMenuItem::SaveGame.id())
+                .expect("item")
+                .active = ItemActivity::Active;
         })
     }
 }
@@ -2877,14 +2938,18 @@ fn draw_main_menu(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &m
     if win_state.in_game {
         let main_menu_opt = menu_state.menues.get_mut(&Menu::Top);
         if let Some(main_menu) = main_menu_opt {
-            let demo_item = &mut main_menu.items[MainMenuItem::BackTo.pos()];
-            demo_item.active = ItemActivity::Highlight;
-            demo_item.string = BACK_TO_GAME;
+            let back_item = main_menu
+                .find_item(MainMenuItem::BackTo.id())
+                .expect("back_item");
+            back_item.active = ItemActivity::Highlight;
+            back_item.string = BACK_TO_GAME;
         }
     } else {
         let main_menu_opt = menu_state.menues.get_mut(&Menu::Top);
         if let Some(main_menu) = main_menu_opt {
-            let demo_item = &mut main_menu.items[MainMenuItem::BackTo.pos()];
+            let demo_item = main_menu
+                .find_item(MainMenuItem::BackTo.id())
+                .expect("demo_item");
             demo_item.active = ItemActivity::Active;
             demo_item.string = BACK_TO_DEMO;
         }
@@ -3025,11 +3090,11 @@ fn draw_outline(
 pub fn check_for_episodes(menu_state: &mut MenuState, variant: &WolfVariant) {
     menu_state.update_menu(Menu::MainMenu(MainMenuItem::NewGame), |entry| {
         entry.items[0].active = ItemActivity::Active;
-        if variant.file_ending == W3D3.file_ending || variant.file_ending == W3D6.file_ending {
+        if variant.id == W3D3.id || variant.id == W3D6.id {
             entry.items[2].active = ItemActivity::Active;
             entry.items[4].active = ItemActivity::Active;
         }
-        if variant.file_ending == W3D6.file_ending {
+        if variant.id == W3D6.id {
             entry.items[6].active = ItemActivity::Active;
             entry.items[8].active = ItemActivity::Active;
             entry.items[10].active = ItemActivity::Active;
