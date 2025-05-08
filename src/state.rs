@@ -5,8 +5,8 @@ mod state_test;
 use crate::act1::{open_door, place_item_type};
 use crate::act2::{
     S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN,
-    S_GRDPAIN1, S_MUTCHASE1, S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1, S_SSCHASE1, S_SSDIE1, S_SSPAIN,
-    S_SSPAIN1,
+    S_GRDPAIN1, S_MUTCHASE1, S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1, S_SCHABBDIE1_5, S_SCHABBDIE1_140,
+    S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1, do_death_scream,
 };
 use crate::agent::{give_points, take_damage};
 use crate::assets::SoundName;
@@ -19,7 +19,7 @@ use crate::draw::RayCastConsts;
 use crate::fixed::new_fixed_i32;
 use crate::game::AREATILE;
 use crate::map::MapSegs;
-use crate::sd::Sound;
+use crate::sd::{DigiMode, Sound};
 use crate::user::rnd_t;
 use crate::vga_render::VGARenderer;
 
@@ -602,6 +602,67 @@ pub fn select_chase_dir(
     level_state.update_obj(k, |obj| obj.dir = DirType::NoDir); // can't move
 }
 
+pub fn select_run_dir(
+    k: ObjKey,
+    level_state: &mut LevelState,
+    player_tile_x: usize,
+    player_tile_y: usize,
+) {
+    let mut d: [DirType; 3] = [DirType::NoDir; 3];
+
+    let delta_x = player_tile_x as i32 - level_state.obj(k).tilex as i32;
+    let delta_y = player_tile_y as i32 - level_state.obj(k).tiley as i32;
+
+    if delta_x < 0 {
+        d[1] = DirType::East
+    } else {
+        d[1] = DirType::West;
+    }
+
+    if delta_y < 0 {
+        d[2] = DirType::South;
+    } else {
+        d[2] = DirType::North;
+    }
+
+    if delta_y.abs() > delta_x.abs() {
+        let t_dir = d[1];
+        d[1] = d[2];
+        d[2] = t_dir;
+    }
+
+    level_state.update_obj(k, |obj| obj.dir = d[1]);
+    if try_walk(k, level_state) {
+        return; /*either moved forward or attacked*/
+    }
+
+    level_state.update_obj(k, |obj| obj.dir = d[2]);
+    if try_walk(k, level_state) {
+        return;
+    }
+
+    /* there is no direct path to the player, so pick another direction */
+
+    if rnd_t() > 128 {
+        /*randomly determine direction of search*/
+        for t_dir in [DirType::North, DirType::NorthWest, DirType::West] {
+            level_state.update_obj(k, |obj| obj.dir = t_dir);
+            if try_walk(k, level_state) {
+                return;
+            }
+        }
+    } else {
+        for t_dir in [DirType::West, DirType::NorthWest, DirType::North] {
+            level_state.update_obj(k, |obj| obj.dir = t_dir);
+            if try_walk(k, level_state) {
+                return;
+            }
+        }
+    }
+
+    level_state.update_obj(k, |obj| obj.dir = DirType::NoDir); // can't move
+}
+
 /// Moves ob be move global units in ob->dir direction
 /// Actors are not allowed to move inside the player
 /// Does NOT check to see if the move is tile map valid
@@ -1088,16 +1149,19 @@ fn kill_actor(
     assets: &Assets,
 ) {
     {
-        let obj = level_state.mut_obj(k);
-        let tile_x = (obj.x >> TILESHIFT) as usize;
-        let tile_y = (obj.y >> TILESHIFT) as usize;
-        obj.tilex = tile_x;
-        obj.tiley = tile_y;
+        let (tile_x, tile_y) = {
+            let obj = level_state.mut_obj(k);
+            let tile_x = (obj.x >> TILESHIFT) as usize;
+            let tile_y = (obj.y >> TILESHIFT) as usize;
+            obj.tilex = tile_x;
+            obj.tiley = tile_y;
+            (tile_x, tile_y)
+        };
 
-        match obj.class {
+        match level_state.obj(k).class {
             ClassType::Guard => {
                 give_points(game_state, rdr, sound, assets, 100);
-                new_state(obj, &S_GRDDIE1);
+                new_state(level_state.mut_obj(k), &S_GRDDIE1);
                 place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
             }
             ClassType::Officer => {
@@ -1105,12 +1169,12 @@ fn kill_actor(
             }
             ClassType::Mutant => {
                 give_points(game_state, rdr, sound, assets, 700);
-                new_state(obj, &S_MUTDIE1);
+                new_state(level_state.mut_obj(k), &S_MUTDIE1);
                 place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
             }
             ClassType::SS => {
                 give_points(game_state, rdr, sound, assets, 500);
-                new_state(obj, &S_SSDIE1);
+                new_state(level_state.mut_obj(k), &S_SSDIE1);
                 if game_state.best_weapon < WeaponType::MachineGun {
                     place_item_type(level_state, StaticKind::BoMachinegun, tile_x, tile_y);
                 } else {
@@ -1119,33 +1183,41 @@ fn kill_actor(
             }
             ClassType::Dog => {
                 give_points(game_state, rdr, sound, assets, 200);
-                new_state(obj, &S_DOGDIE1);
+                new_state(level_state.mut_obj(k), &S_DOGDIE1);
             }
             ClassType::Boss => {
                 give_points(game_state, rdr, sound, assets, 5000);
-                new_state(obj, &S_BOSSDIE1);
+                new_state(level_state.mut_obj(k), &S_BOSSDIE1);
                 place_item_type(level_state, StaticKind::BoKey1, tile_x, tile_y);
             }
             ClassType::Gretel => {
-                panic!("kill gretel");
+                todo!("kill gretel");
             }
             ClassType::Gift => {
-                panic!("kill gift");
+                todo!("kill gift");
             }
             ClassType::Fat => {
-                panic!("kill fat");
+                todo!("kill fat");
             }
             ClassType::Schabb => {
-                panic!("kill schabb");
+                give_points(game_state, rdr, sound, assets, 5000);
+                game_state.kill_x = level_state.player().x as usize;
+                game_state.kill_y = level_state.player().y as usize;
+                if sound.digi_mode() != DigiMode::Off {
+                    new_state(level_state.mut_obj(k), &S_SCHABBDIE1_140);
+                } else {
+                    new_state(level_state.mut_obj(k), &S_SCHABBDIE1_5);
+                }
+                do_death_scream(k, level_state, sound, assets);
             }
             ClassType::Fake => {
-                panic!("kill fake");
+                todo!("kill fake");
             }
             ClassType::MechaHitler => {
-                panic!("kill mecha hitler");
+                todo!("kill mecha hitler");
             }
             ClassType::RealHitler => {
-                panic!("kill real hitler");
+                todo!("kill real hitler");
             }
             _ => { /* ignore kill on this class of obj */ }
         }

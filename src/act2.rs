@@ -6,25 +6,29 @@ use crate::act1::open_door;
 use crate::agent::{S_ATTACK, S_PLAYER, take_damage};
 use crate::assets::SoundName;
 use crate::def::{
-    AMBUSH_TILE, ActiveType, Assets, At, ClassType, ControlState, Difficulty, DirType, DoorAction,
-    EnemyType, FL_AMBUSH, FL_SHOOTABLE, FL_VISABLE, GameState, ICON_ARROWS, LevelState, MAP_SIZE,
-    MIN_ACTOR_DIST, NUM_ENEMIES, ObjKey, ObjType, PlayState, RUN_SPEED, SPD_DOG, SPD_PATROL,
-    Sprite, StateType, TILEGLOBAL, TILESHIFT,
+    AMBUSH_TILE, ANGLES, ActiveType, Assets, At, ClassType, ControlState, Difficulty, DirType,
+    DoorAction, EnemyType, FL_AMBUSH, FL_NONMARK, FL_SHOOTABLE, FL_VISABLE, GameState, ICON_ARROWS,
+    LevelState, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, ObjKey, ObjType, PlayState, RUN_SPEED,
+    SPD_DOG, SPD_PATROL, Sprite, StateType, TILEGLOBAL, TILESHIFT,
 };
 use crate::draw::RayCastConsts;
+use crate::fixed::{fixed_by_frac, new_fixed_i32};
 use crate::game::AREATILE;
 use crate::map::MapSegs;
 use crate::play::ProjectionConfig;
 use crate::sd::Sound;
 use crate::state::{
-    check_line, move_obj, new_state, select_chase_dir, select_dodge_dir, sight_player,
-    spawn_new_obj, try_walk,
+    check_line, move_obj, new_state, select_chase_dir, select_dodge_dir, select_run_dir,
+    sight_player, spawn_new_obj, try_walk,
 };
 use crate::user::rnd_t;
 use crate::vga_render::VGARenderer;
 
 const BJ_RUN_SPEED: i32 = 2048;
 const BJ_JUMP_SPEED: i32 = 680;
+
+const PROJ_SIZE: i32 = 0x2000;
+const PROJECTILE_SIZE: i32 = 0xc000;
 
 static START_HITPOINTS: [[i32; NUM_ENEMIES]; 4] = [
     [
@@ -1296,7 +1300,269 @@ pub static S_BOSSSHOOT8: StateType = StateType {
     next: Some(&S_BOSSCHASE1),
 };
 
-pub static STATES: [&'static StateType; 117] = [
+//
+// schabb
+//
+pub static S_SCHABBSTAND: StateType = StateType {
+    id: 1092,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbW1),
+    tic_time: 10,
+    think: Some(t_schabb),
+    action: None,
+    next: Some(&S_SCHABBCHASE1),
+};
+
+pub static S_SCHABBCHASE1: StateType = StateType {
+    id: 1093,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbW1),
+    tic_time: 10,
+    think: Some(t_schabb),
+    action: None,
+    next: Some(&S_SCHABBCHASE1S),
+};
+
+pub static S_SCHABBCHASE1S: StateType = StateType {
+    id: 1094,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbW1),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_SCHABBCHASE2),
+};
+pub static S_SCHABBCHASE2: StateType = StateType {
+    id: 1095,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbW2),
+    tic_time: 8,
+    think: Some(t_schabb),
+    action: None,
+    next: Some(&S_SCHABBCHASE3),
+};
+
+pub static S_SCHABBCHASE3: StateType = StateType {
+    id: 1096,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbW3),
+    tic_time: 10,
+    think: Some(t_schabb),
+    action: None,
+    next: Some(&S_SCHABBCHASE3S),
+};
+
+pub static S_SCHABBCHASE3S: StateType = StateType {
+    id: 1097,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbW3),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_SCHABBCHASE4),
+};
+
+pub static S_SCHABBCHASE4: StateType = StateType {
+    id: 1098,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbW4),
+    tic_time: 8,
+    think: Some(t_schabb),
+    action: None,
+    next: Some(&S_SCHABBCHASE1),
+};
+
+pub static S_SCHABBDEATHCAM_140: StateType = StateType {
+    id: 1099,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbW1),
+    tic_time: 1,
+    think: None,
+    action: None,
+    next: Some(&S_SCHABBDIE1_140),
+};
+
+pub static S_SCHABBDEATHCAM_5: StateType = StateType {
+    id: 1100,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbW1),
+    tic_time: 1,
+    think: None,
+    action: None,
+    next: Some(&S_SCHABBDIE1_5),
+};
+
+pub static S_SCHABBDIE1_140: StateType = StateType {
+    id: 1101,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbW1),
+    tic_time: 10,
+    think: None,
+    action: Some(a_death_scream),
+    next: Some(&S_SCHABBDIE2_140),
+};
+
+pub static S_SCHABBDIE1_5: StateType = StateType {
+    id: 1102,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbW1),
+    tic_time: 10,
+    think: None,
+    action: Some(a_death_scream),
+    next: Some(&S_SCHABBDIE2_5),
+};
+
+pub static S_SCHABBDIE2_140: StateType = StateType {
+    id: 1103,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbW1),
+    tic_time: 140,
+    think: None,
+    action: None,
+    next: Some(&S_SCHABBDIE3),
+};
+
+pub static S_SCHABBDIE2_5: StateType = StateType {
+    id: 1104,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbW1),
+    tic_time: 140,
+    think: None,
+    action: None,
+    next: Some(&S_SCHABBDIE3),
+};
+
+pub static S_SCHABBDIE3: StateType = StateType {
+    id: 1105,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbDie1),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_SCHABBCHASE4),
+};
+
+pub static S_SCHABBDIE4: StateType = StateType {
+    id: 1106,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbDie2),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_SCHABBDIE5),
+};
+
+pub static S_SCHABBDIE5: StateType = StateType {
+    id: 1107,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbDie3),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_SCHABBDIE6),
+};
+
+pub static S_SCHABBDIE6: StateType = StateType {
+    id: 1108,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbDead),
+    tic_time: 20,
+    think: None,
+    action: Some(a_start_death_cam),
+    next: Some(&S_SCHABBDIE6),
+};
+
+pub static S_SCHABBSHOOT1: StateType = StateType {
+    id: 1109,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbShoot1),
+    tic_time: 30,
+    think: None,
+    action: None,
+    next: Some(&S_SCHABBSHOOT2),
+};
+
+pub static S_SCHABBSHOOT2: StateType = StateType {
+    id: 1110,
+    rotate: 0,
+    sprite: Some(Sprite::SchabbShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_schabb_throw),
+    next: Some(&S_SCHABBCHASE1),
+};
+
+pub static S_NEEDLE1: StateType = StateType {
+    id: 1111,
+    rotate: 0,
+    sprite: Some(Sprite::Hypo1),
+    tic_time: 6,
+    think: Some(t_projectile),
+    action: None,
+    next: Some(&S_NEEDLE2),
+};
+
+pub static S_NEEDLE2: StateType = StateType {
+    id: 1112,
+    rotate: 0,
+    sprite: Some(Sprite::Hypo2),
+    tic_time: 6,
+    think: Some(t_projectile),
+    action: None,
+    next: Some(&S_NEEDLE3),
+};
+
+pub static S_NEEDLE3: StateType = StateType {
+    id: 1113,
+    rotate: 0,
+    sprite: Some(Sprite::Hypo3),
+    tic_time: 6,
+    think: Some(t_projectile),
+    action: None,
+    next: Some(&S_NEEDLE4),
+};
+
+pub static S_NEEDLE4: StateType = StateType {
+    id: 1114,
+    rotate: 0,
+    sprite: Some(Sprite::Hypo4),
+    tic_time: 6,
+    think: Some(t_projectile),
+    action: None,
+    next: Some(&S_NEEDLE1),
+};
+
+pub static S_BOOM1: StateType = StateType {
+    id: 1115,
+    rotate: 0,
+    sprite: Some(Sprite::Boom1),
+    tic_time: 6,
+    think: None,
+    action: None,
+    next: Some(&S_BOOM2),
+};
+
+pub static S_BOOM2: StateType = StateType {
+    id: 1116,
+    rotate: 0,
+    sprite: Some(Sprite::Boom2),
+    tic_time: 6,
+    think: None,
+    action: None,
+    next: Some(&S_BOOM3),
+};
+
+pub static S_BOOM3: StateType = StateType {
+    id: 1117,
+    rotate: 0,
+    sprite: Some(Sprite::Boom3),
+    tic_time: 6,
+    think: None,
+    action: None,
+    next: None,
+};
+
+pub static STATES: [&'static StateType; 143] = [
     &S_PLAYER,
     &S_ATTACK,
     &S_GRDSTAND,
@@ -1414,6 +1680,32 @@ pub static STATES: [&'static StateType; 117] = [
     &S_BOSSSHOOT6,
     &S_BOSSSHOOT7,
     &S_BOSSSHOOT8,
+    &S_SCHABBSTAND,
+    &S_SCHABBCHASE1,
+    &S_SCHABBCHASE1S,
+    &S_SCHABBCHASE2,
+    &S_SCHABBCHASE3,
+    &S_SCHABBCHASE3S,
+    &S_SCHABBCHASE4,
+    &S_SCHABBDEATHCAM_140,
+    &S_SCHABBDEATHCAM_5,
+    &S_SCHABBDIE1_140,
+    &S_SCHABBDIE1_5,
+    &S_SCHABBDIE2_140,
+    &S_SCHABBDIE2_5,
+    &S_SCHABBDIE3,
+    &S_SCHABBDIE4,
+    &S_SCHABBDIE5,
+    &S_SCHABBDIE6,
+    &S_SCHABBSHOOT1,
+    &S_SCHABBSHOOT2,
+    &S_NEEDLE1,
+    &S_NEEDLE2,
+    &S_NEEDLE3,
+    &S_NEEDLE4,
+    &S_BOOM1,
+    &S_BOOM2,
+    &S_BOOM3,
 ];
 
 pub fn get_state_by_id(id: u16) -> Option<&'static StateType> {
@@ -1423,6 +1715,93 @@ pub fn get_state_by_id(id: u16) -> Option<&'static StateType> {
         }
     }
     None
+}
+
+fn t_projectile(
+    k: ObjKey,
+    tics: u64,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    sound: &mut Sound,
+    rdr: &VGARenderer,
+    _: &mut ControlState,
+    rc: &ProjectionConfig,
+    assets: &Assets,
+    rc_consts: &RayCastConsts,
+) {
+    let player_x = level_state.player().x;
+    let player_y = level_state.player().y;
+
+    let speed = new_fixed_i32(level_state.obj(k).speed * tics as i32);
+
+    let mut delta_x = fixed_by_frac(speed, rc.cos(level_state.obj(k).angle as usize)).to_i32();
+    let mut delta_y = fixed_by_frac(speed, rc.sin(level_state.obj(k).angle as usize)).to_i32();
+
+    if delta_x > 0x10000 {
+        delta_x = 0x10000;
+    }
+    if delta_y > 0x10000 {
+        delta_y = 0x10000;
+    }
+
+    level_state.mut_obj(k).x += delta_x;
+    level_state.mut_obj(k).y += delta_y;
+
+    delta_x = level_state.obj(k).x - player_x;
+    delta_y = level_state.obj(k).y - player_y;
+
+    if !projectile_try_move(k, level_state) {
+        if level_state.obj(k).class == ClassType::Rocket {
+            sound.play_sound_loc_actor(
+                SoundName::MISSILEHIT,
+                assets,
+                rc_consts,
+                level_state.obj(k),
+            );
+            level_state.mut_obj(k).state = Some(&S_BOOM1);
+        } else {
+            level_state.mut_obj(k).state = None; // mark for removal
+        }
+        return;
+    }
+
+    if delta_x < PROJECTILE_SIZE && delta_y < PROJECTILE_SIZE {
+        // hit the player
+        let damage = match level_state.obj(k).class {
+            ClassType::Needle => (rnd_t() >> 3) + 20,
+            ClassType::Rocket | ClassType::HRocket | ClassType::Spark => (rnd_t() >> 3) + 30,
+            ClassType::Fire => rnd_t() >> 3,
+            _ => 0,
+        } as i32;
+
+        take_damage(k, damage, level_state, game_state, rdr);
+        level_state.mut_obj(k).state = None; // mark for removal
+        return;
+    }
+
+    let obj = level_state.mut_obj(k);
+    obj.tilex = (obj.x >> TILESHIFT) as usize;
+    obj.tiley = (obj.y >> TILESHIFT) as usize;
+}
+
+fn projectile_try_move(k: ObjKey, level_state: &LevelState) -> bool {
+    let ob = level_state.obj(k);
+
+    let xl = (ob.x - PROJ_SIZE) >> TILESHIFT;
+    let yl = (ob.y - PROJ_SIZE) >> TILESHIFT;
+    let xh = (ob.x + PROJ_SIZE) >> TILESHIFT;
+    let yh = (ob.y + PROJ_SIZE) >> TILESHIFT;
+
+    // check for solid walls
+    for y in yl..=yh {
+        for x in xl..=xh {
+            if let At::Wall(_) = level_state.actor_at[x as usize][y as usize] {
+                return false;
+            }
+        }
+    }
+
+    true
 }
 
 fn t_path(
@@ -1749,6 +2128,144 @@ fn t_chase(
     }
 }
 
+fn t_schabb(
+    k: ObjKey,
+    tics: u64,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    _: &mut Sound,
+    rdr: &VGARenderer,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    _: &Assets,
+    _: &RayCastConsts,
+) {
+    let mut dodge = false;
+    let dist = {
+        let obj = level_state.obj(k);
+        let player = level_state.player();
+        let dx = obj.tilex.abs_diff(player.tilex);
+        let dy = obj.tiley.abs_diff(player.tiley);
+        let dist = if dx > dy { dx } else { dy };
+        dist
+    };
+
+    let (player_tile_x, player_tile_y) = {
+        let player = level_state.player();
+        (player.tilex, player.tiley)
+    };
+
+    if check_line(level_state, level_state.obj(k)) {
+        if (rnd_t() as u64) < (tics << 3) {
+            // go into attack frame
+            let mut_obj = level_state.mut_obj(k);
+            new_state(mut_obj, &S_SCHABBSHOOT1);
+            return;
+        }
+        dodge = true;
+    }
+
+    if level_state.obj(k).dir == DirType::NoDir {
+        if dodge {
+            select_dodge_dir(k, level_state, player_tile_x, player_tile_y);
+        } else {
+            select_chase_dir(k, level_state, player_tile_x, player_tile_y);
+        }
+
+        if level_state.obj(k).dir == DirType::NoDir {
+            return;
+        }
+    }
+
+    let obj = level_state.obj(k);
+    let mut mov = obj.speed * tics as i32;
+    while mov != 0 {
+        let distance = level_state.obj(k).distance;
+        if distance < 0 {
+            // waiting for a door to open
+            let door = &mut level_state.doors[(-distance - 1) as usize];
+            open_door(door);
+            if door.action != DoorAction::Open {
+                return;
+            }
+            level_state.update_obj(k, |obj| obj.distance = TILEGLOBAL) // go ahead, the door is now opoen
+        }
+
+        if mov < level_state.obj(k).distance {
+            move_obj(k, level_state, game_state, rdr, mov, tics);
+            break;
+        }
+
+        // reached goal tile, so select another one
+
+        // fix position to account for round off during moving
+        level_state.update_obj(k, |obj| {
+            obj.x = ((obj.tilex as i32) << TILESHIFT) + TILEGLOBAL / 2;
+            obj.y = ((obj.tiley as i32) << TILESHIFT) + TILEGLOBAL / 2;
+        });
+
+        mov -= level_state.obj(k).distance;
+
+        if dist < 4 {
+            select_run_dir(k, level_state, player_tile_x, player_tile_y);
+        } else if dodge {
+            select_dodge_dir(k, level_state, player_tile_x, player_tile_y);
+        } else {
+            select_chase_dir(k, level_state, player_tile_x, player_tile_y);
+        }
+
+        if level_state.obj(k).dir == DirType::NoDir {
+            return;
+        }
+    }
+}
+
+fn t_schabb_throw(
+    k: ObjKey,
+    _: u64,
+    level_state: &mut LevelState,
+    _: &mut GameState,
+    sound: &mut Sound,
+    _: &VGARenderer,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    assets: &Assets,
+    rc: &RayCastConsts,
+) {
+    let player = level_state.player();
+    let delta_x = player.x - level_state.obj(k).x;
+    let delta_y = level_state.obj(k).y - player.y;
+
+    let mut angle = (delta_y as f64).atan2(delta_x as f64);
+    if angle < 0.0 {
+        angle = std::f64::consts::PI * 2.0 + angle;
+    }
+    let iangle = (angle / (std::f64::consts::PI * 2.0)) as i32 * ANGLES as i32;
+
+    let tile_x = level_state.obj(k).tilex;
+    let tile_y = level_state.obj(k).tiley;
+    let mut obj = spawn_new_obj(
+        &mut level_state.level.map_segs,
+        tile_x,
+        tile_y,
+        &S_NEEDLE1,
+        ClassType::Needle,
+    );
+
+    obj.tic_count = 1;
+    obj.x = level_state.obj(k).x;
+    obj.y = level_state.obj(k).y;
+    obj.dir = DirType::NoDir;
+    obj.angle = iangle;
+    obj.speed = 0x2000;
+    obj.flags = FL_NONMARK;
+    obj.active = ActiveType::Yes;
+
+    level_state.actors.push(obj);
+
+    sound.play_sound_loc_actor(SoundName::SCHABBSTHROW, assets, rc, &obj);
+}
+
 pub fn spawn_dead_guard(
     map_data: &MapSegs,
     actors: &mut Vec<ObjType>,
@@ -1841,6 +2358,26 @@ pub fn spawn_boss(
     spawn(actors, actor_at, boss);
 }
 
+pub fn spawn_schabbs(
+    map_data: &MapSegs,
+    actors: &mut Vec<ObjType>,
+    actor_at: &mut Vec<Vec<At>>,
+    game_state: &mut GameState,
+    x_tile: usize,
+    y_tile: usize,
+) {
+    let mut schabb = spawn_new_obj(map_data, x_tile, y_tile, &S_SCHABBSTAND, ClassType::Schabb);
+    schabb.speed = SPD_PATROL;
+    schabb.hitpoints = START_HITPOINTS[game_state.difficulty as usize][EnemyType::Schabbs as usize];
+    schabb.dir = DirType::South;
+    schabb.flags = FL_SHOOTABLE | FL_AMBUSH;
+    if !game_state.loaded_game {
+        game_state.kill_total += 1;
+    }
+
+    spawn(actors, actor_at, schabb);
+}
+
 pub fn spawn_patrol(
     map_data: &MapSegs,
     which: EnemyType,
@@ -1919,7 +2456,7 @@ pub fn spawn_patrol(
     spawn(actors, actor_at, patrol);
 }
 
-// spawns the obj into the map
+// spawns the obj into the map. At map load time
 fn spawn(actors: &mut Vec<ObjType>, actor_at: &mut Vec<Vec<At>>, obj: ObjType) {
     actors.push(obj);
     let key = ObjKey(actors.len()); // +1 offset (not len()-1), since player will be later at position 0 and positions will shift
@@ -2027,6 +2564,15 @@ fn a_death_scream(
     assets: &Assets,
     _: &RayCastConsts,
 ) {
+    do_death_scream(k, level_state, sound, assets);
+}
+
+pub fn do_death_scream(
+    k: ObjKey,
+    level_state: &mut LevelState,
+    sound: &mut Sound,
+    assets: &Assets,
+) {
     let obj = level_state.obj(k);
     match obj.class {
         ClassType::Mutant => {
@@ -2041,9 +2587,11 @@ fn a_death_scream(
         ClassType::Boss => {
             sound.play_sound(SoundName::MUTTI, assets);
         }
+        ClassType::Schabb => {
+            sound.play_sound(SoundName::MEINGOTT, assets);
+        }
         // TODO realhitlerobj EVASND
         // TODO mechahilterobj SCHEISTSND
-        // TODO schabbobj MEINGOTTSND
         // TODO fakeobj HITLERHASND
         // TODO officerobj NEINSOVASSND
         // TODO giftobj DONNERSND
@@ -2267,4 +2815,19 @@ fn t_bj_done(
     _: &RayCastConsts,
 ) {
     game_state.play_state = PlayState::Victorious;
+}
+
+fn a_start_death_cam(
+    k: ObjKey,
+    _: u64,
+    level_state: &mut LevelState,
+    _: &mut GameState,
+    sound: &mut Sound,
+    _: &VGARenderer,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    assets: &Assets,
+    rc: &RayCastConsts,
+) {
+    todo!("a_start_death_cam");
 }

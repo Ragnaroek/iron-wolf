@@ -460,7 +460,7 @@ fn reset_partial_obj_type(obj: &mut ObjType) {
 }
 
 fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, VGARenderer, Assets) {
-    let config = config::load_wolf_config(loader);
+    let wolf_config = config::load_wolf_config(loader);
     let vga = VGABuilder::new().video_mode(0x13).build_no_backend();
 
     //enable Mode Y
@@ -471,7 +471,7 @@ fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, VGARenderer, Assets)
         assets::load_all_graphics(loader, &None).expect("load all graphics");
     let assets = assets::load_graphic_assets(loader).expect("load graphic assets");
 
-    let prj = new_view_size(config.viewsize);
+    let prj = new_view_size(wolf_config.viewsize);
 
     let vga_screen = Arc::new(vga);
     let rdr = vga_render::init(vga_screen, graphics, fonts, tiles, texts, loader.variant());

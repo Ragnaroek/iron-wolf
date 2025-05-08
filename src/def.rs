@@ -212,6 +212,14 @@ impl LevelState {
         f(&mut self.actors[k.0])
     }
 
+    pub fn remove_obj(&mut self, k: ObjKey) {
+        // TODO replace this by an implementation that does
+        // not shift the elements!
+        // => allocate actors statically with max size and
+        // modify the static array and null out actors
+        self.actors.remove(k.0);
+    }
+
     pub fn update<F>(&mut self, f: F)
     where
         F: FnOnce(&mut LevelState),
@@ -549,7 +557,7 @@ derive_from! {
         MechaHitler,
         Mutant,
         Needle,
-        Fireo,
+        Fire,
         BJ,
         Ghost,
         RealHitler,
@@ -604,10 +612,10 @@ pub struct ObjType {
     pub distance: i32,
     pub dir: DirType,
 
-    pub x: i32, // TODO should be of Fixed type?
-    pub y: i32, // TODO should be of Fixed type?
-    pub tilex: usize,
-    pub tiley: usize,
+    pub x: i32,       // TODO should be of Fixed type?
+    pub y: i32,       // TODO should be of Fixed type?
+    pub tilex: usize, // rename to tile_x
+    pub tiley: usize, // rename to tile_y
     pub area_number: usize,
 
     pub view_x: i32,
@@ -898,6 +906,16 @@ derive_from! {
         BossShoot1 = 300, BossShoot2 = 301, BossShoot3 = 302, BossDead = 303,
 
         BossDie1 = 304, BossDie2 = 305, BossDie3 = 306,
+
+
+        // schabbs
+        SchabbW1 = 307, SchabbW2 = 308, SchabbW3 = 309, SchabbW4 = 310,
+        SchabbShoot1 = 311, SchabbShoot2 = 312,
+
+        SchabbDie1 = 313, SchabbDie2 = 314, SchabbDie3 = 315, SchabbDead = 316,
+        Hypo1 = 317, Hypo2 = 318, Hypo3 = 319, Hypo4 = 320,
+
+        Boom1 = 382, Boom2 = 383, Boom3 = 384, // TODO check numbers
 
         // bj
         BJW1 = 408, BJW2 = 409, BJW3 = 410, BJW4 = 411,

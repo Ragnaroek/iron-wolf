@@ -530,6 +530,7 @@ fn do_actor(
                 rc_consts,
             );
             if level_state.obj(k).state.is_none() {
+                level_state.remove_obj(k);
                 return;
             }
         }
@@ -567,12 +568,14 @@ fn do_actor(
                 rc_consts,
             );
             if level_state.obj(k).state.is_none() {
+                level_state.remove_obj(k);
                 return;
             }
         }
 
         level_state.update_obj(k, |obj| obj.state = obj.state.expect("state").next);
         if level_state.obj(k).state.is_none() {
+            level_state.remove_obj(k);
             return;
         }
 
@@ -597,6 +600,7 @@ fn do_actor(
             rc_consts,
         );
         if level_state.obj(k).state.is_none() {
+            level_state.remove_obj(k);
             return;
         }
     }

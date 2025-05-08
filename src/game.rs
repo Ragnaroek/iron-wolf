@@ -3,7 +3,7 @@ use std::vec;
 use vga::VGA;
 
 use crate::act1::{spawn_door, spawn_static};
-use crate::act2::{spawn_boss, spawn_dead_guard, spawn_patrol, spawn_stand};
+use crate::act2::{spawn_boss, spawn_dead_guard, spawn_patrol, spawn_schabbs, spawn_stand};
 use crate::agent::{
     draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_score, draw_weapon,
     spawn_player, thrust_player,
@@ -869,7 +869,7 @@ fn scan_info_plane(
                     todo!("officer patrol");
                 }
                 196 => {
-                    todo!("schabbs");
+                    spawn_schabbs(map_data, &mut actors, actor_at, game_state, x, y);
                 }
                 197 => {
                     todo!("gretel");
