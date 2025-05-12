@@ -1,7 +1,7 @@
 use crate::agent::S_PLAYER;
 use crate::def::{
-    ClassType, DirType, DoorAction, DoorLock, DoorType, FL_NEVERMARK, Level, LevelState, MAP_SIZE,
-    ObjType,
+    Actors, ClassType, DirType, DoorAction, DoorLock, DoorType, FL_NEVERMARK, Level, LevelState,
+    MAP_SIZE, MAX_ACTORS, ObjType,
 };
 use crate::draw::{Hit, Op, calc_height, init_ray_cast, init_ray_cast_consts};
 use crate::fixed::new_fixed_i32;
@@ -344,6 +344,9 @@ fn mock_level_state() -> LevelState {
     player.tilex = 29;
     player.tiley = 57;
 
+    let mut actors = Actors::new(MAX_ACTORS);
+    actors.add_obj(player);
+
     LevelState {
         level: Level {
             map_segs: MapSegs {
@@ -353,7 +356,7 @@ fn mock_level_state() -> LevelState {
             tile_map,
         },
         map_width: MAP_SIZE as usize,
-        actors: vec![player],
+        actors,
         actor_at: Vec::with_capacity(0),
         doors: mock_doors(),
         area_connect: Vec::with_capacity(0),

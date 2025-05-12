@@ -5,15 +5,15 @@ use vga::VGA;
 use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{spawn_boss, spawn_dead_guard, spawn_patrol, spawn_schabbs, spawn_stand};
 use crate::agent::{
-    draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_score, draw_weapon,
-    spawn_player, thrust_player,
+    DUMMY_PLAYER, draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_score,
+    draw_weapon, spawn_player, thrust_player,
 };
 use crate::assets::{SoundName, load_map_from_assets};
 use crate::config::WolfConfig;
 use crate::def::{
-    AMBUSH_TILE, ANGLES, Assets, At, ControlState, Difficulty, DoorLock, EnemyType, GameState,
-    IWConfig, Level, LevelState, MAP_SIZE, MAX_DOORS, MAX_STATS, NUM_AREAS, ObjType, PlayState,
-    Sprite, StaticType, VisObj, WeaponType, WindowState,
+    AMBUSH_TILE, ANGLES, Actors, Assets, At, ControlState, Difficulty, DoorLock, EnemyType,
+    GameState, IWConfig, Level, LevelState, MAP_SIZE, MAX_ACTORS, MAX_DOORS, MAX_STATS, NUM_AREAS,
+    ObjKey, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState,
 };
 use crate::draw::{RayCast, RayCastConsts, init_ray_cast_consts, three_d_refresh};
 use crate::input::Input;
@@ -567,10 +567,16 @@ fn scan_info_plane(
     actor_at: &mut Vec<Vec<At>>,
     area_by_player: &mut Vec<bool>,
     difficulty: Difficulty,
-) -> (Vec<ObjType>, Vec<StaticType>, Vec<Vec<u16>>) {
+) -> (Actors, Vec<StaticType>, Vec<Vec<u16>>) {
     let mut player = None;
     let mut statics = Vec::new();
-    let mut actors = Vec::new();
+    let mut actors = Actors::new(MAX_ACTORS);
+    let player_key = actors.add_obj(DUMMY_PLAYER); //dummy player as a placeholder!
+    if player_key != ObjKey(0) {
+        // make sure player gets the 0 spot
+        panic!("player not at position 0")
+    }
+
     let mut info_plane = vec![vec![0; MAP_SIZE]; MAP_SIZE];
 
     let mut map_ptr = 0;
@@ -1045,11 +1051,8 @@ fn scan_info_plane(
         }
     }
 
-    if player.is_none() {
-        panic!("No player start position in map");
-    }
-
-    actors.insert(0, player.unwrap());
+    let player = player.expect("No player start position in map");
+    actors.put_obj(player_key, player);
 
     (actors, statics, info_plane)
 }

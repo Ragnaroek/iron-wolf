@@ -462,18 +462,21 @@ fn update_game_state(
     move_push_walls(level_state, game_state, tics);
 
     for i in 0..level_state.actors.len() {
-        do_actor(
-            ObjKey(i),
-            tics,
-            level_state,
-            game_state,
-            sound,
-            rdr,
-            control_state,
-            prj,
-            rc_consts,
-            assets,
-        );
+        let k = ObjKey(i);
+        if level_state.actors.exists(k) {
+            do_actor(
+                k,
+                tics,
+                level_state,
+                game_state,
+                sound,
+                rdr,
+                control_state,
+                prj,
+                rc_consts,
+                assets,
+            );
+        }
     }
 }
 
@@ -530,7 +533,7 @@ fn do_actor(
                 rc_consts,
             );
             if level_state.obj(k).state.is_none() {
-                level_state.remove_obj(k);
+                level_state.actors.drop_obj(k);
                 return;
             }
         }
@@ -568,14 +571,14 @@ fn do_actor(
                 rc_consts,
             );
             if level_state.obj(k).state.is_none() {
-                level_state.remove_obj(k);
+                level_state.actors.drop_obj(k);
                 return;
             }
         }
 
         level_state.update_obj(k, |obj| obj.state = obj.state.expect("state").next);
         if level_state.obj(k).state.is_none() {
-            level_state.remove_obj(k);
+            level_state.actors.drop_obj(k);
             return;
         }
 
@@ -600,7 +603,7 @@ fn do_actor(
             rc_consts,
         );
         if level_state.obj(k).state.is_none() {
-            level_state.remove_obj(k);
+            level_state.actors.drop_obj(k);
             return;
         }
     }

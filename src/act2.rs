@@ -6,10 +6,10 @@ use crate::act1::open_door;
 use crate::agent::{S_ATTACK, S_PLAYER, take_damage};
 use crate::assets::SoundName;
 use crate::def::{
-    AMBUSH_TILE, ANGLES, ActiveType, Assets, At, ClassType, ControlState, Difficulty, DirType,
-    DoorAction, EnemyType, FL_AMBUSH, FL_NONMARK, FL_SHOOTABLE, FL_VISABLE, GameState, ICON_ARROWS,
-    LevelState, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, ObjKey, ObjType, PlayState, RUN_SPEED,
-    SPD_DOG, SPD_PATROL, Sprite, StateType, TILEGLOBAL, TILESHIFT,
+    AMBUSH_TILE, ANGLES, ActiveType, Actors, Assets, At, ClassType, ControlState, Difficulty,
+    DirType, DoorAction, EnemyType, FL_AMBUSH, FL_NONMARK, FL_SHOOTABLE, FL_VISABLE, GameState,
+    ICON_ARROWS, LevelState, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, ObjKey, ObjType, PlayState,
+    RUN_SPEED, SPD_DOG, SPD_PATROL, Sprite, StateType, TILEGLOBAL, TILESHIFT,
 };
 use crate::draw::RayCastConsts;
 use crate::fixed::{fixed_by_frac, new_fixed_i32};
@@ -2261,14 +2261,14 @@ fn t_schabb_throw(
     obj.flags = FL_NONMARK;
     obj.active = ActiveType::Yes;
 
-    level_state.actors.push(obj);
+    level_state.actors.add_obj(obj);
 
     sound.play_sound_loc_actor(SoundName::SCHABBSTHROW, assets, rc, &obj);
 }
 
 pub fn spawn_dead_guard(
     map_data: &MapSegs,
-    actors: &mut Vec<ObjType>,
+    actors: &mut Actors,
     actor_at: &mut Vec<Vec<At>>,
     x_tile: usize,
     y_tile: usize,
@@ -2281,7 +2281,7 @@ pub fn spawn_stand(
     tile_map: &mut Vec<Vec<u16>>,
     map_data: &mut MapSegs,
     which: EnemyType,
-    actors: &mut Vec<ObjType>,
+    actors: &mut Actors,
     actor_at: &mut Vec<Vec<At>>,
     game_state: &mut GameState,
     x_tile: usize,
@@ -2340,7 +2340,7 @@ pub fn spawn_stand(
 
 pub fn spawn_boss(
     map_data: &MapSegs,
-    actors: &mut Vec<ObjType>,
+    actors: &mut Actors,
     actor_at: &mut Vec<Vec<At>>,
     game_state: &mut GameState,
     x_tile: usize,
@@ -2360,7 +2360,7 @@ pub fn spawn_boss(
 
 pub fn spawn_schabbs(
     map_data: &MapSegs,
-    actors: &mut Vec<ObjType>,
+    actors: &mut Actors,
     actor_at: &mut Vec<Vec<At>>,
     game_state: &mut GameState,
     x_tile: usize,
@@ -2381,7 +2381,7 @@ pub fn spawn_schabbs(
 pub fn spawn_patrol(
     map_data: &MapSegs,
     which: EnemyType,
-    actors: &mut Vec<ObjType>,
+    actors: &mut Actors,
     actor_at: &mut Vec<Vec<At>>,
     game_state: &mut GameState,
     x_tile: usize,
@@ -2457,9 +2457,8 @@ pub fn spawn_patrol(
 }
 
 // spawns the obj into the map. At map load time
-fn spawn(actors: &mut Vec<ObjType>, actor_at: &mut Vec<Vec<At>>, obj: ObjType) {
-    actors.push(obj);
-    let key = ObjKey(actors.len()); // +1 offset (not len()-1), since player will be later at position 0 and positions will shift
+fn spawn(actors: &mut Actors, actor_at: &mut Vec<Vec<At>>, obj: ObjType) {
+    let key = actors.add_obj(obj);
     actor_at[obj.tilex][obj.tiley] = At::Obj(key)
 }
 

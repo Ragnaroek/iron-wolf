@@ -1,8 +1,8 @@
 use crate::act2::spawn_stand;
 use crate::agent::S_PLAYER;
 use crate::def::{
-    At, ClassType, Difficulty, DirType, EnemyType, FL_NEVERMARK, FL_SHOOTABLE, Level, LevelState,
-    MAP_SIZE, ObjKey, ObjType, new_game_state,
+    Actors, At, ClassType, Difficulty, DirType, EnemyType, FL_NEVERMARK, FL_SHOOTABLE, Level,
+    LevelState, MAP_SIZE, MAX_ACTORS, ObjKey, ObjType, new_game_state,
 };
 use crate::fixed::new_fixed_i32;
 use crate::map::MapSegs;
@@ -150,6 +150,9 @@ fn mock_level_state_with_actor_at() -> LevelState {
 
 fn mock_level_state(player: ObjType) -> LevelState {
     let tile_map = vec![vec![0; MAP_SIZE]; MAP_SIZE];
+    let mut actors = Actors::new(MAX_ACTORS);
+    actors.add_obj(player);
+
     LevelState {
         level: Level {
             map_segs: MapSegs {
@@ -159,7 +162,7 @@ fn mock_level_state(player: ObjType) -> LevelState {
             tile_map,
         },
         map_width: MAP_SIZE as usize,
-        actors: vec![player],
+        actors,
         actor_at: vec![vec![At::Nothing; MAP_SIZE]; MAP_SIZE],
         doors: Vec::with_capacity(0),
         area_connect: Vec::with_capacity(0),

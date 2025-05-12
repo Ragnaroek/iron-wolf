@@ -1719,7 +1719,6 @@ async fn cp_main_menu(
                 MenuHandle::QuitMenu
             } else {
                 quit(Some("unknown menu selected"));
-                handle
             }
         }
         MenuHandle::QuitMenu => {

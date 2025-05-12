@@ -11,7 +11,7 @@ use crate::def::{
     TILEGLOBAL, TILESHIFT, WeaponType,
 };
 use crate::draw::RayCastConsts;
-use crate::fixed::{fixed_by_frac, new_fixed_i32};
+use crate::fixed::{ZERO, fixed_by_frac, new_fixed_i32};
 use crate::game::AREATILE;
 use crate::map;
 use crate::play::{ProjectionConfig, start_bonus_flash, start_damage_flash};
@@ -23,6 +23,32 @@ use crate::vga_render::VGARenderer;
 const ANGLE_SCALE: i32 = 20;
 const MOVE_SCALE: i32 = 150;
 const BACKMOVE_SCALE: i32 = 100;
+
+pub static DUMMY_PLAYER: ObjType = ObjType {
+    class: ClassType::Player,
+    distance: 0,
+    area_number: 0,
+    active: crate::def::ActiveType::No,
+    tic_count: 0,
+    angle: 0,
+    flags: FL_NEVERMARK,
+    pitch: 0,
+    tilex: 0,
+    tiley: 0,
+    view_x: 0,
+    view_height: 0,
+    trans_x: ZERO,
+    trans_y: ZERO,
+    x: 0,
+    y: 0,
+    speed: 0,
+    dir: DirType::NoDir,
+    temp1: 0,
+    temp2: 0,
+    temp3: 0,
+    state: Some(&S_PLAYER),
+    hitpoints: 0,
+};
 
 pub static S_PLAYER: StateType = StateType {
     id: 10,
@@ -278,14 +304,17 @@ fn knife_attack(
     let mut dist = 0x7fffffff;
     let mut closest = None;
     for i in 1..level_state.actors.len() {
-        let check = &level_state.actors[i];
-        if check.flags & FL_SHOOTABLE != 0
-            && check.flags & FL_VISABLE != 0
-            && check.view_x.abs_diff(prj.center_x as i32) < prj.shoot_delta as u32
-        {
-            if check.trans_x.to_i32() < dist {
-                dist = check.trans_x.to_i32();
-                closest = Some(ObjKey(i));
+        let k = ObjKey(i);
+        if level_state.actors.exists(k) {
+            let check = &level_state.actors.obj(k);
+            if check.flags & FL_SHOOTABLE != 0
+                && check.flags & FL_VISABLE != 0
+                && check.view_x.abs_diff(prj.center_x as i32) < prj.shoot_delta as u32
+            {
+                if check.trans_x.to_i32() < dist {
+                    dist = check.trans_x.to_i32();
+                    closest = Some(ObjKey(i));
+                }
             }
         }
     }
@@ -335,14 +364,17 @@ fn gun_attack(
         old_closest = closest;
 
         for i in 1..level_state.actors.len() {
-            let check = &level_state.actors[i];
-            if check.flags & FL_SHOOTABLE != 0
-                && check.flags & FL_VISABLE != 0
-                && check.view_x.abs_diff(prj.center_x as i32) < prj.shoot_delta as u32
-            {
-                if check.trans_x.to_i32() < view_dist {
-                    view_dist = check.trans_x.to_i32();
-                    closest = Some(ObjKey(i));
+            let k = ObjKey(i);
+            if level_state.actors.exists(k) {
+                let check = &level_state.actors.obj(k);
+                if check.flags & FL_SHOOTABLE != 0
+                    && check.flags & FL_VISABLE != 0
+                    && check.view_x.abs_diff(prj.center_x as i32) < prj.shoot_delta as u32
+                {
+                    if check.trans_x.to_i32() < view_dist {
+                        view_dist = check.trans_x.to_i32();
+                        closest = Some(ObjKey(i));
+                    }
                 }
             }
         }

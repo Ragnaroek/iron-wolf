@@ -4,6 +4,8 @@ mod fixed_test;
 
 use std::fmt;
 
+pub static ZERO: Fixed = Fixed(0);
+
 #[derive(Eq, PartialEq, Clone, Copy)]
 pub struct Fixed(i32); //16:16 fixed point
 

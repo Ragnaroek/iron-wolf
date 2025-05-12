@@ -51,8 +51,11 @@ fn test_do_load_and_save_save0() {
 
     // reset actor data, to modify them and check that they are read correctly in.
     // otherwise level_state_init.actors == level_state.actors, even if nothing is read and copied.
-    for actor in &mut level_state.actors {
-        reset_partial_obj_type(actor);
+    for i in 0..level_state.actors.len() {
+        let k = ObjKey(i);
+        if level_state.actors.exists(k) {
+            reset_partial_obj_type(level_state.actors.mut_obj(k));
+        }
     }
 
     // change some default values to check if it is overwritten
@@ -237,11 +240,14 @@ fn check_loaded_save_0(
     assert_eq!(level_state.actors.len(), level_state_init.actors.len());
     let w3d_actors = w3d_actors_save0();
     for i in 0..level_state.actors.len() {
-        assert!(
-            partial_check_obj(&level_state.actors[i], &w3d_actors[i]),
-            "actors[{}] mismatch",
-            i
-        );
+        let k = ObjKey(i);
+        if level_state.actors.exists(k) {
+            assert!(
+                partial_check_obj(level_state.actors.obj(k), &w3d_actors[i]),
+                "actors[{}] mismatch",
+                i
+            );
+        }
     }
 
     assert_eq!(level_state.statics.len(), level_state_init.statics.len());

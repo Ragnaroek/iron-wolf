@@ -10,7 +10,7 @@ use crate::agent::get_bonus;
 use crate::def::{
     ANGLES, ActiveType, Assets, ClassType, DIR_ANGLE, DoorLock, DoorType, FINE_ANGLES, FL_BONUS,
     FL_VISABLE, FOCAL_LENGTH, GameState, Level, LevelState, MAP_SIZE, MIN_DIST, NUM_WEAPONS,
-    ObjType, Sprite, StaticType, TILEGLOBAL, TILESHIFT, VisObj,
+    ObjKey, ObjType, Sprite, StaticType, TILEGLOBAL, TILESHIFT, VisObj,
 };
 use crate::fixed::{Fixed, fixed_by_frac, new_fixed_i32};
 use crate::input::Input;
@@ -1000,7 +1000,11 @@ fn draw_scaleds(
     let tile = &level_state.level.tile_map;
     let player_angle = level_state.player().angle;
     for i in 1..level_state.actors.len() {
-        let obj = &mut level_state.actors[i];
+        let k = ObjKey(i);
+        if !level_state.actors.exists(k) {
+            continue;
+        }
+        let obj = level_state.actors.mut_obj(k);
         if obj.state.expect("state").sprite.is_none() {
             continue; // no shape
         }

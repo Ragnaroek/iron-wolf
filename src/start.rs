@@ -19,8 +19,8 @@ use crate::config::WolfConfig;
 use crate::def::{
     ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction, DoorLock, DoorType,
     GameState, HEIGHT_RATIO, IWConfig, LevelRatio, LevelState, MAP_SIZE, MAX_DOORS, MAX_STATS,
-    NUM_AREAS, ObjKey, ObjType, Sprite, StaticKind, StaticType, WeaponType, WindowState,
-    new_game_state,
+    NUM_AREAS, ObjKey, ObjType, PLAYER_KEY, Sprite, StaticKind, StaticType, WeaponType,
+    WindowState, new_game_state,
 };
 use crate::draw::{RayCast, init_ray_cast};
 use crate::fixed::{new_fixed_u16, new_fixed_u32};
@@ -359,7 +359,7 @@ async fn pg_13(rdr: &VGARenderer, input: &input::Input) {
     rdr.fade_out().await;
 }
 
-pub fn quit(err: Option<&str>) {
+pub fn quit(err: Option<&str>) -> ! {
     // TODO print error screen, wait for button press and the exit(0)
     println!("TODO draw exit screen, err = {:?}", err);
     exit(0)
@@ -433,9 +433,12 @@ pub fn save_the_game(
         writer.write_u16(v);
     }
 
-    for obj in &level_state.actors {
+    for i in 0..level_state.actors.len() {
+        let k = ObjKey(i);
         disk_anim.disk_flop_anim(rdr, iw_config);
-        write_obj_type(writer, obj);
+        if level_state.actors.exists(k) {
+            write_obj_type(writer, level_state.obj(k));
+        }
     }
     disk_anim.disk_flop_anim(rdr, iw_config);
     write_obj_type(writer, &null_obj_type());
@@ -721,20 +724,17 @@ pub fn do_load(
     }
 
     let player = read_obj_type(reader);
-    *level_state.mut_player() = player;
+    level_state.actors.put_obj(PLAYER_KEY, player);
 
-    let mut actors_loaded = Vec::with_capacity(level_state.actors.len());
+    let mut i = 1;
     loop {
         disk_anim.disk_flop_anim(rdr, iw_config);
         let actor = read_obj_type(reader);
         if actor.active == ActiveType::BadObject {
             break;
         }
-        actors_loaded.push(actor)
-    }
-
-    for i in 1..level_state.actors.len() {
-        level_state.actors[i] = actors_loaded[i - 1];
+        level_state.actors.put_obj(ObjKey(i), actor);
+        i += 1;
     }
 
     // fix up actor_at array pointers

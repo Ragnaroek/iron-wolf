@@ -1,3 +1,7 @@
+#[cfg(test)]
+#[path = "./def_test.rs"]
+mod def_test;
+
 use crate::assets::{DigiChannel, SoundName};
 use crate::draw::RayCastConsts;
 use crate::fixed::Fixed;
@@ -5,6 +9,7 @@ use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::map::{MapFileType, MapSegs, MapType};
 use crate::play::ProjectionConfig;
 use crate::sd::Sound;
+use crate::start::quit;
 use crate::vga_render::{PAGE_1_START, PAGE_2_START, PAGE_3_START, VGARenderer};
 use opl::AdlSound;
 use std::collections::HashMap;
@@ -12,6 +17,7 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 
+pub const MAX_ACTORS: usize = 150;
 pub const MAX_STATS: usize = 400;
 pub const MAX_DOORS: usize = 64;
 
@@ -158,13 +164,73 @@ pub struct VisObj {
     pub sprite: Sprite,
 }
 
+// container for actor management
+pub struct Actors {
+    actors: Vec<Option<ObjType>>,
+    last_obj_ix: isize,
+}
+
+impl Actors {
+    pub fn new(capacity: usize) -> Actors {
+        Actors {
+            actors: vec![None; capacity],
+            last_obj_ix: -1,
+        }
+    }
+
+    pub fn exists(&self, k: ObjKey) -> bool {
+        self.actors[k.0].is_some()
+    }
+
+    pub fn len(&self) -> usize {
+        (self.last_obj_ix + 1) as usize
+    }
+
+    pub fn obj(&self, k: ObjKey) -> &ObjType {
+        self.actors[k.0].as_ref().expect("no actor")
+    }
+
+    pub fn mut_obj(&mut self, k: ObjKey) -> &mut ObjType {
+        (&mut self.actors[k.0]).as_mut().expect("no actor")
+    }
+
+    pub fn put_obj(&mut self, k: ObjKey, obj: ObjType) {
+        self.actors[k.0] = Some(obj);
+        self.last_obj_ix = self.last_obj_ix.max(k.0 as isize);
+    }
+
+    // place an object at the next free space
+    pub fn add_obj(&mut self, obj: ObjType) -> ObjKey {
+        for i in 0..self.actors.len() {
+            if self.actors[i].is_none() {
+                self.actors[i] = Some(obj);
+                self.last_obj_ix = self.last_obj_ix.max(i as isize);
+                return ObjKey(i);
+            }
+        }
+        // no free place found, bomb
+        quit(Some("Too many actors!"));
+    }
+
+    pub fn drop_obj(&mut self, k: ObjKey) {
+        self.actors[k.0] = None;
+        for i in (0..self.actors.len()).rev() {
+            if self.actors[i].is_some() {
+                self.last_obj_ix = i as isize;
+                return;
+            }
+        }
+        self.last_obj_ix = -1;
+    }
+}
+
 /// State for one level
 pub struct LevelState {
     pub level: Level,
     pub map_width: usize,
     /// Player stuff
     pub actor_at: Vec<Vec<At>>,
-    pub actors: Vec<ObjType>,
+    pub actors: Actors,
     /// Door stuff
     pub doors: Vec<DoorType>,
     pub area_connect: Vec<Vec<u8>>, // len() is NUM_AREAS
@@ -186,22 +252,22 @@ pub const PLAYER_KEY: ObjKey = ObjKey(0); // The player is always at position 0
 impl LevelState {
     #[inline]
     pub fn mut_player(&mut self) -> &mut ObjType {
-        &mut self.actors[0]
+        self.actors.mut_obj(PLAYER_KEY)
     }
 
     #[inline]
     pub fn player(&self) -> &ObjType {
-        &self.actors[0]
+        self.actors.obj(PLAYER_KEY)
     }
 
     #[inline]
     pub fn obj(&self, k: ObjKey) -> &ObjType {
-        &self.actors[k.0]
+        self.actors.obj(k)
     }
 
     #[inline]
     pub fn mut_obj(&mut self, k: ObjKey) -> &mut ObjType {
-        &mut self.actors[k.0]
+        self.actors.mut_obj(k)
     }
 
     #[inline]
@@ -209,15 +275,11 @@ impl LevelState {
     where
         F: FnOnce(&mut ObjType),
     {
-        f(&mut self.actors[k.0])
+        f(self.actors.mut_obj(k))
     }
 
-    pub fn remove_obj(&mut self, k: ObjKey) {
-        // TODO replace this by an implementation that does
-        // not shift the elements!
-        // => allocate actors statically with max size and
-        // modify the static array and null out actors
-        self.actors.remove(k.0);
+    pub fn drop_obj(&mut self, k: ObjKey) {
+        self.actors.drop_obj(k);
     }
 
     pub fn update<F>(&mut self, f: F)
