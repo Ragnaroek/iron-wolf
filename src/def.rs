@@ -164,22 +164,38 @@ pub struct VisObj {
     pub sprite: Sprite,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+enum ActorState {
+    Alive(ObjType, usize),
+    Dropped(ObjType, usize),
+    None,
+}
+
 // container for actor management
 pub struct Actors {
-    actors: Vec<Option<ObjType>>,
+    actors: Vec<ActorState>,
     last_obj_ix: isize,
+    clock: usize,
+    drop_age: usize,
 }
+
+const KEEP_AGE: usize = 5;
 
 impl Actors {
     pub fn new(capacity: usize) -> Actors {
         Actors {
-            actors: vec![None; capacity],
+            actors: vec![ActorState::None; capacity],
             last_obj_ix: -1,
+            clock: KEEP_AGE,
+            drop_age: 0,
         }
     }
 
     pub fn exists(&self, k: ObjKey) -> bool {
-        self.actors[k.0].is_some()
+        match &self.actors[k.0] {
+            ActorState::Alive(_, _) => true,
+            _ => false,
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -187,35 +203,88 @@ impl Actors {
     }
 
     pub fn obj(&self, k: ObjKey) -> &ObjType {
-        self.actors[k.0].as_ref().expect("no actor")
+        match &self.actors[k.0] {
+            ActorState::Alive(obj, _) => obj,
+            ActorState::Dropped(obj, _) => obj,
+            ActorState::None => panic!("no actor {:?}", k),
+        }
     }
 
     pub fn mut_obj(&mut self, k: ObjKey) -> &mut ObjType {
-        (&mut self.actors[k.0]).as_mut().expect("no actor")
+        match &mut self.actors[k.0] {
+            ActorState::Alive(obj, _) => obj,
+            ActorState::Dropped(obj, _) => obj,
+            ActorState::None => panic!("no actor {:?}", k),
+        }
     }
 
     pub fn put_obj(&mut self, k: ObjKey, obj: ObjType) {
-        self.actors[k.0] = Some(obj);
+        let age = self.clock;
+        self.clock += 1;
+        self.actors[k.0] = ActorState::Alive(obj, age);
         self.last_obj_ix = self.last_obj_ix.max(k.0 as isize);
     }
 
     // place an object at the next free space
     pub fn add_obj(&mut self, obj: ObjType) -> ObjKey {
-        for i in 0..self.actors.len() {
-            if self.actors[i].is_none() {
-                self.actors[i] = Some(obj);
-                self.last_obj_ix = self.last_obj_ix.max(i as isize);
-                return ObjKey(i);
-            }
+        let found = self.find_place(obj);
+        if let Some(place) = found {
+            return place;
+        }
+        self.gc();
+
+        let found = self.find_place(obj);
+        if let Some(place) = found {
+            return place;
         }
         // no free place found, bomb
         quit(Some("Too many actors!"));
     }
 
+    fn find_place(&mut self, obj: ObjType) -> Option<ObjKey> {
+        for i in 0..self.actors.len() {
+            if self.actors[i] == ActorState::None {
+                let age = self.clock;
+                self.clock += 1;
+                self.actors[i] = ActorState::Alive(obj, age);
+                self.last_obj_ix = self.last_obj_ix.max(i as isize);
+                return Some(ObjKey(i));
+            }
+        }
+        None
+    }
+
     pub fn drop_obj(&mut self, k: ObjKey) {
-        self.actors[k.0] = None;
+        let elem = self.actors[k.0];
+        let dropped_elem = match elem {
+            ActorState::None => elem,
+            ActorState::Alive(obj, age) => {
+                self.drop_age = self.drop_age.max(age);
+                ActorState::Dropped(obj, age)
+            }
+            ActorState::Dropped(_, _) => elem,
+        };
+
+        self.actors[k.0] = dropped_elem;
+    }
+
+    // garbage collects all removed objects and
+    // removes them permanently
+    fn gc(&mut self) {
+        let min_age = self.drop_age - KEEP_AGE;
+        for i in 0..self.actors.len() {
+            match self.actors[i] {
+                ActorState::Dropped(_, age) => {
+                    if age < min_age {
+                        self.actors[i] = ActorState::None;
+                    }
+                }
+                _ => { /* do nothing */ }
+            }
+        }
+
         for i in (0..self.actors.len()).rev() {
-            if self.actors[i].is_some() {
+            if self.actors[i] != ActorState::None {
                 self.last_obj_ix = i as isize;
                 return;
             }

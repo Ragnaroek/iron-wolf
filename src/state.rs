@@ -5,8 +5,8 @@ mod state_test;
 use crate::act1::{open_door, place_item_type};
 use crate::act2::{
     S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN,
-    S_GRDPAIN1, S_MUTCHASE1, S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1, S_SCHABBDIE1_5, S_SCHABBDIE1_140,
-    S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1, do_death_scream,
+    S_GRDPAIN1, S_MUTCHASE1, S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1, S_SCHABBCHASE1, S_SCHABBDIE1_5,
+    S_SCHABBDIE1_140, S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1, do_death_scream,
 };
 use crate::agent::{give_points, take_damage};
 use crate::assets::SoundName;
@@ -883,10 +883,14 @@ pub fn first_sighting(
             new_state(obj, &S_BOSSCHASE1);
             obj.speed = SPD_PATROL * 3;
         }
+        ClassType::Schabb => {
+            sound.play_sound_loc_actor(SoundName::SCHABBSHA, assets, rc_consts, obj);
+            new_state(obj, &S_SCHABBCHASE1);
+            obj.speed *= 3;
+        }
         // TODO mechahitlerobj, DIESND
         // TODO realhitlerobj, DIESND
         // TODO fakeobj, TOT_HUNDSND
-        // TODO schabbobj, SCHABBSHASND
         // TODO officerobj, SPIONSND
         // TODO giftobj EINESND
         // TODO fatobj ERLAUBENSND
@@ -1138,6 +1142,10 @@ pub fn damage_actor(
             _ => { /* do nothing */ }
         }
     }
+
+    if level_state.obj(k).class == ClassType::Schabb {
+        println!("schabb hitpoints = {}", level_state.obj(k).hitpoints);
+    }
 }
 
 fn kill_actor(
@@ -1200,6 +1208,7 @@ fn kill_actor(
                 todo!("kill fat");
             }
             ClassType::Schabb => {
+                println!("schabb killed");
                 give_points(game_state, rdr, sound, assets, 5000);
                 game_state.kill_x = level_state.player().x as usize;
                 game_state.kill_y = level_state.player().y as usize;

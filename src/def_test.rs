@@ -16,15 +16,24 @@ fn test_actors() {
     assert_eq!(actors.len(), MAX_ACTORS);
 
     actors.drop_obj(ObjKey(MAX_ACTORS - 1));
+    assert_eq!(actors.len(), 150);
+
+    actors.gc();
     assert_eq!(actors.len(), 3);
 
-    // drop a whole into the sequence
+    // drop a hole into the sequence
     actors.drop_obj(ObjKey(1));
+    assert_eq!(actors.len(), 3);
+    actors.gc();
     assert_eq!(actors.len(), 3);
 
     actors.drop_obj(ObjKey(0));
     assert_eq!(actors.len(), 3);
+    actors.gc();
+    assert_eq!(actors.len(), 3);
 
     actors.drop_obj(ObjKey(2));
+    assert_eq!(actors.len(), 3);
+    actors.gc();
     assert_eq!(actors.len(), 0);
 }

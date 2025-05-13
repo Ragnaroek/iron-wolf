@@ -1310,7 +1310,7 @@ pub static S_SCHABBSTAND: StateType = StateType {
     tic_time: 10,
     think: Some(t_schabb),
     action: None,
-    next: Some(&S_SCHABBCHASE1),
+    next: Some(&S_SCHABBSTAND),
 };
 
 pub static S_SCHABBCHASE1: StateType = StateType {
@@ -1439,7 +1439,7 @@ pub static S_SCHABBDIE3: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
-    next: Some(&S_SCHABBCHASE4),
+    next: Some(&S_SCHABBDIE4),
 };
 
 pub static S_SCHABBDIE4: StateType = StateType {
