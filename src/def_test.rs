@@ -3,7 +3,7 @@ use crate::{agent::DUMMY_PLAYER, def::ObjKey};
 use super::{Actors, MAX_ACTORS};
 
 #[test]
-fn test_actors() {
+fn test_actors_add_and_drop() {
     let mut actors = Actors::new(MAX_ACTORS);
     assert_eq!(actors.len(), 0);
     actors.add_obj(DUMMY_PLAYER.clone()); //ix=0
@@ -19,21 +19,25 @@ fn test_actors() {
     assert_eq!(actors.len(), 150);
 
     actors.gc();
-    assert_eq!(actors.len(), 3);
+    //does not clean up, as nothing is old enough
+    assert_eq!(actors.len(), 150);
+}
 
-    // drop a hole into the sequence
-    actors.drop_obj(ObjKey(1));
-    assert_eq!(actors.len(), 3);
-    actors.gc();
-    assert_eq!(actors.len(), 3);
+#[test]
+fn test_actor_gc() {
+    let mut actors = Actors::new(MAX_ACTORS);
+    for _ in 0..actors.len() {
+        actors.add_obj(DUMMY_PLAYER.clone());
+    }
 
-    actors.drop_obj(ObjKey(0));
-    assert_eq!(actors.len(), 3);
-    actors.gc();
-    assert_eq!(actors.len(), 3);
+    for i in 0..actors.len() {
+        actors.drop_obj(ObjKey(i));
+    }
 
-    actors.drop_obj(ObjKey(2));
-    assert_eq!(actors.len(), 3);
-    actors.gc();
-    assert_eq!(actors.len(), 0);
+    // first ones added get deleted first and the new obj
+    // get the early places
+    assert_eq!(actors.add_obj(DUMMY_PLAYER.clone()), ObjKey(0));
+    assert_eq!(actors.add_obj(DUMMY_PLAYER.clone()), ObjKey(1));
+    assert_eq!(actors.add_obj(DUMMY_PLAYER.clone()), ObjKey(2));
+    assert_eq!(actors.add_obj(DUMMY_PLAYER.clone()), ObjKey(3));
 }

@@ -1308,7 +1308,7 @@ pub static S_SCHABBSTAND: StateType = StateType {
     rotate: 0,
     sprite: Some(Sprite::SchabbW1),
     tic_time: 10,
-    think: Some(t_schabb),
+    think: Some(t_stand),
     action: None,
     next: Some(&S_SCHABBSTAND),
 };
