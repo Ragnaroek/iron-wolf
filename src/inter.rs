@@ -422,7 +422,7 @@ pub async fn victory(
 
     rdr.activate_buffer(rdr.buffer_offset()).await;
     rdr.fade_in().await;
-    input.ack().await;
+    input.ack();
 
     rdr.fade_out().await;
 
@@ -493,7 +493,7 @@ pub async fn check_highscore(
         }
     } else {
         input.clear_keys_down();
-        input.wait_user_input(500).await;
+        input.wait_user_input(500);
     }
 }
 
@@ -900,7 +900,7 @@ async fn finish_level_complete(
     draw_all_play_border(rdr, prj);
 }
 
-fn write(rdr: &VGARenderer, x: usize, y: usize, str: &str) {
+pub fn write(rdr: &VGARenderer, x: usize, y: usize, str: &str) {
     let mut nx = x * 8;
     let ox = nx;
     let mut ny = y * 8;
@@ -994,7 +994,7 @@ pub async fn preload_graphics(
 
     preload(ticker, iw_config, rdr).await;
 
-    input.wait_user_input(70).await;
+    input.wait_user_input(70);
     rdr.fade_out().await;
 
     draw_all_play_border(rdr, prj);

@@ -22,7 +22,7 @@ pub async fn debug_keys(
             win_state,
             &format!("X:{}\nY:{}\nA:{}", player.x, player.y, player.angle),
         );
-        input.ack().await;
+        input.ack();
         return;
     }
     if input.key_pressed(NumCode::G) {
@@ -32,7 +32,7 @@ pub async fn debug_keys(
         } else {
             print_centered(rdr, win_state, "God mode ON");
         }
-        input.ack().await;
+        input.ack();
         game_state.god_mode = !game_state.god_mode;
         return;
     } else if input.key_pressed(NumCode::W) {

@@ -64,7 +64,7 @@ pub fn init(
 }
 
 impl Input {
-    pub async fn wait_user_input(&self, delay: u64) -> bool {
+    pub fn wait_user_input(&self, delay: u64) -> bool {
         let last_count = get_count(&self.time);
         {
             let mut input = self.input_monitoring.lock().unwrap();
@@ -82,8 +82,8 @@ impl Input {
         false
     }
 
-    pub async fn ack(&self) -> bool {
-        self.wait_user_input(u64::MAX).await
+    pub fn ack(&self) -> bool {
+        self.wait_user_input(u64::MAX)
     }
 
     pub fn start_ack(&self) {

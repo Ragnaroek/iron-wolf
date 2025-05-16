@@ -217,7 +217,7 @@ async fn finish_signon(
     win_state.set_font_color(14, 4);
     c_print(rdr, win_state, "Press a key");
 
-    input.ack().await;
+    input.ack();
 
     rdr.bar(0, 189, 300, 11, peek);
 
@@ -256,7 +256,7 @@ async fn demo_loop(
             // title screen & demo loop
             rdr.pic(0, 0, GraphicNum::TITLEPIC);
             rdr.fade_in().await;
-            if input.wait_user_input(time::TICK_BASE * 15).await {
+            if input.wait_user_input(time::TICK_BASE * 15) {
                 break;
             }
             rdr.fade_out().await;
@@ -264,7 +264,7 @@ async fn demo_loop(
             // credits page
             rdr.pic(0, 0, GraphicNum::CREDITSPIC);
             rdr.fade_in().await;
-            if input.wait_user_input(time::TICK_BASE * 10).await {
+            if input.wait_user_input(time::TICK_BASE * 10) {
                 break;
             }
             rdr.fade_out().await;
@@ -272,7 +272,7 @@ async fn demo_loop(
             // high scores
             draw_high_scores(rdr, win_state, &wolf_config.high_scores);
             rdr.fade_in().await;
-            if input.wait_user_input(time::TICK_BASE * 10).await {
+            if input.wait_user_input(time::TICK_BASE * 10) {
                 break;
             }
 
@@ -355,7 +355,7 @@ async fn pg_13(rdr: &VGARenderer, input: &input::Input) {
     rdr.pic(216, 110, GraphicNum::PG13PIC);
 
     rdr.fade_in().await;
-    input.wait_user_input(time::TICK_BASE * 7).await;
+    input.wait_user_input(time::TICK_BASE * 7);
     rdr.fade_out().await;
 }
 
@@ -645,7 +645,7 @@ pub async fn load_the_game(
         message(rdr, win_state, &STR_SAVE_CHEAT);
 
         input.clear_keys_down();
-        input.ack().await;
+        input.ack();
     }
 }
 

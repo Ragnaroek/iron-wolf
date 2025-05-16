@@ -26,7 +26,7 @@ use crate::play::{
 };
 use crate::sd::Sound;
 use crate::user::HighScore;
-use crate::vga_render::VGARenderer;
+use crate::vga_render::{FizzleFadeAbortable, VGARenderer};
 use crate::vh::vw_fade_out;
 use crate::{map, time};
 
@@ -306,7 +306,6 @@ async fn died(
                 level_state,
                 rc,
                 rdr,
-                input,
                 sound,
                 prj,
                 rc_consts,
@@ -342,7 +341,6 @@ async fn died(
                 level_state,
                 rc,
                 rdr,
-                input,
                 sound,
                 prj,
                 rc_consts,
@@ -353,7 +351,7 @@ async fn died(
     }
 
     // fade to red
-    finish_palette_shifts(game_state, &rdr.vga).await;
+    finish_palette_shifts(game_state, &rdr.vga);
 
     let source_buffer = rdr.buffer_offset() + prj.screenofs;
     rdr.set_buffer_offset(source_buffer);
@@ -363,17 +361,15 @@ async fn died(
     input.clear_keys_down();
     rdr.fizzle_fade(
         ticker,
-        input,
         source_buffer,
         rdr.active_buffer() + prj.screenofs,
         prj.view_width,
         prj.view_height,
         70,
-        false,
-    )
-    .await;
+        FizzleFadeAbortable::No,
+    );
     rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
-    input.wait_user_input(100).await;
+    input.wait_user_input(100);
     //TODO SD_WaitSoundDone
 
     // TODO editor support here (tedlevel)

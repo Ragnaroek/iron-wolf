@@ -13,12 +13,11 @@ use crate::def::{
     ObjKey, ObjType, Sprite, StaticType, TILEGLOBAL, TILESHIFT, VisObj,
 };
 use crate::fixed::{Fixed, fixed_by_frac, new_fixed_i32};
-use crate::input::Input;
 use crate::play::ProjectionConfig;
 use crate::scale::{MAP_MASKS_1, scale_shape, simple_scale_shape};
 use crate::sd::Sound;
 use crate::time::{self, Ticker};
-use crate::vga_render::{self, VGARenderer};
+use crate::vga_render::{self, FizzleFadeAbortable, VGARenderer};
 
 const DEG90: usize = 900;
 const DEG180: usize = 1800;
@@ -584,7 +583,6 @@ pub async fn three_d_refresh(
     level_state: &mut LevelState,
     rc: &mut RayCast,
     rdr: &VGARenderer,
-    input: &Input,
     sound: &mut Sound,
     prj: &ProjectionConfig,
     rc_consts: &RayCastConsts,
@@ -611,15 +609,13 @@ pub async fn three_d_refresh(
     if game_state.fizzle_in {
         rdr.fizzle_fade(
             ticker,
-            input,
             rdr.buffer_offset(),
             rdr.active_buffer() + prj.screenofs,
             prj.view_width,
             prj.view_height,
             20,
-            false,
-        )
-        .await;
+            FizzleFadeAbortable::No,
+        );
         game_state.fizzle_in = false;
         ticker.clear_count(); // don't make a big tic count
     }

@@ -1767,7 +1767,7 @@ async fn cp_new_game(
                     "Please select \"Read This!\"\nfrom the Options menu to\nfind out how to order this\nepisode from Apogee.",
                 );
                 input.clear_keys_down();
-                input.ack().await;
+                input.ack();
                 continue;
             } else {
                 sound.play_sound(SoundName::SHOOT, assets);
@@ -2006,7 +2006,7 @@ async fn cp_view_scores(
     rdr.fade_in().await;
     win_state.font_number = 1;
 
-    input.ack().await;
+    input.ack();
 
     sound.play_music(Music::WONDERIN, assets, loader);
     rdr.fade_out().await;

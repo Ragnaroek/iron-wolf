@@ -35,6 +35,7 @@ use crate::input::DIR_SCAN_EAST;
 use crate::input::DIR_SCAN_NORTH;
 use crate::input::DIR_SCAN_SOUTH;
 use crate::input::DIR_SCAN_WEST;
+use crate::input::Input;
 use crate::input::{self};
 use crate::inter::clear_split_vwb;
 use crate::loader::Loader;
@@ -50,6 +51,7 @@ use crate::sd::Sound;
 use crate::start::load_the_game;
 use crate::time;
 use crate::time::TARGET_FRAME_DURATION;
+use crate::time::Ticker;
 use crate::us1::draw_window;
 use crate::util::check_param;
 use crate::vga_render::VGARenderer;
@@ -347,6 +349,7 @@ pub async fn play_loop(
         span.in_scope(|| {
             update_game_state(
                 tics,
+                ticker,
                 level_state,
                 game_state,
                 control_state,
@@ -361,6 +364,7 @@ pub async fn play_loop(
         #[cfg(not(feature = "tracing"))]
         update_game_state(
             tics,
+            ticker,
             level_state,
             game_state,
             control_state,
@@ -380,7 +384,6 @@ pub async fn play_loop(
             level_state,
             &mut rc,
             rdr,
-            input,
             sound,
             &prj,
             &rc_consts,
@@ -442,6 +445,7 @@ pub async fn play_loop(
 
 fn update_game_state(
     tics: u64,
+    ticker: &Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     control_state: &mut ControlState,
@@ -467,10 +471,12 @@ fn update_game_state(
             do_actor(
                 k,
                 tics,
+                ticker,
                 level_state,
                 game_state,
                 sound,
                 rdr,
+                input,
                 control_state,
                 prj,
                 rc_consts,
@@ -483,10 +489,12 @@ fn update_game_state(
 fn do_actor(
     k: ObjKey,
     tics: u64,
+    ticker: &Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
     rdr: &VGARenderer,
+    input: &Input,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     rc_consts: &RayCastConsts,
@@ -561,10 +569,12 @@ fn do_actor(
             action(
                 k,
                 tics,
+                ticker,
                 level_state,
                 game_state,
                 sound,
                 rdr,
+                input,
                 control_state,
                 prj,
                 assets,
@@ -738,7 +748,7 @@ async fn check_keys(
 
         message(rdr, win_state, "Debugging keys are\nnow available!");
         input.clear_keys_down();
-        input.ack().await;
+        input.ack();
         win_state.debug_ok = true;
         draw_all_play_border_sides(rdr, &prj);
         return GameStateUpdate::with_render_update(prj, rc);
@@ -990,7 +1000,7 @@ async fn update_palette_shifts(
 }
 
 /// Resets palette to normal if needed
-pub async fn finish_palette_shifts(game_state: &mut GameState, vga: &VGA) {
+pub fn finish_palette_shifts(game_state: &mut GameState, vga: &VGA) {
     if game_state.pal_shifted {
         game_state.pal_shifted = false;
         set_palette(vga, &GAMEPAL);

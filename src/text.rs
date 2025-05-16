@@ -136,7 +136,7 @@ async fn show_article(rdr: &VGARenderer, input: &Input, which: usize) {
             first_page = false;
         }
 
-        input.ack().await;
+        input.ack();
         let last_scan = input.last_scan();
         match last_scan {
             NumCode::Escape => break,

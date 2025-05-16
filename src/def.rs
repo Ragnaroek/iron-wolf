@@ -6,10 +6,12 @@ use crate::assets::{DigiChannel, SoundName};
 use crate::draw::RayCastConsts;
 use crate::fixed::Fixed;
 use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
+use crate::input::Input;
 use crate::map::{MapFileType, MapSegs, MapType};
 use crate::play::ProjectionConfig;
 use crate::sd::Sound;
 use crate::start::quit;
+use crate::time::Ticker;
 use crate::vga_render::{PAGE_1_START, PAGE_2_START, PAGE_3_START, VGARenderer};
 use opl::AdlSound;
 use std::collections::HashMap;
@@ -884,10 +886,12 @@ type Think = fn(
 type Action = fn(
     k: ObjKey,
     tics: u64,
+    ticker: &Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
     rdr: &VGARenderer,
+    input: &Input,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     assets: &Assets,

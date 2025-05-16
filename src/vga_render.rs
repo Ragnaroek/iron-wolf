@@ -58,6 +58,11 @@ pub fn init(
     }
 }
 
+pub enum FizzleFadeAbortable<'a> {
+    Yes(&'a Input),
+    No,
+}
+
 impl VGARenderer {
     pub fn mem_to_screen(&self, data: &Vec<u8>, width: usize, height: usize, x: usize, y: usize) {
         let width_bytes = width >> 2;
@@ -230,16 +235,15 @@ impl VGARenderer {
     }
 
     #[cfg_attr(feature = "tracing", instrument(skip_all))]
-    pub async fn fizzle_fade(
+    pub fn fizzle_fade<'a>(
         &self,
         ticker: &time::Ticker,
-        input: &Input,
         source: usize,
         dest: usize,
         width: usize,
         height: usize,
         frames: usize,
-        abortable: bool,
+        abortable: FizzleFadeAbortable<'a>,
     ) -> bool {
         let (page_delta, _) = dest.overflowing_sub(source);
         let mut rnd_val: u32 = 1;
@@ -248,8 +252,10 @@ impl VGARenderer {
         ticker.clear_count();
         let mut frame = 0;
         loop {
-            if abortable && input.check_ack() {
-                return true;
+            if let FizzleFadeAbortable::Yes(input) = abortable {
+                if input.check_ack() {
+                    return true;
+                }
             }
 
             for _ in 0..pix_per_frame {

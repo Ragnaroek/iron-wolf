@@ -1142,10 +1142,6 @@ pub fn damage_actor(
             _ => { /* do nothing */ }
         }
     }
-
-    if level_state.obj(k).class == ClassType::Schabb {
-        println!("schabb hitpoints = {}", level_state.obj(k).hitpoints);
-    }
 }
 
 fn kill_actor(
@@ -1208,7 +1204,6 @@ fn kill_actor(
                 todo!("kill fat");
             }
             ClassType::Schabb => {
-                println!("schabb killed");
                 give_points(game_state, rdr, sound, assets, 5000);
                 game_state.kill_x = level_state.player().x as usize;
                 game_state.kill_y = level_state.player().y as usize;

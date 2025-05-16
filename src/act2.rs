@@ -8,21 +8,25 @@ use crate::assets::SoundName;
 use crate::def::{
     AMBUSH_TILE, ANGLES, ActiveType, Actors, Assets, At, ClassType, ControlState, Difficulty,
     DirType, DoorAction, EnemyType, FL_AMBUSH, FL_NONMARK, FL_SHOOTABLE, FL_VISABLE, GameState,
-    ICON_ARROWS, LevelState, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, ObjKey, ObjType, PlayState,
-    RUN_SPEED, SPD_DOG, SPD_PATROL, Sprite, StateType, TILEGLOBAL, TILESHIFT,
+    ICON_ARROWS, LevelState, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, ObjKey, ObjType, PLAYER_SIZE,
+    PlayState, RUN_SPEED, SCREENLOC, SPD_DOG, SPD_PATROL, STATUS_LINES, Sprite, StateType,
+    TILEGLOBAL, TILESHIFT,
 };
 use crate::draw::RayCastConsts;
-use crate::fixed::{fixed_by_frac, new_fixed_i32};
+use crate::fixed::{fixed_by_frac, new_fixed_i32, new_fixed_u32};
 use crate::game::AREATILE;
+use crate::input::Input;
+use crate::inter::write;
 use crate::map::MapSegs;
-use crate::play::ProjectionConfig;
-use crate::sd::Sound;
+use crate::play::{ProjectionConfig, draw_play_border, finish_palette_shifts};
+use crate::sd::{DigiMode, Sound};
 use crate::state::{
     check_line, move_obj, new_state, select_chase_dir, select_dodge_dir, select_run_dir,
     sight_player, spawn_new_obj, try_walk,
 };
+use crate::time::Ticker;
 use crate::user::rnd_t;
-use crate::vga_render::VGARenderer;
+use crate::vga_render::{FizzleFadeAbortable, VGARenderer};
 
 const BJ_RUN_SPEED: i32 = 2048;
 const BJ_JUMP_SPEED: i32 = 680;
@@ -2223,10 +2227,12 @@ fn t_schabb(
 fn t_schabb_throw(
     k: ObjKey,
     _: u64,
+    _: &Ticker,
     level_state: &mut LevelState,
     _: &mut GameState,
     sound: &mut Sound,
     _: &VGARenderer,
+    _: &Input,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -2472,10 +2478,12 @@ fn spawn(actors: &mut Actors, actor_at: &mut Vec<Vec<At>>, obj: ObjType) {
 fn t_shoot(
     k: ObjKey,
     _: u64,
+    _: &Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
     rdr: &VGARenderer,
+    _: &Input,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -2554,10 +2562,12 @@ fn t_shoot(
 fn a_death_scream(
     k: ObjKey,
     _: u64,
+    _: &Ticker,
     level_state: &mut LevelState,
     _: &mut GameState,
     sound: &mut Sound,
     _: &VGARenderer,
+    _: &Input,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -2788,10 +2798,12 @@ fn t_bj_jump(
 fn t_bj_yell(
     k: ObjKey,
     _: u64,
+    _: &Ticker,
     level_state: &mut LevelState,
     _: &mut GameState,
     sound: &mut Sound,
     _: &VGARenderer,
+    _: &Input,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -2804,10 +2816,12 @@ fn t_bj_yell(
 fn t_bj_done(
     _: ObjKey,
     _: u64,
+    _: &Ticker,
     _: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
     _: &VGARenderer,
+    _: &Input,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -2819,14 +2833,110 @@ fn t_bj_done(
 fn a_start_death_cam(
     k: ObjKey,
     _: u64,
+    ticker: &Ticker,
     level_state: &mut LevelState,
-    _: &mut GameState,
+    game_state: &mut GameState,
     sound: &mut Sound,
-    _: &VGARenderer,
+    rdr: &VGARenderer,
+    input: &Input,
     _: &mut ControlState,
-    _: &ProjectionConfig,
-    assets: &Assets,
-    rc: &RayCastConsts,
+    prj: &ProjectionConfig,
+    _: &Assets,
+    _: &RayCastConsts,
 ) {
-    todo!("a_start_death_cam");
+    finish_palette_shifts(game_state, &rdr.vga);
+
+    if game_state.victory_flag {
+        game_state.play_state = PlayState::Victorious;
+        return;
+    }
+    game_state.victory_flag = true;
+
+    rdr.bar(0, 0, 320, 200 - STATUS_LINES, 127);
+    rdr.fizzle_fade(
+        ticker,
+        rdr.buffer_offset(),
+        rdr.active_buffer(),
+        320,
+        200 - STATUS_LINES,
+        70,
+        FizzleFadeAbortable::No,
+    );
+    rdr.set_buffer_offset(rdr.active_buffer());
+
+    write(rdr, 0, 7, "Let's see that again!");
+    input.wait_user_input(300);
+
+    // line angle up exactly
+    new_state(level_state.mut_player(), &S_DEATH_CAM);
+    level_state.mut_player().x = game_state.kill_x as i32;
+    level_state.mut_player().y = game_state.kill_y as i32;
+
+    let dx = level_state.obj(k).x - level_state.player().x;
+    let dy = level_state.player().y - level_state.obj(k).y;
+
+    let mut fangle = (dy as f64).atan2(dx as f64);
+    if fangle < 0.0 {
+        fangle = std::f64::consts::PI * 2.0 + fangle;
+    }
+    let angle = (fangle / (std::f64::consts::PI * 2.0)) as i32 * ANGLES as i32;
+    level_state.mut_player().angle = angle;
+    // try to position as close as possible without being in a wall
+    let mut dist = 0x14000;
+    loop {
+        let x_move = fixed_by_frac(new_fixed_u32(dist), prj.cos(angle as usize));
+        let y_move = -fixed_by_frac(new_fixed_u32(dist), prj.sin(angle as usize));
+
+        level_state.mut_player().x = level_state.obj(k).x - x_move.to_i32();
+        level_state.mut_player().y = level_state.obj(k).y - y_move.to_i32();
+        dist += 0x1000;
+
+        if check_position_player(level_state) {
+            break;
+        }
+    }
+    level_state.mut_player().tilex = (level_state.player().x >> TILESHIFT) as usize;
+    level_state.mut_player().tiley = (level_state.player().y >> TILESHIFT) as usize;
+
+    // go back to the game
+    let offset_prev = rdr.buffer_offset();
+    for i in 0..3 {
+        rdr.set_buffer_offset(SCREENLOC[i]);
+        draw_play_border(rdr, prj.view_width, prj.view_height);
+    }
+    rdr.set_buffer_offset(offset_prev);
+
+    game_state.fizzle_in = true;
+    let obj = level_state.mut_obj(k);
+    match obj.class {
+        ClassType::Schabb => {
+            if sound.digi_mode() != DigiMode::Off {
+                new_state(level_state.mut_obj(k), &S_SCHABBDEATHCAM_140);
+            } else {
+                new_state(level_state.mut_obj(k), &S_SCHABBDEATHCAM_5);
+            }
+        }
+        // TODO realhitler
+        // TODO giftobj
+        // TODO fatobj
+        _ => { /* ignore */ }
+    }
+}
+
+fn check_position_player(level_state: &LevelState) -> bool {
+    let player = level_state.player();
+    let xl = (player.x - PLAYER_SIZE) >> TILESHIFT;
+    let yl = (player.y - PLAYER_SIZE) >> TILESHIFT;
+    let xh = (player.x + PLAYER_SIZE) >> TILESHIFT;
+    let yh = (player.y + PLAYER_SIZE) >> TILESHIFT;
+
+    // check for solid walls
+    for y in yl..=yh {
+        for x in xl..=xh {
+            if let At::Wall(_) = level_state.actor_at[x as usize][y as usize] {
+                return false;
+            }
+        }
+    }
+    true
 }
