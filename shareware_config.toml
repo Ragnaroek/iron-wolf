@@ -1,6 +1,5 @@
 [data]
 wolf3d_data = "./testdata/shareware_data/"
-patch_data = "./patch/w3d"
 
 [options]
 vanilla = true
