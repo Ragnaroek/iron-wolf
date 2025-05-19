@@ -643,8 +643,18 @@ fn scan_info_plane(
                     );
                 }
                 116..=119 => {
-                    // officer stand: normal mode
-                    todo!("officer stand");
+                    spawn_stand(
+                        tile_map,
+                        map_data,
+                        EnemyType::Officer,
+                        &mut actors,
+                        actor_at,
+                        game_state,
+                        x,
+                        y,
+                        tile - 116,
+                        difficulty,
+                    );
                 }
                 120..=123 => {
                     // officer patrol: normal mode
