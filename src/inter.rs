@@ -641,6 +641,23 @@ pub async fn level_completed(
                 }
                 while sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(ticker, rdr);
+                    if input.check_ack() {
+                        return done_normal_level_complete(
+                            ticker,
+                            rdr,
+                            input,
+                            game_state,
+                            sound,
+                            prj,
+                            assets,
+                            time_left,
+                            kill_ratio,
+                            secret_ratio,
+                            treasure_ratio,
+                            &mut bj_breather,
+                        )
+                        .await;
+                    }
                 }
 
                 if input.check_ack() {
@@ -665,6 +682,23 @@ pub async fn level_completed(
             sound.play_sound(SoundName::ENDBONUS2, assets);
             while sound.is_any_sound_playing() {
                 bj_breather.poll_breathe(ticker, rdr);
+                if input.check_ack() {
+                    return done_normal_level_complete(
+                        ticker,
+                        rdr,
+                        input,
+                        game_state,
+                        sound,
+                        prj,
+                        assets,
+                        time_left,
+                        kill_ratio,
+                        secret_ratio,
+                        treasure_ratio,
+                        &mut bj_breather,
+                    )
+                    .await;
+                }
             }
         }
 
@@ -677,9 +711,25 @@ pub async fn level_completed(
                 sound.play_sound(SoundName::ENDBONUS1, assets);
                 while sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(ticker, rdr);
+                    if input.check_ack() {
+                        return done_normal_level_complete(
+                            ticker,
+                            rdr,
+                            input,
+                            game_state,
+                            sound,
+                            prj,
+                            assets,
+                            time_left,
+                            kill_ratio,
+                            secret_ratio,
+                            treasure_ratio,
+                            &mut bj_breather,
+                        )
+                        .await;
+                    }
                 }
             }
-
             if input.check_ack() {
                 return done_normal_level_complete(
                     ticker,
@@ -711,6 +761,23 @@ pub async fn level_completed(
         }
         while sound.is_any_sound_playing() {
             bj_breather.poll_breathe(ticker, rdr);
+            if input.check_ack() {
+                return done_normal_level_complete(
+                    ticker,
+                    rdr,
+                    input,
+                    game_state,
+                    sound,
+                    prj,
+                    assets,
+                    time_left,
+                    kill_ratio,
+                    secret_ratio,
+                    treasure_ratio,
+                    &mut bj_breather,
+                )
+                .await;
+            }
         }
 
         // SECRET RATIO
@@ -722,6 +789,23 @@ pub async fn level_completed(
                 sound.play_sound(SoundName::ENDBONUS1, assets);
                 while sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(ticker, rdr);
+                    if input.check_ack() {
+                        return done_normal_level_complete(
+                            ticker,
+                            rdr,
+                            input,
+                            game_state,
+                            sound,
+                            prj,
+                            assets,
+                            time_left,
+                            kill_ratio,
+                            secret_ratio,
+                            treasure_ratio,
+                            &mut bj_breather,
+                        )
+                        .await;
+                    }
                 }
             }
             if input.check_ack() {
@@ -755,6 +839,23 @@ pub async fn level_completed(
         }
         while sound.is_any_sound_playing() {
             bj_breather.poll_breathe(ticker, rdr);
+            if input.check_ack() {
+                return done_normal_level_complete(
+                    ticker,
+                    rdr,
+                    input,
+                    game_state,
+                    sound,
+                    prj,
+                    assets,
+                    time_left,
+                    kill_ratio,
+                    secret_ratio,
+                    treasure_ratio,
+                    &mut bj_breather,
+                )
+                .await;
+            }
         }
 
         // TREASURE RATIO
@@ -766,6 +867,23 @@ pub async fn level_completed(
                 sound.play_sound(SoundName::ENDBONUS1, assets);
                 while sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(ticker, rdr);
+                    if input.check_ack() {
+                        return done_normal_level_complete(
+                            ticker,
+                            rdr,
+                            input,
+                            game_state,
+                            sound,
+                            prj,
+                            assets,
+                            time_left,
+                            kill_ratio,
+                            secret_ratio,
+                            treasure_ratio,
+                            &mut bj_breather,
+                        )
+                        .await;
+                    }
                 }
             }
             if input.check_ack() {
@@ -799,6 +917,23 @@ pub async fn level_completed(
         }
         while sound.is_any_sound_playing() {
             bj_breather.poll_breathe(ticker, rdr);
+            if input.check_ack() {
+                return done_normal_level_complete(
+                    ticker,
+                    rdr,
+                    input,
+                    game_state,
+                    sound,
+                    prj,
+                    assets,
+                    time_left,
+                    kill_ratio,
+                    secret_ratio,
+                    treasure_ratio,
+                    &mut bj_breather,
+                )
+                .await;
+            }
         }
 
         return done_normal_level_complete(
