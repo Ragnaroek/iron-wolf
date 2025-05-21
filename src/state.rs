@@ -1107,7 +1107,7 @@ pub fn damage_actor(
 
     level_state.update_obj(k, |obj| obj.hitpoints -= damage as i32);
     if level_state.obj(k).hitpoints <= 0 {
-        kill_actor(k, level_state, game_state, rdr, sound, assets);
+        kill_actor(k, level_state, game_state, rdr, sound, assets, rc_consts);
     } else {
         if level_state.obj(k).flags & FL_ATTACKMODE == 0 {
             first_sighting(k, level_state, sound, assets, rc_consts); // put into combat mode
@@ -1151,6 +1151,7 @@ fn kill_actor(
     rdr: &VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
 ) {
     {
         let (tile_x, tile_y) = {
@@ -1212,7 +1213,7 @@ fn kill_actor(
                 } else {
                     new_state(level_state.mut_obj(k), &S_SCHABBDIE1_5);
                 }
-                do_death_scream(k, level_state, sound, assets);
+                do_death_scream(k, level_state, game_state, sound, assets, rc_consts);
             }
             ClassType::Fake => {
                 todo!("kill fake");

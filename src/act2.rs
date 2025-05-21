@@ -137,6 +137,17 @@ static START_HITPOINTS: [[i32; NUM_ENEMIES]; 4] = [
     ],
 ];
 
+static GUARD_DEATH_SCREAMS: [SoundName; 8] = [
+    SoundName::DEATHSCREAM1,
+    SoundName::DEATHSCREAM2,
+    SoundName::DEATHSCREAM3,
+    SoundName::DEATHSCREAM4,
+    SoundName::DEATHSCREAM5,
+    SoundName::DEATHSCREAM7,
+    SoundName::DEATHSCREAM8,
+    SoundName::DEATHSCREAM9,
+];
+
 // guards (1000)
 
 pub static S_GRDSTAND: StateType = StateType {
@@ -325,7 +336,7 @@ pub static S_GRDDIE1: StateType = StateType {
     sprite: Some(Sprite::GuardDie1),
     tic_time: 15,
     think: None,
-    action: None, //TODO A_DeathScream
+    action: Some(a_death_scream),
     next: Some(&S_GRDDIE2),
 };
 
@@ -541,7 +552,7 @@ pub static S_DOGDIE1: StateType = StateType {
     sprite: Some(Sprite::DogDie1),
     tic_time: 15,
     think: None,
-    action: None, // TODO A_DeathScream
+    action: Some(a_death_scream),
     next: Some(&S_DOGDIE2),
 };
 
@@ -2564,34 +2575,61 @@ fn a_death_scream(
     _: u64,
     _: &Ticker,
     level_state: &mut LevelState,
-    _: &mut GameState,
+    game_state: &mut GameState,
     sound: &mut Sound,
     _: &VGARenderer,
     _: &Input,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
-    _: &RayCastConsts,
+    rc_consts: &RayCastConsts,
 ) {
-    do_death_scream(k, level_state, sound, assets);
+    do_death_scream(k, level_state, game_state, sound, assets, rc_consts);
 }
 
 pub fn do_death_scream(
     k: ObjKey,
     level_state: &mut LevelState,
+    game_state: &mut GameState,
     sound: &mut Sound,
     assets: &Assets,
+    rc_consts: &RayCastConsts,
 ) {
     let obj = level_state.obj(k);
+    if game_state.map_on == 9 && rnd_t() == 0 {
+        match obj.class {
+            ClassType::Mutant
+            | ClassType::Guard
+            | ClassType::Officer
+            | ClassType::SS
+            | ClassType::Dog => {
+                sound.play_sound_loc_actor(SoundName::DEATHSCREAM6, assets, rc_consts, obj);
+                return;
+            }
+            _ => { /* play nothing */ }
+        }
+    }
+
     match obj.class {
         ClassType::Mutant => {
-            sound.play_sound(SoundName::AHHHG, assets);
+            sound.play_sound_loc_actor(SoundName::AHHHG, assets, rc_consts, obj);
+        }
+        ClassType::Guard => {
+            sound.play_sound_loc_actor(
+                GUARD_DEATH_SCREAMS[(rnd_t() % 8) as usize],
+                assets,
+                rc_consts,
+                obj,
+            );
+        }
+        ClassType::Officer => {
+            sound.play_sound_loc_actor(SoundName::NEINSOVAS, assets, rc_consts, obj);
         }
         ClassType::SS => {
-            sound.play_sound(SoundName::LEBEN, assets);
+            sound.play_sound_loc_actor(SoundName::LEBEN, assets, rc_consts, obj);
         }
         ClassType::Dog => {
-            sound.play_sound(SoundName::DOGDEATH, assets);
+            sound.play_sound_loc_actor(SoundName::DOGDEATH, assets, rc_consts, obj);
         }
         ClassType::Boss => {
             sound.play_sound(SoundName::MUTTI, assets);
@@ -2602,7 +2640,6 @@ pub fn do_death_scream(
         // TODO realhitlerobj EVASND
         // TODO mechahilterobj SCHEISTSND
         // TODO fakeobj HITLERHASND
-        // TODO officerobj NEINSOVASSND
         // TODO giftobj DONNERSND
         // TODO gretelobj MEINSND
         // TODO fatobj ROSESND
