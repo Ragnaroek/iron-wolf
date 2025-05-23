@@ -589,13 +589,233 @@ pub static S_DOGDEAD: StateType = StateType {
 // officers (1300)
 
 pub static S_OFCSTAND: StateType = StateType {
-    id: 1043,
+    id: 1300,
     rotate: 1,
     sprite: Some(Sprite::OfficerS1),
     tic_time: 0,
     think: Some(t_stand),
     action: None,
     next: Some(&S_OFCSTAND),
+};
+
+pub static S_OFCPATH1: StateType = StateType {
+    id: 1301,
+    rotate: 1,
+    sprite: Some(Sprite::OfficerW11),
+    tic_time: 20,
+    think: Some(t_path),
+    action: None,
+    next: Some(&S_OFCPATH1S),
+};
+
+pub static S_OFCPATH1S: StateType = StateType {
+    id: 1302,
+    rotate: 1,
+    sprite: Some(Sprite::OfficerW11),
+    tic_time: 5,
+    think: None,
+    action: None,
+    next: Some(&S_OFCPATH2),
+};
+
+pub static S_OFCPATH2: StateType = StateType {
+    id: 1303,
+    rotate: 1,
+    sprite: Some(Sprite::OfficerW21),
+    tic_time: 15,
+    think: Some(t_path),
+    action: None,
+    next: Some(&S_OFCPATH3),
+};
+
+pub static S_OFCPATH3: StateType = StateType {
+    id: 1304,
+    rotate: 1,
+    sprite: Some(Sprite::OfficerW31),
+    tic_time: 20,
+    think: Some(t_path),
+    action: None,
+    next: Some(&S_OFCPATH3S),
+};
+
+pub static S_OFCPATH3S: StateType = StateType {
+    id: 1305,
+    rotate: 1,
+    sprite: Some(Sprite::OfficerW31),
+    tic_time: 5,
+    think: None,
+    action: None,
+    next: Some(&S_OFCPATH4),
+};
+
+pub static S_OFCPATH4: StateType = StateType {
+    id: 1306,
+    rotate: 1,
+    sprite: Some(Sprite::OfficerW41),
+    tic_time: 15,
+    think: Some(t_path),
+    action: None,
+    next: Some(&S_OFCPATH1),
+};
+
+pub static S_OFCPAIN: StateType = StateType {
+    id: 1307,
+    rotate: 2,
+    sprite: Some(Sprite::OfficerPain1),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_OFCCHASE1),
+};
+
+pub static S_OFCPAIN1: StateType = StateType {
+    id: 1308,
+    rotate: 2,
+    sprite: Some(Sprite::OfficerPain2),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_OFCCHASE1),
+};
+
+pub static S_OFCSHOOT1: StateType = StateType {
+    id: 1309,
+    rotate: 0,
+    sprite: Some(Sprite::OfficerShoot1),
+    tic_time: 6,
+    think: None,
+    action: None,
+    next: Some(&S_OFCSHOOT2),
+};
+
+pub static S_OFCSHOOT2: StateType = StateType {
+    id: 1310,
+    rotate: 0,
+    sprite: Some(Sprite::OfficerShoot2),
+    tic_time: 20,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_OFCSHOOT3),
+};
+
+pub static S_OFCSHOOT3: StateType = StateType {
+    id: 1311,
+    rotate: 0,
+    sprite: Some(Sprite::OfficerShoot3),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_OFCCHASE1),
+};
+
+pub static S_OFCCHASE1: StateType = StateType {
+    id: 1312,
+    rotate: 1,
+    sprite: Some(Sprite::OfficerW11),
+    tic_time: 10,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_OFCCHASE1S),
+};
+
+pub static S_OFCCHASE1S: StateType = StateType {
+    id: 1313,
+    rotate: 1,
+    sprite: Some(Sprite::OfficerW11),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_OFCCHASE2),
+};
+
+pub static S_OFCCHASE2: StateType = StateType {
+    id: 1314,
+    rotate: 1,
+    sprite: Some(Sprite::OfficerW21),
+    tic_time: 8,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_OFCCHASE3),
+};
+
+pub static S_OFCCHASE3: StateType = StateType {
+    id: 1315,
+    rotate: 1,
+    sprite: Some(Sprite::OfficerW31),
+    tic_time: 10,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_OFCCHASE3S),
+};
+
+pub static S_OFCCHASE3S: StateType = StateType {
+    id: 1316,
+    rotate: 1,
+    sprite: Some(Sprite::OfficerW31),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_OFCCHASE4),
+};
+
+pub static S_OFCCHASE4: StateType = StateType {
+    id: 1317,
+    rotate: 1,
+    sprite: Some(Sprite::OfficerW41),
+    tic_time: 8,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_OFCCHASE1),
+};
+
+pub static S_OFCDIE1: StateType = StateType {
+    id: 1318,
+    rotate: 0,
+    sprite: Some(Sprite::OfficerDie1),
+    tic_time: 11,
+    think: None,
+    action: Some(a_death_scream),
+    next: Some(&S_OFCDIE2),
+};
+
+pub static S_OFCDIE2: StateType = StateType {
+    id: 1319,
+    rotate: 0,
+    sprite: Some(Sprite::OfficerDie2),
+    tic_time: 11,
+    think: None,
+    action: None,
+    next: Some(&S_OFCDIE3),
+};
+
+pub static S_OFCDIE3: StateType = StateType {
+    id: 1320,
+    rotate: 0,
+    sprite: Some(Sprite::OfficerDie3),
+    tic_time: 11,
+    think: None,
+    action: None,
+    next: Some(&S_OFCDIE4),
+};
+
+pub static S_OFCDIE4: StateType = StateType {
+    id: 1321,
+    rotate: 0,
+    sprite: Some(Sprite::OfficerDie4),
+    tic_time: 11,
+    think: None,
+    action: None,
+    next: Some(&S_OFCDIE5),
+};
+
+pub static S_OFCDIE5: StateType = StateType {
+    id: 1322,
+    rotate: 0,
+    sprite: Some(Sprite::OfficerDead),
+    tic_time: 0,
+    think: None,
+    action: None,
+    next: Some(&S_OFCDIE5),
 };
 
 // mutant (1400)
@@ -1577,7 +1797,7 @@ pub static S_BOOM3: StateType = StateType {
     next: None,
 };
 
-pub static STATES: [&'static StateType; 143] = [
+pub static STATES: [&'static StateType; 165] = [
     &S_PLAYER,
     &S_ATTACK,
     &S_GRDSTAND,
@@ -1624,6 +1844,28 @@ pub static STATES: [&'static StateType; 143] = [
     &S_DOGDIE3,
     &S_DOGDEAD,
     &S_OFCSTAND,
+    &S_OFCPATH1,
+    &S_OFCPATH1S,
+    &S_OFCPATH2,
+    &S_OFCPATH3,
+    &S_OFCPATH3S,
+    &S_OFCPATH4,
+    &S_OFCPAIN,
+    &S_OFCPAIN1,
+    &S_OFCSHOOT1,
+    &S_OFCSHOOT2,
+    &S_OFCSHOOT3,
+    &S_OFCCHASE1,
+    &S_OFCCHASE1S,
+    &S_OFCCHASE2,
+    &S_OFCCHASE3,
+    &S_OFCCHASE3S,
+    &S_OFCCHASE4,
+    &S_OFCDIE1,
+    &S_OFCDIE2,
+    &S_OFCDIE3,
+    &S_OFCDIE4,
+    &S_OFCDIE5,
     &S_MUTSTAND,
     &S_MUTPATH1,
     &S_MUTPATH1S,
@@ -2077,6 +2319,7 @@ fn t_chase(
             // go into attack frame
             let state_change = match obj.class {
                 ClassType::Guard => Some(&S_GRDSHOOT1),
+                ClassType::Officer => Some(&S_OFCSHOOT1),
                 ClassType::Mutant => Some(&S_MUTSHOOT1),
                 ClassType::SS => Some(&S_SSSHOOT1),
                 ClassType::Boss => Some(&S_BOSSSHOOT1),
@@ -2416,15 +2659,12 @@ pub fn spawn_patrol(
             obj
         }
         EnemyType::Officer => {
-            todo!("spawn with &S_OFCPATH1");
-            /*
-            let obj = spawn_new_obj(x_tile, y_tile, &S_OFCPATH1, ClassType::Officer);
+            let mut obj = spawn_new_obj(map_data, x_tile, y_tile, &S_OFCPATH1, ClassType::Officer);
             obj.speed = SPD_PATROL;
             if !game_state.loaded_game {
                 game_state.kill_total += 1;
             }
             obj
-            */
         }
         EnemyType::SS => {
             let mut obj = spawn_new_obj(map_data, x_tile, y_tile, &S_SSPATH1, ClassType::SS);

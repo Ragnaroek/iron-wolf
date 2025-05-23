@@ -8,12 +8,12 @@ use crate::agent::{
     DUMMY_PLAYER, draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_score,
     draw_weapon, spawn_player, thrust_player,
 };
-use crate::assets::{SoundName, load_map_from_assets};
+use crate::assets::{GraphicNum, SoundName, load_demo, load_map_from_assets};
 use crate::config::WolfConfig;
 use crate::def::{
     AMBUSH_TILE, ANGLES, Actors, Assets, At, ControlState, Difficulty, DoorLock, EnemyType,
     GameState, IWConfig, Level, LevelState, MAP_SIZE, MAX_ACTORS, MAX_DOORS, MAX_STATS, NUM_AREAS,
-    ObjKey, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState,
+    ObjKey, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState, new_game_state,
 };
 use crate::draw::{RayCast, RayCastConsts, init_ray_cast_consts, three_d_refresh};
 use crate::input::Input;
@@ -26,6 +26,7 @@ use crate::play::{
 };
 use crate::sd::Sound;
 use crate::user::HighScore;
+use crate::util::new_data_reader;
 use crate::vga_render::{FizzleFadeAbortable, VGARenderer};
 use crate::vh::vw_fade_out;
 use crate::{map, time};
@@ -643,6 +644,7 @@ fn scan_info_plane(
                     );
                 }
                 116..=119 => {
+                    // officer stand: normal mode
                     spawn_stand(
                         tile_map,
                         map_data,
@@ -658,7 +660,17 @@ fn scan_info_plane(
                 }
                 120..=123 => {
                     // officer patrol: normal mode
-                    todo!("office patrol");
+                    spawn_patrol(
+                        map_data,
+                        EnemyType::Officer,
+                        &mut actors,
+                        actor_at,
+                        game_state,
+                        x,
+                        y,
+                        tile - 120,
+                        difficulty,
+                    );
                 }
                 124 => {
                     // guard: dead
@@ -765,12 +777,36 @@ fn scan_info_plane(
                     }
                 }
                 152..=155 => {
-                    // officer stand: medium mode
-                    todo!("officer stand");
+                    if difficulty >= Difficulty::Medium {
+                        spawn_stand(
+                            tile_map,
+                            map_data,
+                            EnemyType::Officer,
+                            &mut actors,
+                            actor_at,
+                            game_state,
+                            x,
+                            y,
+                            tile - 152,
+                            difficulty,
+                        );
+                    }
                 }
                 156..=159 => {
                     // officer patrol: medium mode
-                    todo!("officer patrol");
+                    if difficulty >= Difficulty::Medium {
+                        spawn_patrol(
+                            map_data,
+                            EnemyType::Officer,
+                            &mut actors,
+                            actor_at,
+                            game_state,
+                            x,
+                            y,
+                            tile - 156,
+                            difficulty,
+                        );
+                    }
                 }
                 160 => {
                     todo!("fake hitler");
@@ -873,12 +909,36 @@ fn scan_info_plane(
                     }
                 }
                 188..=191 => {
-                    // officer stand: hard mode
-                    todo!("officer stand");
+                    if difficulty >= Difficulty::Hard {
+                        spawn_stand(
+                            tile_map,
+                            map_data,
+                            EnemyType::Officer,
+                            &mut actors,
+                            actor_at,
+                            game_state,
+                            x,
+                            y,
+                            tile - 188,
+                            difficulty,
+                        );
+                    }
                 }
                 192..=195 => {
                     // officer patrol: hard mode
-                    todo!("officer patrol");
+                    if difficulty >= Difficulty::Hard {
+                        spawn_patrol(
+                            map_data,
+                            EnemyType::Officer,
+                            &mut actors,
+                            actor_at,
+                            game_state,
+                            x,
+                            y,
+                            tile - 192,
+                            difficulty,
+                        );
+                    }
                 }
                 196 => {
                     spawn_schabbs(map_data, &mut actors, actor_at, game_state, x, y);
@@ -1061,4 +1121,70 @@ fn scan_info_plane(
     actors.put_obj(player_key, player);
 
     (actors, statics, info_plane)
+}
+
+// Fades the screen out, then starts a demo.  Exits with the screen faded
+pub async fn play_demo(
+    wolf_config: &mut WolfConfig,
+    iw_config: &IWConfig,
+    ticker: &time::Ticker,
+    win_state: &mut WindowState,
+    menu_state: &mut MenuState,
+    vga: &VGA,
+    sound: &mut Sound,
+    rc: RayCast,
+    rdr: &VGARenderer,
+    input: &mut Input,
+    prj: ProjectionConfig,
+    assets: &Assets,
+    loader: &dyn Loader,
+    demo_num: usize,
+) -> (ProjectionConfig, RayCast) {
+    let demo_data = load_demo(loader, demo_graphic_num(demo_num)).expect("demo load");
+    let mut demo_reader = new_data_reader(&demo_data);
+
+    let mut game_state = new_game_state();
+    game_state.map_on = demo_reader.read_u8() as usize;
+    game_state.difficulty = Difficulty::Hard;
+
+    rdr.fade_out().await;
+    win_state.set_font_color(0, 15);
+    draw_play_screen(&game_state, rdr, &prj).await;
+    rdr.fade_in().await;
+
+    let mut level_state = setup_game_level(&mut game_state, assets).expect("setup game level");
+    start_music(&mut game_state, sound, assets, loader);
+
+    game_state.fizzle_in = true;
+    // TOOD setup controle state that feeds the demo data
+    let mut control_state = new_control_state();
+    play_loop(
+        wolf_config,
+        iw_config,
+        ticker,
+        &mut level_state,
+        &mut game_state,
+        win_state,
+        menu_state,
+        &mut control_state,
+        vga,
+        sound,
+        rc,
+        rdr,
+        input,
+        prj,
+        assets,
+        loader,
+    )
+    .await
+}
+
+fn demo_graphic_num(demo_num: usize) -> GraphicNum {
+    match demo_num {
+        0 => GraphicNum::DEMO0,
+        1 => GraphicNum::DEMO1,
+        2 => GraphicNum::DEMO2,
+        3 => GraphicNum::DEMO3,
+        _ => GraphicNum::DEMO3,
+    }
 }

@@ -24,7 +24,7 @@ use crate::def::{
 };
 use crate::draw::{RayCast, init_ray_cast};
 use crate::fixed::{new_fixed_u16, new_fixed_u32};
-use crate::game::{game_loop, setup_game_level};
+use crate::game::{game_loop, play_demo, setup_game_level};
 use crate::input::{self, Input};
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
@@ -249,6 +249,8 @@ async fn demo_loop(
         pg_13(rdr, input).await;
     }
 
+    let mut last_demo = 0;
+
     let mut prj = prj_param;
     let mut rc = rc_param;
     loop {
@@ -276,7 +278,27 @@ async fn demo_loop(
                 break;
             }
 
-            //TODO PlayDemo() here
+            // demo
+            let (prj_demo, rc_demo) = play_demo(
+                wolf_config,
+                iw_config,
+                &ticker,
+                win_state,
+                menu_state,
+                vga,
+                sound,
+                rc,
+                rdr,
+                input,
+                prj,
+                assets,
+                loader,
+                last_demo,
+            )
+            .await;
+            rc = rc_demo;
+            prj = prj_demo;
+            last_demo = (last_demo + 1) % 4;
         }
 
         rdr.fade_out().await;

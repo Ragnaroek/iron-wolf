@@ -208,6 +208,10 @@ static W3D1_LUMP_MAP: [usize; NUM_GRAPHICS] = [
     144, // MUTANTBJPIC
     145, // PAUSEDPIC
     146, // GETPSYCHEDPIC
+    148, // DEMO0
+    149, // DEMO1
+    150, // DEMO2
+    151, // DEMO3
 ];
 
 // TOOD define W3D3 version data
@@ -375,6 +379,10 @@ static W3D6_LUMP_MAP: [usize; NUM_GRAPHICS] = [
     132, // MUTANTBJPIC
     133, // PAUSEDPIC
     134, // GETPSYCHEDPIC
+    139, // DEMO0
+    140, // DEMO1
+    141, // DEMO2
+    142, // DEMO3
 ];
 
 pub static SOD: WolfVariant = WolfVariant {
@@ -572,7 +580,7 @@ pub enum Music {
     PACMAN,   // 26
 }
 
-pub const NUM_GRAPHICS: usize = 133;
+pub const NUM_GRAPHICS: usize = 137;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum GraphicNum {
@@ -709,6 +717,11 @@ pub enum GraphicNum {
     MUTANTBJPIC,
     PAUSEDPIC,
     GETPSYCHEDPIC,
+
+    DEMO0,
+    DEMO1,
+    DEMO2,
+    DEMO3,
 }
 
 pub fn face_pic(n: usize) -> GraphicNum {
@@ -1069,6 +1082,20 @@ pub static DIGI_MAP: [DigiMapEntry; NUM_DIGI_SOUNDS] = [
     },
 ];
 
+pub fn load_demo(loader: &dyn Loader, demo: GraphicNum) -> Result<Vec<u8>, String> {
+    let grstarts = loader.load_wolf_file(WolfFile::GraphicHead);
+    let grdata = loader.load_wolf_file(WolfFile::GraphicData);
+    let grhuffman_bytes = loader.load_wolf_file(WolfFile::GraphicDict);
+    let grhuffman = to_huffnodes(grhuffman_bytes);
+    let chunk = loader.variant().graphic_lump_map[demo as usize];
+
+    let (pos, compressed) = data_sizes(chunk, &grstarts)?;
+    let source_compressed = &grdata[pos..(pos + compressed)];
+
+    let demo_data = expand_chunk(chunk, &source_compressed, &grhuffman);
+    Ok(demo_data)
+}
+
 pub fn load_all_graphics(
     loader: &dyn Loader,
     patch_config: &Option<PatchConfig>,
@@ -1294,7 +1321,7 @@ fn expand_chunk(chunk: usize, data_in: &[u8], grhuffman: &Vec<Huffnode>) -> Vec<
         if chunk < STARTTILE8M {
             expanded = BLOCK * NUMTILE8;
         } else {
-            panic!("TILE Expand not yet implemented");
+            todo!("TILE Expand not yet implemented");
         }
         data = data_in;
     } else {
