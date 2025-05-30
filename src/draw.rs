@@ -587,6 +587,7 @@ pub async fn three_d_refresh(
     prj: &ProjectionConfig,
     rc_consts: &RayCastConsts,
     assets: &Assets,
+    demo_playback: bool,
 ) {
     rdr.set_buffer_offset(rdr.buffer_offset() + prj.screenofs);
 
@@ -604,7 +605,15 @@ pub async fn three_d_refresh(
         assets,
     );
 
-    draw_player_weapon(ticker, level_state, game_state, rdr, prj, assets);
+    draw_player_weapon(
+        ticker,
+        level_state,
+        game_state,
+        rdr,
+        prj,
+        assets,
+        demo_playback,
+    );
 
     if game_state.fizzle_in {
         rdr.fizzle_fade(
@@ -931,6 +940,7 @@ fn draw_player_weapon(
     rdr: &VGARenderer,
     prj: &ProjectionConfig,
     assets: &Assets,
+    demo_playback: bool,
 ) {
     if game_state.victory_flag {
         let player = level_state.player();
@@ -947,7 +957,11 @@ fn draw_player_weapon(
         simple_scale_shape(rdr, prj, prj.view_width / 2, sprite, prj.view_height + 1);
     }
 
-    // TODO handle demorecord || demoplayback
+    // TODO demorecord
+    if demo_playback {
+        let sprite = &assets.sprites[Sprite::Demo as usize];
+        simple_scale_shape(rdr, prj, prj.view_width / 2, sprite, prj.view_height + 1);
+    }
 }
 
 #[cfg_attr(feature = "tracing", instrument(skip_all))]
@@ -1006,15 +1020,14 @@ fn draw_scaleds(
         }
         let visobj = &mut level_state.vislist[visptr];
         visobj.sprite = obj.state.expect("state").sprite.expect("sprite");
-
         if vis[obj.tilex][obj.tiley]
-            || (vis[obj.tilex - 1][obj.tiley + 1] && tile[obj.tilex - 1][obj.tiley + 1] == 0)
-            || (vis[obj.tilex][obj.tiley + 1] && tile[obj.tilex][obj.tiley + 1] == 0)
-            || (vis[obj.tilex + 1][obj.tiley + 1] && tile[obj.tilex + 1][obj.tiley + 1] == 0)
             || (vis[obj.tilex - 1][obj.tiley] && tile[obj.tilex - 1][obj.tiley] == 0)
             || (vis[obj.tilex + 1][obj.tiley] && tile[obj.tilex + 1][obj.tiley] == 0)
             || (vis[obj.tilex - 1][obj.tiley - 1] && tile[obj.tilex - 1][obj.tiley - 1] == 0)
             || (vis[obj.tilex][obj.tiley - 1] && tile[obj.tilex][obj.tiley - 1] == 0)
+            || (vis[obj.tilex - 1][obj.tiley + 1] && tile[obj.tilex - 1][obj.tiley + 1] == 0)
+            || (vis[obj.tilex + 1][obj.tiley + 1] && tile[obj.tilex + 1][obj.tiley + 1] == 0)
+            || (vis[obj.tilex][obj.tiley + 1] && tile[obj.tilex][obj.tiley + 1] == 0)
             || (vis[obj.tilex + 1][obj.tiley - 1] && tile[obj.tilex + 1][obj.tiley - 1] == 0)
         {
             obj.active = ActiveType::Yes;

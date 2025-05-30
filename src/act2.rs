@@ -2775,7 +2775,7 @@ fn t_shoot(
     }
 
     // see if the shot was a hit
-    if hit_chance > 0 && rnd_t() < hit_chance as u8 {
+    if (rnd_t() as i32) < hit_chance {
         let damage = if dist < 2 {
             rnd_t() >> 2
         } else if dist < 4 {

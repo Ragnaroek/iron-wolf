@@ -16,7 +16,7 @@ use crate::def::{
     ObjKey, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState, new_game_state,
 };
 use crate::draw::{RayCast, RayCastConsts, init_ray_cast_consts, three_d_refresh};
-use crate::input::Input;
+use crate::input::{Input, InputMode};
 use crate::inter::{check_highscore, level_completed, preload_graphics, victory};
 use crate::loader::Loader;
 use crate::menu::MenuState;
@@ -25,7 +25,8 @@ use crate::play::{
     start_music,
 };
 use crate::sd::Sound;
-use crate::user::HighScore;
+use crate::time::Ticker;
+use crate::user::{HighScore, init_rnd_t};
 use crate::util::new_data_reader;
 use crate::vga_render::{FizzleFadeAbortable, VGARenderer};
 use crate::vh::vw_fade_out;
@@ -87,7 +88,7 @@ pub async fn game_loop(
         if game_state.loaded_game {
             game_state.loaded_game = false;
         } else {
-            *level_state = setup_game_level(game_state, assets).unwrap();
+            *level_state = setup_game_level(game_state, assets, false).unwrap();
         }
 
         win_state.in_game = true;
@@ -311,6 +312,7 @@ async fn died(
                 prj,
                 rc_consts,
                 assets,
+                input.mode == InputMode::DemoPlayback,
             )
             .await;
         }
@@ -346,6 +348,7 @@ async fn died(
                 prj,
                 rc_consts,
                 assets,
+                input.mode == InputMode::DemoPlayback,
             )
             .await;
         }
@@ -395,7 +398,11 @@ async fn died(
     }
 }
 
-pub fn setup_game_level(game_state: &mut GameState, assets: &Assets) -> Result<LevelState, String> {
+pub fn setup_game_level(
+    game_state: &mut GameState,
+    assets: &Assets,
+    demo_playback: bool,
+) -> Result<LevelState, String> {
     if !game_state.loaded_game {
         game_state.time_count = 0;
         game_state.secret_total = 0;
@@ -404,6 +411,12 @@ pub fn setup_game_level(game_state: &mut GameState, assets: &Assets) -> Result<L
         game_state.secret_count = 0;
         game_state.kill_count = 0;
         game_state.treasure_count = 0;
+    }
+
+    if demo_playback {
+        init_rnd_t(false);
+    } else {
+        init_rnd_t(true);
     }
 
     let mapnum = game_state.map_on + game_state.episode * 10;
@@ -1127,14 +1140,13 @@ fn scan_info_plane(
 pub async fn play_demo(
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
-    ticker: &time::Ticker,
+    ticker: &Ticker,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     vga: &VGA,
     sound: &mut Sound,
     rc: RayCast,
     rdr: &VGARenderer,
-    input: &mut Input,
     prj: ProjectionConfig,
     assets: &Assets,
     loader: &dyn Loader,
@@ -1142,23 +1154,28 @@ pub async fn play_demo(
 ) -> (ProjectionConfig, RayCast) {
     let demo_data = load_demo(loader, demo_graphic_num(demo_num)).expect("demo load");
     let mut demo_reader = new_data_reader(&demo_data);
-
     let mut game_state = new_game_state();
     game_state.map_on = demo_reader.read_u8() as usize;
     game_state.difficulty = Difficulty::Hard;
+    demo_reader.skip(3); // length not needed (in Vec len)
+
+    let mut input = Input::init_demo_playback(
+        ticker.time_count.clone(),
+        demo_reader.unread_bytes().to_vec(),
+    );
 
     rdr.fade_out().await;
     win_state.set_font_color(0, 15);
     draw_play_screen(&game_state, rdr, &prj).await;
     rdr.fade_in().await;
 
-    let mut level_state = setup_game_level(&mut game_state, assets).expect("setup game level");
+    let mut level_state =
+        setup_game_level(&mut game_state, assets, true).expect("setup game level");
     start_music(&mut game_state, sound, assets, loader);
 
     game_state.fizzle_in = true;
-    // TOOD setup controle state that feeds the demo data
     let mut control_state = new_control_state();
-    play_loop(
+    let r = play_loop(
         wolf_config,
         iw_config,
         ticker,
@@ -1171,12 +1188,13 @@ pub async fn play_demo(
         sound,
         rc,
         rdr,
-        input,
+        &mut input,
         prj,
         assets,
         loader,
     )
-    .await
+    .await;
+    r
 }
 
 fn demo_graphic_num(demo_num: usize) -> GraphicNum {

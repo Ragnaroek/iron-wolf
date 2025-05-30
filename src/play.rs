@@ -22,6 +22,7 @@ use crate::assets::Music;
 use crate::assets::{GAMEPAL, GraphicNum};
 use crate::config::WolfConfig;
 use crate::debug::debug_keys;
+use crate::def::FL_SHOOTABLE;
 use crate::def::{
     ANGLE_QUAD, ANGLES, ActiveType, Assets, At, Button, Control, ControlState, FINE_ANGLES,
     FL_NEVERMARK, FL_NONMARK, FOCAL_LENGTH, GLOBAL1, GameState, IWConfig, LevelState, NUM_BUTTONS,
@@ -36,6 +37,7 @@ use crate::input::DIR_SCAN_NORTH;
 use crate::input::DIR_SCAN_SOUTH;
 use crate::input::DIR_SCAN_WEST;
 use crate::input::Input;
+use crate::input::InputMode;
 use crate::input::{self};
 use crate::inter::clear_split_vwb;
 use crate::loader::Loader;
@@ -81,6 +83,8 @@ const RED_STEPS: i32 = 8;
 const NUM_WHITE_SHIFTS: usize = 3;
 const WHITE_STEPS: i32 = 20;
 const WHITE_TICS: i32 = 6;
+
+const DEMO_TICS: u64 = 4;
 
 pub static BUTTON_JOY: [Button; 4] = [Button::Attack, Button::Strafe, Button::Use, Button::Run];
 
@@ -306,7 +310,7 @@ pub async fn play_loop(
     sound: &mut Sound,
     rc_param: RayCast,
     rdr: &VGARenderer,
-    input: &mut input::Input,
+    input: &mut Input,
     prj_param: ProjectionConfig,
     assets: &Assets,
     loader: &dyn Loader,
@@ -332,14 +336,23 @@ pub async fn play_loop(
         let span = info_span!("frame", id = _frame_id);
         _frame_id += 1;
 
-        let (next_frame_start, curr_tics) = ticker.next_tics_time();
+        let next_tic = if input.mode == InputMode::Player {
+            1
+        } else {
+            DEMO_TICS
+        };
+
+        let (next_frame_start, curr_tics) = ticker.next_tics_time(next_tic);
         let want_frame_start = next_frame_start + (TARGET_FRAME_DURATION / 2); // target mid frame time
         let wait_time = want_frame_start.saturating_duration_since(Instant::now());
         sleep(wait_time).await;
 
-        let mut tics = ticker.get_count().saturating_sub(curr_tics); // in the best case one tic, saturating in case the count is reset/non-monotonic
+        let mut tics = ticker.get_count().saturating_sub(curr_tics); // in the best case next_tics many tics, saturating in case the count is reset/non-monotonic
         if tics == 0 {
             tics = 1;
+        }
+        if input.mode == InputMode::DemoPlayback {
+            tics = DEMO_TICS;
         }
 
         let player = level_state.player();
@@ -388,6 +401,7 @@ pub async fn play_loop(
             &prj,
             &rc_consts,
             assets,
+            input.mode == InputMode::DemoPlayback,
         )
         .await;
 
@@ -451,12 +465,17 @@ fn update_game_state(
     control_state: &mut ControlState,
     sound: &mut Sound,
     rdr: &VGARenderer,
-    input: &input::Input,
+    input: &mut Input,
     prj: &ProjectionConfig,
     rc_consts: &RayCastConsts,
     assets: &Assets,
 ) {
     poll_controls(control_state, tics, input);
+    if input.mode == InputMode::DemoPlayback {
+        if input.demo_ptr == input.demo_buffer.as_ref().expect("demo_data").len() {
+            game_state.play_state = PlayState::Completed;
+        }
+    }
 
     // actor thinking
 
@@ -561,9 +580,7 @@ fn do_actor(
     }
 
     // transitional object
-    level_state.update_obj(k, |obj| {
-        obj.tic_count = obj.tic_count.saturating_sub(tics as u32)
-    });
+    level_state.update_obj(k, |obj| obj.tic_count -= tics as i32);
     while level_state.obj(k).tic_count <= 0 {
         if let Some(action) = level_state.obj(k).state.expect("state").action {
             action(
@@ -596,7 +613,9 @@ fn do_actor(
             level_state.update_obj(k, |obj| obj.tic_count = 0);
             break; // think a last time below
         }
-        level_state.update_obj(k, |obj| obj.tic_count += obj.state.expect("state").tic_time);
+        level_state.update_obj(k, |obj| {
+            obj.tic_count += obj.state.expect("state").tic_time as i32
+        });
     }
 
     if let Some(think) = level_state.obj(k).state.expect("state").think {
@@ -735,10 +754,14 @@ async fn check_keys(
     menu_state: &mut MenuState,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    input: &mut input::Input,
+    input: &mut Input,
     prj: ProjectionConfig,
     loader: &dyn Loader,
 ) -> GameStateUpdate {
+    if input.mode == InputMode::DemoPlayback {
+        return GameStateUpdate::with_render_update(prj, rc);
+    }
+
     if input.key_pressed(NumCode::BackSpace)
         && input.key_pressed(NumCode::LShift)
         && input.key_pressed(NumCode::Alt)
@@ -831,10 +854,30 @@ async fn check_keys(
 }
 
 // reads input delta since last tic and manipulates the player state
-fn poll_controls(state: &mut ControlState, tics: u64, input: &input::Input) {
+fn poll_controls(state: &mut ControlState, tics: u64, input: &mut Input) {
     state.control.x = 0;
     state.control.y = 0;
     state.button_held.copy_from_slice(&state.button_state);
+
+    if input.mode == InputMode::DemoPlayback {
+        let demo_data = input.demo_buffer.as_ref().expect("demo data");
+        let mut button_bits = demo_data[input.demo_ptr];
+        input.demo_ptr += 1;
+        for i in 0..NUM_BUTTONS {
+            state.button_state[i] = (button_bits & 1) != 0;
+            button_bits >>= 1;
+        }
+
+        state.control.x = (demo_data[input.demo_ptr] as i8) as i32;
+        input.demo_ptr += 1;
+
+        state.control.y = (demo_data[input.demo_ptr] as i8) as i32;
+        input.demo_ptr += 1;
+
+        state.control.x *= tics as i32;
+        state.control.y *= tics as i32;
+        return;
+    }
 
     poll_keyboard_buttons(state, input);
 

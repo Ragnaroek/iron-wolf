@@ -42,9 +42,10 @@ fn test_do_load_and_save_save0() {
     game_state.difficulty = Difficulty::Baby;
     game_state.episode = episode; // set this here so that correct level is set up in 'setup_game_level' call
     game_state.map_on = map_on;
-    let mut level_state_init = setup_game_level(&mut game_state, &assets).expect("level state");
+    let mut level_state_init =
+        setup_game_level(&mut game_state, &assets, true).expect("level state");
 
-    let mut level_state = setup_game_level(&mut game_state, &assets).expect("level state");
+    let mut level_state = setup_game_level(&mut game_state, &assets, true).expect("level state");
 
     let mut iw_config = default_iw_config().expect("config");
     iw_config.options.fast_loading = true;
@@ -388,7 +389,7 @@ fn test_do_load_save1() {
     let (_, rdr, assets) = start_test_iw(&loader);
 
     let mut game_state = new_game_state();
-    let mut level_state = setup_game_level(&mut game_state, &assets).expect("level state");
+    let mut level_state = setup_game_level(&mut game_state, &assets, true).expect("level state");
 
     let mut iw_config = default_iw_config().expect("config");
     iw_config.options.fast_loading = true;
@@ -5369,7 +5370,7 @@ fn must_kind(num: usize) -> StaticKind {
 
 fn actor(
     active: i16,
-    tic_count: u32,
+    tic_count: i32,
     class: usize,
     flags: u8,
     dist: i32,

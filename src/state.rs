@@ -166,8 +166,8 @@ pub fn spawn_new_obj(
 
     ObjType {
         class,
-        active: crate::def::ActiveType::Yes,
-        tic_count,
+        active: crate::def::ActiveType::No,
+        tic_count: tic_count as i32,
         distance: 0,
         area_number,
         flags: 0,
@@ -374,14 +374,6 @@ pub fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
     let obj = level_state.obj(k);
     if level_state.level.map_segs.segs[0][obj.tiley * MAP_SIZE + obj.tilex] < AREATILE {
         let obj = level_state.obj(k);
-        println!(
-            "will panic: k = {:?}, class = {:?}, segs[0]={}, x={}, y={}",
-            k,
-            obj.class,
-            level_state.level.map_segs.segs[0][obj.tiley * MAP_SIZE + obj.tilex],
-            obj.tilex,
-            obj.tiley,
-        )
     }
 
     let area = {
@@ -915,7 +907,7 @@ pub fn first_sighting(
 
 pub fn new_state(obj: &mut ObjType, state: &'static StateType) {
     obj.state = Some(state);
-    obj.tic_count = state.tic_time;
+    obj.tic_count = state.tic_time as i32;
 }
 
 /// Checks a straight line between player and current object
@@ -1011,10 +1003,6 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
         let mut x = xt1 + x_step;
         xt2 += x_step;
         loop {
-            if x == xt2 {
-                break;
-            }
-
             let y: i32 = y_frac >> 8;
             y_frac += y_step;
 
@@ -1022,7 +1010,10 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
             x += x_step;
 
             if value == 0 {
-                continue;
+                if x != xt2 {
+                    continue;
+                }
+                break;
             }
             if value < 128 || value > 256 {
                 return false;
@@ -1034,6 +1025,10 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
 
             if intercept > level_state.doors[value as usize].position as i32 {
                 return false;
+            }
+
+            if x == xt2 {
+                break;
             }
         }
     }
@@ -1063,10 +1058,6 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
         let mut y = yt1 + y_step;
         yt2 += y_step;
         loop {
-            if y == yt2 {
-                break;
-            }
-
             let x = x_frac >> 8;
             x_frac += x_step;
 
@@ -1074,7 +1065,10 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
             y += y_step;
 
             if value == 0 {
-                continue;
+                if y != yt2 {
+                    continue;
+                }
+                break;
             }
 
             if value < 128 || value > 256 {
@@ -1086,6 +1080,10 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
 
             if intercept > level_state.doors[value as usize].position as i32 {
                 return false;
+            }
+
+            if y == yt2 {
+                break;
             }
         }
     }

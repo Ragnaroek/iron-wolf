@@ -736,7 +736,7 @@ impl TryFrom<i16> for ActiveType {
 #[derive(Eq, PartialEq, Debug, Clone, Copy)] //XXX do not make this Clone, fix actor_at (also takes a ObjKey instead ObjType???)
 pub struct ObjType {
     pub active: ActiveType,
-    pub tic_count: u32,
+    pub tic_count: i32,
     pub class: ClassType,
     pub state: Option<&'static StateType>,
 

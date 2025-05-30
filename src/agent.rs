@@ -373,7 +373,7 @@ fn gun_attack(
                 {
                     if check.trans_x.to_i32() < view_dist {
                         view_dist = check.trans_x.to_i32();
-                        closest = Some(ObjKey(i));
+                        closest = Some(k);
                     }
                 }
             }

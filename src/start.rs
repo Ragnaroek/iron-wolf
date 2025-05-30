@@ -88,7 +88,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
 
     let ticker = time::new_ticker(rt_ref.clone());
     let input_monitoring = Arc::new(Mutex::new(vga::input::InputMonitoring::new()));
-    let mut input = input::init(
+    let mut input = Input::init_player(
         ticker.time_count.clone(),
         input_monitoring.clone(),
         &wolf_config,
@@ -236,7 +236,7 @@ async fn demo_loop(
     sound: &mut Sound,
     rc_param: RayCast,
     rdr: &VGARenderer,
-    input: &mut input::Input,
+    input: &mut Input,
     prj_param: ProjectionConfig,
     assets: &Assets,
     win_state: &mut WindowState,
@@ -289,7 +289,6 @@ async fn demo_loop(
                 sound,
                 rc,
                 rdr,
-                input,
                 prj,
                 assets,
                 loader,
@@ -304,7 +303,8 @@ async fn demo_loop(
         rdr.fade_out().await;
 
         let mut game_state = new_game_state();
-        let mut level_state = setup_game_level(&mut game_state, assets).expect("setup game level");
+        let mut level_state =
+            setup_game_level(&mut game_state, assets, false).expect("setup game level");
 
         // TODO RecordDemo()
         let update = control_panel(
@@ -697,7 +697,7 @@ pub fn do_load(
     let (offset, checksum) = do_read_checksum(reader, offset, checksum);
 
     disk_anim.disk_flop_anim(rdr, iw_config);
-    *level_state = setup_game_level(game_state, assets).expect("set up game level"); // TODO replace expect with Quit()
+    *level_state = setup_game_level(game_state, assets, false).expect("set up game level"); // TODO replace expect with Quit()
 
     // load tilemap
     for x in 0..MAP_SIZE {
@@ -910,7 +910,7 @@ fn read_obj_type(reader: &mut DataReader) -> ObjType {
         reader.skip(OBJ_TYPE_LEN - 2);
         return null_obj_type();
     }
-    let tic_count = reader.read_u16() as u32;
+    let tic_count = reader.read_u16() as i32;
     let class = ClassType::try_from(reader.read_u16() as usize).expect("ClassType");
 
     let state_id = reader.read_u16();

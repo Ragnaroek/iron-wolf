@@ -68,11 +68,13 @@ impl Ticker {
     }
 
     // returns the count the next tic is based on
-    pub fn next_tics_time(&self) -> (Instant, u64) {
+    pub fn next_tics_time(&self, delta_tic: u64) -> (Instant, u64) {
         let count = self.get_count();
         (
             *self.ref_time.lock().unwrap()
-                + Duration::from_nanos(((count + 1) as f64 * TARGET_MILLIS * 1_000_000.0) as u64),
+                + Duration::from_nanos(
+                    ((count + delta_tic) as f64 * TARGET_MILLIS * 1_000_000.0) as u64,
+                ),
             count,
         )
     }
