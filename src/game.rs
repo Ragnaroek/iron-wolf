@@ -1050,16 +1050,48 @@ fn scan_info_plane(
                     );
                 }
                 224 => {
-                    spawn_ghosts(map_data, EnemyType::Blinky, game_state, x, y);
+                    spawn_ghosts(
+                        map_data,
+                        EnemyType::Blinky,
+                        &mut actors,
+                        actor_at,
+                        game_state,
+                        x,
+                        y,
+                    );
                 }
                 225 => {
-                    spawn_ghosts(map_data, EnemyType::Clyde, game_state, x, y);
+                    spawn_ghosts(
+                        map_data,
+                        EnemyType::Clyde,
+                        &mut actors,
+                        actor_at,
+                        game_state,
+                        x,
+                        y,
+                    );
                 }
                 226 => {
-                    spawn_ghosts(map_data, EnemyType::Pinky, game_state, x, y);
+                    spawn_ghosts(
+                        map_data,
+                        EnemyType::Pinky,
+                        &mut actors,
+                        actor_at,
+                        game_state,
+                        x,
+                        y,
+                    );
                 }
                 227 => {
-                    spawn_ghosts(map_data, EnemyType::Inky, game_state, x, y);
+                    spawn_ghosts(
+                        map_data,
+                        EnemyType::Inky,
+                        &mut actors,
+                        actor_at,
+                        game_state,
+                        x,
+                        y,
+                    );
                 }
                 // nothing on 228 to 233
                 234..=237 => {

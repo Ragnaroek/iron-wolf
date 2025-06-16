@@ -2853,6 +2853,8 @@ pub fn spawn_patrol(
 pub fn spawn_ghosts(
     map_data: &MapSegs,
     which: EnemyType,
+    actors: &mut Actors,
+    actor_at: &mut Vec<Vec<At>>,
     game_state: &mut GameState,
     x_tile: usize,
     y_tile: usize,
@@ -2877,6 +2879,8 @@ pub fn spawn_ghosts(
     if !game_state.loaded_game {
         game_state.kill_total += 1;
     }
+
+    spawn(actors, actor_at, ghost);
 }
 
 // spawns the obj into the map. At map load time
