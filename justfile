@@ -1,21 +1,21 @@
-## SDL
+# SDL
 build-sdl:
-	cargo build --release --features sdl
+    cargo build --release --features sdl
 
 build-sdl-tracing:
-	cargo build --release --features sdl,tracing
+    cargo build --release --features sdl,tracing
 
 run-sdl:
-	RUST_BACKTRACE=1 cargo run --features sdl -- -goobers
+    RUST_BACKTRACE=1 cargo run --features sdl -- -goobers
 
 run-sdl-shareware:
-	RUST_BACKTRACE=1 cargo run --features sdl -- -config ./shareware_config.toml
+    RUST_BACKTRACE=1 cargo run --features sdl -- -config ./shareware_config.toml
 
 run-sdl-tracing:
-		cargo run --features sdl,tracing
+    cargo run --features sdl,tracing
 
 run-sdl-profile:
-	sudo -E cargo flamegraph --features sdl --profile=dev -- run
+    sudo -E cargo flamegraph --features sdl --profile=dev -- run
 
 ## Web
 build-web:
@@ -28,7 +28,6 @@ coverage-sdl:
 	cargo tarpaulin --features sdl --ignore-tests --out Lcov
 
 ## Testing
-
 test-sdl:
 	RUST_BACKTRACE=1 cargo test --features sdl
 
