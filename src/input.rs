@@ -164,7 +164,7 @@ impl Input {
         input.keyboard.last_ascii
     }
 
-    fn im_lock(&self) -> MutexGuard<InputMonitoring> {
+    fn im_lock(&self) -> MutexGuard<'_, InputMonitoring> {
         self.input_monitoring
             .as_ref()
             .expect("player input")

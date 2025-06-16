@@ -898,7 +898,7 @@ type Action = fn(
     rc_consts: &RayCastConsts,
 );
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, Debug)]
 pub struct StateType {
     pub id: u16, // non-changing ID of this state, will be used in save games
     pub rotate: usize,
@@ -907,6 +907,12 @@ pub struct StateType {
     pub think: Option<Think>,
     pub action: Option<Action>,
     pub next: Option<&'static StateType>,
+}
+
+impl PartialEq for StateType {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 derive_from! {
