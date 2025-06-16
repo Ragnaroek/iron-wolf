@@ -3,7 +3,9 @@ use std::vec;
 use vga::VGA;
 
 use crate::act1::{spawn_door, spawn_static};
-use crate::act2::{spawn_boss, spawn_dead_guard, spawn_patrol, spawn_schabbs, spawn_stand};
+use crate::act2::{
+    spawn_boss, spawn_dead_guard, spawn_ghosts, spawn_patrol, spawn_schabbs, spawn_stand,
+};
 use crate::agent::{
     DUMMY_PLAYER, draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_score,
     draw_weapon, spawn_player, thrust_player,
@@ -1048,16 +1050,16 @@ fn scan_info_plane(
                     );
                 }
                 224 => {
-                    todo!("ghost blinky");
+                    spawn_ghosts(map_data, EnemyType::Blinky, game_state, x, y);
                 }
                 225 => {
-                    todo!("ghost clyde");
+                    spawn_ghosts(map_data, EnemyType::Clyde, game_state, x, y);
                 }
                 226 => {
-                    todo!("ghost pinky");
+                    spawn_ghosts(map_data, EnemyType::Pinky, game_state, x, y);
                 }
                 227 => {
-                    todo!("ghost inky");
+                    spawn_ghosts(map_data, EnemyType::Inky, game_state, x, y);
                 }
                 // nothing on 228 to 233
                 234..=237 => {

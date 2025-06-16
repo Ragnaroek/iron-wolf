@@ -22,7 +22,6 @@ use crate::assets::Music;
 use crate::assets::{GAMEPAL, GraphicNum};
 use crate::config::WolfConfig;
 use crate::debug::debug_keys;
-use crate::def::FL_SHOOTABLE;
 use crate::def::{
     ANGLE_QUAD, ANGLES, ActiveType, Assets, At, Button, Control, ControlState, FINE_ANGLES,
     FL_NEVERMARK, FL_NONMARK, FOCAL_LENGTH, GLOBAL1, GameState, IWConfig, LevelState, NUM_BUTTONS,

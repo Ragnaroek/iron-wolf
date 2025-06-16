@@ -20,6 +20,7 @@ use crate::inter::write;
 use crate::map::MapSegs;
 use crate::play::{ProjectionConfig, draw_play_border, finish_palette_shifts};
 use crate::sd::{DigiMode, Sound};
+use crate::start::quit;
 use crate::state::{
     check_line, move_obj, new_state, select_chase_dir, select_dodge_dir, select_run_dir,
     sight_player, spawn_new_obj, try_walk,
@@ -371,6 +372,86 @@ pub static S_GRDDIE4: StateType = StateType {
 };
 
 // ghosts (1100)
+
+pub static S_BLINKYCHASE1: StateType = StateType {
+    id: 1200,
+    rotate: 0,
+    sprite: Some(Sprite::BlinkyW1),
+    tic_time: 10,
+    think: Some(t_ghosts),
+    action: None,
+    next: Some(&S_BLINKYCHASE2),
+};
+
+pub static S_BLINKYCHASE2: StateType = StateType {
+    id: 1201,
+    rotate: 0,
+    sprite: Some(Sprite::BlinkyW2),
+    tic_time: 10,
+    think: Some(t_ghosts),
+    action: None,
+    next: Some(&S_BLINKYCHASE1),
+};
+
+pub static S_INKYCHASE1: StateType = StateType {
+    id: 1202,
+    rotate: 0,
+    sprite: Some(Sprite::InkyW1),
+    tic_time: 10,
+    think: Some(t_ghosts),
+    action: None,
+    next: Some(&S_INKYCHASE2),
+};
+
+pub static S_INKYCHASE2: StateType = StateType {
+    id: 1203,
+    rotate: 0,
+    sprite: Some(Sprite::InkyW2),
+    tic_time: 10,
+    think: Some(t_ghosts),
+    action: None,
+    next: Some(&S_INKYCHASE1),
+};
+
+pub static S_PINKYCHASE1: StateType = StateType {
+    id: 1204,
+    rotate: 0,
+    sprite: Some(Sprite::PinkyW1),
+    tic_time: 10,
+    think: Some(t_ghosts),
+    action: None,
+    next: Some(&S_PINKYCHASE2),
+};
+
+pub static S_PINKYCHASE2: StateType = StateType {
+    id: 1205,
+    rotate: 0,
+    sprite: Some(Sprite::PinkyW2),
+    tic_time: 10,
+    think: Some(t_ghosts),
+    action: None,
+    next: Some(&S_PINKYCHASE1),
+};
+
+pub static S_CLYDECHASE1: StateType = StateType {
+    id: 1206,
+    rotate: 0,
+    sprite: Some(Sprite::ClydeW1),
+    tic_time: 10,
+    think: Some(t_ghosts),
+    action: None,
+    next: Some(&S_CLYDECHASE2),
+};
+
+pub static S_CLYDECHASE2: StateType = StateType {
+    id: 1207,
+    rotate: 0,
+    sprite: Some(Sprite::ClydeW2),
+    tic_time: 10,
+    think: Some(t_ghosts),
+    action: None,
+    next: Some(&S_CLYDECHASE1),
+};
 
 // TODO Impl ghosts
 
@@ -1797,7 +1878,7 @@ pub static S_BOOM3: StateType = StateType {
     next: None,
 };
 
-pub static STATES: [&'static StateType; 165] = [
+pub static STATES: [&'static StateType; 173] = [
     &S_PLAYER,
     &S_ATTACK,
     &S_GRDSTAND,
@@ -1822,6 +1903,14 @@ pub static STATES: [&'static StateType; 165] = [
     &S_GRDDIE2,
     &S_GRDDIE3,
     &S_GRDDIE4,
+    &S_BLINKYCHASE1,
+    &S_BLINKYCHASE2,
+    &S_INKYCHASE1,
+    &S_INKYCHASE2,
+    &S_PINKYCHASE1,
+    &S_PINKYCHASE2,
+    &S_CLYDECHASE1,
+    &S_CLYDECHASE2,
     &S_DOGPATH1,
     &S_DOGPATH1S,
     &S_DOGPATH2,
@@ -2386,6 +2475,54 @@ fn t_chase(
     }
 }
 
+fn t_ghosts(
+    k: ObjKey,
+    tics: u64,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    _: &mut Sound,
+    rdr: &VGARenderer,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    _: &Assets,
+    _: &RayCastConsts,
+) {
+    let (player_tile_x, player_tile_y) = {
+        let player = level_state.player();
+        (player.tilex, player.tiley)
+    };
+
+    if level_state.obj(k).dir == DirType::NoDir {
+        select_chase_dir(k, level_state, player_tile_x, player_tile_y);
+        if level_state.obj(k).dir == DirType::NoDir {
+            return; // object is blocked in
+        }
+    }
+
+    let mut mov = level_state.obj(k).speed * tics as i32;
+    while mov != 0 {
+        if mov < level_state.obj(k).distance {
+            move_obj(k, level_state, game_state, rdr, mov, tics);
+            break;
+        }
+
+        // reached goal tile, so select another one
+
+        // fix position to account for round off during moving
+        level_state.update_obj(k, |obj| {
+            obj.x = ((obj.tilex as i32) << TILESHIFT) + TILEGLOBAL / 2;
+            obj.y = ((obj.tiley as i32) << TILESHIFT) + TILEGLOBAL / 2;
+        });
+
+        mov -= level_state.obj(k).distance;
+
+        select_chase_dir(k, level_state, player_tile_x, player_tile_y);
+        if level_state.obj(k).dir == DirType::NoDir {
+            return; // object is blocked in
+        }
+    }
+}
+
 fn t_schabb(
     k: ObjKey,
     tics: u64,
@@ -2711,6 +2848,35 @@ pub fn spawn_patrol(
         _ => { /* do nothing */ }
     }
     spawn(actors, actor_at, patrol);
+}
+
+pub fn spawn_ghosts(
+    map_data: &MapSegs,
+    which: EnemyType,
+    game_state: &mut GameState,
+    x_tile: usize,
+    y_tile: usize,
+) {
+    let mut ghost = match which {
+        EnemyType::Blinky => {
+            spawn_new_obj(map_data, x_tile, y_tile, &S_BLINKYCHASE1, ClassType::Ghost)
+        }
+        EnemyType::Clyde => {
+            spawn_new_obj(map_data, x_tile, y_tile, &S_CLYDECHASE1, ClassType::Ghost)
+        }
+        EnemyType::Pinky => {
+            spawn_new_obj(map_data, x_tile, y_tile, &S_PINKYCHASE1, ClassType::Ghost)
+        }
+        EnemyType::Inky => spawn_new_obj(map_data, x_tile, y_tile, &S_INKYCHASE1, ClassType::Ghost),
+        _ => quit(Some("not a ghost")),
+    };
+
+    ghost.speed = SPD_DOG;
+    ghost.dir = DirType::East;
+    ghost.flags |= FL_AMBUSH;
+    if !game_state.loaded_game {
+        game_state.kill_total += 1;
+    }
 }
 
 // spawns the obj into the map. At map load time
