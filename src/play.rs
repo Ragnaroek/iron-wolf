@@ -15,6 +15,7 @@ use vga::VGA;
 use vga::input::NumCode;
 
 use crate::act1::{move_doors, move_push_walls};
+use crate::agent::draw_fps;
 use crate::agent::{
     draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_score, draw_weapon,
 };
@@ -201,6 +202,12 @@ impl ProjectionConfig {
     }
 }
 
+#[derive(Clone)]
+struct Fps {
+    real: f32,
+    unbounded: f32,
+}
+
 pub fn new_control_state() -> ControlState {
     ControlState {
         control: Control { x: 0, y: 0 },
@@ -327,10 +334,24 @@ pub async fn play_loop(
     input.clear_keys_down();
     clear_palette_shifts(game_state);
 
+    let mut fps_buffer_ptr = 0;
+    let mut fps_buffer: Vec<Option<Fps>> = if iw_config.options.show_frame_rate {
+        vec![None; 70]
+    } else {
+        vec![None; 0]
+    };
+
     let mut prj = prj_param;
     let mut rc = rc_param;
     let mut _frame_id: u64 = 0;
     while game_state.play_state == PlayState::StillPlaying {
+        let r_start_frame = if iw_config.options.show_frame_rate {
+            draw_play_border(rdr, prj.view_width, prj.view_height); //clear border, as the fps count is written on the border
+            Some(Instant::now())
+        } else {
+            None
+        };
+
         #[cfg(feature = "tracing")]
         let span = info_span!("frame", id = _frame_id);
         _frame_id += 1;
@@ -345,6 +366,12 @@ pub async fn play_loop(
         let want_frame_start = next_frame_start + (TARGET_FRAME_DURATION / 2); // target mid frame time
         let wait_time = want_frame_start.saturating_duration_since(Instant::now());
         sleep(wait_time).await;
+
+        let u_start_frame = if iw_config.options.show_frame_rate {
+            Some(Instant::now())
+        } else {
+            None
+        };
 
         let mut tics = ticker.get_count().saturating_sub(curr_tics); // in the best case next_tics many tics, saturating in case the count is reset/non-monotonic
         if tics == 0 {
@@ -443,6 +470,16 @@ pub async fn play_loop(
         }
 
         game_state.time_count += tics;
+
+        if iw_config.options.show_frame_rate {
+            fps_buffer_ptr = update_fps(
+                rdr,
+                r_start_frame.expect("r_start_frame"),
+                u_start_frame.expect("u_start_frame"),
+                &mut fps_buffer,
+                fps_buffer_ptr,
+            );
+        }
 
         // TODO SD_Poll() ?
         // TODO UpdateSoundLoc
@@ -647,6 +684,44 @@ fn do_actor(
         return;
     }
     level_state.actor_at[tilex][tiley] = At::Obj(k);
+}
+
+fn update_fps(
+    rdr: &VGARenderer,
+    r_start_frame: Instant,
+    u_start_frame: Instant,
+    fps_buffer: &mut Vec<Option<Fps>>,
+    fps_buffer_ptr: usize,
+) -> usize {
+    let r_fps = r_start_frame.elapsed().as_secs_f32();
+    let u_fps = u_start_frame.elapsed().as_secs_f32();
+
+    fps_buffer[fps_buffer_ptr] = Some(Fps {
+        real: r_fps,
+        unbounded: u_fps,
+    });
+    let mut next_ptr = fps_buffer_ptr + 1;
+    if next_ptr >= fps_buffer.len() {
+        next_ptr = 0;
+    }
+
+    let (r_avg, u_avg) = avg_fps(fps_buffer);
+    let fps_str = format!("{:.0}/{:.0}", 1.0 / r_avg, 1.0 / u_avg);
+    draw_fps(rdr, &fps_str);
+    next_ptr
+}
+
+fn avg_fps(fps_buffer: &Vec<Option<Fps>>) -> (f32, f32) {
+    let mut sum_r = 0.0;
+    let mut sum_u = 0.0;
+    for opt_fps in fps_buffer {
+        if let Some(fps) = opt_fps {
+            sum_r += fps.real;
+            sum_u += fps.unbounded;
+        }
+    }
+    let l = fps_buffer.len() as f32;
+    (sum_r / l, sum_u / l)
 }
 
 pub async fn draw_play_screen(state: &GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {

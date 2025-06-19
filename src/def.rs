@@ -841,6 +841,8 @@ pub struct IWConfigOptions {
     pub enable_debug: bool,
     #[serde(default = "true_default")]
     pub fullscreen: bool,
+    #[serde(default)]
+    pub show_frame_rate: bool,
 }
 
 fn true_default() -> bool {

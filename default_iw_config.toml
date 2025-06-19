@@ -37,6 +37,9 @@ enable_debug = false
 # in-game with ALT+F.
 fullscreen = true
 
+# enable frame rate counter display in-game
+show_frame_rate = false
+
 [mods]
 # nothing yet, planned:
 # - brutal mod

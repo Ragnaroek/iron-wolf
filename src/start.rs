@@ -140,7 +140,6 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     });
 
     let options: vga::Options = vga::Options {
-        show_frame_rate: false,
         input_monitoring: Some(input_monitoring),
         ..Default::default()
     };

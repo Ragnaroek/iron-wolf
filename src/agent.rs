@@ -17,6 +17,7 @@ use crate::map;
 use crate::play::{ProjectionConfig, start_bonus_flash, start_damage_flash};
 use crate::sd::Sound;
 use crate::state::{check_line, damage_actor};
+use crate::us1::draw_string;
 use crate::user::rnd_t;
 use crate::vga_render::VGARenderer;
 
@@ -1180,6 +1181,17 @@ pub fn draw_face(state: &GameState, rdr: &VGARenderer) {
         // TODO draw mutant face if last attack was needleobj
         status_draw_pic(rdr, 17, 4, GraphicNum::FACE8APIC)
     }
+}
+
+pub fn draw_fps(rdr: &VGARenderer, fps_str: &str) {
+    let font = &rdr.fonts[1];
+
+    let offset_prev = rdr.buffer_offset();
+    for i in 0..3 {
+        rdr.set_buffer_offset(SCREENLOC[i]);
+        draw_string(rdr, font, fps_str, 0, 0, 5);
+    }
+    rdr.set_buffer_offset(offset_prev);
 }
 
 /// Calls draw face if time to change
