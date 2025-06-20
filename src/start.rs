@@ -297,6 +297,8 @@ async fn demo_loop(
             rc = rc_demo;
             prj = prj_demo;
             last_demo = (last_demo + 1) % 4;
+
+            rdr.set_buffer_offset(rdr.active_buffer());
         }
 
         rdr.fade_out().await;
