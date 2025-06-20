@@ -469,7 +469,12 @@ pub async fn play_loop(
             update_status_bar(game_state, rdr);
         }
 
-        game_state.time_count += tics;
+        if input.mode == InputMode::DemoPlayback {
+            if input.check_ack() {
+                input.clear_keys_down();
+                game_state.play_state = PlayState::Abort;
+            }
+        }
 
         if iw_config.options.show_frame_rate {
             fps_buffer_ptr = update_fps(
@@ -480,6 +485,8 @@ pub async fn play_loop(
                 fps_buffer_ptr,
             );
         }
+
+        game_state.time_count += tics;
 
         // TODO SD_Poll() ?
         // TODO UpdateSoundLoc

@@ -38,7 +38,7 @@ pub enum InputMode {
 
 pub struct Input {
     time: TimeCount,
-    input_monitoring: Option<Arc<Mutex<input::InputMonitoring>>>,
+    pub input_monitoring: Arc<Mutex<input::InputMonitoring>>,
     pub demo_buffer: Option<Vec<u8>>,
     pub demo_ptr: usize,
     pub mode: InputMode,
@@ -65,7 +65,7 @@ impl Input {
             time,
             mouse_enabled: true,
             joystick_enabled: false,
-            input_monitoring: Some(input_monitoring),
+            input_monitoring,
             demo_buffer: None,
             demo_ptr: 0,
             mode: InputMode::Player,
@@ -75,12 +75,16 @@ impl Input {
         }
     }
 
-    pub fn init_demo_playback(time: TimeCount, demo_buffer: Vec<u8>) -> Input {
+    pub fn init_demo_playback(
+        time: TimeCount,
+        input_monitoring: Arc<Mutex<input::InputMonitoring>>,
+        demo_buffer: Vec<u8>,
+    ) -> Input {
         Input {
             time,
-            mouse_enabled: true,
+            mouse_enabled: false,
             joystick_enabled: false,
-            input_monitoring: None,
+            input_monitoring,
             demo_buffer: Some(demo_buffer),
             demo_ptr: 0,
             mode: InputMode::DemoPlayback,
@@ -165,11 +169,7 @@ impl Input {
     }
 
     fn im_lock(&self) -> MutexGuard<'_, InputMonitoring> {
-        self.input_monitoring
-            .as_ref()
-            .expect("player input")
-            .lock()
-            .expect("input monitor lock")
+        self.input_monitoring.lock().expect("input monitor lock")
     }
 }
 

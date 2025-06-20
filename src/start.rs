@@ -278,7 +278,7 @@ async fn demo_loop(
             }
 
             // demo
-            let (prj_demo, rc_demo) = play_demo(
+            let (prj_demo, rc_demo, abort) = play_demo(
                 wolf_config,
                 iw_config,
                 &ticker,
@@ -288,6 +288,7 @@ async fn demo_loop(
                 sound,
                 rc,
                 rdr,
+                input,
                 prj,
                 assets,
                 loader,
@@ -299,6 +300,10 @@ async fn demo_loop(
             last_demo = (last_demo + 1) % 4;
 
             rdr.set_buffer_offset(rdr.active_buffer());
+
+            if abort {
+                break;
+            }
         }
 
         rdr.fade_out().await;

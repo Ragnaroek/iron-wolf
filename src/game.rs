@@ -1181,11 +1181,12 @@ pub async fn play_demo(
     sound: &mut Sound,
     rc: RayCast,
     rdr: &VGARenderer,
+    input: &mut Input,
     prj: ProjectionConfig,
     assets: &Assets,
     loader: &dyn Loader,
     demo_num: usize,
-) -> (ProjectionConfig, RayCast) {
+) -> (ProjectionConfig, RayCast, bool) {
     let demo_data = load_demo(loader, demo_graphic_num(demo_num)).expect("demo load");
     let mut demo_reader = new_data_reader(&demo_data);
     let mut game_state = new_game_state();
@@ -1195,6 +1196,7 @@ pub async fn play_demo(
 
     let mut input = Input::init_demo_playback(
         ticker.time_count.clone(),
+        input.input_monitoring.clone(),
         demo_reader.unread_bytes().to_vec(),
     );
 
@@ -1209,7 +1211,7 @@ pub async fn play_demo(
 
     game_state.fizzle_in = true;
     let mut control_state = new_control_state();
-    let r = play_loop(
+    let (prj, rc) = play_loop(
         wolf_config,
         iw_config,
         ticker,
@@ -1228,7 +1230,7 @@ pub async fn play_demo(
         loader,
     )
     .await;
-    r
+    (prj, rc, game_state.play_state == PlayState::Abort)
 }
 
 fn demo_graphic_num(demo_num: usize) -> GraphicNum {
