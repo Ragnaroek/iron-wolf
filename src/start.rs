@@ -36,7 +36,7 @@ use crate::play::{self, DEMO_TICS, ProjectionConfig, draw_play_border};
 use crate::sd::Sound;
 use crate::time;
 use crate::us1::c_print;
-use crate::util::{DataReader, DataWriter, new_data_reader_with_offset, new_data_writer};
+use crate::util::{DataReader, DataWriter, new_data_writer};
 use crate::vga_render::{self, VGARenderer};
 use crate::vl;
 use crate::{config, sd};
@@ -734,7 +734,7 @@ pub fn do_load(
 ) -> bool {
     let mut disk_anim = new_disk_anim(x, y);
     let data = loader.load_save_game(which).expect("save game loaded");
-    let reader = &mut new_data_reader_with_offset(&data, SAVEGAME_NAME_LEN); //first 32 bytes are savegame name
+    let reader = &mut DataReader::new_with_offset(&data, SAVEGAME_NAME_LEN); //first 32 bytes are savegame name
 
     // reconstruct GameState
     disk_anim.disk_flop_anim(rdr, iw_config);

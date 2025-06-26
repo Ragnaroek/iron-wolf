@@ -30,7 +30,7 @@ use crate::play::{
 use crate::sd::Sound;
 use crate::time::Ticker;
 use crate::user::{HighScore, init_rnd_t};
-use crate::util::new_data_reader;
+use crate::util::DataReader;
 use crate::vga_render::{FizzleFadeAbortable, VGARenderer};
 use crate::vh::vw_fade_out;
 use crate::{map, time};
@@ -1191,7 +1191,7 @@ pub async fn play_demo(
     benchmark: bool,
 ) -> (ProjectionConfig, RayCast, bool, Option<BenchmarkResult>) {
     let demo_data = load_demo(loader, demo_graphic_num(demo_num)).expect("demo load");
-    let mut demo_reader = new_data_reader(&demo_data);
+    let mut demo_reader = DataReader::new(&demo_data);
     let mut game_state = new_game_state();
     game_state.map_on = demo_reader.read_u8() as usize;
     game_state.difficulty = Difficulty::Hard;

@@ -3,6 +3,7 @@
 mod config_test;
 
 use crate::def::{Button, NUM_BUTTONS, NUM_MOUSE_BUTTONS};
+use crate::util::DataReader;
 use crate::{assets::WolfFile, loader::Loader};
 use std::env;
 use std::fs;
@@ -176,7 +177,7 @@ fn button_to_u16(button: Button) -> u16 {
 
 pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
     let data = loader.load_wolf_file(WolfFile::ConfigData);
-    let mut reader = util::new_data_reader(&data);
+    let mut reader = DataReader::new(&data);
 
     let mut high_scores = Vec::with_capacity(MAX_SCORES);
 

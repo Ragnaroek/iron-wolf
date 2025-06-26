@@ -5,10 +5,11 @@ use std::str;
 
 use opl::{AdlSound, Instrument};
 
+use crate::assets::WolfVariant;
 use crate::assets::{DIGI_MAP, SoundName};
 use crate::def::DigiSound;
 use crate::sd::{DigiInfo, Sound};
-use crate::{assets::WolfVariant, util};
+use crate::util::DataReader;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GamedataHeader {
@@ -54,7 +55,7 @@ fn empty_sprite_data() -> SpriteData {
 }
 
 pub fn load_gamedata_headers(data: &Vec<u8>) -> Result<GamedataHeaders, String> {
-    let mut reader = util::new_data_reader(&data);
+    let mut reader = DataReader::new(&data);
     let num_chunks = reader.read_u16();
     let sprite_start = reader.read_u16();
     let sound_start = reader.read_u16();
@@ -126,7 +127,7 @@ pub fn load_sprite<M: Read + Seek>(
         return Err("not enough bytes for sprite in file".to_string());
     }
 
-    let mut reader = util::new_data_reader(&buffer);
+    let mut reader = DataReader::new(&buffer);
     let left_pix = reader.read_u16() as usize;
     let right_pix = reader.read_u16() as usize;
 

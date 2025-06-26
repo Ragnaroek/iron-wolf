@@ -5,7 +5,7 @@ mod map_test;
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Seek, SeekFrom};
 
-use super::util;
+use crate::util::DataReader;
 
 pub const MAP_PLANES: usize = 2;
 pub const NUM_MAPS: usize = 60;
@@ -16,7 +16,7 @@ pub fn rlew_expand(source: &[u8], len: usize, rlew_tag: u16) -> Vec<u16> {
     let trail = source.len() % 2 != 0;
     let loop_len = if trail { len - 1 } else { len };
 
-    let mut reader = util::new_data_reader(source);
+    let mut reader = DataReader::new(source);
     loop {
         let value = reader.read_u16();
         if value != rlew_tag {
@@ -158,7 +158,7 @@ pub fn load_map<M: Seek + Read>(
             .expect("map seek failed");
         map_data.read_exact(&mut buf).expect("map read failed");
 
-        let mut reader = util::new_data_reader(&buf);
+        let mut reader = DataReader::new(&buf);
         let expanded_len = reader.read_u16();
 
         let remaining_bytes = reader.unread_bytes();
@@ -184,7 +184,7 @@ pub fn load_map_headers(
             continue;
         }
 
-        let mut reader = util::new_data_reader_with_offset(&bytes, pos as usize);
+        let mut reader = DataReader::new_with_offset(&bytes, pos as usize);
 
         let mut plane_start = [0; 3];
         for j in 0..3 {
@@ -213,7 +213,7 @@ pub fn load_map_headers(
 }
 
 pub fn load_map_offsets(bytes: &Vec<u8>) -> Result<MapFileType, String> {
-    let mut reader = util::new_data_reader(&bytes);
+    let mut reader = DataReader::new(&bytes);
     let rlew_tag = reader.read_u16();
 
     let mut header_offsets = Vec::with_capacity(100);

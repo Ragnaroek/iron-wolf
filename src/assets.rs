@@ -10,7 +10,7 @@ use crate::loader::Loader;
 use crate::map::{MapFileType, MapSegs, MapType, load_map, load_map_headers, load_map_offsets};
 use crate::patch::{PatchConfig, graphic_patch};
 use crate::sd::Sound;
-use crate::util::new_data_reader;
+use crate::util::DataReader;
 
 pub static GAMEPAL: &'static [u8] = include_bytes!("../assets/gamepal.bin");
 pub static SIGNON: &'static [u8] = include_bytes!("../assets/signon.bin");
@@ -1233,7 +1233,7 @@ fn load_font(
 fn expand_font(chunk: usize, compressed: &[u8], grhuffman: &Vec<Huffnode>) -> Font {
     let expanded = expand_chunk(chunk, compressed, grhuffman);
 
-    let mut reader = new_data_reader(&expanded);
+    let mut reader = DataReader::new(&expanded);
     let height = reader.read_u16();
 
     let mut location = [0; 256];

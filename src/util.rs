@@ -5,12 +5,14 @@ pub struct DataReader<'a> {
     offset: usize,
 }
 
-pub fn new_data_reader(data: &[u8]) -> DataReader<'_> {
-    new_data_reader_with_offset(data, 0)
-}
+impl DataReader<'_> {
+    pub fn new(data: &[u8]) -> DataReader<'_> {
+        DataReader::new_with_offset(data, 0)
+    }
 
-pub fn new_data_reader_with_offset(data: &[u8], offset: usize) -> DataReader<'_> {
-    DataReader { data, offset }
+    pub fn new_with_offset(data: &[u8], offset: usize) -> DataReader<'_> {
+        DataReader { data, offset }
+    }
 }
 
 impl DataReader<'_> {
