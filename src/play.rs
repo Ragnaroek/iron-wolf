@@ -2,6 +2,7 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
+use std::time::Duration;
 use std::time::Instant;
 
 use tokio::time::sleep;
@@ -23,6 +24,7 @@ use crate::assets::Music;
 use crate::assets::{GAMEPAL, GraphicNum};
 use crate::config::WolfConfig;
 use crate::debug::debug_keys;
+use crate::def::BenchmarkResult;
 use crate::def::{
     ANGLE_QUAD, ANGLES, ActiveType, Assets, At, Button, Control, ControlState, FINE_ANGLES,
     FL_NEVERMARK, FL_NONMARK, FOCAL_LENGTH, GLOBAL1, GameState, IWConfig, LevelState, NUM_BUTTONS,
@@ -84,7 +86,7 @@ const NUM_WHITE_SHIFTS: usize = 3;
 const WHITE_STEPS: i32 = 20;
 const WHITE_TICS: i32 = 6;
 
-const DEMO_TICS: u64 = 4;
+pub const DEMO_TICS: u64 = 4;
 
 pub static BUTTON_JOY: [Button; 4] = [Button::Attack, Button::Strafe, Button::Use, Button::Run];
 
@@ -320,7 +322,8 @@ pub async fn play_loop(
     prj_param: ProjectionConfig,
     assets: &Assets,
     loader: &dyn Loader,
-) -> (ProjectionConfig, RayCast) {
+    benchmark: bool,
+) -> (ProjectionConfig, RayCast, Option<BenchmarkResult>) {
     let shifts = init_colour_shifts();
 
     game_state.play_state = PlayState::StillPlaying;
@@ -340,6 +343,18 @@ pub async fn play_loop(
     } else {
         vec![None; 0]
     };
+
+    let mut benchmark_result = if benchmark {
+        Some(BenchmarkResult {
+            total: Duration::ZERO,
+            real: Duration::ZERO,
+            unbounded: Duration::ZERO,
+        })
+    } else {
+        None
+    };
+
+    let play_loop_start = Instant::now();
 
     let mut prj = prj_param;
     let mut rc = rc_param;
@@ -485,6 +500,11 @@ pub async fn play_loop(
                 fps_buffer_ptr,
             );
         }
+        if benchmark {
+            let b = benchmark_result.as_mut().unwrap();
+            b.real += r_start_frame.expect("r_start_frame").elapsed();
+            b.unbounded += u_start_frame.expect("u_start_frame").elapsed();
+        }
 
         game_state.time_count += tics;
 
@@ -497,7 +517,12 @@ pub async fn play_loop(
         }
         rdr.set_buffer_offset(offset_prev);
     }
-    (prj, rc)
+
+    if benchmark {
+        benchmark_result.as_mut().unwrap().total = play_loop_start.elapsed();
+    }
+
+    (prj, rc, benchmark_result)
 }
 
 fn update_game_state(
@@ -700,12 +725,12 @@ fn update_fps(
     fps_buffer: &mut Vec<Option<Fps>>,
     fps_buffer_ptr: usize,
 ) -> usize {
-    let r_fps = r_start_frame.elapsed().as_secs_f32();
-    let u_fps = u_start_frame.elapsed().as_secs_f32();
+    let r_elapsed = r_start_frame.elapsed().as_secs_f32();
+    let u_elapsed = u_start_frame.elapsed().as_secs_f32();
 
     fps_buffer[fps_buffer_ptr] = Some(Fps {
-        real: r_fps,
-        unbounded: u_fps,
+        real: r_elapsed,
+        unbounded: u_elapsed,
     });
     let mut next_ptr = fps_buffer_ptr + 1;
     if next_ptr >= fps_buffer.len() {
@@ -713,7 +738,11 @@ fn update_fps(
     }
 
     let (r_avg, u_avg) = avg_fps(fps_buffer);
-    let fps_str = format!("{:.0}/{:.0}", 1.0 / r_avg, 1.0 / u_avg);
+    let fps_str = format!(
+        "{:.0}/{:.0}",
+        (1.0 / r_avg) * DEMO_TICS as f32,
+        (1.0 / u_avg)
+    );
     draw_fps(rdr, &fps_str);
     next_ptr
 }
@@ -721,13 +750,14 @@ fn update_fps(
 fn avg_fps(fps_buffer: &Vec<Option<Fps>>) -> (f32, f32) {
     let mut sum_r = 0.0;
     let mut sum_u = 0.0;
+    let mut l = 0.0;
     for opt_fps in fps_buffer {
         if let Some(fps) = opt_fps {
             sum_r += fps.real;
             sum_u += fps.unbounded;
+            l += 1.0;
         }
     }
-    let l = fps_buffer.len() as f32;
     (sum_r / l, sum_u / l)
 }
 

@@ -13,9 +13,10 @@ use crate::agent::{
 use crate::assets::{GraphicNum, SoundName, load_demo, load_map_from_assets};
 use crate::config::WolfConfig;
 use crate::def::{
-    AMBUSH_TILE, ANGLES, Actors, Assets, At, ControlState, Difficulty, DoorLock, EnemyType,
-    GameState, IWConfig, Level, LevelState, MAP_SIZE, MAX_ACTORS, MAX_DOORS, MAX_STATS, NUM_AREAS,
-    ObjKey, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState, new_game_state,
+    AMBUSH_TILE, ANGLES, Actors, Assets, At, BenchmarkResult, ControlState, Difficulty, DoorLock,
+    EnemyType, GameState, IWConfig, Level, LevelState, MAP_SIZE, MAX_ACTORS, MAX_DOORS, MAX_STATS,
+    NUM_AREAS, ObjKey, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState,
+    new_game_state,
 };
 use crate::draw::{RayCast, RayCastConsts, init_ray_cast_consts, three_d_refresh};
 use crate::input::{Input, InputMode};
@@ -108,7 +109,7 @@ pub async fn game_loop(
 
         rdr.fade_in().await;
 
-        let (prj_play, rc_play) = play_loop(
+        let (prj_play, rc_play, _) = play_loop(
             wolf_config,
             iw_config,
             ticker,
@@ -125,6 +126,7 @@ pub async fn game_loop(
             prj,
             assets,
             loader,
+            false,
         )
         .await;
         prj = prj_play;
@@ -1186,7 +1188,8 @@ pub async fn play_demo(
     assets: &Assets,
     loader: &dyn Loader,
     demo_num: usize,
-) -> (ProjectionConfig, RayCast, bool) {
+    benchmark: bool,
+) -> (ProjectionConfig, RayCast, bool, Option<BenchmarkResult>) {
     let demo_data = load_demo(loader, demo_graphic_num(demo_num)).expect("demo load");
     let mut demo_reader = new_data_reader(&demo_data);
     let mut game_state = new_game_state();
@@ -1211,7 +1214,7 @@ pub async fn play_demo(
 
     game_state.fizzle_in = true;
     let mut control_state = new_control_state();
-    let (prj, rc) = play_loop(
+    let (prj, rc, benchmark_result) = play_loop(
         wolf_config,
         iw_config,
         ticker,
@@ -1228,9 +1231,15 @@ pub async fn play_demo(
         prj,
         assets,
         loader,
+        benchmark,
     )
     .await;
-    (prj, rc, game_state.play_state == PlayState::Abort)
+    (
+        prj,
+        rc,
+        game_state.play_state == PlayState::Abort,
+        benchmark_result,
+    )
 }
 
 fn demo_graphic_num(demo_num: usize) -> GraphicNum {

@@ -16,6 +16,7 @@ use crate::vga_render::{PAGE_1_START, PAGE_2_START, PAGE_3_START, VGARenderer};
 use opl::AdlSound;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use serde::Deserialize;
 
@@ -111,6 +112,12 @@ macro_rules! derive_from {
     }
 }
 pub use derive_from;
+
+pub struct BenchmarkResult {
+    pub total: Duration,
+    pub real: Duration,
+    pub unbounded: Duration,
+}
 
 pub struct DigiSound {
     pub chunk: Box<[u8]>,

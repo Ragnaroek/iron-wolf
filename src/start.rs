@@ -15,7 +15,7 @@ use vga::{SCReg, VGABuilder};
 
 use crate::act2::get_state_by_id;
 use crate::assets::{self, GAMEPAL, GraphicNum, SIGNON};
-use crate::config::WolfConfig;
+use crate::config::{WolfConfig, check_timedemo_env};
 use crate::def::{
     ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction, DoorLock, DoorType,
     GameState, HEIGHT_RATIO, IWConfig, LevelRatio, LevelState, MAP_SIZE, MAX_DOORS, MAX_STATS,
@@ -32,7 +32,7 @@ use crate::menu::{
     MenuState, check_for_episodes, control_panel, initial_menu_state, intro_screen, intro_song,
     message,
 };
-use crate::play::{self, ProjectionConfig, draw_play_border};
+use crate::play::{self, DEMO_TICS, ProjectionConfig, draw_play_border};
 use crate::sd::Sound;
 use crate::time;
 use crate::us1::c_print;
@@ -119,24 +119,66 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     );
 
     rt_ref.spawn(async move {
-        let prj = init_game(&wolf_config, &vga_loop, &rdr, &input, &mut win_state).await;
-        let rc = init_ray_cast(prj.view_width);
-        demo_loop(
-            &mut wolf_config,
-            &iw_config,
-            ticker,
-            &vga_loop,
-            &mut sound,
-            rc,
-            &rdr,
-            &mut input,
-            prj,
-            &assets,
-            &mut win_state,
-            &mut menu_state,
-            &loader,
-        )
-        .await;
+        if let Some(which_demo) = check_timedemo_env() {
+            let prj = init_projection(&wolf_config, &vga_loop);
+            let rc = init_ray_cast(prj.view_width);
+            let (_, _, abort, benchmark_result) = play_demo(
+                &mut wolf_config,
+                &iw_config,
+                &ticker,
+                &mut win_state,
+                &mut menu_state,
+                &vga_loop,
+                &mut sound,
+                rc,
+                &rdr,
+                &mut input,
+                prj,
+                &assets,
+                &loader,
+                which_demo,
+                true,
+            )
+            .await;
+
+            if abort {
+                println!("timedemo aborted")
+            } else {
+                let b = benchmark_result.expect("benchmark result");
+                let r_fps = (b.real.as_secs_f32() / b.total.as_secs_f32()) * 70.0;
+
+                let num_frames = b.total.as_secs_f32() * 70.0;
+                let avg_frame = (b.unbounded.as_secs_f32() / num_frames) * DEMO_TICS as f32;
+                let u_fps = 1.0 / avg_frame;
+                println!("timedemo, total time: {:.2}s", b.total.as_secs_f32());
+                println!(
+                    "\treal time: {:.2}s, unbounded time: {:.2}s",
+                    b.real.as_secs_f32(),
+                    b.unbounded.as_secs_f32()
+                );
+                println!("\t{:.2} real fps, {:.2} unbounded fps", r_fps, u_fps);
+                exit(0);
+            }
+        } else {
+            let prj = init_game(&wolf_config, &vga_loop, &rdr, &input, &mut win_state).await;
+            let rc = init_ray_cast(prj.view_width);
+            demo_loop(
+                &mut wolf_config,
+                &iw_config,
+                ticker,
+                &vga_loop,
+                &mut sound,
+                rc,
+                &rdr,
+                &mut input,
+                prj,
+                &assets,
+                &mut win_state,
+                &mut menu_state,
+                &loader,
+            )
+            .await;
+        }
     });
 
     let options: vga::Options = vga::Options {
@@ -164,6 +206,11 @@ pub fn initial_window_state() -> WindowState {
     }
 }
 
+fn init_projection(wolf_config: &WolfConfig, vga: &vga::VGA) -> ProjectionConfig {
+    vl::set_palette(vga, GAMEPAL);
+    new_view_size(wolf_config.viewsize)
+}
+
 async fn init_game(
     wolf_config: &WolfConfig,
     vga: &vga::VGA,
@@ -171,13 +218,9 @@ async fn init_game(
     input: &Input,
     win_state: &mut WindowState,
 ) -> ProjectionConfig {
-    vl::set_palette(vga, GAMEPAL);
+    let prj = init_projection(wolf_config, vga);
     signon_screen(vga);
-
     intro_screen(rdr);
-
-    let prj = new_view_size(wolf_config.viewsize);
-
     // TODO InitRedShifts
     finish_signon(vga, rdr, input, win_state).await;
     prj
@@ -278,7 +321,7 @@ async fn demo_loop(
             }
 
             // demo
-            let (prj_demo, rc_demo, abort) = play_demo(
+            let (prj_demo, rc_demo, abort, _) = play_demo(
                 wolf_config,
                 iw_config,
                 &ticker,
@@ -293,6 +336,7 @@ async fn demo_loop(
                 assets,
                 loader,
                 last_demo,
+                false,
             )
             .await;
             rc = rc_demo;

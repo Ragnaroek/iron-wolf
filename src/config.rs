@@ -59,6 +59,21 @@ fn check_config_env() -> Option<String> {
     None
 }
 
+pub fn check_timedemo_env() -> Option<usize> {
+    let mut args = env::args();
+    while let Some(arg) = args.next() {
+        if arg == "-timedemo" {
+            let may_which = args.next();
+            if let Some(which) = may_which {
+                return Some(which.parse().expect("demo number"));
+            } else {
+                panic!("-timedemo needs the demo number parameter")
+            }
+        }
+    }
+    None
+}
+
 #[derive(Copy, Clone)]
 pub enum SDMode {
     Off = 0,

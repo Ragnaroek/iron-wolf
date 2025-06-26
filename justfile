@@ -17,6 +17,9 @@ run-sdl-tracing:
 run-sdl-profile:
     sudo -E cargo flamegraph --features sdl --profile=dev -- run
 
+run-sdl-demo-0:
+    cargo run --features sdl -- -timedemo 0
+
 ## Web
 build-web:
 	wasm-pack build --debug --target web --features web
