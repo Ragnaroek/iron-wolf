@@ -12,7 +12,7 @@ use crate::def::{
     PlayState, RUN_SPEED, SCREENLOC, SPD_DOG, SPD_PATROL, STATUS_LINES, Sprite, StateType,
     TILEGLOBAL, TILESHIFT,
 };
-use crate::draw::RayCastConsts;
+use crate::draw::RayCast;
 use crate::fixed::{fixed_by_frac, new_fixed_i32, new_fixed_u32};
 use crate::game::AREATILE;
 use crate::input::Input;
@@ -2071,17 +2071,17 @@ fn t_projectile(
     sound: &mut Sound,
     rdr: &VGARenderer,
     _: &mut ControlState,
-    rc: &ProjectionConfig,
+    rc_conf: &ProjectionConfig,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
 ) {
     let player_x = level_state.player().x;
     let player_y = level_state.player().y;
 
     let speed = new_fixed_i32(level_state.obj(k).speed * tics as i32);
 
-    let mut delta_x = fixed_by_frac(speed, rc.cos(level_state.obj(k).angle as usize)).to_i32();
-    let mut delta_y = fixed_by_frac(speed, rc.sin(level_state.obj(k).angle as usize)).to_i32();
+    let mut delta_x = fixed_by_frac(speed, rc_conf.cos(level_state.obj(k).angle as usize)).to_i32();
+    let mut delta_y = fixed_by_frac(speed, rc_conf.sin(level_state.obj(k).angle as usize)).to_i32();
 
     if delta_x > 0x10000 {
         delta_x = 0x10000;
@@ -2098,12 +2098,7 @@ fn t_projectile(
 
     if !projectile_try_move(k, level_state) {
         if level_state.obj(k).class == ClassType::Rocket {
-            sound.play_sound_loc_actor(
-                SoundName::MISSILEHIT,
-                assets,
-                rc_consts,
-                level_state.obj(k),
-            );
+            sound.play_sound_loc_actor(SoundName::MISSILEHIT, assets, rc, level_state.obj(k));
             level_state.mut_obj(k).state = Some(&S_BOOM1);
         } else {
             level_state.mut_obj(k).state = None; // mark for removal
@@ -2160,9 +2155,9 @@ fn t_path(
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
 ) {
-    if sight_player(k, level_state, game_state, sound, assets, rc_consts, tics) {
+    if sight_player(k, level_state, game_state, sound, assets, rc, tics) {
         return;
     }
 
@@ -2225,7 +2220,7 @@ fn t_dog_chase(
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
-    _: &RayCastConsts,
+    _: &RayCast,
 ) {
     let (player_tile_x, player_tile_y) = {
         let player = level_state.player();
@@ -2299,7 +2294,7 @@ fn t_bite(
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
-    _: &RayCastConsts,
+    _: &RayCast,
 ) {
     sound.play_sound(SoundName::DOGATTACK, assets);
 
@@ -2364,7 +2359,7 @@ fn t_stand(
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc_consts: &RayCast,
 ) {
     sight_player(k, level_state, game_state, sound, assets, rc_consts, tics);
 }
@@ -2379,7 +2374,7 @@ fn t_chase(
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
-    _: &RayCastConsts,
+    _: &RayCast,
 ) {
     if game_state.victory_flag {
         return;
@@ -2485,7 +2480,7 @@ fn t_ghosts(
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
-    _: &RayCastConsts,
+    _: &RayCast,
 ) {
     let (player_tile_x, player_tile_y) = {
         let player = level_state.player();
@@ -2533,7 +2528,7 @@ fn t_schabb(
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
-    _: &RayCastConsts,
+    _: &RayCast,
 ) {
     let mut dodge = false;
     let dist = {
@@ -2627,7 +2622,7 @@ fn t_schabb_throw(
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
-    rc: &RayCastConsts,
+    rc: &RayCast,
 ) {
     let player = level_state.player();
     let delta_x = player.x - level_state.obj(k).x;
@@ -2908,7 +2903,7 @@ fn t_shoot(
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
-    _: &RayCastConsts,
+    _: &RayCast,
 ) {
     let obj = level_state.obj(k);
     if !level_state.area_by_player[obj.area_number] {
@@ -2992,7 +2987,7 @@ fn a_death_scream(
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc_consts: &RayCast,
 ) {
     do_death_scream(k, level_state, game_state, sound, assets, rc_consts);
 }
@@ -3003,7 +2998,7 @@ pub fn do_death_scream(
     game_state: &mut GameState,
     sound: &mut Sound,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
 ) {
     let obj = level_state.obj(k);
     if game_state.map_on == 9 && rnd_t() == 0 {
@@ -3013,7 +3008,7 @@ pub fn do_death_scream(
             | ClassType::Officer
             | ClassType::SS
             | ClassType::Dog => {
-                sound.play_sound_loc_actor(SoundName::DEATHSCREAM6, assets, rc_consts, obj);
+                sound.play_sound_loc_actor(SoundName::DEATHSCREAM6, assets, rc, obj);
                 return;
             }
             _ => { /* play nothing */ }
@@ -3022,24 +3017,24 @@ pub fn do_death_scream(
 
     match obj.class {
         ClassType::Mutant => {
-            sound.play_sound_loc_actor(SoundName::AHHHG, assets, rc_consts, obj);
+            sound.play_sound_loc_actor(SoundName::AHHHG, assets, rc, obj);
         }
         ClassType::Guard => {
             sound.play_sound_loc_actor(
                 GUARD_DEATH_SCREAMS[(rnd_t() % 8) as usize],
                 assets,
-                rc_consts,
+                rc,
                 obj,
             );
         }
         ClassType::Officer => {
-            sound.play_sound_loc_actor(SoundName::NEINSOVAS, assets, rc_consts, obj);
+            sound.play_sound_loc_actor(SoundName::NEINSOVAS, assets, rc, obj);
         }
         ClassType::SS => {
-            sound.play_sound_loc_actor(SoundName::LEBEN, assets, rc_consts, obj);
+            sound.play_sound_loc_actor(SoundName::LEBEN, assets, rc, obj);
         }
         ClassType::Dog => {
-            sound.play_sound_loc_actor(SoundName::DOGDEATH, assets, rc_consts, obj);
+            sound.play_sound_loc_actor(SoundName::DOGDEATH, assets, rc, obj);
         }
         ClassType::Boss => {
             sound.play_sound(SoundName::MUTTI, assets);
@@ -3199,7 +3194,7 @@ fn t_bj_run(
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
-    _: &RayCastConsts,
+    _: &RayCast,
 ) {
     let mut mov = BJ_RUN_SPEED * tics as i32;
     while mov > 0 {
@@ -3236,7 +3231,7 @@ fn t_bj_jump(
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
-    _: &RayCastConsts,
+    _: &RayCast,
 ) {
     let mov = BJ_JUMP_SPEED * tics as i32;
     move_obj(k, level_state, game_state, rdr, mov, tics);
@@ -3254,7 +3249,7 @@ fn t_bj_yell(
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc_consts: &RayCast,
 ) {
     let obj = level_state.obj(k);
     sound.play_sound_loc_actor(SoundName::YEAH, assets, rc_consts, obj);
@@ -3272,7 +3267,7 @@ fn t_bj_done(
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
-    _: &RayCastConsts,
+    _: &RayCast,
 ) {
     game_state.play_state = PlayState::Victorious;
 }
@@ -3289,7 +3284,7 @@ fn a_start_death_cam(
     _: &mut ControlState,
     prj: &ProjectionConfig,
     _: &Assets,
-    _: &RayCastConsts,
+    _: &RayCast,
 ) {
     finish_palette_shifts(game_state, &rdr.vga);
 

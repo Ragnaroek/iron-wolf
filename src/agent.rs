@@ -10,7 +10,7 @@ use crate::def::{
     PUSHABLE_TILE, PlayState, SCREENLOC, STATUS_LINES, Sprite, StateType, StaticKind, StaticType,
     TILEGLOBAL, TILESHIFT, WeaponType,
 };
-use crate::draw::RayCastConsts;
+use crate::draw::RayCast;
 use crate::fixed::{ZERO, fixed_by_frac, new_fixed_i32};
 use crate::game::AREATILE;
 use crate::map;
@@ -178,7 +178,7 @@ fn t_attack(
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
 ) {
     update_face(tics, game_state, sound, rdr);
 
@@ -249,13 +249,13 @@ fn t_attack(
                 if control_state.button_state[Button::Attack as usize] {
                     game_state.attack_frame -= 2;
                 }
-                weapon_attack(level_state, game_state, sound, rdr, prj, assets, rc_consts);
+                weapon_attack(level_state, game_state, sound, rdr, prj, assets, rc);
             }
             1 => {
-                weapon_attack(level_state, game_state, sound, rdr, prj, assets, rc_consts);
+                weapon_attack(level_state, game_state, sound, rdr, prj, assets, rc);
             }
             2 => {
-                knife_attack(level_state, game_state, rdr, prj, sound, assets, rc_consts);
+                knife_attack(level_state, game_state, rdr, prj, sound, assets, rc);
             }
             3 => {
                 if game_state.ammo != 0 && control_state.button_state[Button::Attack as usize] {
@@ -279,14 +279,14 @@ fn weapon_attack(
     rdr: &VGARenderer,
     prj: &ProjectionConfig,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
 ) {
     if game_state.ammo == 0 {
         // can only happen with chain gun
         game_state.attack_frame += 1;
         return;
     }
-    gun_attack(level_state, game_state, sound, rdr, prj, assets, rc_consts);
+    gun_attack(level_state, game_state, sound, rdr, prj, assets, rc);
     game_state.ammo -= 1;
     draw_ammo(&game_state, rdr);
 }
@@ -298,7 +298,7 @@ fn knife_attack(
     prj: &ProjectionConfig,
     sound: &mut Sound,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
 ) {
     sound.play_sound(SoundName::ATKKNIFE, assets);
 
@@ -330,7 +330,7 @@ fn knife_attack(
         rdr,
         sound,
         assets,
-        rc_consts,
+        rc,
         (rnd_t() >> 4) as usize,
     )
 }
@@ -342,7 +342,7 @@ fn gun_attack(
     rdr: &VGARenderer,
     prj: &ProjectionConfig,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
 ) {
     match game_state.weapon {
         Some(WeaponType::Pistol) => {
@@ -419,7 +419,7 @@ fn gun_attack(
         rdr,
         sound,
         assets,
-        rc_consts,
+        rc,
         damage as usize,
     );
 }
@@ -459,7 +459,7 @@ fn t_player(
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
 ) {
     if game_state.victory_flag {
         victory_spin(tics, level_state);
@@ -470,14 +470,7 @@ fn t_player(
     check_weapon_change(game_state, rdr, control_state);
 
     if control_state.button_state(Button::Use) {
-        cmd_use(
-            level_state,
-            game_state,
-            sound,
-            assets,
-            rc_consts,
-            control_state,
-        );
+        cmd_use(level_state, game_state, sound, assets, rc, control_state);
     }
 
     if control_state.button_state(Button::Attack) && !control_state.button_held(Button::Attack) {
@@ -522,7 +515,7 @@ fn cmd_use(
     game_state: &mut GameState,
     sound: &mut Sound,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
     control_state: &mut ControlState,
 ) {
     let check_x;
@@ -594,7 +587,7 @@ fn cmd_use(
             game_state,
             sound,
             assets,
-            rc_consts,
+            rc,
         );
     } else {
         sound.play_sound(SoundName::DONOTHING, assets);

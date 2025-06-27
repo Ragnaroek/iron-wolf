@@ -13,7 +13,7 @@ use tokio::runtime::Runtime;
 use crate::{
     assets::{DigiChannel, Music, SoundName, WolfFile},
     def::{Assets, DigiSound, ObjType, TILESHIFT},
-    draw::RayCastConsts,
+    draw::RayCast,
     fixed::{Fixed, fixed_by_frac, new_fixed_i32},
     loader::Loader,
     start::quit,
@@ -391,26 +391,26 @@ impl Sound {
         &mut self,
         sound: SoundName,
         assets: &Assets,
-        rc_consts: &RayCastConsts,
+        rc: &RayCast,
         tile_x: usize,
         tile_y: usize,
     ) {
         let gx = new_fixed_i32(((tile_x as i32) << TILESHIFT) + (1 << (TILESHIFT - 1)));
         let gy = new_fixed_i32(((tile_y as i32) << TILESHIFT) + (1 << (TILESHIFT - 1)));
-        self.play_sound_loc_global(sound, assets, rc_consts, gx, gy);
+        self.play_sound_loc_global(sound, assets, rc, gx, gy);
     }
 
     pub fn play_sound_loc_actor(
         &mut self,
         sound: SoundName,
         assets: &Assets,
-        rc_consts: &RayCastConsts,
+        rc: &RayCast,
         obj: &ObjType,
     ) {
         self.play_sound_loc_global(
             sound,
             assets,
-            rc_consts,
+            rc,
             new_fixed_i32(obj.x),
             new_fixed_i32(obj.y),
         );
@@ -420,11 +420,11 @@ impl Sound {
         &mut self,
         sound: SoundName,
         assets: &Assets,
-        rc_consts: &RayCastConsts,
+        rc: &RayCast,
         gx: Fixed,
         gy: Fixed,
     ) {
-        let (left, right) = sound_loc(rc_consts, gx, gy);
+        let (left, right) = sound_loc(rc, gx, gy);
         self.left_pos = left;
         self.right_pos = right;
         self.play_sound(sound, assets);
@@ -500,21 +500,21 @@ fn map_audio_format(format: mixer::AudioFormat) -> AudioFormat {
     }
 }
 
-fn sound_loc(rc_consts: &RayCastConsts, gx_param: Fixed, gy_param: Fixed) -> (u8, u8) {
-    let view_x = new_fixed_i32(rc_consts.view_x);
-    let view_y = new_fixed_i32(rc_consts.view_y);
+fn sound_loc(rc: &RayCast, gx_param: Fixed, gy_param: Fixed) -> (u8, u8) {
+    let view_x = new_fixed_i32(rc.view_x);
+    let view_y = new_fixed_i32(rc.view_y);
 
     let gx = gx_param - view_x;
     let gy = gy_param - view_y;
 
     // calculate newx
-    let xt = fixed_by_frac(gx, rc_consts.view_cos);
-    let yt = fixed_by_frac(gy, rc_consts.view_sin);
+    let xt = fixed_by_frac(gx, rc.view_cos);
+    let yt = fixed_by_frac(gy, rc.view_sin);
     let mut x = (xt - yt).to_i32() >> TILESHIFT;
 
     // calculate newy
-    let xt = fixed_by_frac(gx, rc_consts.view_sin);
-    let yt = fixed_by_frac(gy, rc_consts.view_cos);
+    let xt = fixed_by_frac(gx, rc.view_sin);
+    let yt = fixed_by_frac(gy, rc.view_cos);
     let mut y = (yt + xt).to_i32() >> TILESHIFT;
 
     if y >= ATABLE_MAX {
@@ -562,7 +562,7 @@ impl Sound {
         &mut self,
         sound: SoundName,
         assets: &Assets,
-        rc_consts: &RayCastConsts,
+        rc: &RayCast,
 
         tile_x: usize,
         tile_y: usize,
@@ -574,7 +574,7 @@ impl Sound {
         &mut self,
         sound: SoundName,
         assets: &Assets,
-        rc_consts: &RayCastConsts,
+        rc: &RayCast,
         obj: &ObjType,
     ) {
         todo!("impl play sound actor web");
@@ -584,7 +584,7 @@ impl Sound {
         &mut self,
         sound: SoundName,
         assets: &Assets,
-        rc_consts: &RayCastConsts,
+        rc: &RayCast,
         tile_x: usize,
         tile_y: usize,
     ) {

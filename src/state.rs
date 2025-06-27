@@ -16,7 +16,7 @@ use crate::def::{
     FL_SHOOTABLE, GameState, LevelState, MAP_SIZE, MIN_ACTOR_DIST, ObjKey, ObjType, SPD_PATROL,
     StateType, StaticKind, TILEGLOBAL, TILESHIFT, UNSIGNEDSHIFT, WeaponType,
 };
-use crate::draw::RayCastConsts;
+use crate::draw::RayCast;
 use crate::fixed::new_fixed_i32;
 use crate::game::AREATILE;
 use crate::map::MapSegs;
@@ -764,7 +764,7 @@ pub fn sight_player(
     game_state: &mut GameState,
     sound: &mut Sound,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
     tics: u64,
 ) -> bool {
     let obj = level_state.obj(k);
@@ -831,7 +831,7 @@ pub fn sight_player(
         return false;
     }
 
-    first_sighting(k, level_state, sound, assets, rc_consts);
+    first_sighting(k, level_state, sound, assets, rc);
     true
 }
 
@@ -842,18 +842,18 @@ pub fn first_sighting(
     level_state: &mut LevelState,
     sound: &mut Sound,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
 ) {
     // react to the player
     let obj = level_state.mut_obj(k);
     match obj.class {
         ClassType::Guard => {
-            sound.play_sound_loc_actor(SoundName::HALT, assets, rc_consts, obj);
+            sound.play_sound_loc_actor(SoundName::HALT, assets, rc, obj);
             new_state(obj, &S_GRDCHASE1);
             obj.speed *= 3; // go faster when chasing player
         }
         ClassType::Officer => {
-            sound.play_sound_loc_actor(SoundName::SPION, assets, rc_consts, obj);
+            sound.play_sound_loc_actor(SoundName::SPION, assets, rc, obj);
             new_state(obj, &S_OFCCHASE1);
             obj.speed *= 5; // go faster when chasing player
         }
@@ -862,22 +862,22 @@ pub fn first_sighting(
             obj.speed *= 3;
         }
         ClassType::Dog => {
-            sound.play_sound_loc_actor(SoundName::DOGBARK, assets, rc_consts, obj);
+            sound.play_sound_loc_actor(SoundName::DOGBARK, assets, rc, obj);
             new_state(obj, &S_DOGCHASE1);
             obj.speed *= 2; // go faster when chasing player
         }
         ClassType::SS => {
-            sound.play_sound_loc_actor(SoundName::SCHUTZAD, assets, rc_consts, obj);
+            sound.play_sound_loc_actor(SoundName::SCHUTZAD, assets, rc, obj);
             new_state(obj, &S_SSCHASE1);
             obj.speed *= 4;
         }
         ClassType::Boss => {
-            sound.play_sound_loc_actor(SoundName::GUTENTAG, assets, rc_consts, obj);
+            sound.play_sound_loc_actor(SoundName::GUTENTAG, assets, rc, obj);
             new_state(obj, &S_BOSSCHASE1);
             obj.speed = SPD_PATROL * 3;
         }
         ClassType::Schabb => {
-            sound.play_sound_loc_actor(SoundName::SCHABBSHA, assets, rc_consts, obj);
+            sound.play_sound_loc_actor(SoundName::SCHABBSHA, assets, rc, obj);
             new_state(obj, &S_SCHABBCHASE1);
             obj.speed *= 3;
         }
@@ -1092,7 +1092,7 @@ pub fn damage_actor(
     rdr: &VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
     damage_param: usize,
 ) {
     game_state.made_noise = true;
@@ -1105,10 +1105,10 @@ pub fn damage_actor(
 
     level_state.update_obj(k, |obj| obj.hitpoints -= damage as i32);
     if level_state.obj(k).hitpoints <= 0 {
-        kill_actor(k, level_state, game_state, rdr, sound, assets, rc_consts);
+        kill_actor(k, level_state, game_state, rdr, sound, assets, rc);
     } else {
         if level_state.obj(k).flags & FL_ATTACKMODE == 0 {
-            first_sighting(k, level_state, sound, assets, rc_consts); // put into combat mode
+            first_sighting(k, level_state, sound, assets, rc); // put into combat mode
         }
 
         let obj = level_state.mut_obj(k);
@@ -1153,7 +1153,7 @@ fn kill_actor(
     rdr: &VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
 ) {
     {
         let (tile_x, tile_y) = {
@@ -1217,7 +1217,7 @@ fn kill_actor(
                 } else {
                     new_state(level_state.mut_obj(k), &S_SCHABBDIE1_5);
                 }
-                do_death_scream(k, level_state, game_state, sound, assets, rc_consts);
+                do_death_scream(k, level_state, game_state, sound, assets, rc);
             }
             ClassType::Fake => {
                 todo!("kill fake");

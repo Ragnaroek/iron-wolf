@@ -3,7 +3,7 @@ use crate::def::{
     Actors, ClassType, DirType, DoorAction, DoorLock, DoorType, FL_NEVERMARK, Level, LevelState,
     MAP_SIZE, MAX_ACTORS, ObjType,
 };
-use crate::draw::{Hit, Op, calc_height, init_ray_cast, init_ray_cast_consts};
+use crate::draw::{Hit, Op, calc_height, init_ray_cast};
 use crate::fixed::new_fixed_i32;
 use crate::map::MapSegs;
 use crate::start::new_view_size;
@@ -18,16 +18,16 @@ fn test_cast_angle_63() -> Result<(), String> {
     prj.fine_tangents[898] = prj.fine_tangents[898] + 2;
     let mut level_state = mock_level_state();
     level_state.mut_player().angle = 63; // an interesting angle in the start level
-    let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
     let mut rc = init_ray_cast(prj.view_width);
+    rc.init_ray_cast_consts(&prj, level_state.player(), 0);
 
-    assert_eq!(consts.x_partialup, 42879);
-    assert_eq!(consts.y_partialup, 12924);
-    assert_eq!(consts.x_partialdown, 22657);
-    assert_eq!(consts.y_partialdown, 52612);
+    assert_eq!(rc.x_partialup, 42879);
+    assert_eq!(rc.y_partialup, 12924);
+    assert_eq!(rc.x_partialdown, 22657);
+    assert_eq!(rc.y_partialdown, 52612);
 
     for pixx in 0..prj.view_width {
-        rc.init_cast(&prj, pixx, &consts);
+        rc.init_cast(&prj, pixx);
         match pixx {
             0 => check_init_pixx_0(&rc),
             1 => check_init_pixx_1(&rc),
@@ -36,7 +36,7 @@ fn test_cast_angle_63() -> Result<(), String> {
             _ => (), /* no check */
         }
 
-        rc.cast(&consts, &mut level_state);
+        rc.cast(&mut level_state);
         match pixx {
             0 => check_cast_pixx_0(&rc),
             1 => check_cast_pixx_1(&rc),
@@ -165,24 +165,24 @@ fn test_cast_angle_353() -> Result<(), String> {
     let prj = new_view_size(19);
     let mut level_state = mock_level_state();
     level_state.mut_player().angle = 353;
-    let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
     let mut rc = init_ray_cast(prj.view_width);
+    rc.init_ray_cast_consts(&prj, level_state.player(), 0);
 
     assert_eq!(level_state.player().x, 1933312);
     assert_eq!(level_state.player().y, 3768320);
-    assert_eq!(consts.view_cos, new_fixed_i32(65047));
-    assert_eq!(consts.view_sin, new_fixed_i32(-2147475662));
-    assert_eq!(consts.view_x, 1911207);
-    assert_eq!(consts.view_y, 3765607);
-    assert_eq!(consts.x_partialup, 54873);
-    assert_eq!(consts.y_partialup, 35481);
-    assert_eq!(consts.x_partialdown, 10663);
-    assert_eq!(consts.y_partialdown, 30055);
+    assert_eq!(rc.view_cos, new_fixed_i32(65047));
+    assert_eq!(rc.view_sin, new_fixed_i32(-2147475662));
+    assert_eq!(rc.view_x, 1911207);
+    assert_eq!(rc.view_y, 3765607);
+    assert_eq!(rc.x_partialup, 54873);
+    assert_eq!(rc.y_partialup, 35481);
+    assert_eq!(rc.x_partialdown, 10663);
+    assert_eq!(rc.y_partialdown, 30055);
 
     //Do one ray cast with the const vars
     for pixx in 0..prj.view_width {
-        rc.init_cast(&prj, pixx, &consts);
-        rc.cast(&consts, &mut level_state);
+        rc.init_cast(&prj, pixx);
+        rc.cast(&mut level_state);
     }
     Ok(())
 }
@@ -192,22 +192,22 @@ fn test_cast_angle_26() -> Result<(), String> {
     let prj = new_view_size(19);
     let mut level_state = mock_level_state();
     level_state.mut_player().angle = 26;
-    let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
     let mut rc = init_ray_cast(prj.view_width);
+    rc.init_ray_cast_consts(&prj, level_state.player(), 0);
 
-    assert_eq!(consts.x_partialup, 52785);
-    assert_eq!(consts.y_partialup, 23005);
-    assert_eq!(consts.x_partialdown, 12751);
-    assert_eq!(consts.y_partialdown, 42531);
+    assert_eq!(rc.x_partialup, 52785);
+    assert_eq!(rc.y_partialup, 23005);
+    assert_eq!(rc.x_partialdown, 12751);
+    assert_eq!(rc.y_partialdown, 42531);
 
     for pixx in 0..prj.view_width {
-        rc.init_cast(&prj, pixx, &consts);
+        rc.init_cast(&prj, pixx);
         match pixx {
             0 => check_init_angle_26_pixx_0(&rc),
             _ => (), /* no check */
         }
 
-        rc.cast(&consts, &mut level_state);
+        rc.cast(&mut level_state);
         match pixx {
             0 => check_cast_angle_26_pixx_0(&rc),
             _ => (), /* no check */
@@ -249,22 +249,22 @@ fn test_cast_angle_288() -> Result<(), String> {
     let prj = new_view_size(19);
     let mut level_state = mock_level_state();
     level_state.mut_player().angle = 288;
-    let consts = init_ray_cast_consts(&prj, level_state.player(), 0);
     let mut rc = init_ray_cast(prj.view_width);
+    rc.init_ray_cast_consts(&prj, level_state.player(), 0);
 
-    assert_eq!(consts.x_partialup, 39650);
-    assert_eq!(consts.y_partialup, 53949);
-    assert_eq!(consts.x_partialdown, 25886);
-    assert_eq!(consts.y_partialdown, 11587);
+    assert_eq!(rc.x_partialup, 39650);
+    assert_eq!(rc.y_partialup, 53949);
+    assert_eq!(rc.x_partialdown, 25886);
+    assert_eq!(rc.y_partialdown, 11587);
 
     for pixx in 0..prj.view_width {
-        rc.init_cast(&prj, pixx, &consts);
+        rc.init_cast(&prj, pixx);
         match pixx {
             274 => check_init_angle_288_pixx_274(&rc),
             _ => (), /* no check */
         }
 
-        rc.cast(&consts, &mut level_state);
+        rc.cast(&mut level_state);
         match pixx {
             274 => check_cast_angle_288_pixx_274(&rc),
             _ => (), /* no check */
@@ -307,9 +307,10 @@ fn test_init_ray_cast_consts() {
     let prj = new_view_size(19);
     let mut player = test_player();
     player.angle = 63;
-    let consts = init_ray_cast_consts(&prj, &player, 0);
-    assert_eq!(consts.view_x, 1923201);
-    assert_eq!(consts.view_y, 3788164);
+    let mut rc = init_ray_cast(prj.view_width);
+    rc.init_ray_cast_consts(&prj, &player, 0);
+    assert_eq!(rc.view_x, 1923201);
+    assert_eq!(rc.view_y, 3788164);
 }
 
 #[test]
@@ -318,11 +319,11 @@ fn test_calc_height() {
     let mut player = test_player();
     player.angle = 63;
 
-    let consts = init_ray_cast_consts(&prj, &player, 0);
-    assert_eq!(
-        calc_height(prj.height_numerator, 1904384, 3670016, &consts),
-        562,
-    )
+    let mut rc = init_ray_cast(prj.view_width);
+    rc.init_ray_cast_consts(&prj, &player, 0);
+    rc.x_intercept = 1904384;
+    rc.y_intercept = 3670016;
+    assert_eq!(calc_height(prj.height_numerator, &rc), 562)
 }
 
 // Helper

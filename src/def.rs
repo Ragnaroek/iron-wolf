@@ -3,7 +3,7 @@
 mod def_test;
 
 use crate::assets::{DigiChannel, SoundName};
-use crate::draw::RayCastConsts;
+use crate::draw::RayCast;
 use crate::fixed::Fixed;
 use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::input::Input;
@@ -889,7 +889,7 @@ type Think = fn(
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
 );
 
 type Action = fn(
@@ -904,7 +904,7 @@ type Action = fn(
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     assets: &Assets,
-    rc_consts: &RayCastConsts,
+    rc: &RayCast,
 );
 
 #[derive(Eq, Debug)]
