@@ -328,9 +328,9 @@ checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
 name = "opl-emu"
-version = "0.2.6"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f79f851b9626b0d368b355cdcd98aeaeb8859927c6ec93b47d5c1f8afc4373df"
+checksum = "63e636bcd14940944b707b27203d90690d7e1b560b2289274b608fc28dc7da8b"
 dependencies = [
  "sdl2",
 ]
