@@ -2271,12 +2271,11 @@ fn t_dog_chase(
             mov -= obj.distance;
         });
 
-        select_dodge_dir(
-            k,
-            level_state,
-            level_state.obj(k).tilex,
-            level_state.obj(k).tiley,
-        );
+        let (player_tile_x, player_tile_y) = {
+            let player = level_state.player();
+            (player.tilex, player.tiley)
+        };
+        select_dodge_dir(k, level_state, player_tile_x, player_tile_y);
 
         if level_state.obj(k).dir == DirType::NoDir {
             return;
