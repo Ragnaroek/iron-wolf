@@ -4,10 +4,11 @@ mod state_test;
 
 use crate::act1::{open_door, place_item_type};
 use crate::act2::{
-    S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN,
-    S_GRDPAIN1, S_MUTCHASE1, S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1, S_OFCCHASE1, S_OFCDIE1, S_OFCPAIN,
-    S_OFCPAIN1, S_SCHABBCHASE1, S_SCHABBDIE1_5, S_SCHABBDIE1_140, S_SSCHASE1, S_SSDIE1, S_SSPAIN,
-    S_SSPAIN1, do_death_scream,
+    S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_FAKECHASE1, S_FAKEDIE1_10, S_FAKEDIE1_140,
+    S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_HITLERDIE1, S_MECHACHASE1, S_MECHADIE1_10,
+    S_MECHADIE1_140, S_MUTCHASE1, S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1, S_OFCCHASE1, S_OFCDIE1,
+    S_OFCPAIN, S_OFCPAIN1, S_SCHABBCHASE1, S_SCHABBDIE1_10, S_SCHABBDIE1_140, S_SSCHASE1, S_SSDIE1,
+    S_SSPAIN, S_SSPAIN1, do_death_scream,
 };
 use crate::agent::{give_points, take_damage};
 use crate::assets::SoundName;
@@ -144,6 +145,7 @@ static DIAGONAL: [[DirType; 9]; 9] = [
 
 pub const MIN_SIGHT: i32 = 0x18000;
 
+// TODO rename to new_obj (as it does not really do the spawn as in the original)
 pub fn spawn_new_obj(
     map_data: &MapSegs,
     tile_x: usize,
@@ -886,9 +888,17 @@ pub fn first_sighting(
             new_state(obj, &S_SCHABBCHASE1);
             obj.speed *= 3;
         }
-        // TODO mechahitlerobj, DIESND
+        ClassType::Fake => {
+            sound.play_sound_loc_actor(SoundName::TOTHUND, assets, rc, obj);
+            new_state(obj, &S_FAKECHASE1);
+            obj.speed *= 3;
+        }
+        ClassType::MechaHitler => {
+            sound.play_sound_loc_actor(SoundName::DIE, assets, rc, obj);
+            new_state(obj, &S_MECHACHASE1);
+            obj.speed *= 3;
+        }
         // TODO realhitlerobj, DIESND
-        // TODO fakeobj, TOT_HUNDSND
         // TODO giftobj EINESND
         // TODO fatobj ERLAUBENSND
         // TODO gretelobj KEINSND
@@ -1220,18 +1230,32 @@ fn kill_actor(
                 if sound.digi_mode() != DigiMode::Off {
                     new_state(level_state.mut_obj(k), &S_SCHABBDIE1_140);
                 } else {
-                    new_state(level_state.mut_obj(k), &S_SCHABBDIE1_5);
+                    new_state(level_state.mut_obj(k), &S_SCHABBDIE1_10);
                 }
                 do_death_scream(k, level_state, game_state, sound, assets, rc);
             }
             ClassType::Fake => {
-                todo!("kill fake");
+                give_points(game_state, rdr, sound, assets, 2000);
+                if sound.digi_mode() != DigiMode::Off {
+                    new_state(level_state.mut_obj(k), &S_FAKEDIE1_140);
+                } else {
+                    new_state(level_state.mut_obj(k), &S_FAKEDIE1_10);
+                }
             }
             ClassType::MechaHitler => {
-                todo!("kill mecha hitler");
+                give_points(game_state, rdr, sound, assets, 5000);
+                if sound.digi_mode() != DigiMode::Off {
+                    new_state(level_state.mut_obj(k), &S_MECHADIE1_140);
+                } else {
+                    new_state(level_state.mut_obj(k), &S_MECHADIE1_10);
+                }
             }
             ClassType::RealHitler => {
-                todo!("kill real hitler");
+                give_points(game_state, rdr, sound, assets, 5000);
+                game_state.kill_x = level_state.player().x as usize;
+                game_state.kill_y = level_state.player().y as usize;
+                new_state(level_state.mut_obj(k), &S_HITLERDIE1);
+                do_death_scream(k, level_state, game_state, sound, assets, rc);
             }
             _ => { /* ignore kill on this class of obj */ }
         }

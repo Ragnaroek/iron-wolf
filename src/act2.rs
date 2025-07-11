@@ -7,10 +7,10 @@ use crate::agent::{S_ATTACK, S_PLAYER, take_damage};
 use crate::assets::SoundName;
 use crate::def::{
     AMBUSH_TILE, ANGLES, ActiveType, Actors, Assets, At, ClassType, ControlState, Difficulty,
-    DirType, DoorAction, EnemyType, FL_AMBUSH, FL_NONMARK, FL_SHOOTABLE, FL_VISABLE, GameState,
-    ICON_ARROWS, LevelState, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, ObjKey, ObjType, PLAYER_SIZE,
-    PlayState, RUN_SPEED, SCREENLOC, SPD_DOG, SPD_PATROL, STATUS_LINES, Sprite, StateType,
-    TILEGLOBAL, TILESHIFT,
+    DirType, DoorAction, EnemyType, FL_AMBUSH, FL_NEVERMARK, FL_NONMARK, FL_SHOOTABLE, FL_VISABLE,
+    GameState, ICON_ARROWS, LevelState, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, ObjKey, ObjType,
+    PLAYER_SIZE, PlayState, RUN_SPEED, SCREENLOC, SPD_DOG, SPD_PATROL, STATUS_LINES, Sprite,
+    StateType, TILEGLOBAL, TILESHIFT,
 };
 use crate::draw::RayCast;
 use crate::fixed::{fixed_by_frac, new_fixed_i32, new_fixed_u32};
@@ -148,6 +148,8 @@ static GUARD_DEATH_SCREAMS: [SoundName; 8] = [
     SoundName::DEATHSCREAM8,
     SoundName::DEATHSCREAM9,
 ];
+
+// TODO consistently use id with groups and gaps :/
 
 // guards (1000)
 
@@ -1698,14 +1700,14 @@ pub static S_SCHABBDEATHCAM_140: StateType = StateType {
     next: Some(&S_SCHABBDIE1_140),
 };
 
-pub static S_SCHABBDEATHCAM_5: StateType = StateType {
+pub static S_SCHABBDEATHCAM_10: StateType = StateType {
     id: 1100,
     rotate: 0,
     sprite: Some(Sprite::SchabbW1),
     tic_time: 1,
     think: None,
     action: None,
-    next: Some(&S_SCHABBDIE1_5),
+    next: Some(&S_SCHABBDIE1_10),
 };
 
 pub static S_SCHABBDIE1_140: StateType = StateType {
@@ -1718,14 +1720,14 @@ pub static S_SCHABBDIE1_140: StateType = StateType {
     next: Some(&S_SCHABBDIE2_140),
 };
 
-pub static S_SCHABBDIE1_5: StateType = StateType {
+pub static S_SCHABBDIE1_10: StateType = StateType {
     id: 1102,
     rotate: 0,
     sprite: Some(Sprite::SchabbW1),
     tic_time: 10,
     think: None,
     action: Some(a_death_scream),
-    next: Some(&S_SCHABBDIE2_5),
+    next: Some(&S_SCHABBDIE2_10),
 };
 
 pub static S_SCHABBDIE2_140: StateType = StateType {
@@ -1738,11 +1740,11 @@ pub static S_SCHABBDIE2_140: StateType = StateType {
     next: Some(&S_SCHABBDIE3),
 };
 
-pub static S_SCHABBDIE2_5: StateType = StateType {
+pub static S_SCHABBDIE2_10: StateType = StateType {
     id: 1104,
     rotate: 0,
     sprite: Some(Sprite::SchabbW1),
-    tic_time: 140,
+    tic_time: 10,
     think: None,
     action: None,
     next: Some(&S_SCHABBDIE3),
@@ -1878,7 +1880,687 @@ pub static S_BOOM3: StateType = StateType {
     next: None,
 };
 
-pub static STATES: [&'static StateType; 173] = [
+pub static S_FAKESTAND: StateType = StateType {
+    id: 1118,
+    rotate: 0,
+    sprite: Some(Sprite::FakeW1),
+    tic_time: 0,
+    think: Some(t_stand),
+    action: None,
+    next: Some(&S_FAKESTAND),
+};
+
+pub static S_FAKECHASE1: StateType = StateType {
+    id: 1119,
+    rotate: 0,
+    sprite: Some(Sprite::FakeW1),
+    tic_time: 10,
+    think: Some(t_fake),
+    action: None,
+    next: Some(&S_FAKECHASE1S),
+};
+
+pub static S_FAKECHASE1S: StateType = StateType {
+    id: 1120,
+    rotate: 0,
+    sprite: Some(Sprite::FakeW1),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_FAKECHASE2),
+};
+
+pub static S_FAKECHASE2: StateType = StateType {
+    id: 1121,
+    rotate: 0,
+    sprite: Some(Sprite::FakeW2),
+    tic_time: 8,
+    think: Some(t_fake),
+    action: None,
+    next: Some(&S_FAKECHASE3),
+};
+
+pub static S_FAKECHASE3: StateType = StateType {
+    id: 1122,
+    rotate: 0,
+    sprite: Some(Sprite::FakeW3),
+    tic_time: 10,
+    think: Some(t_fake),
+    action: None,
+    next: Some(&S_FAKECHASE3S),
+};
+
+pub static S_FAKECHASE3S: StateType = StateType {
+    id: 1123,
+    rotate: 0,
+    sprite: Some(Sprite::FakeW3),
+    tic_time: 3,
+    think: None,
+    action: None,
+    next: Some(&S_FAKECHASE4),
+};
+
+pub static S_FAKECHASE4: StateType = StateType {
+    id: 1124,
+    rotate: 0,
+    sprite: Some(Sprite::FakeW4),
+    tic_time: 8,
+    think: Some(t_fake),
+    action: None,
+    next: Some(&S_FAKECHASE1),
+};
+
+pub static S_FAKEDIE1_140: StateType = StateType {
+    id: 1125,
+    rotate: 0,
+    sprite: Some(Sprite::FakeDie1),
+    tic_time: 10,
+    think: None,
+    action: Some(a_death_scream),
+    next: Some(&S_FAKEDIE2_140),
+};
+
+pub static S_FAKEDIE1_10: StateType = StateType {
+    id: 1126,
+    rotate: 0,
+    sprite: Some(Sprite::FakeDie1),
+    tic_time: 10,
+    think: None,
+    action: Some(a_death_scream),
+    next: Some(&S_FAKEDIE2_10),
+};
+
+pub static S_FAKEDIE2_140: StateType = StateType {
+    id: 1127,
+    rotate: 0,
+    sprite: Some(Sprite::FakeDie2),
+    tic_time: 140,
+    think: None,
+    action: None,
+    next: Some(&S_FAKEDIE3),
+};
+
+pub static S_FAKEDIE2_10: StateType = StateType {
+    id: 1128,
+    rotate: 0,
+    sprite: Some(Sprite::FakeDie2),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_FAKEDIE3),
+};
+
+pub static S_FAKEDIE3: StateType = StateType {
+    id: 1129,
+    rotate: 0,
+    sprite: Some(Sprite::FakeDie3),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_FAKEDIE4),
+};
+
+pub static S_FAKEDIE4: StateType = StateType {
+    id: 1130,
+    rotate: 0,
+    sprite: Some(Sprite::FakeDie4),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_FAKEDIE5),
+};
+
+pub static S_FAKEDIE5: StateType = StateType {
+    id: 1131,
+    rotate: 0,
+    sprite: Some(Sprite::FakeDie5),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_FAKEDIE6),
+};
+
+pub static S_FAKEDIE6: StateType = StateType {
+    id: 1132,
+    rotate: 0,
+    sprite: Some(Sprite::FakeDead),
+    tic_time: 0,
+    think: None,
+    action: None,
+    next: Some(&S_FAKEDIE6),
+};
+
+pub static S_FAKESHOOT1: StateType = StateType {
+    id: 1133,
+    rotate: 0,
+    sprite: Some(Sprite::FakeShoot),
+    tic_time: 8,
+    think: None,
+    action: Some(t_fake_fire),
+    next: Some(&S_FAKESHOOT2),
+};
+
+pub static S_FAKESHOOT2: StateType = StateType {
+    id: 1134,
+    rotate: 0,
+    sprite: Some(Sprite::FakeShoot),
+    tic_time: 8,
+    think: None,
+    action: Some(t_fake_fire),
+    next: Some(&S_FAKESHOOT3),
+};
+
+pub static S_FAKESHOOT3: StateType = StateType {
+    id: 1135,
+    rotate: 0,
+    sprite: Some(Sprite::FakeShoot),
+    tic_time: 8,
+    think: None,
+    action: Some(t_fake_fire),
+    next: Some(&S_FAKESHOOT4),
+};
+
+pub static S_FAKESHOOT4: StateType = StateType {
+    id: 1136,
+    rotate: 0,
+    sprite: Some(Sprite::FakeShoot),
+    tic_time: 8,
+    think: None,
+    action: Some(t_fake_fire),
+    next: Some(&S_FAKESHOOT5),
+};
+
+pub static S_FAKESHOOT5: StateType = StateType {
+    id: 1137,
+    rotate: 0,
+    sprite: Some(Sprite::FakeShoot),
+    tic_time: 8,
+    think: None,
+    action: Some(t_fake_fire),
+    next: Some(&S_FAKESHOOT6),
+};
+
+pub static S_FAKESHOOT6: StateType = StateType {
+    id: 1138,
+    rotate: 0,
+    sprite: Some(Sprite::FakeShoot),
+    tic_time: 8,
+    think: None,
+    action: Some(t_fake_fire),
+    next: Some(&S_FAKESHOOT7),
+};
+
+pub static S_FAKESHOOT7: StateType = StateType {
+    id: 1139,
+    rotate: 0,
+    sprite: Some(Sprite::FakeShoot),
+    tic_time: 8,
+    think: None,
+    action: Some(t_fake_fire),
+    next: Some(&S_FAKESHOOT8),
+};
+
+pub static S_FAKESHOOT8: StateType = StateType {
+    id: 1140,
+    rotate: 0,
+    sprite: Some(Sprite::FakeShoot),
+    tic_time: 8,
+    think: None,
+    action: Some(t_fake_fire),
+    next: Some(&S_FAKESHOOT9),
+};
+
+pub static S_FAKESHOOT9: StateType = StateType {
+    id: 1141,
+    rotate: 0,
+    sprite: Some(Sprite::FakeShoot),
+    tic_time: 8,
+    think: None,
+    action: None,
+    next: Some(&S_FAKECHASE1),
+};
+
+pub static S_FIRE1: StateType = StateType {
+    id: 9999,
+    rotate: 0,
+    sprite: Some(Sprite::Fire1),
+    tic_time: 6,
+    think: Some(t_projectile),
+    action: None,
+    next: Some(&S_FIRE2),
+};
+
+pub static S_FIRE2: StateType = StateType {
+    id: 1142,
+    rotate: 0,
+    sprite: Some(Sprite::Fire2),
+    tic_time: 6,
+    think: Some(t_projectile),
+    action: None,
+    next: Some(&S_FIRE1),
+};
+
+pub static S_MECHASTAND: StateType = StateType {
+    id: 1143,
+    rotate: 0,
+    sprite: Some(Sprite::MechaW1),
+    tic_time: 0,
+    think: Some(t_stand),
+    action: None,
+    next: Some(&S_MECHASTAND),
+};
+
+pub static S_MECHACHASE1: StateType = StateType {
+    id: 1144,
+    rotate: 0,
+    sprite: Some(Sprite::MechaW1),
+    tic_time: 10,
+    think: Some(t_chase),
+    action: Some(a_mecha_sound),
+    next: Some(&S_MECHACHASE1S),
+};
+
+pub static S_MECHACHASE1S: StateType = StateType {
+    id: 1145,
+    rotate: 0,
+    sprite: Some(Sprite::MechaW1),
+    tic_time: 6,
+    think: None,
+    action: None,
+    next: Some(&S_MECHACHASE2),
+};
+
+pub static S_MECHACHASE2: StateType = StateType {
+    id: 1146,
+    rotate: 0,
+    sprite: Some(Sprite::MechaW2),
+    tic_time: 8,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_MECHACHASE3),
+};
+
+pub static S_MECHACHASE3: StateType = StateType {
+    id: 1147,
+    rotate: 0,
+    sprite: Some(Sprite::MechaW3),
+    tic_time: 10,
+    think: Some(t_chase),
+    action: Some(a_mecha_sound),
+    next: Some(&S_MECHACHASE3S),
+};
+
+pub static S_MECHACHASE3S: StateType = StateType {
+    id: 1148,
+    rotate: 0,
+    sprite: Some(Sprite::MechaW3),
+    tic_time: 6,
+    think: None,
+    action: None,
+    next: Some(&S_MECHACHASE4),
+};
+
+pub static S_MECHACHASE4: StateType = StateType {
+    id: 1149,
+    rotate: 0,
+    sprite: Some(Sprite::MechaW4),
+    tic_time: 8,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_MECHACHASE1),
+};
+
+pub static S_MECHADIE1_140: StateType = StateType {
+    id: 1150,
+    rotate: 0,
+    sprite: Some(Sprite::MechaDie1),
+    tic_time: 10,
+    think: None,
+    action: Some(a_death_scream),
+    next: Some(&S_MECHADIE2_140),
+};
+
+pub static S_MECHADIE1_10: StateType = StateType {
+    id: 1151,
+    rotate: 0,
+    sprite: Some(Sprite::MechaDie1),
+    tic_time: 10,
+    think: None,
+    action: Some(a_death_scream),
+    next: Some(&S_MECHADIE2_10),
+};
+
+pub static S_MECHADIE2_140: StateType = StateType {
+    id: 1152,
+    rotate: 0,
+    sprite: Some(Sprite::MechaDie2),
+    tic_time: 140,
+    think: None,
+    action: None,
+    next: Some(&S_MECHADIE3),
+};
+
+pub static S_MECHADIE2_10: StateType = StateType {
+    id: 1153,
+    rotate: 0,
+    sprite: Some(Sprite::MechaDie2),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_MECHADIE3),
+};
+
+pub static S_MECHADIE3: StateType = StateType {
+    id: 1154,
+    rotate: 0,
+    sprite: Some(Sprite::MechaDie3),
+    tic_time: 10,
+    think: None,
+    action: Some(a_hitler_morph),
+    next: Some(&S_MECHADIE4),
+};
+
+pub static S_MECHADIE4: StateType = StateType {
+    id: 1155,
+    rotate: 0,
+    sprite: Some(Sprite::MechaDead),
+    tic_time: 0,
+    think: None,
+    action: None,
+    next: Some(&S_MECHADIE4),
+};
+
+pub static S_MECHASHOOT1: StateType = StateType {
+    id: 1156,
+    rotate: 0,
+    sprite: Some(Sprite::MechaShoot1),
+    tic_time: 30,
+    think: None,
+    action: None,
+    next: Some(&S_MECHASHOOT2),
+};
+
+pub static S_MECHASHOOT2: StateType = StateType {
+    id: 1157,
+    rotate: 0,
+    sprite: Some(Sprite::MechaShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_MECHASHOOT3),
+};
+
+pub static S_MECHASHOOT3: StateType = StateType {
+    id: 1158,
+    rotate: 0,
+    sprite: Some(Sprite::MechaShoot3),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_MECHASHOOT4),
+};
+
+pub static S_MECHASHOOT4: StateType = StateType {
+    id: 1159,
+    rotate: 0,
+    sprite: Some(Sprite::MechaShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_MECHASHOOT5),
+};
+
+pub static S_MECHASHOOT5: StateType = StateType {
+    id: 1160,
+    rotate: 0,
+    sprite: Some(Sprite::MechaShoot3),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_MECHASHOOT6),
+};
+
+pub static S_MECHASHOOT6: StateType = StateType {
+    id: 1161,
+    rotate: 0,
+    sprite: Some(Sprite::MechaShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_MECHACHASE1),
+};
+
+pub static S_HITLERCHASE1: StateType = StateType {
+    id: 1162,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerW1),
+    tic_time: 6,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_HITLERCHASE1S),
+};
+
+pub static S_HITLERCHASE1S: StateType = StateType {
+    id: 1163,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerW1),
+    tic_time: 4,
+    think: None,
+    action: None,
+    next: Some(&S_HITLERCHASE2),
+};
+
+pub static S_HITLERCHASE2: StateType = StateType {
+    id: 1164,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerW2),
+    tic_time: 2,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_HITLERCHASE3),
+};
+
+pub static S_HITLERCHASE3: StateType = StateType {
+    id: 1165,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerW3),
+    tic_time: 6,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_HITLERCHASE3S),
+};
+
+pub static S_HITLERCHASE3S: StateType = StateType {
+    id: 1166,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerW3),
+    tic_time: 4,
+    think: None,
+    action: None,
+    next: Some(&S_HITLERCHASE4),
+};
+
+pub static S_HITLERCHASE4: StateType = StateType {
+    id: 1167,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerW4),
+    tic_time: 2,
+    think: Some(t_chase),
+    action: None,
+    next: Some(&S_HITLERCHASE1),
+};
+
+pub static S_HITLERDEATHCAM: StateType = StateType {
+    id: 1168,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerW1),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_HITLERDIE1),
+};
+
+pub static S_HITLERDIE1: StateType = StateType {
+    id: 1169,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerW1),
+    tic_time: 1,
+    think: None,
+    action: Some(a_death_scream),
+    next: Some(&S_HITLERDIE2),
+};
+
+pub static S_HITLERDIE2: StateType = StateType {
+    id: 1170,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerW1),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_HITLERDIE3),
+};
+
+pub static S_HITLERDIE3: StateType = StateType {
+    id: 1171,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerDie1),
+    tic_time: 10,
+    think: None,
+    action: Some(a_slurpie),
+    next: Some(&S_HITLERDIE4),
+};
+
+pub static S_HITLERDIE4: StateType = StateType {
+    id: 1172,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerDie2),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_HITLERDIE5),
+};
+
+pub static S_HITLERDIE5: StateType = StateType {
+    id: 1173,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerDie3),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_HITLERDIE6),
+};
+
+pub static S_HITLERDIE6: StateType = StateType {
+    id: 1174,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerDie4),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_HITLERDIE7),
+};
+
+pub static S_HITLERDIE7: StateType = StateType {
+    id: 1175,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerDie5),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_HITLERDIE8),
+};
+
+pub static S_HITLERDIE8: StateType = StateType {
+    id: 1176,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerDie6),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_HITLERDIE9),
+};
+
+pub static S_HITLERDIE9: StateType = StateType {
+    id: 1177,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerDie7),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_HITLERDIE10),
+};
+
+pub static S_HITLERDIE10: StateType = StateType {
+    id: 1178,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerDead),
+    tic_time: 20,
+    think: None,
+    action: Some(a_start_death_cam),
+    next: Some(&S_HITLERDIE10),
+};
+
+pub static S_HITLERSHOOT1: StateType = StateType {
+    id: 1179,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerShoot1),
+    tic_time: 30,
+    think: None,
+    action: None,
+    next: Some(&S_HITLERSHOOT2),
+};
+
+pub static S_HITLERSHOOT2: StateType = StateType {
+    id: 1180,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_HITLERSHOOT3),
+};
+
+pub static S_HITLERSHOOT3: StateType = StateType {
+    id: 1181,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerShoot3),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_HITLERSHOOT4),
+};
+
+pub static S_HITLERSHOOT4: StateType = StateType {
+    id: 1182,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_HITLERSHOOT5),
+};
+
+pub static S_HITLERSHOOT5: StateType = StateType {
+    id: 1183,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerShoot3),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_HITLERSHOOT6),
+};
+
+pub static S_HITLERSHOOT6: StateType = StateType {
+    id: 1184,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    next: Some(&S_HITLERCHASE1),
+};
+
+pub static STATES: [&'static StateType; 241] = [
     &S_PLAYER,
     &S_ATTACK,
     &S_GRDSTAND,
@@ -2034,11 +2716,11 @@ pub static STATES: [&'static StateType; 173] = [
     &S_SCHABBCHASE3S,
     &S_SCHABBCHASE4,
     &S_SCHABBDEATHCAM_140,
-    &S_SCHABBDEATHCAM_5,
+    &S_SCHABBDEATHCAM_10,
     &S_SCHABBDIE1_140,
-    &S_SCHABBDIE1_5,
+    &S_SCHABBDIE1_10,
     &S_SCHABBDIE2_140,
-    &S_SCHABBDIE2_5,
+    &S_SCHABBDIE2_10,
     &S_SCHABBDIE3,
     &S_SCHABBDIE4,
     &S_SCHABBDIE5,
@@ -2052,6 +2734,74 @@ pub static STATES: [&'static StateType; 173] = [
     &S_BOOM1,
     &S_BOOM2,
     &S_BOOM3,
+    &S_FAKESTAND,
+    &S_FAKECHASE1,
+    &S_FAKECHASE1S,
+    &S_FAKECHASE2,
+    &S_FAKECHASE3,
+    &S_FAKECHASE3S,
+    &S_FAKECHASE4,
+    &S_FAKEDIE1_140,
+    &S_FAKEDIE1_10,
+    &S_FAKEDIE2_140,
+    &S_FAKEDIE2_10,
+    &S_FAKEDIE3,
+    &S_FAKEDIE4,
+    &S_FAKEDIE5,
+    &S_FAKEDIE6,
+    &S_FAKESHOOT1,
+    &S_FAKESHOOT2,
+    &S_FAKESHOOT3,
+    &S_FAKESHOOT4,
+    &S_FAKESHOOT5,
+    &S_FAKESHOOT6,
+    &S_FAKESHOOT7,
+    &S_FAKESHOOT8,
+    &S_FAKESHOOT9,
+    &S_FIRE1,
+    &S_FIRE2,
+    &S_MECHASTAND,
+    &S_MECHACHASE1,
+    &S_MECHACHASE1S,
+    &S_MECHACHASE2,
+    &S_MECHACHASE3,
+    &S_MECHACHASE3S,
+    &S_MECHACHASE4,
+    &S_MECHADIE1_140,
+    &S_MECHADIE1_10,
+    &S_MECHADIE2_140,
+    &S_MECHADIE2_10,
+    &S_MECHADIE3,
+    &S_MECHADIE4,
+    &S_MECHASHOOT1,
+    &S_MECHASHOOT2,
+    &S_MECHASHOOT3,
+    &S_MECHASHOOT4,
+    &S_MECHASHOOT5,
+    &S_MECHASHOOT6,
+    &S_HITLERCHASE1,
+    &S_HITLERCHASE1S,
+    &S_HITLERCHASE2,
+    &S_HITLERCHASE3,
+    &S_HITLERCHASE3S,
+    &S_HITLERCHASE4,
+    &S_HITLERDEATHCAM,
+    &S_HITLERDIE1,
+    &S_HITLERDIE2,
+    &S_HITLERDIE3,
+    &S_HITLERDIE4,
+    &S_HITLERDIE5,
+    &S_HITLERDIE6,
+    &S_HITLERDIE7,
+    &S_HITLERDIE8,
+    &S_HITLERDIE9,
+    &S_HITLERDIE10,
+    &S_HITLERSHOOT1,
+    &S_HITLERSHOOT2,
+    &S_HITLERSHOOT3,
+    &S_HITLERSHOOT4,
+    &S_HITLERSHOOT5,
+    &S_HITLERSHOOT6,
 ];
 
 pub fn get_state_by_id(id: u16) -> Option<&'static StateType> {
@@ -2406,6 +3156,8 @@ fn t_chase(
                 ClassType::Mutant => Some(&S_MUTSHOOT1),
                 ClassType::SS => Some(&S_SSSHOOT1),
                 ClassType::Boss => Some(&S_BOSSSHOOT1),
+                ClassType::MechaHitler => Some(&S_MECHASHOOT1),
+                ClassType::RealHitler => Some(&S_HITLERSHOOT1),
                 _ => panic!("impl state change for {:?}", obj.class),
             };
 
@@ -2657,6 +3409,192 @@ fn t_schabb_throw(
     sound.play_sound_loc_actor(SoundName::SCHABBSTHROW, assets, rc, &obj);
 }
 
+fn t_fake(
+    k: ObjKey,
+    tics: u64,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    _: &mut Sound,
+    rdr: &VGARenderer,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    _: &Assets,
+    _: &RayCast,
+) {
+    let (player_tile_x, player_tile_y) = {
+        let player = level_state.player();
+        (player.tilex, player.tiley)
+    };
+
+    if check_line(level_state, level_state.obj(k)) {
+        if (rnd_t() as u64) < (tics << 1) {
+            // go into attack frame
+            let mut_obj = level_state.mut_obj(k);
+            new_state(mut_obj, &S_FAKESHOOT1);
+            return;
+        }
+    }
+
+    if level_state.obj(k).dir == DirType::NoDir {
+        select_dodge_dir(k, level_state, player_tile_x, player_tile_y);
+
+        if level_state.obj(k).dir == DirType::NoDir {
+            return;
+        }
+    }
+
+    let obj = level_state.obj(k);
+    let mut mov = obj.speed * tics as i32;
+    while mov != 0 {
+        if mov < level_state.obj(k).distance {
+            move_obj(k, level_state, game_state, rdr, mov, tics);
+            break;
+        }
+
+        // reached goal tile, so select another one
+
+        // fix position to account for round off during moving
+        level_state.update_obj(k, |obj| {
+            obj.x = ((obj.tilex as i32) << TILESHIFT) + TILEGLOBAL / 2;
+            obj.y = ((obj.tiley as i32) << TILESHIFT) + TILEGLOBAL / 2;
+        });
+
+        mov -= level_state.obj(k).distance;
+
+        select_dodge_dir(k, level_state, player_tile_x, player_tile_y);
+
+        if level_state.obj(k).dir == DirType::NoDir {
+            return;
+        }
+    }
+}
+
+fn t_fake_fire(
+    k: ObjKey,
+    _: u64,
+    _: &Ticker,
+    level_state: &mut LevelState,
+    _: &mut GameState,
+    sound: &mut Sound,
+    _: &VGARenderer,
+    _: &Input,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    assets: &Assets,
+    rc: &RayCast,
+) {
+    let player = level_state.player();
+    let delta_x = player.x - level_state.obj(k).x;
+    let delta_y = level_state.obj(k).y - player.y;
+
+    let mut angle = (delta_y as f64).atan2(delta_x as f64);
+    if angle < 0.0 {
+        angle = std::f64::consts::PI * 2.0 + angle;
+    }
+    let iangle = (angle / (std::f64::consts::PI * 2.0)) as i32 * ANGLES as i32;
+
+    let tile_x = level_state.obj(k).tilex;
+    let tile_y = level_state.obj(k).tiley;
+    let mut obj = spawn_new_obj(
+        &mut level_state.level.map_segs,
+        tile_x,
+        tile_y,
+        &S_FIRE1,
+        ClassType::Fire,
+    );
+
+    obj.tic_count = 1;
+    obj.x = level_state.obj(k).x;
+    obj.y = level_state.obj(k).y;
+    obj.dir = DirType::NoDir;
+    obj.angle = iangle;
+    obj.speed = 0x2000;
+    obj.flags = FL_NEVERMARK;
+    obj.active = ActiveType::Yes;
+
+    level_state.actors.add_obj(obj);
+
+    sound.play_sound_loc_actor(SoundName::FLAMETHROWER, assets, rc, &obj);
+}
+
+fn a_hitler_morph(
+    k: ObjKey,
+    _: u64,
+    _: &Ticker,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    _: &mut Sound,
+    _: &VGARenderer,
+    _: &Input,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    _: &Assets,
+    _: &RayCast,
+) {
+    let tile_x = level_state.obj(k).tilex;
+    let tile_y = level_state.obj(k).tiley;
+    let mut real_hitler = spawn_new_obj(
+        &mut level_state.level.map_segs,
+        tile_x,
+        tile_y,
+        &S_HITLERCHASE1,
+        ClassType::RealHitler,
+    );
+    let obj = level_state.obj(k);
+    real_hitler.speed = SPD_PATROL * 5;
+    real_hitler.x = obj.x;
+    real_hitler.y = obj.y;
+
+    real_hitler.distance = obj.distance;
+    real_hitler.dir = obj.dir;
+    real_hitler.flags = obj.flags | FL_SHOOTABLE;
+    real_hitler.hitpoints = match game_state.difficulty {
+        Difficulty::Baby => 500,
+        Difficulty::Easy => 700,
+        Difficulty::Medium => 800,
+        Difficulty::Hard => 900,
+    };
+
+    level_state.actors.add_obj(real_hitler);
+}
+
+fn a_mecha_sound(
+    k: ObjKey,
+    _: u64,
+    _: &Ticker,
+    level_state: &mut LevelState,
+    _: &mut GameState,
+    sound: &mut Sound,
+    _: &VGARenderer,
+    _: &Input,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    assets: &Assets,
+    rc: &RayCast,
+) {
+    let obj = level_state.obj(k);
+    if level_state.area_by_player[obj.area_number] {
+        sound.play_sound_loc_actor(SoundName::MECHSTEP, assets, rc, obj);
+    }
+}
+
+fn a_slurpie(
+    k: ObjKey,
+    _: u64,
+    _: &Ticker,
+    level_state: &mut LevelState,
+    _: &mut GameState,
+    sound: &mut Sound,
+    _: &VGARenderer,
+    _: &Input,
+    _: &mut ControlState,
+    _: &ProjectionConfig,
+    assets: &Assets,
+    rc: &RayCast,
+) {
+    sound.play_sound_loc_actor(SoundName::SLURPIE, assets, rc, level_state.obj(k));
+}
+
 pub fn spawn_dead_guard(
     map_data: &MapSegs,
     actors: &mut Actors,
@@ -2767,6 +3705,52 @@ pub fn spawn_schabbs(
     }
 
     spawn(actors, actor_at, schabb);
+}
+
+pub fn spawn_fake_hitler(
+    map_data: &MapSegs,
+    actors: &mut Actors,
+    actor_at: &mut Vec<Vec<At>>,
+    game_state: &mut GameState,
+    x_tile: usize,
+    y_tile: usize,
+) {
+    let mut fake = spawn_new_obj(map_data, x_tile, y_tile, &S_FAKESTAND, ClassType::Fake);
+    fake.speed = SPD_PATROL;
+    fake.hitpoints = START_HITPOINTS[game_state.difficulty as usize][EnemyType::Fake as usize];
+    fake.dir = DirType::North;
+    fake.flags = FL_SHOOTABLE | FL_AMBUSH;
+    if !game_state.loaded_game {
+        game_state.kill_total += 1;
+    }
+
+    spawn(actors, actor_at, fake);
+}
+
+pub fn spawn_hitler(
+    map_data: &MapSegs,
+    actors: &mut Actors,
+    actor_at: &mut Vec<Vec<At>>,
+    game_state: &mut GameState,
+    x_tile: usize,
+    y_tile: usize,
+) {
+    let mut hitler = spawn_new_obj(
+        map_data,
+        x_tile,
+        y_tile,
+        &S_MECHASTAND,
+        ClassType::MechaHitler,
+    );
+    hitler.speed = SPD_PATROL;
+    hitler.hitpoints = START_HITPOINTS[game_state.difficulty as usize][EnemyType::Hitler as usize];
+    hitler.dir = DirType::South;
+    hitler.flags = FL_SHOOTABLE | FL_AMBUSH;
+    if !game_state.loaded_game {
+        game_state.kill_total += 1;
+    }
+
+    spawn(actors, actor_at, hitler);
 }
 
 pub fn spawn_patrol(
@@ -3041,9 +4025,15 @@ pub fn do_death_scream(
         ClassType::Schabb => {
             sound.play_sound(SoundName::MEINGOTT, assets);
         }
-        // TODO realhitlerobj EVASND
-        // TODO mechahilterobj SCHEISTSND
-        // TODO fakeobj HITLERHASND
+        ClassType::Fake => {
+            sound.play_sound(SoundName::HITLERHA, assets);
+        }
+        ClassType::MechaHitler => {
+            sound.play_sound(SoundName::SCHEIST, assets);
+        }
+        ClassType::RealHitler => {
+            sound.play_sound(SoundName::EVA, assets);
+        }
         // TODO giftobj DONNERSND
         // TODO gretelobj MEINSND
         // TODO fatobj ROSESND
@@ -3354,7 +4344,7 @@ fn a_start_death_cam(
             if sound.digi_mode() != DigiMode::Off {
                 new_state(level_state.mut_obj(k), &S_SCHABBDEATHCAM_140);
             } else {
-                new_state(level_state.mut_obj(k), &S_SCHABBDEATHCAM_5);
+                new_state(level_state.mut_obj(k), &S_SCHABBDEATHCAM_10);
             }
         }
         // TODO realhitler

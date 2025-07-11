@@ -1065,6 +1065,26 @@ derive_from! {
         SchabbDie1 = 313, SchabbDie2 = 314, SchabbDie3 = 315, SchabbDead = 316,
         Hypo1 = 317, Hypo2 = 318, Hypo3 = 319, Hypo4 = 320,
 
+        // fake
+        FakeW1 = 321, FakeW2 = 322, FakeW3 = 323, FakeW4 = 324,
+        FakeShoot = 325, Fire1 = 326, Fire2 = 327,
+
+        FakeDie1 = 328, FakeDie2 = 329, FakeDie3 = 330, FakeDie4 = 331,
+        FakeDie5 = 332, FakeDead = 333,
+
+        // hitler
+        MechaW1 = 334, MechaW2 = 335, MechaW3 = 336, MechaW4 = 337,
+        MechaShoot1 = 338, MechaShoot2 = 339, MechaShoot3 = 340, MechaDead = 341,
+
+        MechaDie1 = 342, MechaDie2 = 343, MechaDie3 = 344,
+
+        HitlerW1 = 345, HitlerW2 = 346, HitlerW3 = 347, HitlerW4 = 348,
+        HitlerShoot1 = 349, HitlerShoot2 = 350, HitlerShoot3 = 351, HitlerDead = 352,
+
+        HitlerDie1 = 353, HitlerDie2 = 354, HitlerDie3 = 355, HitlerDie4 = 356,
+        HitlerDie5 = 357, HitlerDie6 = 358, HitlerDie7 = 359,
+
+        // Rocket, smoke and small explosion
         Boom1 = 382, Boom2 = 383, Boom3 = 384, // TODO check numbers
 
         // bj

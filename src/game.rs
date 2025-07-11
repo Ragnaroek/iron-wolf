@@ -4,7 +4,8 @@ use vga::VGA;
 
 use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{
-    spawn_boss, spawn_dead_guard, spawn_ghosts, spawn_patrol, spawn_schabbs, spawn_stand,
+    spawn_boss, spawn_dead_guard, spawn_fake_hitler, spawn_ghosts, spawn_hitler, spawn_patrol,
+    spawn_schabbs, spawn_stand,
 };
 use crate::agent::{
     DUMMY_PLAYER, draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_score,
@@ -822,7 +823,7 @@ fn scan_info_plane(
                     }
                 }
                 160 => {
-                    todo!("fake hitler");
+                    spawn_fake_hitler(map_data, &mut actors, actor_at, game_state, x, y);
                 }
                 161 => {
                     todo!("death");
@@ -883,7 +884,7 @@ fn scan_info_plane(
                     }
                 }
                 178 => {
-                    todo!("hitler");
+                    spawn_hitler(map_data, &mut actors, actor_at, game_state, x, y);
                 }
                 179 => {
                     todo!("fat");
