@@ -373,7 +373,12 @@ pub fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
 
     let area = {
         let obj = level_state.obj(k);
-        (level_state.level.map_segs.segs[0][obj.tiley * MAP_SIZE + obj.tilex] - AREATILE) as usize
+        let seg_val = level_state.level.map_segs.segs[0][obj.tiley * MAP_SIZE + obj.tilex];
+        if level_state.level.map_segs.segs[0][obj.tiley * MAP_SIZE + obj.tilex] < AREATILE {
+            0
+        } else {
+            (seg_val - AREATILE) as usize
+        }
     };
     let obj = level_state.mut_obj(k);
     obj.area_number = area;

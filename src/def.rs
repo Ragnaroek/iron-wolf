@@ -752,11 +752,11 @@ pub struct ObjType {
     pub distance: i32,
     pub dir: DirType,
 
-    pub x: i32,       // TODO should be of Fixed type?
-    pub y: i32,       // TODO should be of Fixed type?
-    pub tilex: usize, // rename to tile_x
-    pub tiley: usize, // rename to tile_y
-    pub area_number: usize,
+    pub x: i32,             // TODO should be of Fixed type?
+    pub y: i32,             // TODO should be of Fixed type?
+    pub tilex: usize,       // rename to tile_x
+    pub tiley: usize,       // rename to tile_y
+    pub area_number: usize, // TODO should be u8?
 
     pub view_x: i32,
     pub view_height: i32,
