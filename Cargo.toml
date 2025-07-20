@@ -77,8 +77,8 @@ wasm-timer = { version = "0.2.5", optional = true }
 debug = true
 
 [profile.dev]
-debug = true
-opt-level = 3
+debug = 2
+split-debuginfo = "packed"
 
 [profile.release]
 strip = true
