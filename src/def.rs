@@ -39,8 +39,9 @@ pub const GLOBAL1: i32 = 1 << 16;
 pub const MAP_SIZE: usize = 64;
 pub const MIN_DIST: i32 = 0x5800;
 pub const PLAYER_SIZE: i32 = MIN_DIST;
-pub const ANGLES: usize = 360; //must be divisable by 4
+pub const ANGLES: usize = 360; // must be divisable by 4
 pub const ANGLES_I32: i32 = ANGLES as i32;
+pub const ANGLES_F64: f64 = ANGLES as f64;
 pub const ANGLE_QUAD: usize = ANGLES / 4;
 pub const TILEGLOBAL: i32 = 1 << 16;
 

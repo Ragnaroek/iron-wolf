@@ -6,7 +6,7 @@ use crate::act1::open_door;
 use crate::agent::{S_ATTACK, S_PLAYER, take_damage};
 use crate::assets::SoundName;
 use crate::def::{
-    AMBUSH_TILE, ANGLES, ActiveType, Actors, Assets, At, ClassType, ControlState, Difficulty,
+    AMBUSH_TILE, ANGLES_F64, ActiveType, Actors, Assets, At, ClassType, ControlState, Difficulty,
     DirType, DoorAction, EnemyType, FL_AMBUSH, FL_NEVERMARK, FL_NONMARK, FL_SHOOTABLE, FL_VISABLE,
     GameState, ICON_ARROWS, LevelState, MAP_SIZE, MIN_ACTOR_DIST, NUM_ENEMIES, ObjKey, ObjType,
     PLAYER_SIZE, PlayState, RUN_SPEED, SCREENLOC, SPD_DOG, SPD_PATROL, STATUS_LINES, Sprite,
@@ -33,7 +33,7 @@ const BJ_RUN_SPEED: i32 = 2048;
 const BJ_JUMP_SPEED: i32 = 680;
 
 const PROJ_SIZE: i32 = 0x2000;
-const PROJECTILE_SIZE: i32 = 0xc000;
+const PROJECTILE_SIZE: u32 = 0xc000;
 
 static START_HITPOINTS: [[i32; NUM_ENEMIES]; 4] = [
     [
@@ -2807,22 +2807,25 @@ fn t_projectile(
     let player_y = level_state.player().y;
 
     let speed = new_fixed_i32(level_state.obj(k).speed * tics as i32);
+    {
+        let mut delta_x =
+            fixed_by_frac(speed, rc_conf.cos(level_state.obj(k).angle as usize)).to_i32();
+        let mut delta_y =
+            -fixed_by_frac(speed, rc_conf.sin(level_state.obj(k).angle as usize)).to_i32();
 
-    let mut delta_x = fixed_by_frac(speed, rc_conf.cos(level_state.obj(k).angle as usize)).to_i32();
-    let mut delta_y = fixed_by_frac(speed, rc_conf.sin(level_state.obj(k).angle as usize)).to_i32();
+        if delta_x > 0x10000 {
+            delta_x = 0x10000;
+        }
+        if delta_y > 0x10000 {
+            delta_y = 0x10000;
+        }
 
-    if delta_x > 0x10000 {
-        delta_x = 0x10000;
+        level_state.mut_obj(k).x += delta_x;
+        level_state.mut_obj(k).y += delta_y;
     }
-    if delta_y > 0x10000 {
-        delta_y = 0x10000;
-    }
 
-    level_state.mut_obj(k).x += delta_x;
-    level_state.mut_obj(k).y += delta_y;
-
-    delta_x = level_state.obj(k).x - player_x;
-    delta_y = level_state.obj(k).y - player_y;
+    let delta_player_x = level_state.obj(k).x.abs_diff(player_x);
+    let delta_player_y = level_state.obj(k).y.abs_diff(player_y);
 
     if !projectile_try_move(k, level_state) {
         if level_state.obj(k).class == ClassType::Rocket {
@@ -2834,7 +2837,7 @@ fn t_projectile(
         return;
     }
 
-    if delta_x < PROJECTILE_SIZE && delta_y < PROJECTILE_SIZE {
+    if delta_player_x < PROJECTILE_SIZE && delta_player_y < PROJECTILE_SIZE {
         // hit the player
         let damage = match level_state.obj(k).class {
             ClassType::Needle => (rnd_t() >> 3) + 20,
@@ -3361,7 +3364,7 @@ fn t_schabb_throw(
     if angle < 0.0 {
         angle = std::f64::consts::PI * 2.0 + angle;
     }
-    let iangle = (angle / (std::f64::consts::PI * 2.0)) as i32 * ANGLES as i32;
+    let iangle = ((angle / (std::f64::consts::PI * 2.0)) * ANGLES_F64) as i32;
 
     let tile_x = level_state.obj(k).tilex;
     let tile_y = level_state.obj(k).tiley;
@@ -3469,7 +3472,7 @@ fn t_fake_fire(
     if angle < 0.0 {
         angle = std::f64::consts::PI * 2.0 + angle;
     }
-    let iangle = (angle / (std::f64::consts::PI * 2.0)) as i32 * ANGLES as i32;
+    let iangle = ((angle / (std::f64::consts::PI * 2.0)) * ANGLES_F64) as i32;
 
     let tile_x = level_state.obj(k).tilex;
     let tile_y = level_state.obj(k).tiley;
@@ -3486,7 +3489,7 @@ fn t_fake_fire(
     obj.y = level_state.obj(k).y;
     obj.dir = DirType::NoDir;
     obj.angle = iangle;
-    obj.speed = 0x2000;
+    obj.speed = 0x1200;
     obj.flags = FL_NEVERMARK;
     obj.active = ActiveType::Yes;
 
@@ -4288,7 +4291,7 @@ fn a_start_death_cam(
     if fangle < 0.0 {
         fangle = std::f64::consts::PI * 2.0 + fangle;
     }
-    let angle = (fangle / (std::f64::consts::PI * 2.0)) as i32 * ANGLES as i32;
+    let angle = ((fangle / (std::f64::consts::PI * 2.0)) * ANGLES_F64) as i32;
     level_state.mut_player().angle = angle;
     // try to position as close as possible without being in a wall
     let mut dist = 0x14000;

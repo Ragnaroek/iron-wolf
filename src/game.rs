@@ -14,9 +14,9 @@ use crate::agent::{
 use crate::assets::{GraphicNum, SoundName, load_demo, load_map_from_assets};
 use crate::config::WolfConfig;
 use crate::def::{
-    AMBUSH_TILE, ANGLES, Actors, Assets, At, BenchmarkResult, ControlState, Difficulty, DoorLock,
-    EnemyType, GameState, IWConfig, Level, LevelState, MAP_SIZE, MAX_ACTORS, MAX_DOORS, MAX_STATS,
-    NUM_AREAS, ObjKey, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState,
+    AMBUSH_TILE, ANGLES, ANGLES_F64, Actors, Assets, At, BenchmarkResult, ControlState, Difficulty,
+    DoorLock, EnemyType, GameState, IWConfig, Level, LevelState, MAP_SIZE, MAX_ACTORS, MAX_DOORS,
+    MAX_STATS, NUM_AREAS, ObjKey, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState,
     new_game_state,
 };
 use crate::draw::{RayCast, three_d_refresh};
@@ -269,7 +269,7 @@ async fn died(
     if fangle < 0.0 {
         fangle = std::f64::consts::PI * 2.0 + fangle;
     }
-    let iangle = (fangle / (std::f64::consts::PI * 2.0)) as i32 * ANGLES as i32;
+    let iangle = ((fangle / (std::f64::consts::PI * 2.0)) * ANGLES_F64) as i32;
 
     let counter;
     let clockwise;
