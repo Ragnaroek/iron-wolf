@@ -1950,38 +1950,18 @@ pub static S_FAKECHASE4: StateType = StateType {
     next: Some(&S_FAKECHASE1),
 };
 
-pub static S_FAKEDIE1_140: StateType = StateType {
+pub static S_FAKEDIE1: StateType = StateType {
     id: 1125,
     rotate: 0,
     sprite: Some(Sprite::FakeDie1),
     tic_time: 10,
     think: None,
     action: Some(a_death_scream),
-    next: Some(&S_FAKEDIE2_140),
+    next: Some(&S_FAKEDIE2),
 };
 
-pub static S_FAKEDIE1_10: StateType = StateType {
-    id: 1126,
-    rotate: 0,
-    sprite: Some(Sprite::FakeDie1),
-    tic_time: 10,
-    think: None,
-    action: Some(a_death_scream),
-    next: Some(&S_FAKEDIE2_10),
-};
-
-pub static S_FAKEDIE2_140: StateType = StateType {
+pub static S_FAKEDIE2: StateType = StateType {
     id: 1127,
-    rotate: 0,
-    sprite: Some(Sprite::FakeDie2),
-    tic_time: 140,
-    think: None,
-    action: None,
-    next: Some(&S_FAKEDIE3),
-};
-
-pub static S_FAKEDIE2_10: StateType = StateType {
-    id: 1128,
     rotate: 0,
     sprite: Some(Sprite::FakeDie2),
     tic_time: 10,
@@ -2560,7 +2540,7 @@ pub static S_HITLERSHOOT6: StateType = StateType {
     next: Some(&S_HITLERCHASE1),
 };
 
-pub static STATES: [&'static StateType; 241] = [
+pub static STATES: [&'static StateType; 239] = [
     &S_PLAYER,
     &S_ATTACK,
     &S_GRDSTAND,
@@ -2741,10 +2721,8 @@ pub static STATES: [&'static StateType; 241] = [
     &S_FAKECHASE3,
     &S_FAKECHASE3S,
     &S_FAKECHASE4,
-    &S_FAKEDIE1_140,
-    &S_FAKEDIE1_10,
-    &S_FAKEDIE2_140,
-    &S_FAKEDIE2_10,
+    &S_FAKEDIE1,
+    &S_FAKEDIE2,
     &S_FAKEDIE3,
     &S_FAKEDIE4,
     &S_FAKEDIE5,

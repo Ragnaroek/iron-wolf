@@ -4,11 +4,11 @@ mod state_test;
 
 use crate::act1::{open_door, place_item_type};
 use crate::act2::{
-    S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_FAKECHASE1, S_FAKEDIE1_10, S_FAKEDIE1_140,
-    S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_HITLERDIE1, S_MECHACHASE1, S_MECHADIE1_10,
-    S_MECHADIE1_140, S_MUTCHASE1, S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1, S_OFCCHASE1, S_OFCDIE1,
-    S_OFCPAIN, S_OFCPAIN1, S_SCHABBCHASE1, S_SCHABBDIE1_10, S_SCHABBDIE1_140, S_SSCHASE1, S_SSDIE1,
-    S_SSPAIN, S_SSPAIN1, do_death_scream,
+    S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_FAKECHASE1, S_FAKEDIE1, S_GRDCHASE1,
+    S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_HITLERDIE1, S_MECHACHASE1, S_MECHADIE1_10, S_MECHADIE1_140,
+    S_MUTCHASE1, S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1, S_OFCCHASE1, S_OFCDIE1, S_OFCPAIN, S_OFCPAIN1,
+    S_SCHABBCHASE1, S_SCHABBDIE1_10, S_SCHABBDIE1_140, S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1,
+    do_death_scream,
 };
 use crate::agent::{give_points, take_damage};
 use crate::assets::SoundName;
@@ -1236,11 +1236,7 @@ fn kill_actor(
             }
             ClassType::Fake => {
                 give_points(game_state, rdr, sound, assets, 2000);
-                if sound.digi_mode() != DigiMode::Off {
-                    new_state(level_state.mut_obj(k), &S_FAKEDIE1_140);
-                } else {
-                    new_state(level_state.mut_obj(k), &S_FAKEDIE1_10);
-                }
+                new_state(level_state.mut_obj(k), &S_FAKEDIE1);
             }
             ClassType::MechaHitler => {
                 give_points(game_state, rdr, sound, assets, 5000);
