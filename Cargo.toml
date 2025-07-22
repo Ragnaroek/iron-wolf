@@ -77,10 +77,13 @@ wasm-timer = { version = "0.2.5", optional = true }
 debug = true
 
 [profile.dev]
-debug = 2
+debug = true
+opt-level = 3              # without 3, iw crashes with a stack overflow...
 split-debuginfo = "packed"
 
 [profile.release]
+opt-level = "z"
+debug = false
 strip = true
 lto = true
 codegen-units = 1
