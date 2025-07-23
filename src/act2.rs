@@ -4328,7 +4328,9 @@ fn a_start_death_cam(
                 new_state(level_state.mut_obj(k), &S_SCHABBDEATHCAM_10);
             }
         }
-        // TODO realhitler
+        ClassType::RealHitler => {
+            new_state(level_state.mut_obj(k), &S_HITLERDEATHCAM);
+        }
         // TODO giftobj
         // TODO fatobj
         _ => { /* ignore */ }
