@@ -5,7 +5,7 @@ mod state_test;
 use crate::act1::{open_door, place_item_type};
 use crate::act2::{
     S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_FAKECHASE1, S_FAKEDIE1, S_GRDCHASE1,
-    S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_HITLERDIE1, S_MECHACHASE1, S_MECHADIE1_10, S_MECHADIE1_140,
+    S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_HITLERDIE1_5, S_HITLERDIE1_140, S_MECHACHASE1, S_MECHADIE1,
     S_MUTCHASE1, S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1, S_OFCCHASE1, S_OFCDIE1, S_OFCPAIN, S_OFCPAIN1,
     S_SCHABBCHASE1, S_SCHABBDIE1_10, S_SCHABBDIE1_140, S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1,
     do_death_scream,
@@ -1239,17 +1239,19 @@ fn kill_actor(
             }
             ClassType::MechaHitler => {
                 give_points(game_state, rdr, sound, assets, 5000);
-                if sound.digi_mode() != DigiMode::Off {
-                    new_state(level_state.mut_obj(k), &S_MECHADIE1_140);
-                } else {
-                    new_state(level_state.mut_obj(k), &S_MECHADIE1_10);
-                }
+                new_state(level_state.mut_obj(k), &S_MECHADIE1);
             }
             ClassType::RealHitler => {
                 give_points(game_state, rdr, sound, assets, 5000);
                 game_state.kill_x = level_state.player().x as usize;
                 game_state.kill_y = level_state.player().y as usize;
-                new_state(level_state.mut_obj(k), &S_HITLERDIE1);
+
+                if sound.digi_mode() != DigiMode::Off {
+                    new_state(level_state.mut_obj(k), &S_HITLERDIE1_140);
+                } else {
+                    new_state(level_state.mut_obj(k), &S_HITLERDIE1_5);
+                }
+
                 do_death_scream(k, level_state, game_state, sound, assets, rc);
             }
             _ => { /* ignore kill on this class of obj */ }

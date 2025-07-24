@@ -2190,41 +2190,21 @@ pub static S_MECHACHASE4: StateType = StateType {
     next: Some(&S_MECHACHASE1),
 };
 
-pub static S_MECHADIE1_140: StateType = StateType {
-    id: 1150,
-    rotate: 0,
-    sprite: Some(Sprite::MechaDie1),
-    tic_time: 10,
-    think: None,
-    action: Some(a_death_scream),
-    next: Some(&S_MECHADIE2_140),
-};
-
-pub static S_MECHADIE1_10: StateType = StateType {
+pub static S_MECHADIE1: StateType = StateType {
     id: 1151,
     rotate: 0,
     sprite: Some(Sprite::MechaDie1),
     tic_time: 10,
     think: None,
     action: Some(a_death_scream),
-    next: Some(&S_MECHADIE2_10),
+    next: Some(&S_MECHADIE2),
 };
 
-pub static S_MECHADIE2_140: StateType = StateType {
-    id: 1152,
-    rotate: 0,
-    sprite: Some(Sprite::MechaDie2),
-    tic_time: 140,
-    think: None,
-    action: None,
-    next: Some(&S_MECHADIE3),
-};
-
-pub static S_MECHADIE2_10: StateType = StateType {
+pub static S_MECHADIE2: StateType = StateType {
     id: 1153,
     rotate: 0,
     sprite: Some(Sprite::MechaDie2),
-    tic_time: 10,
+    tic_time: 5,
     think: None,
     action: None,
     next: Some(&S_MECHADIE3),
@@ -2370,38 +2350,68 @@ pub static S_HITLERCHASE4: StateType = StateType {
     next: Some(&S_HITLERCHASE1),
 };
 
-pub static S_HITLERDEATHCAM: StateType = StateType {
+pub static S_HITLERDEATHCAM_140: StateType = StateType {
     id: 1168,
     rotate: 0,
     sprite: Some(Sprite::HitlerW1),
     tic_time: 10,
     think: None,
     action: None,
-    next: Some(&S_HITLERDIE1),
+    next: Some(&S_HITLERDIE1_140),
 };
 
-pub static S_HITLERDIE1: StateType = StateType {
+pub static S_HITLERDEATHCAM_5: StateType = StateType {
     id: 1169,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerW1),
+    tic_time: 10,
+    think: None,
+    action: None,
+    next: Some(&S_HITLERDIE1_5),
+};
+
+pub static S_HITLERDIE1_140: StateType = StateType {
+    id: 1170,
     rotate: 0,
     sprite: Some(Sprite::HitlerW1),
     tic_time: 1,
     think: None,
     action: Some(a_death_scream),
-    next: Some(&S_HITLERDIE2),
+    next: Some(&S_HITLERDIE2_140),
 };
 
-pub static S_HITLERDIE2: StateType = StateType {
-    id: 1170,
+pub static S_HITLERDIE1_5: StateType = StateType {
+    id: 1171,
     rotate: 0,
     sprite: Some(Sprite::HitlerW1),
-    tic_time: 10,
+    tic_time: 1,
+    think: None,
+    action: Some(a_death_scream),
+    next: Some(&S_HITLERDIE2_5),
+};
+
+pub static S_HITLERDIE2_140: StateType = StateType {
+    id: 1172,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerW1),
+    tic_time: 140,
+    think: None,
+    action: None,
+    next: Some(&S_HITLERDIE3),
+};
+
+pub static S_HITLERDIE2_5: StateType = StateType {
+    id: 1173,
+    rotate: 0,
+    sprite: Some(Sprite::HitlerW1),
+    tic_time: 5,
     think: None,
     action: None,
     next: Some(&S_HITLERDIE3),
 };
 
 pub static S_HITLERDIE3: StateType = StateType {
-    id: 1171,
+    id: 1174,
     rotate: 0,
     sprite: Some(Sprite::HitlerDie1),
     tic_time: 10,
@@ -2411,7 +2421,7 @@ pub static S_HITLERDIE3: StateType = StateType {
 };
 
 pub static S_HITLERDIE4: StateType = StateType {
-    id: 1172,
+    id: 1175,
     rotate: 0,
     sprite: Some(Sprite::HitlerDie2),
     tic_time: 10,
@@ -2421,7 +2431,7 @@ pub static S_HITLERDIE4: StateType = StateType {
 };
 
 pub static S_HITLERDIE5: StateType = StateType {
-    id: 1173,
+    id: 1176,
     rotate: 0,
     sprite: Some(Sprite::HitlerDie3),
     tic_time: 10,
@@ -2431,7 +2441,7 @@ pub static S_HITLERDIE5: StateType = StateType {
 };
 
 pub static S_HITLERDIE6: StateType = StateType {
-    id: 1174,
+    id: 1177,
     rotate: 0,
     sprite: Some(Sprite::HitlerDie4),
     tic_time: 10,
@@ -2441,7 +2451,7 @@ pub static S_HITLERDIE6: StateType = StateType {
 };
 
 pub static S_HITLERDIE7: StateType = StateType {
-    id: 1175,
+    id: 1178,
     rotate: 0,
     sprite: Some(Sprite::HitlerDie5),
     tic_time: 10,
@@ -2451,7 +2461,7 @@ pub static S_HITLERDIE7: StateType = StateType {
 };
 
 pub static S_HITLERDIE8: StateType = StateType {
-    id: 1176,
+    id: 1179,
     rotate: 0,
     sprite: Some(Sprite::HitlerDie6),
     tic_time: 10,
@@ -2461,7 +2471,7 @@ pub static S_HITLERDIE8: StateType = StateType {
 };
 
 pub static S_HITLERDIE9: StateType = StateType {
-    id: 1177,
+    id: 1180,
     rotate: 0,
     sprite: Some(Sprite::HitlerDie7),
     tic_time: 10,
@@ -2471,7 +2481,7 @@ pub static S_HITLERDIE9: StateType = StateType {
 };
 
 pub static S_HITLERDIE10: StateType = StateType {
-    id: 1178,
+    id: 1181,
     rotate: 0,
     sprite: Some(Sprite::HitlerDead),
     tic_time: 20,
@@ -2481,7 +2491,7 @@ pub static S_HITLERDIE10: StateType = StateType {
 };
 
 pub static S_HITLERSHOOT1: StateType = StateType {
-    id: 1179,
+    id: 1182,
     rotate: 0,
     sprite: Some(Sprite::HitlerShoot1),
     tic_time: 30,
@@ -2491,7 +2501,7 @@ pub static S_HITLERSHOOT1: StateType = StateType {
 };
 
 pub static S_HITLERSHOOT2: StateType = StateType {
-    id: 1180,
+    id: 1183,
     rotate: 0,
     sprite: Some(Sprite::HitlerShoot2),
     tic_time: 10,
@@ -2501,7 +2511,7 @@ pub static S_HITLERSHOOT2: StateType = StateType {
 };
 
 pub static S_HITLERSHOOT3: StateType = StateType {
-    id: 1181,
+    id: 1184,
     rotate: 0,
     sprite: Some(Sprite::HitlerShoot3),
     tic_time: 10,
@@ -2511,7 +2521,7 @@ pub static S_HITLERSHOOT3: StateType = StateType {
 };
 
 pub static S_HITLERSHOOT4: StateType = StateType {
-    id: 1182,
+    id: 1185,
     rotate: 0,
     sprite: Some(Sprite::HitlerShoot2),
     tic_time: 10,
@@ -2521,7 +2531,7 @@ pub static S_HITLERSHOOT4: StateType = StateType {
 };
 
 pub static S_HITLERSHOOT5: StateType = StateType {
-    id: 1183,
+    id: 1186,
     rotate: 0,
     sprite: Some(Sprite::HitlerShoot3),
     tic_time: 10,
@@ -2531,7 +2541,7 @@ pub static S_HITLERSHOOT5: StateType = StateType {
 };
 
 pub static S_HITLERSHOOT6: StateType = StateType {
-    id: 1184,
+    id: 1187,
     rotate: 0,
     sprite: Some(Sprite::HitlerShoot2),
     tic_time: 10,
@@ -2540,7 +2550,7 @@ pub static S_HITLERSHOOT6: StateType = StateType {
     next: Some(&S_HITLERCHASE1),
 };
 
-pub static STATES: [&'static StateType; 239] = [
+pub static STATES: [&'static StateType; 240] = [
     &S_PLAYER,
     &S_ATTACK,
     &S_GRDSTAND,
@@ -2745,10 +2755,8 @@ pub static STATES: [&'static StateType; 239] = [
     &S_MECHACHASE3,
     &S_MECHACHASE3S,
     &S_MECHACHASE4,
-    &S_MECHADIE1_140,
-    &S_MECHADIE1_10,
-    &S_MECHADIE2_140,
-    &S_MECHADIE2_10,
+    &S_MECHADIE1,
+    &S_MECHADIE2,
     &S_MECHADIE3,
     &S_MECHADIE4,
     &S_MECHASHOOT1,
@@ -2763,9 +2771,12 @@ pub static STATES: [&'static StateType; 239] = [
     &S_HITLERCHASE3,
     &S_HITLERCHASE3S,
     &S_HITLERCHASE4,
-    &S_HITLERDEATHCAM,
-    &S_HITLERDIE1,
-    &S_HITLERDIE2,
+    &S_HITLERDEATHCAM_140,
+    &S_HITLERDEATHCAM_5,
+    &S_HITLERDIE1_140,
+    &S_HITLERDIE1_5,
+    &S_HITLERDIE2_140,
+    &S_HITLERDIE2_5,
     &S_HITLERDIE3,
     &S_HITLERDIE4,
     &S_HITLERDIE5,
@@ -4329,7 +4340,11 @@ fn a_start_death_cam(
             }
         }
         ClassType::RealHitler => {
-            new_state(level_state.mut_obj(k), &S_HITLERDEATHCAM);
+            if sound.digi_mode() != DigiMode::Off {
+                new_state(level_state.mut_obj(k), &S_HITLERDEATHCAM_140);
+            } else {
+                new_state(level_state.mut_obj(k), &S_HITLERDEATHCAM_5);
+            }
         }
         // TODO giftobj
         // TODO fatobj
