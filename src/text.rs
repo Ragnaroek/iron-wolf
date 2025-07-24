@@ -141,7 +141,7 @@ async fn show_article(rdr: &VGARenderer, input: &Input, which: usize) {
         match last_scan {
             NumCode::Escape => break,
             NumCode::UpArrow | NumCode::PgUp | NumCode::LeftArrow => {
-                if layout_ctx.page_num >= 1 {
+                if layout_ctx.page_num > 1 {
                     layout_ctx.page_num -= 1;
                     new_page = true;
                 }
