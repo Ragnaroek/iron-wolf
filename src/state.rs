@@ -1015,6 +1015,10 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
             let y: i32 = y_frac >> 8;
             y_frac += y_step;
 
+            if x as usize >= MAP_SIZE || y as usize >= MAP_SIZE {
+                // out of map, no line of sight
+                return false;
+            }
             let mut value = level_state.level.tile_map[x as usize][y as usize];
             x += x_step;
 
@@ -1070,6 +1074,10 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
             let x = x_frac >> 8;
             x_frac += x_step;
 
+            if x as usize >= MAP_SIZE || y as usize >= MAP_SIZE {
+                // out of map, no line of sight
+                return false;
+            }
             let mut value = level_state.level.tile_map[x as usize][y as usize];
             y += y_step;
 

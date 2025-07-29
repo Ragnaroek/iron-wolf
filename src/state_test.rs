@@ -60,6 +60,37 @@ fn test_check_line_2() {
     assert!(check_line(&level_state, obj));
 }
 
+// Bugfix test
+#[test]
+fn test_check_line_3() {
+    let mut player = test_player();
+    player.tilex = 24;
+    player.tiley = 61;
+    player.x = 1638037;
+    player.y = 4029590;
+    let mut level_state = mock_level_state(player);
+    let mut game_state = new_game_state();
+    spawn_stand(
+        &mut level_state.level.tile_map,
+        &mut level_state.level.map_segs,
+        EnemyType::Guard,
+        &mut level_state.actors,
+        &mut level_state.actor_at,
+        &mut game_state,
+        39,
+        61,
+        2,
+        Difficulty::Baby,
+    );
+
+    let obj = level_state.mut_obj(ObjKey(1));
+    obj.x = 2326528;
+    obj.y = 4202496;
+
+    let obj = level_state.obj(ObjKey(1));
+    assert_eq!(check_line(&level_state, obj), false);
+}
+
 #[test]
 fn test_check_diag() {
     let mut level_state = mock_level_state_with_actor_at();
