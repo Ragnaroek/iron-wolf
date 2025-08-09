@@ -20,6 +20,9 @@ run-sdl-profile:
 run-sdl-demo-0:
     cargo run --features sdl -- -timedemo 0
 
+run-sdl-demo-1:
+    cargo run --features sdl -- -timedemo 1
+
 ## Web
 build-web:
 	wasm-pack build --debug --target web --features web
