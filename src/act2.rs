@@ -180,7 +180,7 @@ pub static S_GRDPATH1S: StateType = StateType {
     tic_time: 5,
     think: None,
     action: None,
-    next: Some(&S_GRDPATH3),
+    next: Some(&S_GRDPATH2),
 };
 
 pub static S_GRDPATH2: StateType = StateType {
