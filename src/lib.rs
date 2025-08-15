@@ -5,7 +5,6 @@
 #![feature(type_alias_impl_trait)]
 #![feature(stmt_expr_attributes)]
 #![feature(duration_millis_float)]
-#![feature(strict_overflow_ops)]
 
 pub mod act1;
 pub mod act2;
