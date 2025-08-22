@@ -357,6 +357,7 @@ pub async fn play_loop(
     let mut prj = prj_param;
     let mut rc = rc_param;
     let mut _frame_id: u64 = 0;
+    let mut demo_tic = 0;
     while game_state.play_state == PlayState::StillPlaying {
         let r_start_frame = if iw_config.options.show_frame_rate || benchmark {
             draw_play_border(rdr, prj.view_width, prj.view_height); //clear border, as the fps count is written on the border
@@ -369,16 +370,22 @@ pub async fn play_loop(
         let span = info_span!("frame", id = _frame_id);
         _frame_id += 1;
 
-        let next_tic = if input.mode == InputMode::Player {
-            1
-        } else {
-            DEMO_TICS
-        };
-
-        let (next_frame_start, curr_tics) = ticker.next_tics_time(next_tic);
+        let (next_frame_start, curr_tics) = ticker.next_tics_time(1);
         let want_frame_start = next_frame_start + (TARGET_FRAME_DURATION / 2); // target mid frame time
         let wait_time = want_frame_start.saturating_duration_since(Instant::now());
         sleep(wait_time).await;
+
+        if input.mode == InputMode::DemoPlayback {
+            demo_tic += 1;
+            if demo_tic < DEMO_TICS {
+                /* Don't sleep to long (not DEMO_TICS long) to give the other task some room
+                 * to work on stuff.
+                 */
+                continue;
+            } else {
+                demo_tic = 0;
+            }
+        }
 
         let u_start_frame = if iw_config.options.show_frame_rate || benchmark {
             Some(Instant::now())
