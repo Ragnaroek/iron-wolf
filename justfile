@@ -17,11 +17,8 @@ run-sdl-tracing:
 run-sdl-profile:
     sudo -E cargo flamegraph --features sdl --profile=dev -- run
 
-run-sdl-demo-0:
-    cargo run --features sdl -- -timedemo 0
-
-run-sdl-demo-1:
-    cargo run --features sdl -- -timedemo 1
+run-sdl-demo NUM:
+    cargo run --features sdl -- -timedemo {{NUM}}
 
 ## Web
 build-web:
