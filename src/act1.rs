@@ -277,13 +277,22 @@ pub fn place_item_type(
     }
 
     if let Some(info) = found_info {
-        level_state.statics.push(StaticType {
+        let new_static = StaticType {
             tile_x,
             tile_y,
             sprite: info.sprite,
             flags: FL_BONUS,
             item_number: info.kind,
-        });
+        };
+        // look for a free spot in static list
+        for stat in &mut level_state.statics {
+            if stat.sprite == Sprite::None {
+                *stat = new_static;
+                return;
+            }
+        }
+        // no free spot, append
+        level_state.statics.push(new_static);
     } else {
         panic!("PlaceItemType: couldn't find type!");
     }
