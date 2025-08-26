@@ -2011,7 +2011,7 @@ async fn cp_view_scores(
     sound.play_music(Music::WONDERIN, assets, loader);
     rdr.fade_out().await;
 
-    MenuHandle::BackToGameLoop(None)
+    MenuHandle::QuitMenu
 }
 
 async fn cp_save_game(
