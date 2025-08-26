@@ -823,9 +823,7 @@ pub fn thrust_player(level_state: &mut LevelState) -> usize {
         player.tiley * MAP_SIZE + player.tilex
     };
 
-    let (area, _) =
-        (level_state.level.map_segs.segs[0][offset] as u8).overflowing_sub(AREATILE as u8);
-
+    let area = level_state.level.map_segs.segs[0][offset].saturating_sub(AREATILE);
     let player = level_state.mut_player();
     player.area_number = area as usize;
 

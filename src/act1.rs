@@ -309,7 +309,7 @@ pub fn place_item_type(
 // Scans outward from playerarea, marking all connected areas
 fn connect_areas(level_state: &mut LevelState) {
     level_state.area_by_player.fill(false);
-    let area_num = level_state.player().area_number as usize;
+    let area_num = level_state.player().area_number;
     level_state.area_by_player[area_num] = true;
     recursive_connect(level_state, area_num);
 }
