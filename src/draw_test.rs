@@ -4,7 +4,7 @@ use crate::def::{
     MAP_SIZE, MAX_ACTORS, ObjType,
 };
 use crate::draw::{Hit, Op, calc_height, init_ray_cast};
-use crate::fixed::new_fixed_i32;
+use crate::fixed::Fixed;
 use crate::map::MapSegs;
 use crate::start::new_view_size;
 
@@ -170,8 +170,8 @@ fn test_cast_angle_353() -> Result<(), String> {
 
     assert_eq!(level_state.player().x, 1933312);
     assert_eq!(level_state.player().y, 3768320);
-    assert_eq!(rc.view_cos, new_fixed_i32(65047));
-    assert_eq!(rc.view_sin, new_fixed_i32(-2147475662));
+    assert_eq!(rc.view_cos, Fixed::new_from_i32(65047));
+    assert_eq!(rc.view_sin, Fixed::new_from_i32(-2147475662));
     assert_eq!(rc.view_x, 1911207);
     assert_eq!(rc.view_y, 3765607);
     assert_eq!(rc.x_partialup, 54873);
@@ -396,8 +396,8 @@ fn test_player() -> ObjType {
         flags: FL_NEVERMARK,
         view_height: 0,
         view_x: 0,
-        trans_x: new_fixed_i32(0),
-        trans_y: new_fixed_i32(0),
+        trans_x: Fixed::new_from_i32(0),
+        trans_y: Fixed::new_from_i32(0),
         active: crate::def::ActiveType::Yes,
         angle: 0,
         pitch: 0,

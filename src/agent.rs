@@ -11,7 +11,7 @@ use crate::def::{
     TILEGLOBAL, TILESHIFT, WeaponType,
 };
 use crate::draw::RayCast;
-use crate::fixed::{ZERO, fixed_by_frac, new_fixed_i32};
+use crate::fixed::{Fixed, ZERO, fixed_by_frac};
 use crate::game::AREATILE;
 use crate::map;
 use crate::play::{ProjectionConfig, start_bonus_flash, start_damage_flash};
@@ -615,8 +615,8 @@ pub fn spawn_player(
         tiley: tile_y,
         view_x: 0,
         view_height: 0,
-        trans_x: new_fixed_i32(0),
-        trans_y: new_fixed_i32(0),
+        trans_x: ZERO,
+        trans_y: ZERO,
         x: ((tile_x as i32) << TILESHIFT) + TILEGLOBAL / 2,
         y: ((tile_y as i32) << TILESHIFT) + TILEGLOBAL / 2,
         speed: 0,
@@ -843,7 +843,7 @@ pub fn thrust(
     //TODO reset funnyticount (only for Spear?)
     level_state.thrustspeed += speed_param;
 
-    let speed = new_fixed_i32(if speed_param >= MIN_DIST * 2 {
+    let speed = Fixed::new_from_i32(if speed_param >= MIN_DIST * 2 {
         MIN_DIST * 2 - 1
     } else {
         speed_param

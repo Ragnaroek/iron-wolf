@@ -18,7 +18,7 @@ use crate::def::{
     StateType, StaticKind, TILEGLOBAL, TILESHIFT, UNSIGNEDSHIFT, WeaponType,
 };
 use crate::draw::RayCast;
-use crate::fixed::new_fixed_i32;
+use crate::fixed::ZERO;
 use crate::game::AREATILE;
 use crate::map::MapSegs;
 use crate::sd::{DigiMode, Sound};
@@ -179,8 +179,8 @@ pub fn spawn_new_obj(
         tiley: tile_y,
         view_x: 0,
         view_height: 0,
-        trans_x: new_fixed_i32(0),
-        trans_y: new_fixed_i32(0),
+        trans_x: ZERO,
+        trans_y: ZERO,
         x: ((tile_x as i32) << TILESHIFT) + TILEGLOBAL / 2,
         y: ((tile_y as i32) << TILESHIFT) + TILEGLOBAL / 2,
         dir: DirType::NoDir,

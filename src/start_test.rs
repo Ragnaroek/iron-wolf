@@ -10,7 +10,7 @@ use crate::def::{
     GameState, LevelState, MAP_SIZE, NUM_AREAS, ObjKey, ObjType, Sprite, StaticKind, StaticType,
     WeaponType, new_game_state,
 };
-use crate::fixed::{new_fixed, new_fixed_i32};
+use crate::fixed::{Fixed, ZERO};
 use crate::game::setup_game_level;
 use crate::loader::{DiskLoader, Loader};
 use crate::play::ProjectionConfig;
@@ -456,8 +456,8 @@ fn reset_partial_obj_type(obj: &mut ObjType) {
     obj.area_number = 78;
     obj.view_x = -1;
     obj.view_height = -3;
-    obj.trans_x = new_fixed(0, 0);
-    obj.trans_y = new_fixed(0, 0);
+    obj.trans_x = ZERO;
+    obj.trans_y = ZERO;
     obj.angle = -33;
     obj.area_number = 756;
     obj.speed = -8;
@@ -5404,8 +5404,8 @@ fn actor(
     actor.tiley = tile_y;
     actor.view_x = view_x;
     actor.view_height = view_height;
-    actor.trans_x = new_fixed_i32(trans_x);
-    actor.trans_y = new_fixed_i32(trans_y);
+    actor.trans_x = Fixed::new_from_i32(trans_x);
+    actor.trans_y = Fixed::new_from_i32(trans_y);
     actor.area_number = area_num;
     actor.angle = angle;
     actor.hitpoints = hitpoints;

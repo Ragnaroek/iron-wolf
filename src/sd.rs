@@ -14,7 +14,7 @@ use crate::{
     assets::{DigiChannel, Music, SoundName, WolfFile},
     def::{Assets, DigiSound, ObjType, TILESHIFT},
     draw::RayCast,
-    fixed::{Fixed, fixed_by_frac, new_fixed_i32},
+    fixed::{Fixed, fixed_by_frac},
     loader::Loader,
     start::quit,
 };
@@ -395,8 +395,8 @@ impl Sound {
         tile_x: usize,
         tile_y: usize,
     ) {
-        let gx = new_fixed_i32(((tile_x as i32) << TILESHIFT) + (1 << (TILESHIFT - 1)));
-        let gy = new_fixed_i32(((tile_y as i32) << TILESHIFT) + (1 << (TILESHIFT - 1)));
+        let gx = Fixed::new_from_i32(((tile_x as i32) << TILESHIFT) + (1 << (TILESHIFT - 1)));
+        let gy = Fixed::new_from_i32(((tile_y as i32) << TILESHIFT) + (1 << (TILESHIFT - 1)));
         self.play_sound_loc_global(sound, assets, rc, gx, gy);
     }
 
@@ -411,8 +411,8 @@ impl Sound {
             sound,
             assets,
             rc,
-            new_fixed_i32(obj.x),
-            new_fixed_i32(obj.y),
+            Fixed::new_from_i32(obj.x),
+            Fixed::new_from_i32(obj.y),
         );
     }
 
@@ -501,8 +501,8 @@ fn map_audio_format(format: mixer::AudioFormat) -> AudioFormat {
 }
 
 fn sound_loc(rc: &RayCast, gx_param: Fixed, gy_param: Fixed) -> (u8, u8) {
-    let view_x = new_fixed_i32(rc.view_x);
-    let view_y = new_fixed_i32(rc.view_y);
+    let view_x = Fixed::new_from_i32(rc.view_x);
+    let view_y = Fixed::new_from_i32(rc.view_y);
 
     let gx = gx_param - view_x;
     let gy = gy_param - view_y;

@@ -23,7 +23,7 @@ use crate::def::{
     WindowState, new_game_state,
 };
 use crate::draw::{RayCast, init_ray_cast};
-use crate::fixed::{new_fixed_u16, new_fixed_u32};
+use crate::fixed::Fixed;
 use crate::game::{game_loop, play_demo, setup_game_level};
 use crate::input::{self, Input};
 use crate::inter::draw_high_scores;
@@ -36,7 +36,7 @@ use crate::play::{self, DEMO_TICS, ProjectionConfig, draw_play_border};
 use crate::sd::Sound;
 use crate::time;
 use crate::us1::c_print;
-use crate::util::{DataReader, DataWriter, new_data_writer};
+use crate::util::{DataReader, DataWriter};
 use crate::vga_render::{self, VGARenderer};
 use crate::vl;
 use crate::{config, sd};
@@ -450,8 +450,8 @@ pub fn save_the_game(
 ) {
     let mut disk_anim = new_disk_anim(x, y);
 
-    // Save bytes to a writer (need this for checksumming)
-    let writer = &mut new_data_writer(game_file_size(level_state, game_state));
+    // Save bytes to a writer (need this for checksuming)
+    let writer = &mut DataWriter::new(game_file_size(level_state, game_state));
 
     let mut header = [0; SAVEGAME_NAME_LEN];
     let name_bytes = name.as_bytes();
@@ -940,8 +940,8 @@ pub fn null_obj_type() -> ObjType {
         area_number: 0,
         view_x: 0,
         view_height: 0,
-        trans_x: new_fixed_u32(0),
-        trans_y: new_fixed_u32(0),
+        trans_x: Fixed::new_from_u32(0),
+        trans_y: Fixed::new_from_u32(0),
         angle: 0,
         hitpoints: 0,
         speed: 0,
@@ -985,11 +985,11 @@ fn read_obj_type(reader: &mut DataReader) -> ObjType {
 
     let tx_1 = reader.read_u16();
     let tx_2 = reader.read_u16();
-    let trans_x = new_fixed_u16(tx_2, tx_1);
+    let trans_x = Fixed::new_from_u16(tx_2, tx_1);
 
     let ty_1 = reader.read_u16();
     let ty_2 = reader.read_u16();
-    let trans_y = new_fixed_u16(ty_2, ty_1);
+    let trans_y = Fixed::new_from_u16(ty_2, ty_1);
 
     let angle = reader.read_u16() as i32;
 

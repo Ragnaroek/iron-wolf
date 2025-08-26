@@ -13,7 +13,7 @@ use crate::def::{
     StateType, TILEGLOBAL, TILESHIFT,
 };
 use crate::draw::RayCast;
-use crate::fixed::{fixed_by_frac, new_fixed_i32, new_fixed_u32};
+use crate::fixed::{Fixed, fixed_by_frac};
 use crate::game::AREATILE;
 use crate::input::Input;
 use crate::inter::write;
@@ -2817,7 +2817,7 @@ fn t_projectile(
     let player_x = level_state.player().x;
     let player_y = level_state.player().y;
 
-    let speed = new_fixed_i32(level_state.obj(k).speed * tics as i32);
+    let speed = Fixed::new_from_i32(level_state.obj(k).speed * tics as i32);
     {
         let mut delta_x =
             fixed_by_frac(speed, rc_conf.cos(level_state.obj(k).angle as usize)).to_i32();
@@ -4307,8 +4307,8 @@ fn a_start_death_cam(
     // try to position as close as possible without being in a wall
     let mut dist = 0x14000;
     loop {
-        let x_move = fixed_by_frac(new_fixed_u32(dist), prj.cos(angle as usize));
-        let y_move = -fixed_by_frac(new_fixed_u32(dist), prj.sin(angle as usize));
+        let x_move = fixed_by_frac(Fixed::new_from_u32(dist), prj.cos(angle as usize));
+        let y_move = -fixed_by_frac(Fixed::new_from_u32(dist), prj.sin(angle as usize));
 
         level_state.mut_player().x = level_state.obj(k).x - x_move.to_i32();
         level_state.mut_player().y = level_state.obj(k).y - y_move.to_i32();

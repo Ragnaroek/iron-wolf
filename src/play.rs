@@ -31,7 +31,7 @@ use crate::def::{
     ObjKey, PlayState, SCREENLOC, STATUS_LINES, TILEGLOBAL, WindowState,
 };
 use crate::draw::{RayCast, three_d_refresh};
-use crate::fixed::{Fixed, new_fixed, new_fixed_u32};
+use crate::fixed::Fixed;
 use crate::input::DIR_SCAN_EAST;
 use crate::input::DIR_SCAN_NORTH;
 use crate::input::DIR_SCAN_SOUTH;
@@ -277,14 +277,14 @@ fn calc_pixelangle(view_width: usize, face_dist: f64) -> Vec<i32> {
 
 fn calc_sines() -> Vec<Fixed> {
     //TODO_VANILLA +1?? Bug in the original? does it write outside the array there in the original?
-    let mut sines: Vec<Fixed> = vec![new_fixed(0, 0); ANGLES + ANGLE_QUAD + 1];
+    let mut sines: Vec<Fixed> = vec![Fixed::new(0, 0); ANGLES + ANGLE_QUAD + 1];
 
     let mut angle: f32 = 0.0;
     let angle_step = PI / 2.0 / ANGLE_QUAD as f32;
     for i in 0..=ANGLE_QUAD {
         let value: u32 = (GLOBAL1 as f32 * angle.sin()) as u32;
         //TODO ugly fixes in here, make this exact to the old c-code
-        let v_fixed = new_fixed_u32(value.min(65535));
+        let v_fixed = Fixed::new_from_u32(value.min(65535));
         let mut value_neg = value | 0x80000000u32;
         if i == 90 {
             //otherwise a ??rounding error?? occurs and walking
@@ -292,7 +292,7 @@ fn calc_sines() -> Vec<Fixed> {
             //latest in the generalisation)
             value_neg -= 1;
         }
-        let v_fixed_neg = new_fixed_u32(value_neg);
+        let v_fixed_neg = Fixed::new_from_u32(value_neg);
         sines[i] = v_fixed;
         sines[i + ANGLES] = v_fixed;
         sines[ANGLES / 2 - i] = v_fixed;

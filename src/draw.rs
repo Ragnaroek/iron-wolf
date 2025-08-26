@@ -12,7 +12,7 @@ use crate::def::{
     FL_VISABLE, FOCAL_LENGTH, GameState, Level, LevelState, MAP_SIZE, MIN_DIST, NUM_WEAPONS,
     ObjKey, ObjType, Sprite, StaticType, TILEGLOBAL, TILESHIFT, VisObj,
 };
-use crate::fixed::{Fixed, ZERO, fixed_by_frac, new_fixed_i32};
+use crate::fixed::{Fixed, ZERO, fixed_by_frac};
 use crate::play::ProjectionConfig;
 use crate::scale::{MAP_MASKS_1, scale_shape, simple_scale_shape};
 use crate::sd::Sound;
@@ -192,8 +192,8 @@ impl RayCast {
     ) {
         let view_sin = prj.sin(player.angle as usize);
         let view_cos = prj.cos(player.angle as usize);
-        let view_x = player.x - fixed_by_frac(new_fixed_i32(FOCAL_LENGTH), view_cos).to_i32();
-        let view_y = player.y + fixed_by_frac(new_fixed_i32(FOCAL_LENGTH), view_sin).to_i32();
+        let view_x = player.x - fixed_by_frac(Fixed::new_from_i32(FOCAL_LENGTH), view_cos).to_i32();
+        let view_y = player.y + fixed_by_frac(Fixed::new_from_i32(FOCAL_LENGTH), view_sin).to_i32();
 
         let x_partialdown = view_x & (TILEGLOBAL - 1);
         let x_partialup = TILEGLOBAL - x_partialdown;
@@ -261,8 +261,11 @@ impl RayCast {
             self.y_partial = self.y_partialup;
         }
         //initvars:
-        self.y_intercept =
-            fixed_by_frac(new_fixed_i32(self.y_step), new_fixed_i32(self.x_partial)).to_i32();
+        self.y_intercept = fixed_by_frac(
+            Fixed::new_from_i32(self.y_step),
+            Fixed::new_from_i32(self.x_partial),
+        )
+        .to_i32();
         self.y_intercept += self.view_y;
         self.dx = self.y_intercept >> 16;
 
@@ -273,8 +276,11 @@ impl RayCast {
 
         self.y_tile = 0;
 
-        self.x_intercept =
-            fixed_by_frac(new_fixed_i32(self.x_step), new_fixed_i32(self.y_partial)).to_i32();
+        self.x_intercept = fixed_by_frac(
+            Fixed::new_from_i32(self.x_step),
+            Fixed::new_from_i32(self.y_partial),
+        )
+        .to_i32();
         self.x_intercept += self.view_x;
         self.dx = self.x_intercept >> 16;
         self.cx = self.dx;
@@ -641,10 +647,10 @@ fn clear_screen(state: &GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {
 //Helper functions
 
 pub fn calc_height(height_numerator: i32, rc: &RayCast) -> i32 {
-    let gx = new_fixed_i32(rc.x_intercept - rc.view_x);
+    let gx = Fixed::new_from_i32(rc.x_intercept - rc.view_x);
     let gxt = fixed_by_frac(gx, rc.view_cos);
 
-    let gy = new_fixed_i32(rc.y_intercept - rc.view_y);
+    let gy = Fixed::new_from_i32(rc.y_intercept - rc.view_y);
     let gyt = fixed_by_frac(gy, rc.view_sin);
 
     let mut nx = gxt.to_i32() - gyt.to_i32();
@@ -1090,8 +1096,8 @@ fn calc_rotate(prj: &ProjectionConfig, player_angle: i32, obj: &ObjType) -> usiz
 }
 
 fn transform_actor(rc: &RayCast, prj: &ProjectionConfig, obj: &mut ObjType) {
-    let gx = new_fixed_i32(obj.x - rc.view_x);
-    let gy = new_fixed_i32(obj.y - rc.view_y);
+    let gx = Fixed::new_from_i32(obj.x - rc.view_x);
+    let gy = Fixed::new_from_i32(obj.y - rc.view_y);
 
     let gxt = fixed_by_frac(gx, rc.view_cos);
     let gyt = fixed_by_frac(gy, rc.view_sin);
@@ -1104,8 +1110,8 @@ fn transform_actor(rc: &RayCast, prj: &ProjectionConfig, obj: &mut ObjType) {
 
     // calculate perspective ratio
 
-    obj.trans_x = new_fixed_i32(nx);
-    obj.trans_y = new_fixed_i32(ny);
+    obj.trans_x = Fixed::new_from_i32(nx);
+    obj.trans_y = Fixed::new_from_i32(ny);
 
     if nx < MIN_DIST {
         // too close, don't overflow the divide
@@ -1127,8 +1133,8 @@ fn transform_tile(
     visobj: &mut VisObj,
 ) -> bool {
     // translate point to view centered coordinates
-    let gx = new_fixed_i32(((stat.tile_x as i32) << TILESHIFT) + 0x8000 - rc.view_x);
-    let gy = new_fixed_i32(((stat.tile_y as i32) << TILESHIFT) + 0x8000 - rc.view_y);
+    let gx = Fixed::new_from_i32(((stat.tile_x as i32) << TILESHIFT) + 0x8000 - rc.view_x);
+    let gy = Fixed::new_from_i32(((stat.tile_y as i32) << TILESHIFT) + 0x8000 - rc.view_y);
 
     let gxt = fixed_by_frac(gx, rc.view_cos);
     let gyt = fixed_by_frac(gy, rc.view_sin);

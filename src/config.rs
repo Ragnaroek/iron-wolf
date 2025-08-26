@@ -11,7 +11,7 @@ use std::path::Path;
 
 use super::def::IWConfig;
 use super::user;
-use super::util;
+use super::util::DataWriter;
 
 use vga::input::{NumCode, to_numcode};
 
@@ -120,7 +120,7 @@ pub struct WolfConfig {
 }
 
 pub fn write_wolf_config(loader: &dyn Loader, wolf_config: &WolfConfig) -> Result<(), String> {
-    let mut writer = util::new_data_writer(522); // TODO always 522 bytes?
+    let mut writer = DataWriter::new(522);
 
     for i in 0..MAX_SCORES {
         let high_score = &wolf_config.high_scores[i];

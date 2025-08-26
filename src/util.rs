@@ -13,9 +13,7 @@ impl DataReader<'_> {
     pub fn new_with_offset(data: &[u8], offset: usize) -> DataReader<'_> {
         DataReader { data, offset }
     }
-}
 
-impl DataReader<'_> {
     pub fn read_utf8_string(&mut self, size: usize) -> String {
         let str =
             String::from_utf8_lossy(&self.data[self.offset..(self.offset + size)]).to_string();
@@ -98,6 +96,13 @@ pub struct DataWriter {
 }
 
 impl DataWriter {
+    pub fn new(size: usize) -> DataWriter {
+        DataWriter {
+            data: vec![0; size],
+            offset: 0,
+        }
+    }
+
     pub fn write_utf8_string(&mut self, str: &str, size: usize) {
         let mut data = vec![0; size];
 
@@ -158,13 +163,6 @@ impl DataWriter {
 
     pub fn offset(&self) -> usize {
         return self.offset;
-    }
-}
-
-pub fn new_data_writer(size: usize) -> DataWriter {
-    DataWriter {
-        data: vec![0; size],
-        offset: 0,
     }
 }
 

@@ -1,36 +1,36 @@
 use super::calc_pixelangle;
-use crate::fixed::new_fixed_i32;
+use crate::fixed::Fixed;
 use crate::start::new_view_size;
 
 #[test]
 fn test_calc_sines() {
     let prj = new_view_size(19);
 
-    assert_eq!(prj.sin(0), new_fixed_i32(0));
-    assert_eq!(prj.sin(360), new_fixed_i32(-2147483648));
-    assert_eq!(prj.sin(180), new_fixed_i32(-2147483648));
+    assert_eq!(prj.sin(0), Fixed::new_from_i32(0));
+    assert_eq!(prj.sin(360), Fixed::new_from_i32(-2147483648));
+    assert_eq!(prj.sin(180), Fixed::new_from_i32(-2147483648));
 
-    assert_eq!(prj.sin(16), new_fixed_i32(18064));
-    assert_eq!(prj.sin(376), new_fixed_i32(18064));
-    assert_eq!(prj.sin(164), new_fixed_i32(18064));
-    assert_eq!(prj.sin(344), new_fixed_i32(-2147465584));
-    assert_eq!(prj.sin(196), new_fixed_i32(-2147465584));
+    assert_eq!(prj.sin(16), Fixed::new_from_i32(18064));
+    assert_eq!(prj.sin(376), Fixed::new_from_i32(18064));
+    assert_eq!(prj.sin(164), Fixed::new_from_i32(18064));
+    assert_eq!(prj.sin(344), Fixed::new_from_i32(-2147465584));
+    assert_eq!(prj.sin(196), Fixed::new_from_i32(-2147465584));
 
-    assert_eq!(prj.sin(40), new_fixed_i32(42125));
-    assert_eq!(prj.sin(400), new_fixed_i32(42125));
-    assert_eq!(prj.sin(140), new_fixed_i32(42125));
-    assert_eq!(prj.sin(320), new_fixed_i32(-2147441523));
-    assert_eq!(prj.sin(220), new_fixed_i32(-2147441523));
+    assert_eq!(prj.sin(40), Fixed::new_from_i32(42125));
+    assert_eq!(prj.sin(400), Fixed::new_from_i32(42125));
+    assert_eq!(prj.sin(140), Fixed::new_from_i32(42125));
+    assert_eq!(prj.sin(320), Fixed::new_from_i32(-2147441523));
+    assert_eq!(prj.sin(220), Fixed::new_from_i32(-2147441523));
 
-    assert_eq!(prj.sin(64), new_fixed_i32(58903));
-    assert_eq!(prj.sin(424), new_fixed_i32(58903));
-    assert_eq!(prj.sin(116), new_fixed_i32(58903));
-    assert_eq!(prj.sin(296), new_fixed_i32(-2147424745));
-    assert_eq!(prj.sin(244), new_fixed_i32(-2147424745));
+    assert_eq!(prj.sin(64), Fixed::new_from_i32(58903));
+    assert_eq!(prj.sin(424), Fixed::new_from_i32(58903));
+    assert_eq!(prj.sin(116), Fixed::new_from_i32(58903));
+    assert_eq!(prj.sin(296), Fixed::new_from_i32(-2147424745));
+    assert_eq!(prj.sin(244), Fixed::new_from_i32(-2147424745));
 
-    assert_eq!(prj.sin(90), new_fixed_i32(65535), "sin(90)");
-    assert_eq!(prj.sin(450), new_fixed_i32(65535), "sin(450)");
-    assert_eq!(prj.sin(270), new_fixed_i32(-2147418113), "sin(270)");
+    assert_eq!(prj.sin(90), Fixed::new_from_i32(65535), "sin(90)");
+    assert_eq!(prj.sin(450), Fixed::new_from_i32(65535), "sin(450)");
+    assert_eq!(prj.sin(270), Fixed::new_from_i32(-2147418113), "sin(270)");
 }
 
 #[test]

@@ -4,7 +4,7 @@ use crate::def::{
     Actors, At, ClassType, Difficulty, DirType, EnemyType, FL_NEVERMARK, FL_SHOOTABLE, Level,
     LevelState, MAP_SIZE, MAX_ACTORS, ObjKey, ObjType, new_game_state,
 };
-use crate::fixed::new_fixed_i32;
+use crate::fixed::Fixed;
 use crate::map::MapSegs;
 use crate::state::check_side;
 
@@ -215,8 +215,8 @@ fn test_player() -> ObjType {
         flags: FL_NEVERMARK,
         view_height: 0,
         view_x: 0,
-        trans_x: new_fixed_i32(0),
-        trans_y: new_fixed_i32(0),
+        trans_x: Fixed::new_from_i32(0),
+        trans_y: Fixed::new_from_i32(0),
         active: crate::def::ActiveType::Yes,
         angle: 0,
         pitch: 0,
