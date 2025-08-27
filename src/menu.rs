@@ -6,7 +6,9 @@ use vga::input::{MouseButton, NumCode};
 
 use crate::assets::{GraphicNum, Music, SoundName, W3D1, W3D3, W3D6, WolfVariant, is_sod};
 use crate::config::{WolfConfig, write_wolf_config};
-use crate::def::{Assets, Button, Difficulty, GameState, IWConfig, LevelState, WindowState};
+use crate::def::{
+    Assets, Button, Difficulty, GameState, IWConfig, LevelState, PlayState, WindowState,
+};
 use crate::draw::{RayCast, init_ray_cast};
 use crate::input::{ControlDirection, ControlInfo, Input, read_control};
 use crate::inter::draw_high_scores;
@@ -98,8 +100,14 @@ static END_STRINGS: [&'static str; 9] = [
 static GAME_SAVED: &'static str =
     "There's already a game\nsaved at this position.\n      Overwrite?";
 
+static END_GAME_STR: &'static str =
+    "Are you sure you want\nto end the game you\nare playing? (Y or N):";
+
 static BACK_TO_DEMO: &'static str = "Back to Demo";
 static BACK_TO_GAME: &'static str = "Back to Game";
+
+static VIEW_SCORES: &'static str = "View Scores";
+static END_GAME: &'static str = "End Game";
 
 static STR_EMPTY: &'static str = "      - empty -";
 static STR_LOADING: &'static str = "Loading...";
@@ -423,7 +431,7 @@ fn initial_main_menu(variant: &WolfVariant) -> MenuStateEntry {
     items.push(ItemType {
         item: MainMenuItem::ViewScores.id(),
         active: ItemActivity::Active,
-        string: "View Scores",
+        string: VIEW_SCORES,
     });
     items.push(ItemType {
         item: MainMenuItem::BackTo.id(),
@@ -990,8 +998,18 @@ pub async fn control_panel(
                     }
                     MainMenuItem::ReadThis => cp_read_this(rdr, sound, assets, input, loader).await,
                     MainMenuItem::ViewScores => {
-                        cp_view_scores(wolf_config, rdr, sound, assets, input, win_state, loader)
-                            .await
+                        cp_view_scores(
+                            wolf_config,
+                            ticker,
+                            game_state,
+                            rdr,
+                            sound,
+                            assets,
+                            input,
+                            win_state,
+                            loader,
+                        )
+                        .await
                     }
                     MainMenuItem::Quit => MenuHandle::QuitMenu,
                     MainMenuItem::BackTo => MenuHandle::BackToGameLoop(None),
@@ -1993,6 +2011,8 @@ async fn cp_load_game(
 
 async fn cp_view_scores(
     wolf_config: &WolfConfig,
+    ticker: &Ticker,
+    game_state: &mut GameState,
     rdr: &VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
@@ -2000,18 +2020,30 @@ async fn cp_view_scores(
     win_state: &mut WindowState,
     loader: &dyn Loader,
 ) -> MenuHandle {
-    win_state.font_number = 0;
-    sound.play_music(Music::ROSTER, assets, loader);
-    draw_high_scores(rdr, win_state, &wolf_config.high_scores);
-    rdr.fade_in().await;
-    win_state.font_number = 1;
+    if game_state.loaded_game
+        || game_state.start_game
+        || game_state.play_state == PlayState::StillPlaying
+    {
+        if !confirm(ticker, rdr, sound, assets, input, win_state, END_GAME_STR).await {
+            return MenuHandle::OpenMenu(Menu::Top);
+        }
+        game_state.lives = 0;
+        game_state.play_state = PlayState::Died;
+        MenuHandle::BackToGameLoop(None) // let the game handle the PlayState::Died
+    } else {
+        win_state.font_number = 0;
+        sound.play_music(Music::ROSTER, assets, loader);
+        draw_high_scores(rdr, win_state, &wolf_config.high_scores);
+        rdr.fade_in().await;
+        win_state.font_number = 1;
 
-    input.ack();
+        input.ack();
 
-    sound.play_music(Music::WONDERIN, assets, loader);
-    rdr.fade_out().await;
+        sound.play_music(Music::WONDERIN, assets, loader);
+        rdr.fade_out().await;
 
-    MenuHandle::QuitMenu
+        MenuHandle::QuitMenu
+    }
 }
 
 async fn cp_save_game(
@@ -2942,6 +2974,11 @@ fn draw_main_menu(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &m
                 .expect("back_item");
             back_item.active = ItemActivity::Highlight;
             back_item.string = BACK_TO_GAME;
+
+            let score_item = main_menu
+                .find_item(MainMenuItem::ViewScores.id())
+                .expect("view score item");
+            score_item.string = END_GAME;
         }
     } else {
         let main_menu_opt = menu_state.menues.get_mut(&Menu::Top);
@@ -2951,6 +2988,11 @@ fn draw_main_menu(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &m
                 .expect("demo_item");
             demo_item.active = ItemActivity::Active;
             demo_item.string = BACK_TO_DEMO;
+
+            let score_item = main_menu
+                .find_item(MainMenuItem::ViewScores.id())
+                .expect("view score item");
+            score_item.string = VIEW_SCORES;
         }
     }
 

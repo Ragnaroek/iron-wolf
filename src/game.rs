@@ -259,11 +259,20 @@ async fn died(
     sound.play_sound(SoundName::PLAYERDEATH, assets);
 
     let player = level_state.player();
-    let killer_obj = level_state.obj(game_state.killer_obj.expect("killer obj key be present"));
+
+    let (killer_x, killer_y) = if let Some(k) = game_state.killer_obj {
+        let killer_obj = level_state.obj(k);
+        (killer_obj.x, killer_obj.y)
+    } else {
+        // This happens if the player ends the game. The original
+        // game uses random numbers in this game, but we just default this
+        // to (0, 0) in iw.
+        (0, 0)
+    };
 
     // swing around to face attacker
-    let dx = killer_obj.x - player.x;
-    let dy = player.y - killer_obj.y;
+    let dx = killer_x - player.x;
+    let dy = player.y - killer_y;
 
     let mut fangle = (dy as f64).atan2(dx as f64);
     if fangle < 0.0 {
