@@ -567,7 +567,7 @@ pub fn new_game_state() -> GameState {
         victory_flag: false,
         god_mode: false,
         got_gat_gun: false,
-        play_state: PlayState::StillPlaying,
+        play_state: PlayState::Died,
         killer_obj: None,
         attack_frame: 0,
         attack_count: 0,
