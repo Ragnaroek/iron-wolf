@@ -567,7 +567,7 @@ pub fn new_game_state() -> GameState {
         victory_flag: false,
         god_mode: false,
         got_gat_gun: false,
-        play_state: PlayState::Died,
+        play_state: PlayState::StillPlaying,
         killer_obj: None,
         attack_frame: 0,
         attack_count: 0,
@@ -592,9 +592,11 @@ impl GameState {
     pub fn prepare_episode_select(&mut self) {
         let difficulty = self.difficulty;
         let episode = self.episode;
+        let play_state = self.play_state;
         *self = new_game_state();
         self.difficulty = difficulty;
         self.episode = episode;
+        self.play_state = play_state;
     }
 }
 
@@ -623,7 +625,7 @@ impl WindowState {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PlayState {
     StillPlaying,
     Completed,

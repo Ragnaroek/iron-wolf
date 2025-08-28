@@ -22,6 +22,7 @@ use crate::us1::{c_print, line_input, print};
 use crate::user::rnd_t;
 use crate::vga_render::VGARenderer;
 use crate::vh::{vw_hlin, vw_vlin};
+use crate::vl::{self};
 
 const NUM_SAVE_GAMES: usize = 10;
 
@@ -97,6 +98,10 @@ static END_STRINGS: [&'static str; 9] = [
     "You are at an intersection.\nA sign says, 'Press Y to quit.'\n>",
     "For guns and glory, press N.\nFor work and worry, press Y.",
 ];
+
+static CUR_GAME: &'static str =
+    "You are currently in\na game. Continuing will\nerase old game. Ok?";
+
 static GAME_SAVED: &'static str =
     "There's already a game\nsaved at this position.\n      Overwrite?";
 
@@ -1789,7 +1794,12 @@ async fn cp_new_game(
                 continue;
             } else {
                 sound.play_sound(SoundName::SHOOT, assets);
-                //TODO confirm dialog if already in a game
+                if win_state.in_game {
+                    if confirm(ticker, rdr, sound, assets, input, win_state, CUR_GAME).await {
+                        game_state.play_state = PlayState::ResetGame;
+                        menu_fade_out(rdr).await;
+                    }
+                }
                 game_state.episode = episode_selected / 2;
                 return MenuHandle::OpenMenu(Menu::DifficultySelect);
             };
@@ -2020,10 +2030,7 @@ async fn cp_view_scores(
     win_state: &mut WindowState,
     loader: &dyn Loader,
 ) -> MenuHandle {
-    if game_state.loaded_game
-        || game_state.start_game
-        || game_state.play_state == PlayState::StillPlaying
-    {
+    if game_state.loaded_game || game_state.start_game || win_state.in_game {
         if !confirm(ticker, rdr, sound, assets, input, win_state, END_GAME_STR).await {
             return MenuHandle::OpenMenu(Menu::Top);
         }
@@ -3279,4 +3286,8 @@ fn numcode_name(scan: NumCode) -> &'static str {
         NumCode::Plus => "+",
         _ => "?",
     }
+}
+
+async fn menu_fade_out(rdr: &VGARenderer) {
+    vl::fade_out(&rdr.vga, 0, 255, 43, 0, 0, 10).await
 }

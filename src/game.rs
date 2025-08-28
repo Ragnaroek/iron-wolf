@@ -223,11 +223,9 @@ pub async fn game_loop(
 
                 menu_state.reset();
 
-                // TODO MainMenu viewscores text manipulation?
-
                 return (prj, rc);
             }
-            PlayState::Warped | PlayState::Abort => {
+            PlayState::Warped | PlayState::Abort | PlayState::ResetGame => {
                 // do nothing and loop around the game loop
             }
             _ => panic!("not implemented end with state {:?}", game_state.play_state),
