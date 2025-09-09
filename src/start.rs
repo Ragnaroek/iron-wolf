@@ -77,7 +77,7 @@ impl DiskAnim {
 
 pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<(), String> {
     let mut wolf_config = config::load_wolf_config(&loader);
-    let patch_config = &loader.load_patch_config_file();
+    let patch_config = &loader.load_patch_config_file()?;
 
     let rt = tokio_runtime()?;
     let rt_ref = Arc::new(rt);

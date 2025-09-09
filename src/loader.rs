@@ -17,7 +17,7 @@ pub trait Loader: Sync + Send {
         offset: u64,
         len: usize,
     ) -> Result<Vec<u8>, String>;
-    fn load_patch_config_file(&self) -> Option<PatchConfig>;
+    fn load_patch_config_file(&self) -> Result<Option<PatchConfig>, String>;
     fn load_patch_data_file(&self, name: String) -> Vec<u8>;
 
     /// Read the first 32 bytes of a save game file
@@ -64,14 +64,17 @@ impl Loader for DiskLoader {
         Ok(buf)
     }
 
-    fn load_patch_config_file(&self) -> Option<PatchConfig> {
+    fn load_patch_config_file(&self) -> Result<Option<PatchConfig>, String> {
         if self.patch_path.is_none() {
-            return None;
+            return Ok(None);
         }
-        Some(
-            patch::load_patch_config_file(&self.patch_path.as_ref().unwrap().join("patch.toml"))
-                .unwrap(),
-        )
+
+        if let Some(ref_path) = &self.patch_path.as_ref() {
+            let loaded_file = patch::load_patch_config_file(&ref_path.join("patch.toml"))?;
+            return Ok(Some(loaded_file));
+        }
+
+        Err("error loading patch file".to_string())
     }
     // panics, if patch path is not set
     fn load_patch_data_file(&self, name: String) -> Vec<u8> {

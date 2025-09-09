@@ -15,6 +15,8 @@ use crate::map;
 use crate::patch::PatchConfig;
 use crate::start::iw_start;
 
+const PATCH_FILE_NAME: &'static str = "patch.toml";
+
 #[wasm_bindgen]
 pub fn init_panic_hook() {
     console_error_panic_hook::set_once();
@@ -113,8 +115,13 @@ impl Loader for WebLoader {
         buffer.clone()
     }
 
-    fn load_patch_config_file(&self) -> Option<PatchConfig> {
-        todo!("patch file loading not implemented for web");
+    fn load_patch_config_file(&self) -> Result<Option<PatchConfig>, String> {
+        if let Some(bytes) = self.files.get(PATCH_FILE_NAME) {
+            let config: PatchConfig = toml::from_slice(&bytes).map_err(|e| e.to_string())?;
+            Ok(Some(config))
+        } else {
+            Ok(None)
+        }
     }
     // panics, if patch path is not set
     fn load_patch_data_file(&self, name: String) -> Vec<u8> {
