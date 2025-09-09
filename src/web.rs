@@ -65,26 +65,77 @@ pub struct WebLoader {
 
 #[wasm_bindgen]
 impl WebLoader {
-    /*#[wasm_bindgen(constructor)]
-    pub fn new(variant: WolfVariant) -> WebLoader {
-        WebLoader{
-            variant: &variant,
-            files : HashMap::new(),
-        }
-    }*/
-
     pub fn load(&mut self, file: String, data: Vec<u8>) {
+        web_sys::console::log_1(&format!("## load file {}", file).into());
+
         self.files.insert(file, data);
     }
 
     pub fn all_files_loaded(&self) -> bool {
-        self.files.contains_key(assets::GRAPHIC_DICT)
-            && self.files.contains_key(assets::GRAPHIC_HEAD)
-            && self.files.contains_key(assets::GRAPHIC_DATA)
-            && self.files.contains_key(assets::MAP_HEAD)
-            && self.files.contains_key(assets::GAME_MAPS)
-            && self.files.contains_key(assets::GAMEDATA)
-            && self.files.contains_key(assets::CONFIG_DATA)
+        self.files
+            .contains_key(&self.file_name(assets::GRAPHIC_DICT))
+            && self
+                .files
+                .contains_key(&self.file_name(assets::GRAPHIC_HEAD))
+            && self
+                .files
+                .contains_key(&self.file_name(assets::GRAPHIC_DATA))
+            && self.files.contains_key(&self.file_name(assets::MAP_HEAD))
+            && self.files.contains_key(&self.file_name(assets::GAME_MAPS))
+            && self.files.contains_key(&self.file_name(assets::GAMEDATA))
+            && self
+                .files
+                .contains_key(&self.file_name(assets::CONFIG_DATA))
+    }
+
+    fn file_name(&self, asset_name: &str) -> String {
+        format!("{}.{}", asset_name, self.variant.file_ending)
+    }
+}
+
+impl Loader for WebLoader {
+    fn variant(&self) -> &'static WolfVariant {
+        return self.variant;
+    }
+
+    fn write_wolf_file(&self, file: WolfFile, data: &[u8]) -> Result<(), String> {
+        todo!("write_wolf_file not implemented for web");
+    }
+
+    fn load_wolf_file(&self, file: WolfFile) -> Vec<u8> {
+        let buffer = self
+            .files
+            .get(&file_name(file, &self.variant))
+            .expect(&format!(
+                "file {} not found",
+                file_name(file, &self.variant)
+            ));
+        buffer.clone()
+    }
+
+    fn load_patch_config_file(&self) -> Option<PatchConfig> {
+        todo!("patch file loading not implemented for web");
+    }
+    // panics, if patch path is not set
+    fn load_patch_data_file(&self, name: String) -> Vec<u8> {
+        todo!("patch file data loading not implemented for web");
+    }
+    fn load_save_game_head(&self, which: usize) -> Result<Vec<u8>, String> {
+        todo!("save game loading not implemented yet for web");
+    }
+    fn load_save_game(&self, which: usize) -> Result<Vec<u8>, String> {
+        todo!("save game loading not implemented yet for web");
+    }
+    fn save_save_game(&self, which: usize, bytes: &[u8]) -> Result<(), String> {
+        todo!("save game saving not implemented yet for web");
+    }
+    fn load_wolf_file_slice(
+        &self,
+        file: WolfFile,
+        offset: u64,
+        len: usize,
+    ) -> Result<Vec<u8>, String> {
+        todo!("wolf_file_slice not implemented yet for web")
     }
 }
 
@@ -148,60 +199,6 @@ fn handle_load(event: web_sys::Event, name: String, loader: Rc<RefCell<WebLoader
             .unwrap()
             .into_inner();
         iw_start_web(l).expect("iw start");
-    }
-
-    /*
-    let l = loader.unwrap();
-
-    let loader_borrow = &loader.borrow();
-    if l.all_files_loaded() {
-        iw_start_web(loader).expect("iw start");
-    }*/
-}
-
-impl Loader for WebLoader {
-    fn variant(&self) -> &'static WolfVariant {
-        return self.variant;
-    }
-
-    fn write_wolf_file(&self, file: WolfFile, data: &[u8]) -> Result<(), String> {
-        todo!("write_wolf_file not implemented for web");
-    }
-
-    fn load_wolf_file(&self, file: WolfFile) -> Vec<u8> {
-        let buffer = self
-            .files
-            .get(&file_name(file, &self.variant))
-            .expect(&format!(
-                "file {} not found",
-                file_name(file, &self.variant)
-            ));
-        buffer.clone()
-    }
-
-    fn load_patch_config_file(&self) -> Option<PatchConfig> {
-        todo!("patch file loading not implemented for web");
-    }
-    // panics, if patch path is not set
-    fn load_patch_data_file(&self, name: String) -> Vec<u8> {
-        todo!("patch file data loading not implemented for web");
-    }
-    fn load_save_game_head(&self, which: usize) -> Result<Vec<u8>, String> {
-        todo!("save game loading not implemented yet for web");
-    }
-    fn load_save_game(&self, which: usize) -> Result<Vec<u8>, String> {
-        todo!("save game loading not implemented yet for web");
-    }
-    fn save_save_game(&self, which: usize, bytes: &[u8]) -> Result<(), String> {
-        todo!("save game saving not implemented yet for web");
-    }
-    fn load_wolf_file_slice(
-        &self,
-        file: WolfFile,
-        offset: u64,
-        len: usize,
-    ) -> Result<Vec<u8>, String> {
-        todo!("wolf_file_slice not implemented yet for web")
     }
 }
 
