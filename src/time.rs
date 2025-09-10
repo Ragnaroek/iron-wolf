@@ -3,10 +3,10 @@ use tracing::instrument;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
 
 use tokio::runtime::Runtime;
 use tokio::time::sleep;
+use web_time::{Duration, Instant};
 
 pub const TICK_BASE: u64 = 70; //Hz
 const TARGET_NANOS: u128 = 1_000_000_000 / TICK_BASE as u128; //duration of one tick in nanos

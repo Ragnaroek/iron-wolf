@@ -188,7 +188,7 @@ pub struct Sound {
 
 #[cfg(feature = "web")]
 pub struct Sound {
-    modes: Modes,
+    modes: Arc<Mutex<Modes>>,
     pub opl: OPL,
 }
 
@@ -227,7 +227,12 @@ pub fn startup(rt: Arc<Runtime>) -> Result<Sound, String> {
 
 #[cfg(feature = "web")]
 pub fn startup(_: Arc<Runtime>) -> Result<Sound, String> {
-    todo!("impl web sd startup")
+    //"TODO impl proper web sd startup (currently a dummy)")
+    let opl = opl::new()?;
+    Ok(Sound {
+        modes: default_modes(),
+        opl: opl,
+    })
 }
 
 #[cfg(feature = "sdl")]
@@ -596,7 +601,11 @@ impl Sound {
         channel: DigiChannel,
         original_data: Vec<u8>,
     ) -> Result<DigiSound, String> {
-        todo!("impl web digi sound preparation")
+        //TODO proper impl web digi sound preparation
+        Ok(DigiSound {
+            chunk: Box::new([0; 0]),
+            channel: DigiChannel::Any,
+        })
     }
 
     pub fn sound_mode(&self) -> SoundMode {

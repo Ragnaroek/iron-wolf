@@ -8,7 +8,7 @@
       "initialization_options": {
         "cargo": {
           "features": [
-            "sdl",
+            "web",
             "tracing"
           ]
         }

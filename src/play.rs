@@ -2,8 +2,7 @@
 #[path = "./play_test.rs"]
 mod play_test;
 
-use std::time::Duration;
-use std::time::Instant;
+use web_time::{Duration, Instant};
 
 use tokio::time::sleep;
 
