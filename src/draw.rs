@@ -14,10 +14,9 @@ use crate::def::{
 };
 use crate::fixed::{Fixed, ZERO, fixed_by_frac};
 use crate::play::ProjectionConfig;
+use crate::rc::{self, FizzleFadeAbortable, VGARenderer};
 use crate::scale::{MAP_MASKS_1, scale_shape, simple_scale_shape};
 use crate::sd::Sound;
-use crate::time::{self, Ticker};
-use crate::vga_render::{self, FizzleFadeAbortable, VGARenderer};
 
 const DEG90: usize = 900;
 const DEG180: usize = 1800;
@@ -526,7 +525,7 @@ pub fn wall_refresh(
     game_state: &GameState,
     level_state: &mut LevelState,
     rc: &mut RayCast,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     prj: &ProjectionConfig,
     assets: &Assets,
 ) {
@@ -582,11 +581,10 @@ pub fn wall_refresh(
 
 #[cfg_attr(feature = "tracing", instrument(skip_all))]
 pub async fn three_d_refresh(
-    ticker: &time::Ticker,
     game_state: &mut GameState,
     level_state: &mut LevelState,
     rc: &mut RayCast,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     prj: &ProjectionConfig,
     assets: &Assets,
@@ -599,19 +597,10 @@ pub async fn three_d_refresh(
 
     draw_scaleds(game_state, level_state, &rc, rdr, sound, prj, assets);
 
-    draw_player_weapon(
-        ticker,
-        level_state,
-        game_state,
-        rdr,
-        prj,
-        assets,
-        demo_playback,
-    );
+    draw_player_weapon(level_state, game_state, rdr, prj, assets, demo_playback);
 
     if game_state.fizzle_in {
         rdr.fizzle_fade(
-            ticker,
             rdr.buffer_offset(),
             rdr.active_buffer() + prj.screenofs,
             prj.view_width,
@@ -620,23 +609,23 @@ pub async fn three_d_refresh(
             FizzleFadeAbortable::No,
         );
         game_state.fizzle_in = false;
-        ticker.clear_count(); // don't make a big tic count
+        rdr.ticker.clear_count(); // don't make a big tic count
     }
 
     rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
     rdr.activate_buffer(rdr.buffer_offset()).await;
 
     //set offset to buffer for next frame
-    let mut next_offset = rdr.buffer_offset() + vga_render::SCREEN_SIZE;
-    if next_offset > vga_render::PAGE_3_START {
-        next_offset = vga_render::PAGE_1_START;
+    let mut next_offset = rdr.buffer_offset() + rc::SCREEN_SIZE;
+    if next_offset > rc::PAGE_3_START {
+        next_offset = rc::PAGE_1_START;
     }
     rdr.set_buffer_offset(next_offset);
 }
 
 // Clears the screen and already draws the bottom and ceiling
 #[cfg_attr(feature = "tracing", instrument(skip_all))]
-fn clear_screen(state: &GameState, rdr: &VGARenderer, prj: &ProjectionConfig) {
+fn clear_screen(state: &GameState, rdr: &mut VGARenderer, prj: &ProjectionConfig) {
     let ceil_color = VGA_CEILING[state.episode * 10 + state.map_on];
 
     let half = prj.view_height / 2;
@@ -666,7 +655,7 @@ pub fn scale_post(
     scaler_state: &ScalerState,
     height: i32,
     prj: &ProjectionConfig,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     assets: &Assets,
 ) {
     let texture = &assets.textures[scaler_state.texture_ix];
@@ -698,7 +687,7 @@ pub fn hit_vert_wall(
     rc: &mut RayCast,
     pixx: usize,
     prj: &ProjectionConfig,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     level: &Level,
     assets: &Assets,
 ) {
@@ -739,7 +728,7 @@ pub fn hit_horiz_wall(
     rc: &mut RayCast,
     pixx: usize,
     prj: &ProjectionConfig,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     level: &Level,
     assets: &Assets,
 ) {
@@ -781,7 +770,7 @@ pub fn hit_horiz_door(
     rc: &mut RayCast,
     pixx: usize,
     prj: &ProjectionConfig,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     level_state: &LevelState,
     assets: &Assets,
 ) {
@@ -806,7 +795,7 @@ pub fn hit_vert_door(
     rc: &mut RayCast,
     pixx: usize,
     prj: &ProjectionConfig,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     level_state: &LevelState,
     assets: &Assets,
 ) {
@@ -844,7 +833,7 @@ pub fn hit_horiz_push_wall(
     rc: &mut RayCast,
     pixx: usize,
     prj: &ProjectionConfig,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     assets: &Assets,
 ) {
     let mut post_source = (rc.x_intercept >> 4) & 0xFC0;
@@ -878,7 +867,7 @@ pub fn hit_vert_push_wall(
     rc: &mut RayCast,
     pixx: usize,
     prj: &ProjectionConfig,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     assets: &Assets,
 ) {
     let mut post_source = (rc.y_intercept >> 4) & 0xFC0;
@@ -917,17 +906,16 @@ fn vert_wall(i: usize) -> usize {
 
 #[cfg_attr(feature = "tracing", instrument(skip_all))]
 fn draw_player_weapon(
-    ticker: &Ticker,
     level_state: &LevelState,
     game_state: &GameState,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     prj: &ProjectionConfig,
     assets: &Assets,
     demo_playback: bool,
 ) {
     if game_state.victory_flag {
         let player = level_state.player();
-        if player.state == Some(&S_DEATH_CAM) && (ticker.get_count() & 32) != 0 {
+        if player.state == Some(&S_DEATH_CAM) && (rdr.ticker.get_count() & 32) != 0 {
             let sprite = &assets.sprites[Sprite::DeathCam as usize];
             simple_scale_shape(rdr, prj, prj.view_width / 2, sprite, prj.view_height + 1);
         }
@@ -952,7 +940,7 @@ fn draw_scaleds(
     game_state: &mut GameState,
     level_state: &mut LevelState,
     rc: &RayCast,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     prj: &ProjectionConfig,
     assets: &Assets,

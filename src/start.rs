@@ -4,14 +4,14 @@ mod start_test;
 
 use std::cmp::min;
 use std::process::exit;
-use std::sync::{Arc, Mutex};
-use std::thread::sleep;
+use std::sync::Arc;
 use std::time::Duration;
 use std::usize;
 
+use tokio::runtime::{self, Runtime};
+
 use vga::input::NumCode;
-use vga::util::tokio_runtime;
-use vga::{SCReg, VGABuilder};
+use vga::{SCReg, VGA, VGABuilder};
 
 use crate::act2::get_state_by_id;
 use crate::assets::{self, GAMEPAL, GraphicNum, SIGNON};
@@ -25,7 +25,6 @@ use crate::def::{
 use crate::draw::{RayCast, init_ray_cast};
 use crate::fixed::Fixed;
 use crate::game::{game_loop, play_demo, setup_game_level};
-use crate::input::{self, Input};
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::menu::{
@@ -33,11 +32,11 @@ use crate::menu::{
     message,
 };
 use crate::play::{self, DEMO_TICS, ProjectionConfig, draw_play_border};
+use crate::rc::{Input, VGARenderer};
 use crate::sd::Sound;
 use crate::time;
 use crate::us1::c_print;
 use crate::util::{DataReader, DataWriter};
-use crate::vga_render::{self, VGARenderer};
 use crate::vl;
 use crate::{config, sd};
 
@@ -61,7 +60,7 @@ fn new_disk_anim(x: usize, y: usize) -> DiskAnim {
 }
 
 impl DiskAnim {
-    fn disk_flop_anim(&mut self, rdr: &VGARenderer, iw_config: &IWConfig) {
+    fn disk_flop_anim(&mut self, rdr: &mut VGARenderer, iw_config: &IWConfig) {
         if self.which {
             rdr.pic(self.x, self.y, GraphicNum::CDISKLOADING2PIC)
         } else {
@@ -69,8 +68,10 @@ impl DiskAnim {
         }
         self.which = !self.which;
 
+        rdr.vga.draw_frame();
+
         if !iw_config.options.fast_loading {
-            sleep(Duration::from_millis(40));
+            std::thread::sleep(Duration::from_millis(40));
         }
     }
 }
@@ -87,52 +88,46 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, patch_config)?;
 
     let ticker = time::new_ticker(rt_ref.clone());
-    let input_monitoring = Arc::new(Mutex::new(vga::input::InputMonitoring::new()));
-    let mut input = Input::init_player(
-        ticker.time_count.clone(),
-        input_monitoring.clone(),
-        &wolf_config,
-    );
 
     let mut win_state = initial_window_state();
     let mut menu_state = initial_menu_state(loader.variant());
 
     check_for_episodes(&mut menu_state, loader.variant());
 
-    let (vga, handle) = VGABuilder::new()
-        .video_mode(0x13)
-        .fullscreen(iw_config.options.fullscreen)
-        .build()?;
-    //enable Mode Y
-    let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
-    vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
+    vga::util::spawn_async(async move {
+        let mut vga = VGABuilder::new()
+            .video_mode(0x13)
+            .title("Iron Wolf".to_string())
+            .fullscreen(iw_config.options.fullscreen)
+            .build()
+            .expect("vga build");
+        //enable Mode Y
+        let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
+        vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
-    let vga_screen = Arc::new(vga);
-    let vga_loop = vga_screen.clone();
-    let rdr = vga_render::init(
-        vga_screen.clone(),
-        graphics,
-        fonts,
-        tiles,
-        texts,
-        loader.variant(),
-    );
+        let input = Input::init_player(&wolf_config);
+        let mut rdr = VGARenderer::init(
+            vga,
+            ticker,
+            graphics,
+            fonts,
+            tiles,
+            texts,
+            loader.variant(),
+            input,
+        );
 
-    rt_ref.spawn(async move {
         if let Some(which_demo) = check_timedemo_env() {
-            let prj = init_projection(&wolf_config, &vga_loop);
+            let prj = init_projection(&wolf_config, &rdr.vga);
             let rc = init_ray_cast(prj.view_width);
             let (_, _, abort, benchmark_result) = play_demo(
                 &mut wolf_config,
                 &iw_config,
-                &ticker,
                 &mut win_state,
                 &mut menu_state,
-                &vga_loop,
                 &mut sound,
                 rc,
-                &rdr,
-                &mut input,
+                &mut rdr,
                 prj,
                 &assets,
                 &loader,
@@ -160,17 +155,15 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
                 exit(0);
             }
         } else {
-            let prj = init_game(&wolf_config, &vga_loop, &rdr, &input, &mut win_state).await;
+            let prj = init_game(&wolf_config, &mut rdr, &mut win_state).await;
             let rc = init_ray_cast(prj.view_width);
+
             demo_loop(
                 &mut wolf_config,
                 &iw_config,
-                ticker,
-                &vga_loop,
                 &mut sound,
                 rc,
-                &rdr,
-                &mut input,
+                &mut rdr,
                 prj,
                 &assets,
                 &mut win_state,
@@ -181,13 +174,19 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
         }
     });
 
-    let options: vga::Options = vga::Options {
-        input_monitoring: Some(input_monitoring),
-        ..Default::default()
-    };
-    let handle_ref = Arc::new(handle);
-    vga_screen.start(handle_ref, options)?;
     Ok(())
+}
+
+pub fn tokio_runtime() -> Result<Runtime, String> {
+    #[cfg(feature = "web")]
+    let rt = runtime::Builder::new_current_thread()
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    #[cfg(any(feature = "sdl", feature = "test"))]
+    let rt = runtime::Runtime::new().map_err(|e| e.to_string())?;
+
+    Ok(rt)
 }
 
 pub fn initial_window_state() -> WindowState {
@@ -206,23 +205,21 @@ pub fn initial_window_state() -> WindowState {
     }
 }
 
-fn init_projection(wolf_config: &WolfConfig, vga: &vga::VGA) -> ProjectionConfig {
+fn init_projection(wolf_config: &WolfConfig, vga: &VGA) -> ProjectionConfig {
     vl::set_palette(vga, GAMEPAL);
     new_view_size(wolf_config.viewsize)
 }
 
 async fn init_game(
     wolf_config: &WolfConfig,
-    vga: &vga::VGA,
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
 ) -> ProjectionConfig {
-    let prj = init_projection(wolf_config, vga);
-    signon_screen(vga);
+    let prj = init_projection(wolf_config, &rdr.vga);
+    signon_screen(&mut rdr.vga);
     intro_screen(rdr);
     // TODO InitRedShifts
-    finish_signon(vga, rdr, input, win_state).await;
+    finish_signon(rdr, win_state).await;
     prj
 }
 
@@ -239,18 +236,13 @@ pub fn new_view_size(view_size: u16) -> ProjectionConfig {
     play::calc_projection(w, h)
 }
 
-pub fn show_view_size(rdr: &VGARenderer, view_size: u16) {
+pub fn show_view_size(rdr: &mut VGARenderer, view_size: u16) {
     let (w, h) = dim_from_viewsize(view_size);
     draw_play_border(rdr, w, h);
 }
 
-async fn finish_signon(
-    vga: &vga::VGA,
-    rdr: &VGARenderer,
-    input: &Input,
-    win_state: &mut WindowState,
-) {
-    let peek = vga.read_mem(0);
+async fn finish_signon(rdr: &mut VGARenderer, win_state: &mut WindowState) {
+    let peek = rdr.vga.read_mem(0);
     rdr.bar(0, 189, 300, 11, peek);
 
     win_state.window_x = 0;
@@ -259,26 +251,24 @@ async fn finish_signon(
     win_state.set_font_color(14, 4);
     c_print(rdr, win_state, "Press a key");
 
-    input.ack();
+    rdr.ack();
 
     rdr.bar(0, 189, 300, 11, peek);
-
     win_state.print_y = 190;
     win_state.set_font_color(10, 4);
     c_print(rdr, win_state, "Working...");
 
     win_state.set_font_color(0, 15);
+
+    rdr.vga.draw_frame();
 }
 
 async fn demo_loop(
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
-    ticker: time::Ticker,
-    vga: &vga::VGA,
     sound: &mut Sound,
     rc_param: RayCast,
-    rdr: &VGARenderer,
-    input: &mut Input,
+    rdr: &mut VGARenderer,
     prj_param: ProjectionConfig,
     assets: &Assets,
     win_state: &mut WindowState,
@@ -288,7 +278,7 @@ async fn demo_loop(
     sound.play_music(intro_song(loader.variant()), assets, loader);
 
     if !iw_config.options.no_wait {
-        pg_13(rdr, input).await;
+        pg_13(rdr).await;
     }
 
     let mut last_demo = 0;
@@ -300,7 +290,7 @@ async fn demo_loop(
             // title screen & demo loop
             rdr.pic(0, 0, GraphicNum::TITLEPIC);
             rdr.fade_in().await;
-            if input.wait_user_input(time::TICK_BASE * 15) {
+            if rdr.wait_user_input(time::TICK_BASE * 15) {
                 break;
             }
             rdr.fade_out().await;
@@ -308,7 +298,7 @@ async fn demo_loop(
             // credits page
             rdr.pic(0, 0, GraphicNum::CREDITSPIC);
             rdr.fade_in().await;
-            if input.wait_user_input(time::TICK_BASE * 10) {
+            if rdr.wait_user_input(time::TICK_BASE * 10) {
                 break;
             }
             rdr.fade_out().await;
@@ -316,7 +306,7 @@ async fn demo_loop(
             // high scores
             draw_high_scores(rdr, win_state, &wolf_config.high_scores);
             rdr.fade_in().await;
-            if input.wait_user_input(time::TICK_BASE * 10) {
+            if rdr.wait_user_input(time::TICK_BASE * 10) {
                 break;
             }
 
@@ -324,14 +314,11 @@ async fn demo_loop(
             let (prj_demo, rc_demo, abort, _) = play_demo(
                 wolf_config,
                 iw_config,
-                &ticker,
                 win_state,
                 menu_state,
-                vga,
                 sound,
                 rc,
                 rdr,
-                input,
                 prj,
                 assets,
                 loader,
@@ -360,13 +347,11 @@ async fn demo_loop(
         let update = control_panel(
             wolf_config,
             iw_config,
-            &ticker,
             &mut level_state,
             &mut game_state,
             sound,
             rc,
             rdr,
-            input,
             prj,
             assets,
             win_state,
@@ -379,16 +364,13 @@ async fn demo_loop(
         rc = update.ray_cast;
 
         (prj, rc) = game_loop(
-            &ticker,
             wolf_config,
             iw_config,
             &mut level_state,
             &mut game_state,
-            vga,
             sound,
             rc,
             rdr,
-            input,
             prj,
             assets,
             win_state,
@@ -400,7 +382,7 @@ async fn demo_loop(
     }
 }
 
-fn signon_screen(vga: &vga::VGA) {
+fn signon_screen(vga: &mut VGA) {
     let mut buf_offset = 0;
     let mut vga_offset = 0;
     while buf_offset < SIGNON.len() - 4 {
@@ -421,13 +403,13 @@ fn signon_screen(vga: &vga::VGA) {
     }
 }
 
-async fn pg_13(rdr: &VGARenderer, input: &input::Input) {
+async fn pg_13(rdr: &mut VGARenderer) {
     rdr.fade_out().await;
     rdr.bar(0, 0, 320, 200, 0x82);
     rdr.pic(216, 110, GraphicNum::PG13PIC);
 
     rdr.fade_in().await;
-    input.wait_user_input(time::TICK_BASE * 7);
+    rdr.wait_user_input(time::TICK_BASE * 7);
     rdr.fade_out().await;
 }
 
@@ -441,7 +423,7 @@ pub fn save_the_game(
     iw_config: &IWConfig,
     level_state: &LevelState,
     game_state: &GameState,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     loader: &dyn Loader,
     which: usize,
     name: &str,
@@ -692,8 +674,7 @@ pub async fn load_the_game(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     win_state: &mut WindowState,
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     assets: &Assets,
     loader: &dyn Loader,
     which: usize,
@@ -716,8 +697,8 @@ pub async fn load_the_game(
     if !checksums_matched {
         message(rdr, win_state, &STR_SAVE_CHEAT);
 
-        input.clear_keys_down();
-        input.ack();
+        rdr.clear_keys_down();
+        rdr.ack();
     }
 }
 
@@ -725,7 +706,7 @@ pub fn do_load(
     iw_config: &IWConfig,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     assets: &Assets,
     loader: &dyn Loader,
     which: usize,

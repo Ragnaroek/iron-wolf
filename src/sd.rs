@@ -2,11 +2,9 @@
 #[path = "./sd_test.rs"]
 mod sd_test;
 
-use std::{
-    sync::{Arc, Mutex},
-    thread::sleep,
-    time::Duration,
-};
+use std::sync::{Arc, Mutex};
+use std::thread::sleep;
+use std::time::Duration;
 
 use tokio::runtime::Runtime;
 
@@ -21,9 +19,9 @@ use crate::{
 
 use opl::OPL;
 
-#[cfg(feature = "sdl")]
+#[cfg(any(feature = "sdl", feature = "test"))]
 use sdl2::audio::{self, AudioCVT, AudioFormat};
-#[cfg(feature = "sdl")]
+#[cfg(any(feature = "sdl", feature = "test"))]
 use sdl2::mixer::{self, Channel};
 
 const ORIG_SAMPLE_RATE: i32 = 7042;
@@ -167,7 +165,7 @@ pub struct DigiInfo {
     pub length: usize,
 }
 
-#[cfg(feature = "sdl")]
+#[cfg(any(feature = "sdl", feature = "test"))]
 pub struct DigiMixConfig {
     pub frequency: i32,
     pub format: AudioFormat,
@@ -175,7 +173,7 @@ pub struct DigiMixConfig {
     pub group: mixer::Group,
 }
 
-#[cfg(feature = "sdl")]
+#[cfg(any(feature = "sdl", feature = "test"))]
 pub struct Sound {
     modes: Arc<Mutex<Modes>>,
     opl: Arc<Mutex<OPL>>,
@@ -192,7 +190,7 @@ pub struct Sound {
     pub opl: OPL,
 }
 
-#[cfg(feature = "sdl")]
+#[cfg(any(feature = "sdl", feature = "test"))]
 pub fn startup(rt: Arc<Runtime>) -> Result<Sound, String> {
     let mut opl = opl::new()?;
     opl.init(opl::OPLSettings {
@@ -235,7 +233,7 @@ pub fn startup(_: Arc<Runtime>) -> Result<Sound, String> {
     })
 }
 
-#[cfg(feature = "sdl")]
+#[cfg(any(feature = "sdl", feature = "test"))]
 impl Sound {
     pub fn is_sound_playing(&mut self, sound: SoundName) -> bool {
         let playing_mon = self.sound_playing.lock().unwrap();
@@ -497,7 +495,7 @@ impl Sound {
     }
 }
 
-#[cfg(feature = "sdl")]
+#[cfg(any(feature = "sdl", feature = "test"))]
 fn map_audio_format(format: mixer::AudioFormat) -> AudioFormat {
     match format {
         mixer::AUDIO_S16LSB => AudioFormat::S16LSB,

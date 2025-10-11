@@ -5,15 +5,16 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use tokio::runtime::Runtime;
-use tokio::time::sleep;
 use web_time::{Duration, Instant};
+
+use vga::util::sleep;
 
 pub const TICK_BASE: u64 = 70; //Hz
 const TARGET_NANOS: u128 = 1_000_000_000 / TICK_BASE as u128; //duration of one tick in nanos
 const TARGET_MILLIS: f64 = 1000.0 / TICK_BASE as f64;
-const TICK_SAMPLE_RATE: Duration = std::time::Duration::from_nanos((TARGET_NANOS / 2) as u64);
+const TICK_SAMPLE_RATE: Duration = Duration::from_nanos((TARGET_NANOS / 2) as u64);
 // target frame duration at 70Hz
-pub const TARGET_FRAME_DURATION: Duration = std::time::Duration::from_nanos(TARGET_NANOS as u64);
+pub const TARGET_FRAME_DURATION: Duration = Duration::from_nanos(TARGET_NANOS as u64);
 
 const MAX_TICS: u64 = 10;
 
@@ -37,6 +38,16 @@ pub struct Ticker {
     pub ref_time: Arc<Mutex<Instant>>,
 }
 
+pub fn new_test_ticker() -> Ticker {
+    let ref_time = Arc::new(Mutex::new(Instant::now()));
+    let time_count = new_time_count();
+    Ticker {
+        time_count,
+        last_count: AtomicU64::new(0),
+        ref_time,
+    }
+}
+
 pub fn new_ticker(rt: Arc<Runtime>) -> Ticker {
     let time_count = new_time_count();
     let time_t = time_count.clone();
@@ -44,7 +55,7 @@ pub fn new_ticker(rt: Arc<Runtime>) -> Ticker {
     let ref_time = Arc::new(Mutex::new(Instant::now()));
     let ref_time_t = ref_time.clone();
 
-    rt.spawn_blocking(move || {
+    rt.spawn(async move {
         loop {
             std::thread::sleep(TICK_SAMPLE_RATE);
             let ref_time = ref_time_t.lock().unwrap();
@@ -118,9 +129,8 @@ impl Ticker {
 
     // waits for 'count' tics in a non-busy way
     pub async fn tics(&self, count: u64) {
-        sleep(std::time::Duration::from_nanos(
-            (TARGET_NANOS * count as u128) as u64,
-        ))
-        .await
+        //sleep(Duration::from_nanos((TARGET_NANOS * count as u128) as u64)).await
+        sleep(Duration::from_nanos((TARGET_NANOS * count as u128) as u64).as_millis_f64() as u32)
+            .await
     }
 }

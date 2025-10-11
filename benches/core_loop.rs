@@ -3,20 +3,20 @@
 extern crate iw;
 extern crate test;
 
-use iw::start::new_view_size;
-use vga::VGABuilder;
-
-use iw::config::default_iw_config;
-use iw::loader::DiskLoader;
 use std::path::PathBuf;
-use std::sync::Arc;
 use test::Bencher;
 
+use vga::VGABuilder;
+
 use iw::assets;
+use iw::config::default_iw_config;
 use iw::def::new_game_state;
 use iw::draw::{init_ray_cast, wall_refresh};
 use iw::game::setup_game_level;
-use iw::vga_render;
+use iw::loader::DiskLoader;
+use iw::rc::{Input, VGARenderer};
+use iw::start::new_view_size;
+use iw::time::new_test_ticker;
 
 #[bench]
 fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
@@ -37,15 +37,18 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
     let prj = new_view_size(19);
     let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, &None)?;
 
-    let vga = VGABuilder::new().video_mode(0x13).build_no_backend();
-    let vga_screen = Arc::new(vga);
-    let render = vga_render::init(
-        vga_screen.clone(),
+    let vga = VGABuilder::new().video_mode(0x13).build()?;
+    let input = Input::init_demo_playback(Vec::with_capacity(0));
+    let ticker = new_test_ticker();
+    let mut rdr = VGARenderer::init(
+        vga,
+        ticker,
         graphics,
         fonts,
         tiles,
         texts,
         &assets::W3D1,
+        input,
     );
 
     let mut game_state = new_game_state();
@@ -62,7 +65,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
                 &game_state,
                 &mut level_state,
                 &mut rc,
-                &render,
+                &mut rdr,
                 &prj,
                 &assets,
             );
@@ -78,7 +81,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
                 &game_state,
                 &mut level_state,
                 &mut rc,
-                &render,
+                &mut rdr,
                 &prj,
                 &assets,
             );
@@ -94,7 +97,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
                 &game_state,
                 &mut level_state,
                 &mut rc,
-                &render,
+                &mut rdr,
                 &prj,
                 &assets,
             );
@@ -110,7 +113,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
                 &game_state,
                 &mut level_state,
                 &mut rc,
-                &render,
+                &mut rdr,
                 &prj,
                 &assets,
             );
@@ -126,7 +129,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
                 &game_state,
                 &mut level_state,
                 &mut rc,
-                &render,
+                &mut rdr,
                 &prj,
                 &assets,
             );
@@ -142,7 +145,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
                 &game_state,
                 &mut level_state,
                 &mut rc,
-                &render,
+                &mut rdr,
                 &prj,
                 &assets,
             );

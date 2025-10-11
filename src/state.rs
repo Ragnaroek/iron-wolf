@@ -23,7 +23,7 @@ use crate::game::AREATILE;
 use crate::map::MapSegs;
 use crate::sd::{DigiMode, Sound};
 use crate::user::rnd_t;
-use crate::vga_render::VGARenderer;
+use crate::rc::VGARenderer;
 
 static OPPOSITE: [DirType; 9] = [
     DirType::West,
@@ -668,7 +668,7 @@ pub fn move_obj(
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     mov: i32,
     tics: u64,
 ) {
@@ -1115,7 +1115,7 @@ pub fn damage_actor(
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
     rc: &RayCast,
@@ -1176,7 +1176,7 @@ fn kill_actor(
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
     rc: &RayCast,

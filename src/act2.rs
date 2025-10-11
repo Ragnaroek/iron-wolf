@@ -1,7 +1,6 @@
 #[cfg(test)]
 #[path = "./act2_test.rs"]
 mod act2_test;
-
 use crate::act1::open_door;
 use crate::agent::{S_ATTACK, S_PLAYER, take_damage};
 use crate::assets::SoundName;
@@ -15,19 +14,17 @@ use crate::def::{
 use crate::draw::RayCast;
 use crate::fixed::{Fixed, fixed_by_frac};
 use crate::game::AREATILE;
-use crate::input::Input;
 use crate::inter::write;
 use crate::map::MapSegs;
 use crate::play::{ProjectionConfig, draw_play_border, finish_palette_shifts};
+use crate::rc::{FizzleFadeAbortable, VGARenderer};
 use crate::sd::{DigiMode, Sound};
 use crate::start::quit;
 use crate::state::{
     check_line, move_obj, new_state, select_chase_dir, select_dodge_dir, select_run_dir,
     sight_player, spawn_new_obj, try_walk,
 };
-use crate::time::Ticker;
 use crate::user::rnd_t;
-use crate::vga_render::{FizzleFadeAbortable, VGARenderer};
 
 const BJ_RUN_SPEED: i32 = 2048;
 const BJ_JUMP_SPEED: i32 = 680;
@@ -2808,7 +2805,7 @@ fn t_projectile(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     _: &mut ControlState,
     rc_conf: &ProjectionConfig,
     assets: &Assets,
@@ -2893,7 +2890,7 @@ fn t_path(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -2958,7 +2955,7 @@ fn t_dog_chase(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -3031,7 +3028,7 @@ fn t_bite(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3096,7 +3093,7 @@ fn t_stand(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    _: &VGARenderer,
+    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3111,7 +3108,7 @@ fn t_chase(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -3219,7 +3216,7 @@ fn t_ghosts(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -3267,7 +3264,7 @@ fn t_schabb(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -3356,12 +3353,10 @@ fn t_schabb(
 fn t_schabb_throw(
     k: ObjKey,
     _: u64,
-    _: &Ticker,
     level_state: &mut LevelState,
     _: &mut GameState,
     sound: &mut Sound,
-    _: &VGARenderer,
-    _: &Input,
+    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3407,7 +3402,7 @@ fn t_fake(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -3464,12 +3459,10 @@ fn t_fake(
 fn t_fake_fire(
     k: ObjKey,
     _: u64,
-    _: &Ticker,
     level_state: &mut LevelState,
     _: &mut GameState,
     sound: &mut Sound,
-    _: &VGARenderer,
-    _: &Input,
+    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3512,12 +3505,10 @@ fn t_fake_fire(
 fn a_hitler_morph(
     k: ObjKey,
     _: u64,
-    _: &Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    _: &VGARenderer,
-    _: &Input,
+    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -3553,12 +3544,10 @@ fn a_hitler_morph(
 fn a_mecha_sound(
     k: ObjKey,
     _: u64,
-    _: &Ticker,
     level_state: &mut LevelState,
     _: &mut GameState,
     sound: &mut Sound,
-    _: &VGARenderer,
-    _: &Input,
+    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3573,12 +3562,10 @@ fn a_mecha_sound(
 fn a_slurpie(
     k: ObjKey,
     _: u64,
-    _: &Ticker,
     level_state: &mut LevelState,
     _: &mut GameState,
     sound: &mut Sound,
-    _: &VGARenderer,
-    _: &Input,
+    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3869,12 +3856,10 @@ fn spawn(actors: &mut Actors, actor_at: &mut Vec<Vec<At>>, obj: ObjType) {
 fn t_shoot(
     k: ObjKey,
     _: u64,
-    _: &Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &VGARenderer,
-    _: &Input,
+    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3953,12 +3938,10 @@ fn t_shoot(
 fn a_death_scream(
     k: ObjKey,
     _: u64,
-    _: &Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    _: &VGARenderer,
-    _: &Input,
+    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -4171,7 +4154,7 @@ fn t_bj_run(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -4183,7 +4166,6 @@ fn t_bj_run(
             move_obj(k, level_state, game_state, rdr, mov, tics);
             break;
         }
-
         {
             let obj = level_state.mut_obj(k);
             obj.x = ((obj.tilex as i32) << TILESHIFT) + TILEGLOBAL / 2;
@@ -4208,7 +4190,7 @@ fn t_bj_jump(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -4221,12 +4203,10 @@ fn t_bj_jump(
 fn t_bj_yell(
     k: ObjKey,
     _: u64,
-    _: &Ticker,
     level_state: &mut LevelState,
     _: &mut GameState,
     sound: &mut Sound,
-    _: &VGARenderer,
-    _: &Input,
+    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -4239,12 +4219,10 @@ fn t_bj_yell(
 fn t_bj_done(
     _: ObjKey,
     _: u64,
-    _: &Ticker,
     _: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    _: &VGARenderer,
-    _: &Input,
+    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -4256,12 +4234,10 @@ fn t_bj_done(
 fn a_start_death_cam(
     k: ObjKey,
     _: u64,
-    ticker: &Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     _: &mut ControlState,
     prj: &ProjectionConfig,
     _: &Assets,
@@ -4277,7 +4253,6 @@ fn a_start_death_cam(
 
     rdr.bar(0, 0, 320, 200 - STATUS_LINES, 127);
     rdr.fizzle_fade(
-        ticker,
         rdr.buffer_offset(),
         rdr.active_buffer(),
         320,
@@ -4288,7 +4263,7 @@ fn a_start_death_cam(
     rdr.set_buffer_offset(rdr.active_buffer());
 
     write(rdr, 0, 7, "Let's see that again!");
-    input.wait_user_input(300);
+    rdr.wait_user_input(300);
 
     // line angle up exactly
     new_state(level_state.mut_player(), &S_DEATH_CAM);

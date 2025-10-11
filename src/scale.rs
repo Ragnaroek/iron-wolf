@@ -4,7 +4,7 @@ mod scale_test;
 
 use crate::gamedata::{SpriteData, SpritePost};
 use crate::play::ProjectionConfig;
-use crate::vga_render::{SCREENBWIDE, VGARenderer};
+use crate::rc::{SCREENBWIDE, VGARenderer};
 
 pub static MAP_MASKS_1: [u8; 4 * 8] = [
     1, 3, 7, 15, 15, 15, 15, 15, 2, 6, 14, 14, 14, 14, 14, 14, 4, 12, 12, 12, 12, 12, 12, 12, 8, 8,
@@ -127,7 +127,7 @@ fn build_comp_scale(scaler_height: usize, view_height: usize) -> Scaler {
 }
 
 pub fn scale_shape(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     wall_height: &Vec<i32>,
     prj: &ProjectionConfig,
     x_center: usize,
@@ -274,7 +274,7 @@ pub fn scale_shape(
 
 // simple = no clipping
 pub fn simple_scale_shape(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     prj: &ProjectionConfig,
     x_center: usize,
     sprite: &SpriteData,
@@ -326,7 +326,7 @@ pub fn simple_scale_shape(
 }
 
 fn scale_line(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     scaler: &Scaler,
     sprite: &SpriteData,
     posts: &Vec<SpritePost>,
@@ -356,7 +356,7 @@ fn scale_line(
 }
 
 fn scale(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     scaler: &Scaler,
     sprite: &SpriteData,
     posts: &Vec<SpritePost>,

@@ -1,8 +1,8 @@
 use std::sync::atomic::{AtomicI32, Ordering};
-use std::time::Duration;
 use std::{ascii, collections::HashMap, str};
-use tokio::time::sleep;
+
 use vga::input::{MouseButton, NumCode};
+use vga::util::sleep;
 
 use crate::assets::{GraphicNum, Music, SoundName, W3D1, W3D3, W3D6, WolfVariant, is_sod};
 use crate::config::{WolfConfig, write_wolf_config};
@@ -10,17 +10,15 @@ use crate::def::{
     Assets, Button, Difficulty, GameState, IWConfig, LevelState, PlayState, WindowState,
 };
 use crate::draw::{RayCast, init_ray_cast};
-use crate::input::{ControlDirection, ControlInfo, Input, read_control};
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::play::{BUTTON_JOY, ProjectionConfig};
+use crate::rc::{ControlDirection, ControlInfo, VGARenderer};
 use crate::sd::{DigiMode, MusicMode, Sound, SoundMode};
 use crate::start::{load_the_game, new_view_size, quit, save_the_game, show_view_size};
 use crate::text::help_screens;
-use crate::time::Ticker;
 use crate::us1::{c_print, line_input, print};
 use crate::user::rnd_t;
-use crate::vga_render::VGARenderer;
 use crate::vh::{vw_hlin, vw_vlin};
 use crate::vl::{self};
 
@@ -379,11 +377,10 @@ impl MenuState {
     }
 }
 
-type MenuRoutine = fn(&VGARenderer, &Input, &mut WindowState, &mut MenuState, usize);
+type MenuRoutine = fn(&mut VGARenderer, &mut WindowState, &mut MenuState, usize);
 
 fn no_op_routine(
-    _rdr: &VGARenderer,
-    _input: &Input,
+    _rdr: &mut VGARenderer,
     _win_state: &mut WindowState,
     _menu_state: &mut MenuState,
     _which: usize,
@@ -817,13 +814,11 @@ fn placeholder() -> ItemType {
 pub async fn control_panel(
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
-    ticker: &Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
     rc: RayCast,
-    rdr: &VGARenderer,
-    input: &mut Input,
+    rdr: &mut VGARenderer,
     prj: ProjectionConfig,
     assets: &Assets,
     win_state: &mut WindowState,
@@ -840,7 +835,7 @@ pub async fn control_panel(
     let f_key_handle = match scan {
         NumCode::F1 => {
             if loader.variant().help_text_lump_id.is_some() {
-                Some(cp_read_this(rdr, sound, assets, input, loader).await)
+                Some(cp_read_this(rdr, sound, assets, loader).await)
             } else {
                 None
             }
@@ -848,13 +843,11 @@ pub async fn control_panel(
         NumCode::F2 => Some(
             cp_save_game(
                 iw_config,
-                ticker,
                 level_state,
                 game_state,
                 rdr,
                 sound,
                 assets,
-                input,
                 win_state,
                 menu_state,
                 loader,
@@ -864,35 +857,26 @@ pub async fn control_panel(
         NumCode::F3 => Some(
             cp_load_game(
                 iw_config,
-                ticker,
                 level_state,
                 game_state,
                 rdr,
                 sound,
                 assets,
-                input,
                 win_state,
                 menu_state,
                 loader,
             )
             .await,
         ),
-        NumCode::F4 => Some(
-            cp_sound(
-                ticker, rdr, sound, assets, input, win_state, menu_state, loader,
-            )
-            .await,
-        ),
+        NumCode::F4 => Some(cp_sound(rdr, sound, assets, win_state, menu_state, loader).await),
         NumCode::F5 => {
             let (handle, prj, rc) = cp_change_view(
                 wolf_config,
                 iw_config,
-                ticker,
                 rdr,
                 sound,
                 rc_return,
                 assets,
-                input,
                 win_state,
                 prj_return,
                 loader,
@@ -903,9 +887,7 @@ pub async fn control_panel(
             rc_return = rc;
             Some(handle)
         }
-        NumCode::F6 => {
-            Some(cp_control(ticker, rdr, sound, assets, input, win_state, menu_state).await)
-        }
+        NumCode::F6 => Some(cp_control(rdr, sound, assets, win_state, menu_state).await),
         _ => None,
     };
     if let Some(handle) = f_key_handle {
@@ -931,35 +913,25 @@ pub async fn control_panel(
         let menu_opt = menu_stack.last();
         if let Some(menu) = menu_opt {
             let handle = match menu {
-                Menu::Top => {
-                    cp_main_menu(ticker, rdr, sound, assets, input, win_state, menu_state).await
-                }
+                Menu::Top => cp_main_menu(rdr, sound, assets, win_state, menu_state).await,
                 Menu::MainMenu(item) => match item {
                     MainMenuItem::NewGame => {
-                        cp_new_game(
-                            ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
-                        )
-                        .await
+                        cp_new_game(game_state, rdr, sound, assets, win_state, menu_state).await
                     }
                     MainMenuItem::Sound => {
-                        cp_sound(
-                            ticker, rdr, sound, assets, input, win_state, menu_state, loader,
-                        )
-                        .await
+                        cp_sound(rdr, sound, assets, win_state, menu_state, loader).await
                     }
                     MainMenuItem::Control => {
-                        cp_control(ticker, rdr, sound, assets, input, win_state, menu_state).await
+                        cp_control(rdr, sound, assets, win_state, menu_state).await
                     }
                     MainMenuItem::LoadGame => {
                         cp_load_game(
                             iw_config,
-                            ticker,
                             level_state,
                             game_state,
                             rdr,
                             sound,
                             assets,
-                            input,
                             win_state,
                             menu_state,
                             loader,
@@ -969,13 +941,11 @@ pub async fn control_panel(
                     MainMenuItem::SaveGame => {
                         cp_save_game(
                             iw_config,
-                            ticker,
                             level_state,
                             game_state,
                             rdr,
                             sound,
                             assets,
-                            input,
                             win_state,
                             menu_state,
                             loader,
@@ -986,12 +956,10 @@ pub async fn control_panel(
                         let (handle, prj_new, rc_new) = cp_change_view(
                             wolf_config,
                             iw_config,
-                            ticker,
                             rdr,
                             sound,
                             rc_return,
                             assets,
-                            input,
                             win_state,
                             prj_return,
                             loader,
@@ -1001,16 +969,14 @@ pub async fn control_panel(
                         rc_return = rc_new;
                         handle
                     }
-                    MainMenuItem::ReadThis => cp_read_this(rdr, sound, assets, input, loader).await,
+                    MainMenuItem::ReadThis => cp_read_this(rdr, sound, assets, loader).await,
                     MainMenuItem::ViewScores => {
                         cp_view_scores(
                             wolf_config,
-                            ticker,
                             game_state,
                             rdr,
                             sound,
                             assets,
-                            input,
                             win_state,
                             loader,
                         )
@@ -1020,19 +986,15 @@ pub async fn control_panel(
                     MainMenuItem::BackTo => MenuHandle::BackToGameLoop(None),
                 },
                 Menu::DifficultySelect => {
-                    cp_difficulty_select(
-                        ticker, game_state, rdr, sound, assets, input, win_state, menu_state,
-                    )
-                    .await
+                    cp_difficulty_select(game_state, rdr, sound, assets, win_state, menu_state)
+                        .await
                 }
                 Menu::CustomizeControls => {
                     cp_custom_controls(
                         wolf_config,
-                        ticker,
                         rdr,
                         sound,
                         assets,
-                        input,
                         win_state,
                         menu_state,
                         loader,
@@ -1058,67 +1020,54 @@ pub async fn control_panel(
 }
 
 async fn cp_read_this(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &mut Input,
     loader: &dyn Loader,
 ) -> MenuHandle {
     sound.play_music(Music::CORNER, assets, loader);
-    help_screens(rdr, input).await;
+    help_screens(rdr).await;
     sound.play_music(Music::WONDERIN, assets, loader);
     MenuHandle::QuitMenu
 }
 
 async fn cp_custom_controls(
     wolf_config: &mut WolfConfig,
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &mut Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
 ) -> MenuHandle {
-    draw_custom_screen(rdr, input, win_state, menu_state).await;
+    draw_custom_screen(rdr, win_state, menu_state).await;
 
     menu_state.select_menu(Menu::CustomizeControls);
-    let handle = handle_menu(
-        ticker,
-        rdr,
-        sound,
-        assets,
-        input,
-        win_state,
-        menu_state,
-        fixup_custom,
-    )
-    .await;
+    let handle = handle_menu(rdr, sound, assets, win_state, menu_state, fixup_custom).await;
 
     if let MenuHandle::Selected(which) = &handle {
         match which {
             0 => {
-                define_mouse_btns(ticker, rdr, sound, assets, input, win_state, menu_state);
-                draw_cust_mouse(rdr, input, win_state, menu_state, true);
+                define_mouse_btns(rdr, sound, assets, win_state, menu_state);
+                draw_cust_mouse(rdr, win_state, menu_state, true);
             }
             3 => {
                 todo!("implement joystick button change");
             }
             6 => {
-                define_key_btns(ticker, rdr, sound, assets, input, win_state, menu_state);
-                draw_cust_keybd(rdr, input, win_state, menu_state, false);
+                define_key_btns(rdr, sound, assets, win_state, menu_state);
+                draw_cust_keybd(rdr, win_state, menu_state, false);
             }
             8 => {
-                define_key_move(ticker, rdr, sound, assets, input, win_state, menu_state);
-                draw_cust_keys(rdr, input, win_state, menu_state, false);
+                define_key_move(rdr, sound, assets, win_state, menu_state);
+                draw_cust_keys(rdr, win_state, menu_state, false);
             }
             _ => { /* do nothing */ }
         }
 
-        wolf_config.button_mouse = input.button_mouse.clone();
-        wolf_config.button_scan = input.button_scan.clone();
-        wolf_config.dir_scan = input.dir_scan.clone();
+        wolf_config.button_mouse = rdr.input.button_mouse.clone();
+        wolf_config.button_scan = rdr.input.button_scan.clone();
+        wolf_config.dir_scan = rdr.input.dir_scan.clone();
         write_wolf_config(loader, wolf_config).expect("write config");
     }
 
@@ -1126,20 +1075,16 @@ async fn cp_custom_controls(
 }
 
 fn define_mouse_btns(
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &mut Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
     enter_ctrl_data(
-        ticker,
         rdr,
         sound,
         assets,
-        input,
         win_state,
         menu_state,
         2,
@@ -1151,20 +1096,16 @@ fn define_mouse_btns(
 }
 
 fn define_key_btns(
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &mut Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
     enter_ctrl_data(
-        ticker,
         rdr,
         sound,
         assets,
-        input,
         win_state,
         menu_state,
         8,
@@ -1176,20 +1117,16 @@ fn define_key_btns(
 }
 
 fn define_key_move(
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &mut Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
     enter_ctrl_data(
-        ticker,
         rdr,
         sound,
         assets,
-        input,
         win_state,
         menu_state,
         10,
@@ -1201,21 +1138,18 @@ fn define_key_move(
 }
 
 type DrawRoutine = fn(
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     hilight: bool,
 );
 
-type PrintRoutine = fn(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, i: usize);
+type PrintRoutine = fn(rdr: &mut VGARenderer, win_state: &mut WindowState, i: usize);
 
 fn enter_ctrl_data(
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &mut Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     index: usize,
@@ -1225,7 +1159,7 @@ fn enter_ctrl_data(
     input_type: InputType,
 ) {
     sound.play_sound(SoundName::SHOOT, assets);
-    input.clear_keys_down();
+    rdr.clear_keys_down();
 
     win_state.print_y = CST_Y + 13 * index;
     let mut exit = false;
@@ -1246,24 +1180,24 @@ fn enter_ctrl_data(
         if redraw {
             x = CST_START + CST_SPC * which;
             cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
-            draw_routine(rdr, input, win_state, menu_state, true);
+            draw_routine(rdr, win_state, menu_state, true);
             cp_draw_window(rdr, x - 2, win_state.print_y, CST_SPC, 11, TEXT_COLOR);
             draw_outline(rdr, x - 2, win_state.print_y, CST_SPC, 11, 0, HIGHLIGHT);
             win_state.set_font_color(0, TEXT_COLOR);
-            print_routine(rdr, input, win_state, which);
+            print_routine(rdr, win_state, which);
             win_state.print_x = x;
-            wait_key_up(input);
+            wait_key_up(rdr);
             redraw = false;
         }
 
-        let mut ci = read_any_control(input);
+        let mut ci = read_any_control(rdr);
 
         if input_type == InputType::Mouse || input_type == InputType::Joystick {
-            if input.key_pressed(NumCode::Return)
-                || input.key_pressed(NumCode::Control)
-                || input.key_pressed(NumCode::Alt)
+            if rdr.key_pressed(NumCode::Return)
+                || rdr.key_pressed(NumCode::Control)
+                || rdr.key_pressed(NumCode::Alt)
             {
-                input.clear_keys_down();
+                rdr.clear_keys_down();
                 ci.button_0 = false;
                 ci.button_1 = false;
             }
@@ -1272,20 +1206,20 @@ fn enter_ctrl_data(
         // CHANGE BUTTON VALUE?
         if (ci.button_0 || ci.button_1 || ci.button_2 || ci.button_3)
             || (input_type == InputType::KeyboardButtons || input_type == InputType::KeyboardMove)
-                && input.last_scan() == NumCode::Return
+                && rdr.last_scan() == NumCode::Return
         {
             let mut picked = false;
-            ticker.clear_count();
+            rdr.ticker.clear_count();
             let mut tick = false;
             win_state.set_font_color(0, TEXT_COLOR);
 
             loop {
                 if input_type == InputType::KeyboardButtons || input_type == InputType::KeyboardMove
                 {
-                    input.clear_keys_down();
+                    rdr.clear_keys_down();
                 }
 
-                if ticker.get_count() > 10 {
+                if rdr.ticker.get_count() > 10 {
                     if !tick {
                         rdr.bar(x, win_state.print_y + 1, CST_SPC - 2, 10, TEXT_COLOR);
                     } else {
@@ -1294,30 +1228,32 @@ fn enter_ctrl_data(
                         sound.play_sound(SoundName::HITWALL, assets);
                     }
                     tick = !tick;
-                    ticker.clear_count();
+                    rdr.ticker.clear_count();
                 }
 
                 // WHICH TYPE OF INPUT DO WE PROCESS?
                 match input_type {
                     InputType::Mouse => {
                         let mut result = None;
-                        if input.mouse_button_pressed(MouseButton::Left) {
+                        if rdr.mouse_button_pressed(MouseButton::Left) {
                             result = Some(MouseButton::Left)
-                        } else if input.mouse_button_pressed(MouseButton::Right) {
+                        } else if rdr.mouse_button_pressed(MouseButton::Right) {
                             result = Some(MouseButton::Right)
-                        } else if input.mouse_button_pressed(MouseButton::Middle) {
+                        } else if rdr.mouse_button_pressed(MouseButton::Middle) {
                             result = Some(MouseButton::Middle)
                         }
 
                         if let Some(button) = result {
                             for z in 0..4 {
-                                if BUTTON_ORDER[which] as usize == input.button_mouse[z] as usize {
-                                    input.button_mouse[which] = Button::NoButton;
+                                if BUTTON_ORDER[which] as usize
+                                    == rdr.input.button_mouse[z] as usize
+                                {
+                                    rdr.input.button_mouse[which] = Button::NoButton;
                                     break;
                                 }
                             }
 
-                            input.button_mouse[button as usize - 1] =
+                            rdr.input.button_mouse[button as usize - 1] =
                                 Button::from_usize(BUTTON_ORDER[which] as usize);
                             picked = true;
                             sound.play_sound(SoundName::SHOOTDOOR, assets);
@@ -1327,27 +1263,27 @@ fn enter_ctrl_data(
                         todo!("enter joystick");
                     }
                     InputType::KeyboardButtons => {
-                        let last_scan = input.last_scan();
+                        let last_scan = rdr.last_scan();
                         if last_scan != NumCode::None {
-                            input.button_scan[BUTTON_ORDER[which] as usize] = last_scan;
+                            rdr.input.button_scan[BUTTON_ORDER[which] as usize] = last_scan;
                             picked = true;
                             sound.play_sound(SoundName::SHOOT, assets);
-                            input.clear_keys_down();
+                            rdr.clear_keys_down();
                         }
                     }
                     InputType::KeyboardMove => {
-                        let last_scan = input.last_scan();
+                        let last_scan = rdr.last_scan();
                         if last_scan != NumCode::None {
-                            input.dir_scan[MOVE_ORDER[which] as usize] = last_scan;
+                            rdr.input.dir_scan[MOVE_ORDER[which] as usize] = last_scan;
                             picked = true;
                             sound.play_sound(SoundName::SHOOT, assets);
-                            input.clear_keys_down();
+                            rdr.clear_keys_down();
                         }
                     }
                 }
 
                 // EXIT INPUT?
-                if input.key_pressed(NumCode::Escape) {
+                if rdr.key_pressed(NumCode::Escape) {
                     picked = true;
                 }
 
@@ -1358,10 +1294,10 @@ fn enter_ctrl_data(
 
             win_state.set_font_color(TEXT_COLOR, BKGD_COLOR);
             redraw = true;
-            wait_key_up(input);
+            wait_key_up(rdr);
         }
 
-        if ci.button_1 || input.key_pressed(NumCode::Escape) {
+        if ci.button_1 || rdr.key_pressed(NumCode::Escape) {
             exit = true;
         }
 
@@ -1382,12 +1318,12 @@ fn enter_ctrl_data(
                 redraw = true;
                 sound.play_sound(SoundName::MOVEGUN1, assets);
                 loop {
-                    let ci = read_any_control(input);
+                    let ci = read_any_control(rdr);
                     if ci.dir == ControlDirection::None {
                         break;
                     }
                 }
-                input.clear_keys_down();
+                rdr.clear_keys_down();
             }
             ControlDirection::East => {
                 loop {
@@ -1403,12 +1339,12 @@ fn enter_ctrl_data(
                 redraw = true;
                 sound.play_sound(SoundName::MOVEGUN1, assets);
                 loop {
-                    let ci = read_any_control(input);
+                    let ci = read_any_control(rdr);
                     if ci.dir == ControlDirection::None {
                         break;
                     }
                 }
-                input.clear_keys_down();
+                rdr.clear_keys_down();
             }
             ControlDirection::North | ControlDirection::South => {
                 exit = true;
@@ -1422,13 +1358,12 @@ fn enter_ctrl_data(
     }
 
     sound.play_sound(SoundName::ESCPRESSED, assets);
-    wait_key_up(input);
+    wait_key_up(rdr);
     cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
 }
 
 async fn draw_custom_screen(
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
@@ -1458,7 +1393,7 @@ async fn draw_custom_screen(
     win_state.print_x = CST_START + CST_SPC * 3;
     print(rdr, win_state, STR_CSTRAFE);
     cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
-    draw_cust_mouse(rdr, input, win_state, menu_state, false);
+    draw_cust_mouse(rdr, win_state, menu_state, false);
     print(rdr, win_state, "\n");
 
     // JOYSTICK/PAD
@@ -1474,7 +1409,7 @@ async fn draw_custom_screen(
     win_state.print_x = CST_START + CST_SPC * 3;
     print(rdr, win_state, STR_CSTRAFE);
     cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
-    draw_cust_joy(rdr, input, win_state, menu_state, false);
+    draw_cust_joy(rdr, win_state, menu_state, false);
     print(rdr, win_state, "\n");
 
     // KEYBOARD
@@ -1490,7 +1425,7 @@ async fn draw_custom_screen(
     win_state.print_x = CST_START + CST_SPC * 3;
     print(rdr, win_state, STR_CSTRAFE);
     cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
-    draw_cust_keybd(rdr, input, win_state, menu_state, false);
+    draw_cust_keybd(rdr, win_state, menu_state, false);
     print(rdr, win_state, "\n");
 
     // KEYBOARD MOVE KEYS
@@ -1504,7 +1439,7 @@ async fn draw_custom_screen(
     win_state.print_x = CST_START + CST_SPC * 3;
     print(rdr, win_state, STR_BKWD);
     cp_draw_window(rdr, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
-    draw_cust_keys(rdr, input, win_state, menu_state, false);
+    draw_cust_keys(rdr, win_state, menu_state, false);
 
     // PICK STARTING POINT IN MENU
     let menu = menu_state
@@ -1526,8 +1461,7 @@ async fn draw_custom_screen(
 
 // FIXUP GUN CURSOR OVERDRAW SHIT
 fn fixup_custom(
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     which: usize,
@@ -1541,10 +1475,10 @@ fn fixup_custom(
     vw_hlin(rdr, 7, 32, y + 13, BORDER_COLOR);
 
     match which {
-        0 => draw_cust_mouse(rdr, input, win_state, menu_state, true),
-        3 => draw_cust_joy(rdr, input, win_state, menu_state, true),
-        6 => draw_cust_keybd(rdr, input, win_state, menu_state, true),
-        8 => draw_cust_keys(rdr, input, win_state, menu_state, true),
+        0 => draw_cust_mouse(rdr, win_state, menu_state, true),
+        3 => draw_cust_joy(rdr, win_state, menu_state, true),
+        6 => draw_cust_keybd(rdr, win_state, menu_state, true),
+        8 => draw_cust_keys(rdr, win_state, menu_state, true),
         _ => {}
     }
 
@@ -1558,10 +1492,10 @@ fn fixup_custom(
 
         if last_which as usize != which {
             match last_which {
-                0 => draw_cust_mouse(rdr, input, win_state, menu_state, false),
-                3 => draw_cust_joy(rdr, input, win_state, menu_state, false),
-                6 => draw_cust_keybd(rdr, input, win_state, menu_state, false),
-                8 => draw_cust_keys(rdr, input, win_state, menu_state, false),
+                0 => draw_cust_mouse(rdr, win_state, menu_state, false),
+                3 => draw_cust_joy(rdr, win_state, menu_state, false),
+                6 => draw_cust_keybd(rdr, win_state, menu_state, false),
+                8 => draw_cust_keys(rdr, win_state, menu_state, false),
                 _ => {}
             }
         }
@@ -1571,8 +1505,7 @@ fn fixup_custom(
 }
 
 fn draw_cust_mouse(
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     hilight: bool,
@@ -1585,7 +1518,7 @@ fn draw_cust_mouse(
         .get_mut(&Menu::CustomizeControls)
         .expect("customize control menue");
 
-    if !input.mouse_enabled {
+    if !rdr.input.mouse_enabled {
         win_state.set_font_color(DEACTIVE, BKGD_COLOR);
         menu.items[0].active = ItemActivity::Deactive;
     } else {
@@ -1594,13 +1527,13 @@ fn draw_cust_mouse(
 
     win_state.print_y = CST_Y + 13 * 2;
     for i in 0..4 {
-        print_cust_mouse(rdr, input, win_state, i);
+        print_cust_mouse(rdr, win_state, i);
     }
 }
 
-fn print_cust_mouse(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, i: usize) {
+fn print_cust_mouse(rdr: &mut VGARenderer, win_state: &mut WindowState, i: usize) {
     for j in 0..4 {
-        if BUTTON_ORDER[i] as usize == input.button_mouse[j] as usize {
+        if BUTTON_ORDER[i] as usize == rdr.input.button_mouse[j] as usize {
             win_state.print_x = CST_START + CST_SPC * i;
             print(rdr, win_state, MB_ARRAY[j]);
             break;
@@ -1609,8 +1542,7 @@ fn print_cust_mouse(rdr: &VGARenderer, input: &Input, win_state: &mut WindowStat
 }
 
 fn draw_cust_joy(
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     hilight: bool,
@@ -1623,7 +1555,7 @@ fn draw_cust_joy(
         .get_mut(&Menu::CustomizeControls)
         .expect("customize control menue");
 
-    if !input.joystick_enabled {
+    if !rdr.input.joystick_enabled {
         win_state.set_font_color(DEACTIVE, BKGD_COLOR);
         menu.items[3].active = ItemActivity::Deactive;
     } else {
@@ -1636,7 +1568,7 @@ fn draw_cust_joy(
     }
 }
 
-fn print_cust_joy(rdr: &VGARenderer, win_state: &mut WindowState, i: usize) {
+fn print_cust_joy(rdr: &mut VGARenderer, win_state: &mut WindowState, i: usize) {
     for j in 0..4 {
         if BUTTON_ORDER[i] as usize == BUTTON_JOY[j] as usize {
             win_state.print_x = CST_START + CST_SPC * i;
@@ -1647,8 +1579,7 @@ fn print_cust_joy(rdr: &VGARenderer, win_state: &mut WindowState, i: usize) {
 }
 
 fn draw_cust_keybd(
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     _: &mut MenuState,
     hilight: bool,
@@ -1658,19 +1589,18 @@ fn draw_cust_keybd(
 
     win_state.print_y = CST_Y + 13 * 8;
     for i in 0..4 {
-        print_cust_keybd(rdr, input, win_state, i);
+        print_cust_keybd(rdr, win_state, i);
     }
 }
 
-fn print_cust_keybd(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, i: usize) {
+fn print_cust_keybd(rdr: &mut VGARenderer, win_state: &mut WindowState, i: usize) {
     win_state.print_x = CST_START + CST_SPC * i;
-    let scan = input.button_scan[BUTTON_ORDER[i] as usize];
+    let scan = rdr.input.button_scan[BUTTON_ORDER[i] as usize];
     print(rdr, win_state, numcode_name(scan));
 }
 
 fn draw_cust_keys(
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     _: &mut MenuState,
     hilight: bool,
@@ -1680,39 +1610,27 @@ fn draw_cust_keys(
 
     win_state.print_y = CST_Y + 13 * 10;
     for i in 0..4 {
-        print_cust_keys(rdr, input, win_state, i);
+        print_cust_keys(rdr, win_state, i);
     }
 }
 
-fn print_cust_keys(rdr: &VGARenderer, input: &Input, win_state: &mut WindowState, i: usize) {
-    let scan = input.dir_scan[MOVE_ORDER[i] as usize];
+fn print_cust_keys(rdr: &mut VGARenderer, win_state: &mut WindowState, i: usize) {
+    let scan = rdr.input.dir_scan[MOVE_ORDER[i] as usize];
     win_state.print_x = CST_START + CST_SPC * i;
     print(rdr, win_state, numcode_name(scan));
 }
 
 async fn cp_main_menu(
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) -> MenuHandle {
     draw_main_menu(rdr, win_state, menu_state);
     rdr.fade_in().await;
 
-    let handle = handle_menu(
-        ticker,
-        rdr,
-        sound,
-        assets,
-        input,
-        win_state,
-        menu_state,
-        no_op_routine,
-    )
-    .await;
+    let handle = handle_menu(rdr, sound, assets, win_state, menu_state, no_op_routine).await;
 
     match handle {
         MenuHandle::Selected(selected) => {
@@ -1738,14 +1656,14 @@ async fn cp_main_menu(
             } else if selected_item == MainMenuItem::BackTo.id() {
                 return MenuHandle::BackToGameLoop(None);
             } else if selected_item == MainMenuItem::Quit.id() {
-                menu_quit(ticker, rdr, sound, assets, input, win_state, menu_state).await;
+                menu_quit(rdr, sound, assets, win_state, menu_state).await;
                 MenuHandle::QuitMenu
             } else {
                 quit(Some("unknown menu selected"));
             }
         }
         MenuHandle::QuitMenu => {
-            menu_quit(ticker, rdr, sound, assets, input, win_state, menu_state).await;
+            menu_quit(rdr, sound, assets, win_state, menu_state).await;
             MenuHandle::QuitMenu
         }
         _ => handle,
@@ -1753,29 +1671,18 @@ async fn cp_main_menu(
 }
 
 async fn cp_new_game(
-    ticker: &Ticker,
     game_state: &mut GameState,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) -> MenuHandle {
     loop {
         draw_new_episode(rdr, win_state, menu_state).await;
 
-        let episode_handle = handle_menu(
-            ticker,
-            rdr,
-            sound,
-            assets,
-            input,
-            win_state,
-            menu_state,
-            no_op_routine,
-        )
-        .await;
+        let episode_handle =
+            handle_menu(rdr, sound, assets, win_state, menu_state, no_op_routine).await;
         if let MenuHandle::Selected(episode_selected) = episode_handle {
             let new_game_menu = menu_state
                 .menues
@@ -1789,13 +1696,13 @@ async fn cp_new_game(
                     win_state,
                     "Please select \"Read This!\"\nfrom the Options menu to\nfind out how to order this\nepisode from Apogee.",
                 );
-                input.clear_keys_down();
-                input.ack();
+                rdr.clear_keys_down();
+                rdr.ack();
                 continue;
             } else {
                 sound.play_sound(SoundName::SHOOT, assets);
                 if win_state.in_game {
-                    if confirm(ticker, rdr, sound, assets, input, win_state, CUR_GAME).await {
+                    if confirm(rdr, sound, assets, win_state, CUR_GAME).await {
                         game_state.play_state = PlayState::ResetGame;
                         menu_fade_out(rdr).await;
                     }
@@ -1813,28 +1720,17 @@ async fn cp_new_game(
 // Sound
 
 async fn cp_sound(
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
 ) -> MenuHandle {
     draw_sound_menu(rdr, win_state, menu_state, sound).await;
     loop {
-        let sound_handle = handle_menu(
-            ticker,
-            rdr,
-            sound,
-            assets,
-            input,
-            win_state,
-            menu_state,
-            no_op_routine,
-        )
-        .await;
+        let sound_handle =
+            handle_menu(rdr, sound, assets, win_state, menu_state, no_op_routine).await;
         if let MenuHandle::Selected(which) = sound_handle {
             // SOUND EFFECTS
             if which == SoundItem::SoundEffectNone.pos() {
@@ -1889,7 +1785,7 @@ async fn cp_sound(
 }
 
 async fn draw_sound_menu(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     sound: &Sound,
@@ -1964,13 +1860,11 @@ async fn draw_sound_menu(
 
 async fn cp_load_game(
     iw_config: &IWConfig,
-    ticker: &Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
@@ -1979,17 +1873,8 @@ async fn cp_load_game(
     let state = read_save_game_state(loader);
     draw_load_save_screen(rdr, win_state, menu_state, &state, false).await;
     loop {
-        let load_handle = handle_menu(
-            ticker,
-            rdr,
-            sound,
-            assets,
-            input,
-            win_state,
-            menu_state,
-            no_op_routine,
-        )
-        .await;
+        let load_handle =
+            handle_menu(rdr, sound, assets, win_state, menu_state, no_op_routine).await;
         if let MenuHandle::Selected(which) = load_handle {
             if state[which].available {
                 draw_ls_action(rdr, win_state, false);
@@ -2000,7 +1885,6 @@ async fn cp_load_game(
                     game_state,
                     win_state,
                     rdr,
-                    input,
                     assets,
                     loader,
                     which,
@@ -2021,17 +1905,15 @@ async fn cp_load_game(
 
 async fn cp_view_scores(
     wolf_config: &WolfConfig,
-    ticker: &Ticker,
     game_state: &mut GameState,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     loader: &dyn Loader,
 ) -> MenuHandle {
     if game_state.loaded_game || game_state.start_game || win_state.in_game {
-        if !confirm(ticker, rdr, sound, assets, input, win_state, END_GAME_STR).await {
+        if !confirm(rdr, sound, assets, win_state, END_GAME_STR).await {
             return MenuHandle::OpenMenu(Menu::Top);
         }
         game_state.lives = 0;
@@ -2044,7 +1926,7 @@ async fn cp_view_scores(
         rdr.fade_in().await;
         win_state.font_number = 1;
 
-        input.ack();
+        rdr.ack();
 
         sound.play_music(Music::WONDERIN, assets, loader);
         rdr.fade_out().await;
@@ -2055,13 +1937,11 @@ async fn cp_view_scores(
 
 async fn cp_save_game(
     iw_config: &IWConfig,
-    ticker: &Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
@@ -2070,22 +1950,13 @@ async fn cp_save_game(
     let state = read_save_game_state(loader);
     draw_load_save_screen(rdr, win_state, menu_state, &state, true).await;
     loop {
-        let save_handle = handle_menu(
-            ticker,
-            rdr,
-            sound,
-            assets,
-            input,
-            win_state,
-            menu_state,
-            no_op_routine,
-        )
-        .await;
+        let save_handle =
+            handle_menu(rdr, sound, assets, win_state, menu_state, no_op_routine).await;
         if let MenuHandle::Selected(which) = save_handle {
             // TODO Check overwrite existing game
 
             if state[which].available {
-                if !confirm(ticker, rdr, sound, assets, input, win_state, GAME_SAVED).await {
+                if !confirm(rdr, sound, assets, win_state, GAME_SAVED).await {
                     draw_load_save_screen(rdr, win_state, menu_state, &state, true).await;
                     continue;
                 } else {
@@ -2114,9 +1985,7 @@ async fn cp_save_game(
             };
 
             let (input, escape) = line_input(
-                ticker,
                 rdr,
-                input,
                 win_state,
                 LSM_X + save_menu.state.indent + 2,
                 LSM_Y + which * 13 + 1,
@@ -2185,7 +2054,7 @@ fn read_save_game_state(loader: &dyn Loader) -> Vec<SaveGameState> {
     return result;
 }
 
-fn draw_ls_action(rdr: &VGARenderer, win_state: &mut WindowState, save: bool) {
+fn draw_ls_action(rdr: &mut VGARenderer, win_state: &mut WindowState, save: bool) {
     cp_draw_window(rdr, LSA_X, LSA_Y, LSA_W, LSA_H, TEXT_COLOR);
     draw_outline(rdr, LSA_X, LSA_Y, LSA_W, LSA_H, 0, HIGHLIGHT);
     rdr.pic(LSA_X + 8, LSA_Y + 5, GraphicNum::CDISKLOADING1PIC);
@@ -2203,7 +2072,7 @@ fn draw_ls_action(rdr: &VGARenderer, win_state: &mut WindowState, save: bool) {
 }
 
 async fn draw_load_save_screen(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     state: &Vec<SaveGameState>,
@@ -2234,7 +2103,7 @@ async fn draw_load_save_screen(
 }
 
 fn print_ls_entry(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     save_game: &SaveGameState,
@@ -2267,35 +2136,25 @@ fn print_ls_entry(
     win_state.font_number = 1;
 }
 
-fn draw_new_game_diff(
-    rdr: &VGARenderer,
-    _: &Input,
-    _: &mut WindowState,
-    _: &mut MenuState,
-    which: usize,
-) {
+fn draw_new_game_diff(rdr: &mut VGARenderer, _: &mut WindowState, _: &mut MenuState, which: usize) {
     rdr.pic(NM_X + 185, NM_Y + 7, difficulty_pic(which));
 }
 
 // Diffculty Select
 
 async fn cp_difficulty_select(
-    ticker: &Ticker,
     game_state: &mut GameState,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) -> MenuHandle {
     draw_difficulty_select(rdr, win_state, menu_state).await;
     let handle = handle_menu(
-        ticker,
         rdr,
         sound,
         assets,
-        input,
         win_state,
         menu_state,
         draw_new_game_diff,
@@ -2315,7 +2174,7 @@ async fn cp_difficulty_select(
 }
 
 async fn draw_difficulty_select(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
@@ -2347,7 +2206,7 @@ fn difficulty_pic(i: usize) -> GraphicNum {
 }
 
 async fn draw_new_episode(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
@@ -2384,30 +2243,18 @@ fn episode_pic(i: usize) -> GraphicNum {
 }
 
 async fn cp_control(
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) -> MenuHandle {
-    draw_ctl_screen(rdr, input, win_state, menu_state).await;
+    draw_ctl_screen(rdr, win_state, menu_state).await;
 
-    wait_key_up(input);
+    wait_key_up(rdr);
 
     loop {
-        let handle = handle_menu(
-            ticker,
-            rdr,
-            sound,
-            assets,
-            input,
-            win_state,
-            menu_state,
-            no_op_routine,
-        )
-        .await;
+        let handle = handle_menu(rdr, sound, assets, win_state, menu_state, no_op_routine).await;
 
         if let MenuHandle::Selected(which) = handle {
             if which == ControlItem::MouseEnabled.pos() {
@@ -2437,8 +2284,7 @@ async fn cp_control(
 }
 
 async fn draw_ctl_screen(
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
@@ -2455,14 +2301,14 @@ async fn draw_ctl_screen(
 
     menu_state.update_menu(Menu::MainMenu(MainMenuItem::Control), |entry| {
         // no gamepad support at the moment, always disable
-        if !input.joystick_enabled {
+        if !rdr.input.joystick_enabled {
             entry.items[1].active = ItemActivity::Deactive;
             entry.items[2].active = ItemActivity::Deactive;
             entry.items[3].active = ItemActivity::Deactive;
         }
 
         // no mouse support at the moment, always disable
-        if !input.mouse_enabled {
+        if !rdr.input.mouse_enabled {
             entry.items[0].active = ItemActivity::Deactive;
             entry.items[4].active = ItemActivity::Deactive;
         }
@@ -2473,28 +2319,28 @@ async fn draw_ctl_screen(
 
     let x = CTL_X + CTL_INDENT - 24;
     let y = CTL_Y + 3;
-    if input.mouse_enabled {
+    if rdr.input.mouse_enabled {
         rdr.pic(x, y, GraphicNum::CSELECTEDPIC);
     } else {
         rdr.pic(x, y, GraphicNum::CNOTSELECTEDPIC);
     }
 
     let y = CTL_Y + 16;
-    if input.joystick_enabled {
+    if rdr.input.joystick_enabled {
         rdr.pic(x, y, GraphicNum::CSELECTEDPIC);
     } else {
         rdr.pic(x, y, GraphicNum::CNOTSELECTEDPIC);
     }
 
     let y = CTL_Y + 29;
-    if input.joystick_enabled {
+    if rdr.input.joystick_enabled {
         rdr.pic(x, y, GraphicNum::CSELECTEDPIC);
     } else {
         rdr.pic(x, y, GraphicNum::CNOTSELECTEDPIC);
     }
 
     let y = CTL_Y + 42;
-    if input.joystick_enabled {
+    if rdr.input.joystick_enabled {
         rdr.pic(x, y, GraphicNum::CSELECTEDPIC);
     } else {
         rdr.pic(x, y, GraphicNum::CNOTSELECTEDPIC);
@@ -2520,16 +2366,14 @@ async fn draw_ctl_screen(
 }
 
 async fn menu_quit(
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
     let text = END_STRINGS[((rnd_t() & 0x07) + (rnd_t() & 1)) as usize];
-    if confirm(ticker, rdr, sound, assets, input, win_state, text).await {
+    if confirm(rdr, sound, assets, win_state, text).await {
         //TODO stop music
         rdr.fade_in().await;
         quit(None)
@@ -2541,12 +2385,10 @@ async fn menu_quit(
 async fn cp_change_view(
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     rc: RayCast,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     prj: ProjectionConfig,
     loader: &dyn Loader,
@@ -2557,7 +2399,7 @@ async fn cp_change_view(
 
     loop {
         // TODO CheckPause()
-        let ci = read_any_control(input);
+        let ci = read_any_control(rdr);
         match ci.dir {
             ControlDirection::South | ControlDirection::West => {
                 new_view -= 1;
@@ -2566,7 +2408,7 @@ async fn cp_change_view(
                 }
                 show_view_size(rdr, new_view);
                 sound.play_sound(SoundName::HITWALL, assets);
-                tic_delay(ticker, input, 10).await;
+                tic_delay(rdr, 10).await;
             }
             ControlDirection::North | ControlDirection::East => {
                 new_view += 1;
@@ -2575,7 +2417,7 @@ async fn cp_change_view(
                 }
                 show_view_size(rdr, new_view);
                 sound.play_sound(SoundName::HITWALL, assets);
-                tic_delay(ticker, input, 10).await;
+                tic_delay(rdr, 10).await;
             }
             _ => { /* ignore */ }
         }
@@ -2583,9 +2425,9 @@ async fn cp_change_view(
         // TODO PicturePause
 
         // TODO Check mouse button
-        if input.key_pressed(NumCode::Return) {
+        if rdr.key_pressed(NumCode::Return) {
             break;
-        } else if input.key_pressed(NumCode::Escape) {
+        } else if rdr.key_pressed(NumCode::Escape) {
             sound.play_sound(SoundName::ESCPRESSED, assets);
             rdr.fade_out().await;
             return (MenuHandle::OpenMenu(Menu::Top), prj, rc);
@@ -2598,7 +2440,7 @@ async fn cp_change_view(
         sound.play_sound(SoundName::SHOOT, assets);
         message(rdr, win_state, "Thinking...");
         if !iw_config.options.fast_loading {
-            sleep(Duration::from_millis(2500)).await;
+            sleep(2500).await;
         }
         prj_return = new_view_size(new_view);
         rc_return = init_ray_cast(prj_return.view_width);
@@ -2611,7 +2453,7 @@ async fn cp_change_view(
     return (MenuHandle::OpenMenu(Menu::Top), prj_return, rc_return);
 }
 
-async fn draw_change_view(rdr: &VGARenderer, win_state: &mut WindowState, view_size: u16) {
+async fn draw_change_view(rdr: &mut VGARenderer, win_state: &mut WindowState, view_size: u16) {
     rdr.bar(0, 160, 320, 40, VIEW_COLOR);
     show_view_size(rdr, view_size);
 
@@ -2630,26 +2472,26 @@ async fn draw_change_view(rdr: &VGARenderer, win_state: &mut WindowState, view_s
 // helper
 
 async fn confirm(
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     str: &str,
 ) -> bool {
     message(rdr, win_state, str);
-    input.clear_keys_down();
+    rdr.clear_keys_down();
 
     // BLINK CURSOR
     let x = win_state.print_x;
     let y = win_state.print_y;
     let mut tick = false;
     let mut time_count = 0;
-    while !input.key_pressed(NumCode::Y)
-        && !input.key_pressed(NumCode::N)
-        && !input.key_pressed(NumCode::Escape)
+    while !rdr.key_pressed(NumCode::Y)
+        && !rdr.key_pressed(NumCode::N)
+        && !rdr.key_pressed(NumCode::Escape)
     {
+        rdr.vga.draw_frame();
+
         if time_count >= 10 {
             if tick {
                 rdr.bar(x, y, 8, 13, TEXT_COLOR);
@@ -2662,17 +2504,17 @@ async fn confirm(
             time_count = 0;
         }
 
-        ticker.tics(1).await;
+        rdr.ticker.tics(1).await;
         time_count += 1;
     }
 
-    let exit = if input.key_pressed(NumCode::Y) {
+    let exit = if rdr.key_pressed(NumCode::Y) {
         true
     } else {
         false
     };
 
-    input.clear_keys_down();
+    rdr.clear_keys_down();
 
     if exit {
         sound.play_sound(SoundName::ESCPRESSED, assets);
@@ -2684,21 +2526,16 @@ async fn confirm(
 
 /// Handle moving gun around a menu
 async fn handle_menu(
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     routine: MenuRoutine,
 ) -> MenuHandle {
-    let handle = handle_menu_loop(
-        ticker, rdr, sound, assets, input, win_state, menu_state, routine,
-    )
-    .await;
+    let handle = handle_menu_loop(rdr, sound, assets, win_state, menu_state, routine).await;
 
-    input.clear_keys_down();
+    rdr.clear_keys_down();
 
     if let MenuHandle::Selected(which_pos) = handle {
         menu_state.update_selected(|selected| selected.state.cur_pos = Some(which_pos));
@@ -2707,11 +2544,9 @@ async fn handle_menu(
 }
 
 async fn handle_menu_loop(
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     routine: MenuRoutine,
@@ -2727,17 +2562,19 @@ async fn handle_menu_loop(
     rdr.pic(x, y, GraphicNum::CCURSOR1PIC);
 
     // CALL CUSTOM ROUTINE IF IT IS NEEDED
-    routine(rdr, input, win_state, menu_state, which_pos);
+    routine(rdr, win_state, menu_state, which_pos);
 
     let mut shape = GraphicNum::CCURSOR1PIC;
     let mut timer = 8;
-    input.clear_keys_down();
+    rdr.clear_keys_down();
 
     let exit;
     loop {
+        rdr.vga.draw_frame();
+
         // CHANGE GUN SHAPE
-        if ticker.get_count() > timer {
-            ticker.clear_count();
+        if rdr.ticker.get_count() > timer {
+            rdr.ticker.clear_count();
             if shape == GraphicNum::CCURSOR1PIC {
                 shape = GraphicNum::CCURSOR2PIC;
                 timer = 8;
@@ -2746,14 +2583,14 @@ async fn handle_menu_loop(
                 timer = 70;
             }
             rdr.pic(x, y, shape);
-            routine(rdr, input, win_state, menu_state, which_pos);
+            routine(rdr, win_state, menu_state, which_pos);
         }
 
         // TODO CheckPause
 
         // TODO check key presses
 
-        let ci = read_any_control(input);
+        let ci = read_any_control(rdr);
         match ci.dir {
             ControlDirection::North => {
                 erase_gun(rdr, win_state, menu_state.selected_state(), x, y, which_pos);
@@ -2763,7 +2600,7 @@ async fn handle_menu_loop(
                         != ItemActivity::Deactive
                 {
                     y -= 6;
-                    draw_half_step(ticker, rdr, sound, assets, x, y).await;
+                    draw_half_step(rdr, sound, assets, x, y).await;
                 }
 
                 loop {
@@ -2780,12 +2617,11 @@ async fn handle_menu_loop(
                 }
 
                 y = draw_gun(
-                    rdr, sound, assets, input, win_state, menu_state, x, y, which_pos, base_y,
-                    routine,
+                    rdr, sound, assets, win_state, menu_state, x, y, which_pos, base_y, routine,
                 );
 
                 // WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
-                tic_delay(ticker, input, 20).await;
+                tic_delay(rdr, 20).await;
             }
             ControlDirection::South => {
                 erase_gun(rdr, win_state, menu_state.selected_state(), x, y, which_pos);
@@ -2795,7 +2631,7 @@ async fn handle_menu_loop(
                         != ItemActivity::Deactive
                 {
                     y += 6;
-                    draw_half_step(ticker, rdr, sound, assets, x, y).await;
+                    draw_half_step(rdr, sound, assets, x, y).await;
                 }
 
                 loop {
@@ -2811,22 +2647,21 @@ async fn handle_menu_loop(
                     }
                 }
                 y = draw_gun(
-                    rdr, sound, assets, input, win_state, menu_state, x, y, which_pos, base_y,
-                    routine,
+                    rdr, sound, assets, win_state, menu_state, x, y, which_pos, base_y, routine,
                 );
 
                 // WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
-                tic_delay(ticker, input, 20).await;
+                tic_delay(rdr, 20).await;
             }
             _ => { /* ignore */ }
         }
 
-        if input.key_pressed(NumCode::Space) || input.key_pressed(NumCode::Return) {
+        if rdr.key_pressed(NumCode::Space) || rdr.key_pressed(NumCode::Return) {
             sound.play_sound(SoundName::SHOOT, assets);
             exit = MenuHandle::Selected(which_pos);
             break;
         }
-        if input.key_pressed(NumCode::Escape) {
+        if rdr.key_pressed(NumCode::Escape) {
             sound.play_sound(SoundName::ESCPRESSED, assets);
             exit = MenuHandle::QuitMenu;
             break;
@@ -2835,20 +2670,20 @@ async fn handle_menu_loop(
     return exit;
 }
 
-async fn tic_delay(ticker: &Ticker, input: &Input, count: u64) {
-    input.clear_keys_down();
+async fn tic_delay(rdr: &mut VGARenderer, count: u64) {
+    rdr.clear_keys_down();
     for _ in 0..count {
-        let ci = read_any_control(input);
+        let ci = read_any_control(rdr);
         if ci.dir != ControlDirection::None {
             break;
         }
-        ticker.tics(1).await
+        rdr.vga.draw_frame();
+        rdr.ticker.tics(1).await
     }
 }
 
 async fn draw_half_step(
-    ticker: &Ticker,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
     x: usize,
@@ -2857,11 +2692,11 @@ async fn draw_half_step(
     rdr.pic(x, y, GraphicNum::CCURSOR1PIC);
     sound.play_sound(SoundName::MOVEGUN1, assets);
 
-    ticker.tics(8).await;
+    rdr.ticker.tics(8).await;
 }
 
 fn erase_gun(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     selected: &MenuStateEntry,
     x: usize,
@@ -2876,16 +2711,15 @@ fn erase_gun(
     print(rdr, win_state, selected.items[which_pos].string);
 }
 
-fn draw_menu_gun(rdr: &VGARenderer, item_info: &ItemInfo) {
+fn draw_menu_gun(rdr: &mut VGARenderer, item_info: &ItemInfo) {
     let y = item_info.y + item_info.cur_pos.unwrap_or(0) * 13 - 2;
     rdr.pic(item_info.x, y, GraphicNum::CCURSOR1PIC);
 }
 
 fn draw_gun(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    input: &Input,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     x: usize,
@@ -2906,14 +2740,14 @@ fn draw_gun(
     win_state.print_y = selected.state.y + which_pos * 13;
     print(rdr, win_state, selected.items[which_pos].string);
 
-    routine(rdr, input, win_state, menu_state, which_pos);
+    routine(rdr, win_state, menu_state, which_pos);
 
     sound.play_sound(SoundName::MOVEGUN2, assets);
 
     new_y
 }
 
-fn read_any_control(input: &Input) -> ControlInfo {
+fn read_any_control(rdr: &mut VGARenderer) -> ControlInfo {
     let mut ci = ControlInfo {
         button_0: false,
         button_1: false,
@@ -2921,12 +2755,12 @@ fn read_any_control(input: &Input) -> ControlInfo {
         button_3: false,
         dir: ControlDirection::None,
     };
-    read_control(input, &mut ci);
+    rdr.read_control(&mut ci);
 
-    if input.mouse_enabled {
-        ci.button_0 = input.mouse_button_pressed(MouseButton::Left);
-        ci.button_1 = input.mouse_button_pressed(MouseButton::Right);
-        ci.button_2 = input.mouse_button_pressed(MouseButton::Middle);
+    if rdr.input.mouse_enabled {
+        ci.button_0 = rdr.mouse_button_pressed(MouseButton::Left);
+        ci.button_1 = rdr.mouse_button_pressed(MouseButton::Right);
+        ci.button_2 = rdr.mouse_button_pressed(MouseButton::Middle);
         // TODO read mouse direction
     }
 
@@ -2934,16 +2768,16 @@ fn read_any_control(input: &Input) -> ControlInfo {
     ci
 }
 
-fn wait_key_up(input: &Input) {
+fn wait_key_up(rdr: &mut VGARenderer) {
     loop {
-        let ci = read_any_control(input);
+        let ci = read_any_control(rdr);
         let something_pressed = ci.button_0
             | ci.button_1
             | ci.button_2
             | ci.button_3
-            | input.key_pressed(NumCode::Space)
-            | input.key_pressed(NumCode::Return)
-            | input.key_pressed(NumCode::Escape);
+            | rdr.key_pressed(NumCode::Space)
+            | rdr.key_pressed(NumCode::Return)
+            | rdr.key_pressed(NumCode::Escape);
         if !something_pressed {
             return;
         }
@@ -2965,7 +2799,7 @@ fn setup_control_panel(win_state: &mut WindowState, menu_state: &mut MenuState) 
     }
 }
 
-fn draw_main_menu(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState) {
+fn draw_main_menu(rdr: &mut VGARenderer, win_state: &mut WindowState, menu_state: &mut MenuState) {
     clear_ms_screen(rdr);
     rdr.pic(112, 184, GraphicNum::CMOUSELBACKPIC);
     draw_stripes(rdr, 10);
@@ -3007,7 +2841,7 @@ fn draw_main_menu(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &m
     draw_menu(rdr, win_state, menu_state);
 }
 
-fn draw_menu(rdr: &VGARenderer, win_state: &mut WindowState, menu_state: &MenuState) {
+fn draw_menu(rdr: &mut VGARenderer, win_state: &mut WindowState, menu_state: &MenuState) {
     let selected = menu_state.selected_state();
     let which = selected.state.cur_pos.unwrap_or(0);
 
@@ -3052,18 +2886,18 @@ fn active_ix(active: ItemActivity) -> usize {
     }
 }
 
-pub fn draw_stripes(rdr: &VGARenderer, y: usize) {
+pub fn draw_stripes(rdr: &mut VGARenderer, y: usize) {
     rdr.bar(0, y, 320, 24, 0);
     rdr.hlin(0, 319, y + 22, STRIPE);
 }
 
-pub fn clear_ms_screen(rdr: &VGARenderer) {
+pub fn clear_ms_screen(rdr: &mut VGARenderer) {
     rdr.bar(0, 0, 320, 200, BORDER_COLOR)
 }
 
 /// The supplied message should only contain ASCII characters.
 /// All other characters are not supported and ignored.
-pub fn message(rdr: &VGARenderer, win_state: &mut WindowState, str: &str) {
+pub fn message(rdr: &mut VGARenderer, win_state: &mut WindowState, str: &str) {
     win_state.font_number = 1;
     win_state.font_color = 0;
     let font = &rdr.fonts[win_state.font_number];
@@ -3115,13 +2949,20 @@ pub fn message(rdr: &VGARenderer, win_state: &mut WindowState, str: &str) {
     rdr.set_buffer_offset(prev_buffer);
 }
 
-fn cp_draw_window(rdr: &VGARenderer, x: usize, y: usize, width: usize, height: usize, color: u8) {
+fn cp_draw_window(
+    rdr: &mut VGARenderer,
+    x: usize,
+    y: usize,
+    width: usize,
+    height: usize,
+    color: u8,
+) {
     rdr.bar(x, y, width, height, color);
     draw_outline(rdr, x, y, width, height, BORDER2_COLOR, DEACTIVE);
 }
 
 fn draw_outline(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     x: usize,
     y: usize,
     width: usize,
@@ -3163,7 +3004,7 @@ pub fn intro_song(variant: &WolfVariant) -> Music {
 // HANDLE INTRO SCREEN (SYSTEM CONFIG)
 //
 ////////////////////////////////////////////////////////////////////
-pub fn intro_screen(rdr: &VGARenderer) {
+pub fn intro_screen(rdr: &mut VGARenderer) {
     // DRAW MAIN MEMORY
     for i in 0..10 {
         // iw assumes that there is always enough main memory

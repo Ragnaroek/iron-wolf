@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
 use vga::{SCReg, VGABuilder};
 
@@ -14,8 +14,9 @@ use crate::fixed::{Fixed, ZERO};
 use crate::game::setup_game_level;
 use crate::loader::{DiskLoader, Loader};
 use crate::play::ProjectionConfig;
+use crate::rc::{Input, VGARenderer};
 use crate::start::{OBJ_TYPE_LEN, STAT_TYPE_LEN, save_the_game};
-use crate::vga_render::{self, VGARenderer};
+use crate::time::new_test_ticker;
 
 use super::new_view_size;
 use super::{do_load, null_obj_type};
@@ -36,7 +37,7 @@ fn test_do_load_and_save_save0() {
         patch_path: None,
     };
 
-    let (_, rdr, assets) = start_test_iw(&loader);
+    let (_, mut rdr, assets) = start_test_iw(&loader);
 
     let mut game_state = new_game_state();
     game_state.difficulty = Difficulty::Baby;
@@ -69,7 +70,7 @@ fn test_do_load_and_save_save0() {
         &iw_config,
         &mut level_state,
         &mut game_state,
-        &rdr,
+        &mut rdr,
         &assets,
         &loader,
         0,
@@ -92,7 +93,7 @@ fn test_do_load_and_save_save0() {
         &iw_config,
         &level_state,
         &game_state,
-        &rdr,
+        &mut rdr,
         &loader,
         9,
         "e1m2",
@@ -106,7 +107,7 @@ fn test_do_load_and_save_save0() {
         &iw_config,
         &mut level_state,
         &mut game_state,
-        &rdr,
+        &mut rdr,
         &assets,
         &loader,
         9, /*only difference to load before*/
@@ -386,7 +387,7 @@ fn test_do_load_save1() {
         patch_path: None,
     };
 
-    let (_, rdr, assets) = start_test_iw(&loader);
+    let (_, mut rdr, assets) = start_test_iw(&loader);
 
     let mut game_state = new_game_state();
     let mut level_state = setup_game_level(&mut game_state, &assets, true).expect("level state");
@@ -399,7 +400,7 @@ fn test_do_load_save1() {
         &iw_config,
         &mut level_state,
         &mut game_state,
-        &rdr,
+        &mut rdr,
         &assets,
         &loader,
         1,
@@ -468,7 +469,10 @@ fn reset_partial_obj_type(obj: &mut ObjType) {
 
 fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, VGARenderer, Assets) {
     let wolf_config = config::load_wolf_config(loader);
-    let vga = VGABuilder::new().video_mode(0x13).build_no_backend();
+    let mut vga = VGABuilder::new()
+        .video_mode(0x13)
+        .build()
+        .expect("VGA test instance");
 
     //enable Mode Y
     let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
@@ -479,9 +483,18 @@ fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, VGARenderer, Assets)
     let assets = assets::load_graphic_assets(loader).expect("load graphic assets");
 
     let prj = new_view_size(wolf_config.viewsize);
-
-    let vga_screen = Arc::new(vga);
-    let rdr = vga_render::init(vga_screen, graphics, fonts, tiles, texts, loader.variant());
+    let input = Input::init_demo_playback(Vec::with_capacity(0));
+    let ticker = new_test_ticker();
+    let rdr = VGARenderer::init(
+        vga,
+        ticker,
+        graphics,
+        fonts,
+        tiles,
+        texts,
+        loader.variant(),
+        input,
+    );
 
     (prj, rdr, assets)
 }

@@ -31,13 +31,10 @@ coverage-sdl:
 	cargo tarpaulin --features sdl --ignore-tests --out Lcov
 
 ## Testing
-test-sdl:
-	RUST_BACKTRACE=1 cargo test --features sdl
+test:
+	RUST_BACKTRACE=1 cargo test --features test
 
-test-web:
-	RUST_BACKTRACE=1 cargo test --features web
-
-test-all: build-sdl-tracing test-sdl test-web
+test-all: build-sdl-tracing build-web test
 
 
 ## Misc

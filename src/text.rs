@@ -1,10 +1,10 @@
 use vga::input::NumCode;
 
 use crate::assets::{GAMEPAL, GraphicNum};
+use crate::rc::VGARenderer;
 use crate::start::quit;
 use crate::us1::{draw_string, measure_string};
 use crate::vl;
-use crate::{input::Input, vga_render::VGARenderer};
 
 const BACK_COLOR: u8 = 0x11;
 
@@ -90,13 +90,13 @@ impl<'a> Text<'a> {
     }
 }
 
-pub async fn help_screens(rdr: &VGARenderer, input: &Input) {
-    show_article(rdr, input, 0).await;
+pub async fn help_screens(rdr: &mut VGARenderer) {
+    show_article(rdr, 0).await;
     rdr.fade_out().await;
 }
 
-pub async fn end_text(rdr: &VGARenderer, input: &Input, which: usize) {
-    show_article(rdr, input, which + 1).await;
+pub async fn end_text(rdr: &mut VGARenderer, which: usize) {
+    show_article(rdr, which + 1).await;
     rdr.fade_out().await;
 }
 
@@ -114,7 +114,7 @@ fn pages(str: &str) -> Vec<Page> {
     pages
 }
 
-async fn show_article(rdr: &VGARenderer, input: &Input, which: usize) {
+async fn show_article(rdr: &mut VGARenderer, which: usize) {
     rdr.bar(0, 0, 320, 200, BACK_COLOR);
 
     let pages = pages(&rdr.texts[which]);
@@ -136,8 +136,8 @@ async fn show_article(rdr: &VGARenderer, input: &Input, which: usize) {
             first_page = false;
         }
 
-        input.ack();
-        let last_scan = input.last_scan();
+        rdr.ack();
+        let last_scan = rdr.last_scan();
         match last_scan {
             NumCode::Escape => break,
             NumCode::UpArrow | NumCode::PgUp | NumCode::LeftArrow => {
@@ -156,11 +156,16 @@ async fn show_article(rdr: &VGARenderer, input: &Input, which: usize) {
         }
     }
 
-    input.clear_keys_down();
+    rdr.clear_keys_down();
 }
 
 /// Clears the screen, draws the pics on the page, and word wraps the text.
-fn page_layout(layout_ctx: &mut LayoutContext, rdr: &VGARenderer, page: &Page, show_number: bool) {
+fn page_layout(
+    layout_ctx: &mut LayoutContext,
+    rdr: &mut VGARenderer,
+    page: &Page,
+    show_number: bool,
+) {
     rdr.bar(0, 0, 320, 200, BACK_COLOR);
     rdr.pic(0, 0, GraphicNum::HTOPWINDOWPIC);
     rdr.pic(0, 8, GraphicNum::HLEFTWINDOWPIC);
@@ -215,10 +220,9 @@ fn page_layout(layout_ctx: &mut LayoutContext, rdr: &VGARenderer, page: &Page, s
     }
 
     if show_number {
-        let font = &rdr.fonts[layout_ctx.font_number];
         draw_string(
             rdr,
-            font,
+            layout_ctx.font_number,
             &format!("pg {} of {}", layout_ctx.page_num, layout_ctx.num_pages),
             213,
             183,
@@ -229,7 +233,7 @@ fn page_layout(layout_ctx: &mut LayoutContext, rdr: &VGARenderer, page: &Page, s
 
 fn handle_command(
     layout_ctx: &mut LayoutContext,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     text: &mut Text,
 ) -> Result<(), String> {
     let cmd_opt = text.next().map(|c| c.to_ascii_uppercase());
@@ -317,7 +321,7 @@ fn new_line(layout_ctx: &mut LayoutContext, text: &mut Text) {
 
 fn handle_word(
     layout_ctx: &mut LayoutContext,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     text: &mut Text,
 ) -> Result<(), String> {
     let mut word = "".to_string();
@@ -337,8 +341,11 @@ fn handle_word(
         return Err("Word limit exceeded".to_string());
     }
 
-    let font = &rdr.fonts[layout_ctx.font_number];
-    let (w, _) = measure_string(font, &word);
+    let w = {
+        let font = &rdr.fonts[layout_ctx.font_number];
+        let (w, _) = measure_string(font, &word);
+        w
+    };
 
     while layout_ctx.px + w > layout_ctx.right_margin[layout_ctx.row_on] {
         new_line(layout_ctx, text);
@@ -351,7 +358,7 @@ fn handle_word(
     let new_pos = layout_ctx.px + w;
     draw_string(
         rdr,
-        font,
+        layout_ctx.font_number,
         &word,
         layout_ctx.px,
         layout_ctx.py,

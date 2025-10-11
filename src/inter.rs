@@ -4,17 +4,15 @@ use crate::agent::{draw_level, draw_score, give_points};
 use crate::assets::{GraphicNum, Music, SoundName, num_pic};
 use crate::config::{MAX_HIGH_NAME, MAX_SCORES, WolfConfig, write_wolf_config};
 use crate::def::{Assets, Difficulty, GameState, IWConfig, STATUS_LINES, WindowState};
-use crate::input::Input;
 use crate::loader::Loader;
 use crate::menu::{BORDER_COLOR, READ_HCOLOR, clear_ms_screen, draw_stripes};
 use crate::play::{ProjectionConfig, draw_all_play_border};
+use crate::rc::VGARenderer;
 use crate::sd::Sound;
 use crate::start::quit;
 use crate::text::end_text;
-use crate::time::{self, Ticker};
 use crate::us1::{line_input, measure_string, print};
 use crate::user::HighScore;
-use crate::vga_render::VGARenderer;
 use crate::vh::BLACK;
 
 static ALPHA: [GraphicNum; 43] = [
@@ -331,8 +329,7 @@ static PAR_TIMES: [ParTime; 60] = [
 pub async fn victory(
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     assets: &Assets,
     win_state: &mut WindowState,
     loader: &dyn Loader,
@@ -422,11 +419,11 @@ pub async fn victory(
 
     rdr.activate_buffer(rdr.buffer_offset()).await;
     rdr.fade_in().await;
-    input.ack();
+    rdr.ack();
 
     rdr.fade_out().await;
 
-    end_text(rdr, input, game_state.episode).await;
+    end_text(rdr, game_state.episode).await;
 }
 
 pub fn clear_split_vwb(win_state: &mut WindowState) {
@@ -438,10 +435,8 @@ pub fn clear_split_vwb(win_state: &mut WindowState) {
 }
 
 pub async fn check_highscore(
-    ticker: &Ticker,
     sound: &mut Sound,
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     assets: &Assets,
     win_state: &mut WindowState,
     loader: &dyn Loader,
@@ -473,9 +468,7 @@ pub async fn check_highscore(
         win_state.back_color = BORDER_COLOR;
         win_state.font_color = 15;
         let (input, escape) = line_input(
-            ticker,
             rdr,
-            input,
             win_state,
             win_state.print_x,
             win_state.print_y,
@@ -492,13 +485,13 @@ pub async fn check_highscore(
             quit(Some("failed to write config file"));
         }
     } else {
-        input.clear_keys_down();
-        input.wait_user_input(500);
+        rdr.clear_keys_down();
+        rdr.wait_user_input(500);
     }
 }
 
 pub fn draw_high_scores(
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
     high_scores: &Vec<HighScore>,
 ) {
@@ -521,15 +514,22 @@ pub fn draw_high_scores(
         print(rdr, win_state, &s.name);
         // level
         let completed_str = to_fixed_width_string(s.completed as u32); // Used fixed-width numbers (129...)
-        let font = &rdr.fonts[win_state.font_number];
-        let (w, _) = measure_string(font, &completed_str);
+        let w = {
+            let font = &rdr.fonts[win_state.font_number];
+            let (w, _) = measure_string(font, &completed_str);
+            w
+        };
         win_state.print_x = (22 * 8) - w;
         win_state.print_x -= 6;
         let level = format!("E{}/L{}", s.episode + 1, completed_str);
         print(rdr, win_state, &level);
         // score
         let score_str = to_fixed_width_string(s.score);
-        let (w, _) = measure_string(font, &score_str);
+        let w = {
+            let font = &rdr.fonts[win_state.font_number];
+            let (w, _) = measure_string(font, &score_str);
+            w
+        };
         win_state.print_x = (34 * 8) - 8 - w;
         print(rdr, win_state, &score_str);
     }
@@ -549,9 +549,7 @@ fn to_fixed_width_string(u: u32) -> String {
 ///
 /// Exit with the screen faded out
 pub async fn level_completed(
-    ticker: &time::Ticker,
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     game_state: &mut GameState,
     prj: &ProjectionConfig,
     sound: &mut Sound,
@@ -565,8 +563,8 @@ pub async fn level_completed(
     rdr.bar(0, 0, 320, 200 - STATUS_LINES, 127);
     sound.play_music(Music::ENDLEVEL, assets, loader);
 
-    input.clear_keys_down();
-    input.start_ack();
+    rdr.clear_keys_down();
+    rdr.start_ack();
 
     // do the intermission
     rdr.set_buffer_offset(rdr.active_buffer());
@@ -640,12 +638,10 @@ pub async fn level_completed(
                     sound.play_sound(SoundName::ENDBONUS1, assets);
                 }
                 while sound.is_any_sound_playing() {
-                    bj_breather.poll_breathe(ticker, rdr);
-                    if input.check_ack() {
+                    bj_breather.poll_breathe(rdr);
+                    if rdr.check_ack() {
                         return done_normal_level_complete(
-                            ticker,
                             rdr,
-                            input,
                             game_state,
                             sound,
                             prj,
@@ -660,11 +656,9 @@ pub async fn level_completed(
                     }
                 }
 
-                if input.check_ack() {
+                if rdr.check_ack() {
                     return done_normal_level_complete(
-                        ticker,
                         rdr,
-                        input,
                         game_state,
                         sound,
                         prj,
@@ -681,12 +675,10 @@ pub async fn level_completed(
 
             sound.play_sound(SoundName::ENDBONUS2, assets);
             while sound.is_any_sound_playing() {
-                bj_breather.poll_breathe(ticker, rdr);
-                if input.check_ack() {
+                bj_breather.poll_breathe(rdr);
+                if rdr.check_ack() {
                     return done_normal_level_complete(
-                        ticker,
                         rdr,
-                        input,
                         game_state,
                         sound,
                         prj,
@@ -710,12 +702,10 @@ pub async fn level_completed(
             if i % 10 == 0 {
                 sound.play_sound(SoundName::ENDBONUS1, assets);
                 while sound.is_any_sound_playing() {
-                    bj_breather.poll_breathe(ticker, rdr);
-                    if input.check_ack() {
+                    bj_breather.poll_breathe(rdr);
+                    if rdr.check_ack() {
                         return done_normal_level_complete(
-                            ticker,
                             rdr,
-                            input,
                             game_state,
                             sound,
                             prj,
@@ -730,11 +720,9 @@ pub async fn level_completed(
                     }
                 }
             }
-            if input.check_ack() {
+            if rdr.check_ack() {
                 return done_normal_level_complete(
-                    ticker,
                     rdr,
-                    input,
                     game_state,
                     sound,
                     prj,
@@ -760,12 +748,10 @@ pub async fn level_completed(
             sound.play_sound(SoundName::ENDBONUS2, assets);
         }
         while sound.is_any_sound_playing() {
-            bj_breather.poll_breathe(ticker, rdr);
-            if input.check_ack() {
+            bj_breather.poll_breathe(rdr);
+            if rdr.check_ack() {
                 return done_normal_level_complete(
-                    ticker,
                     rdr,
-                    input,
                     game_state,
                     sound,
                     prj,
@@ -788,12 +774,10 @@ pub async fn level_completed(
             if i % 10 == 0 {
                 sound.play_sound(SoundName::ENDBONUS1, assets);
                 while sound.is_any_sound_playing() {
-                    bj_breather.poll_breathe(ticker, rdr);
-                    if input.check_ack() {
+                    bj_breather.poll_breathe(rdr);
+                    if rdr.check_ack() {
                         return done_normal_level_complete(
-                            ticker,
                             rdr,
-                            input,
                             game_state,
                             sound,
                             prj,
@@ -808,11 +792,9 @@ pub async fn level_completed(
                     }
                 }
             }
-            if input.check_ack() {
+            if rdr.check_ack() {
                 return done_normal_level_complete(
-                    ticker,
                     rdr,
-                    input,
                     game_state,
                     sound,
                     prj,
@@ -838,12 +820,10 @@ pub async fn level_completed(
             sound.play_sound(SoundName::ENDBONUS2, assets);
         }
         while sound.is_any_sound_playing() {
-            bj_breather.poll_breathe(ticker, rdr);
-            if input.check_ack() {
+            bj_breather.poll_breathe(rdr);
+            if rdr.check_ack() {
                 return done_normal_level_complete(
-                    ticker,
                     rdr,
-                    input,
                     game_state,
                     sound,
                     prj,
@@ -866,12 +846,10 @@ pub async fn level_completed(
             if i % 10 == 0 {
                 sound.play_sound(SoundName::ENDBONUS1, assets);
                 while sound.is_any_sound_playing() {
-                    bj_breather.poll_breathe(ticker, rdr);
-                    if input.check_ack() {
+                    bj_breather.poll_breathe(rdr);
+                    if rdr.check_ack() {
                         return done_normal_level_complete(
-                            ticker,
                             rdr,
-                            input,
                             game_state,
                             sound,
                             prj,
@@ -886,11 +864,9 @@ pub async fn level_completed(
                     }
                 }
             }
-            if input.check_ack() {
+            if rdr.check_ack() {
                 return done_normal_level_complete(
-                    ticker,
                     rdr,
-                    input,
                     game_state,
                     sound,
                     prj,
@@ -916,12 +892,10 @@ pub async fn level_completed(
             sound.play_sound(SoundName::ENDBONUS2, assets);
         }
         while sound.is_any_sound_playing() {
-            bj_breather.poll_breathe(ticker, rdr);
-            if input.check_ack() {
+            bj_breather.poll_breathe(rdr);
+            if rdr.check_ack() {
                 return done_normal_level_complete(
-                    ticker,
                     rdr,
-                    input,
                     game_state,
                     sound,
                     prj,
@@ -937,9 +911,7 @@ pub async fn level_completed(
         }
 
         return done_normal_level_complete(
-            ticker,
             rdr,
-            input,
             game_state,
             sound,
             prj,
@@ -960,13 +932,11 @@ pub async fn level_completed(
 
     give_points(game_state, rdr, sound, assets, 15000);
 
-    return finish_level_complete(ticker, rdr, input, game_state, prj, &mut bj_breather).await;
+    return finish_level_complete(rdr, game_state, prj, &mut bj_breather).await;
 }
 
 async fn done_normal_level_complete(
-    ticker: &time::Ticker,
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     game_state: &mut GameState,
     sound: &mut Sound,
     prj: &ProjectionConfig,
@@ -1012,22 +982,20 @@ async fn done_normal_level_complete(
     game_state.level_ratios[game_state.map_on].treasure = treasure_ratio;
     game_state.level_ratios[game_state.map_on].time = (game_state.time_count / 70) as i32;
 
-    finish_level_complete(ticker, rdr, input, game_state, prj, bj_breather).await;
+    finish_level_complete(rdr, game_state, prj, bj_breather).await;
 }
 
 async fn finish_level_complete(
-    ticker: &time::Ticker,
-    rdr: &VGARenderer,
-    input: &Input,
+    rdr: &mut VGARenderer,
     game_state: &mut GameState,
     prj: &ProjectionConfig,
     bj_breather: &mut BjBreather,
 ) {
     draw_score(game_state, rdr);
 
-    input.start_ack();
-    while !input.check_ack() {
-        bj_breather.poll_breathe(ticker, rdr);
+    rdr.start_ack();
+    while !rdr.check_ack() {
+        bj_breather.poll_breathe(rdr);
     }
 
     rdr.fade_out().await;
@@ -1035,7 +1003,7 @@ async fn finish_level_complete(
     draw_all_play_border(rdr, prj);
 }
 
-pub fn write(rdr: &VGARenderer, x: usize, y: usize, str: &str) {
+pub fn write(rdr: &mut VGARenderer, x: usize, y: usize, str: &str) {
     let mut nx = x * 8;
     let ox = nx;
     let mut ny = y * 8;
@@ -1097,27 +1065,25 @@ fn new_bj_breather() -> BjBreather {
 }
 
 impl BjBreather {
-    fn poll_breathe(&mut self, ticker: &time::Ticker, rdr: &VGARenderer) {
-        if ticker.get_count() > (self.time_start + self.max) {
+    fn poll_breathe(&mut self, rdr: &mut VGARenderer) {
+        if rdr.ticker.get_count() > (self.time_start + self.max) {
             self.which = !self.which;
             if self.which {
                 rdr.pic(0, 16, GraphicNum::GUYPIC);
             } else {
                 rdr.pic(0, 16, GraphicNum::GUY2PIC);
             }
-            self.time_start = ticker.get_count();
+            self.time_start = rdr.ticker.get_count();
             self.max = 35;
         }
     }
 }
 
 pub async fn preload_graphics(
-    ticker: &time::Ticker,
     iw_config: &IWConfig,
     state: &GameState,
     prj: &ProjectionConfig,
-    input: &Input,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
 ) {
     draw_level(state, rdr);
     // TODO ClearSplitVWB() (is there split screen support?)
@@ -1127,9 +1093,9 @@ pub async fn preload_graphics(
 
     rdr.fade_in().await;
 
-    preload(ticker, iw_config, rdr).await;
+    preload(iw_config, rdr).await;
 
-    input.wait_user_input(70);
+    rdr.wait_user_input(70);
     rdr.fade_out().await;
 
     draw_all_play_border(rdr, prj);
@@ -1137,13 +1103,15 @@ pub async fn preload_graphics(
 
 // Only fakes the pre-load since in iw all graphics are already loaded into
 // memory. Simulates the thermometer update on the Get Psyched Screen only.
-async fn preload(ticker: &time::Ticker, iw_config: &IWConfig, rdr: &VGARenderer) {
+async fn preload(iw_config: &IWConfig, rdr: &mut VGARenderer) {
     let x = 160 - 14 * 8;
     let y = 80 - 3 * 8;
     let width = 28 * 8;
     let height = 48;
     let total = 100;
     for current in 0..total {
+        rdr.vga.draw_frame();
+
         let w = width - 10;
         rdr.bar(x + 5, y + height - 3, w, 2, BLACK);
         let w = (w * current) / total;
@@ -1152,7 +1120,7 @@ async fn preload(ticker: &time::Ticker, iw_config: &IWConfig, rdr: &VGARenderer)
             rdr.bar(x + 5, y + height - 3, w - 1, 1, 0x32);
         }
         if !iw_config.options.fast_loading {
-            ticker.tics(1).await;
+            rdr.ticker.tics(1).await;
         }
     }
 }

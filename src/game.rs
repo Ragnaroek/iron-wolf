@@ -1,7 +1,5 @@
 use std::vec;
 
-use vga::VGA;
-
 use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{
     spawn_boss, spawn_dead_guard, spawn_fake_hitler, spawn_ghosts, spawn_hitler, spawn_patrol,
@@ -20,21 +18,19 @@ use crate::def::{
     new_game_state,
 };
 use crate::draw::{RayCast, three_d_refresh};
-use crate::input::{Input, InputMode};
 use crate::inter::{check_highscore, level_completed, preload_graphics, victory};
 use crate::loader::Loader;
+use crate::map;
 use crate::menu::MenuState;
 use crate::play::{
     ProjectionConfig, draw_play_screen, finish_palette_shifts, new_control_state, play_loop,
     start_music,
 };
+use crate::rc::{FizzleFadeAbortable, Input, InputMode, VGARenderer};
 use crate::sd::Sound;
-use crate::time::Ticker;
 use crate::user::{HighScore, init_rnd_t};
 use crate::util::DataReader;
-use crate::vga_render::{FizzleFadeAbortable, VGARenderer};
 use crate::vh::vw_fade_out;
-use crate::{map, time};
 
 pub const AREATILE: u16 = 107;
 
@@ -53,16 +49,13 @@ pub const DEATH_ROTATE: u64 = 2;
 static ELEVATOR_BACK_TO: [usize; 6] = [1, 1, 7, 3, 5, 3];
 
 pub async fn game_loop(
-    ticker: &time::Ticker,
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    vga: &VGA,
     sound: &mut Sound,
     rc_param: RayCast,
-    rdr: &VGARenderer,
-    input: &mut Input,
+    rdr: &mut VGARenderer,
     prj_param: ProjectionConfig,
     assets: &Assets,
     win_state: &mut WindowState,
@@ -100,7 +93,7 @@ pub async fn game_loop(
         start_music(game_state, sound, assets, loader);
 
         if !game_state.died {
-            preload_graphics(ticker, iw_config, &game_state, &prj, input, rdr).await;
+            preload_graphics(iw_config, &game_state, &prj, rdr).await;
         } else {
             game_state.died = false;
         }
@@ -113,17 +106,14 @@ pub async fn game_loop(
         let (prj_play, rc_play, _) = play_loop(
             wolf_config,
             iw_config,
-            ticker,
             level_state,
             game_state,
             win_state,
             menu_state,
             &mut control_state,
-            vga,
             sound,
             rc,
             rdr,
-            input,
             prj,
             assets,
             loader,
@@ -144,12 +134,9 @@ pub async fn game_loop(
             PlayState::Completed | PlayState::SecretLevel => {
                 game_state.keys = 0;
                 draw_keys(&game_state, rdr);
-                vw_fade_out(vga).await;
+                vw_fade_out(&rdr.vga).await;
 
-                level_completed(
-                    ticker, rdr, input, game_state, &prj, sound, assets, win_state, loader,
-                )
-                .await;
+                level_completed(rdr, game_state, &prj, sound, assets, win_state, loader).await;
 
                 game_state.old_score = game_state.score;
 
@@ -168,18 +155,7 @@ pub async fn game_loop(
             PlayState::Died => {
                 let player = level_state.player();
                 rc.init_ray_cast_consts(&prj, player, game_state.push_wall_pos);
-                died(
-                    ticker,
-                    level_state,
-                    game_state,
-                    &mut rc,
-                    rdr,
-                    sound,
-                    &prj,
-                    input,
-                    assets,
-                )
-                .await;
+                died(level_state, game_state, &mut rc, rdr, sound, &prj, assets).await;
                 if game_state.lives > -1 {
                     continue 'game_loop;
                 }
@@ -187,10 +163,8 @@ pub async fn game_loop(
                 rdr.fade_out().await;
 
                 check_highscore(
-                    ticker,
                     sound,
                     rdr,
-                    input,
                     assets,
                     win_state,
                     loader,
@@ -206,13 +180,11 @@ pub async fn game_loop(
             PlayState::Victorious => {
                 rdr.fade_out().await;
 
-                victory(game_state, sound, rdr, input, assets, win_state, loader).await;
+                victory(game_state, sound, rdr, assets, win_state, loader).await;
 
                 check_highscore(
-                    ticker,
                     sound,
                     rdr,
-                    input,
                     assets,
                     win_state,
                     loader,
@@ -243,14 +215,12 @@ fn new_high_score(game_state: &GameState) -> HighScore {
 }
 
 async fn died(
-    ticker: &time::Ticker,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     rc: &mut RayCast,
-    rdr: &VGARenderer,
+    rdr: &mut VGARenderer,
     sound: &mut Sound,
     prj: &ProjectionConfig,
-    input: &Input,
     assets: &Assets,
 ) {
     game_state.weapon = None; // take away weapon
@@ -300,7 +270,7 @@ async fn died(
                 break;
             }
 
-            let tics = ticker.wait_for_tic().await;
+            let tics = rdr.ticker.wait_for_tic().await;
             let mut change = (tics * DEATH_ROTATE) as i32;
             if curangle + change > iangle {
                 change = iangle - curangle;
@@ -313,7 +283,6 @@ async fn died(
                 player.angle -= ANGLES as i32;
             }
             three_d_refresh(
-                ticker,
                 game_state,
                 level_state,
                 rc,
@@ -321,7 +290,7 @@ async fn died(
                 sound,
                 prj,
                 assets,
-                input.mode == InputMode::DemoPlayback,
+                rdr.input.mode == InputMode::DemoPlayback,
             )
             .await;
         }
@@ -335,7 +304,7 @@ async fn died(
                 break;
             }
 
-            let tics = ticker.wait_for_tic().await;
+            let tics = rdr.ticker.wait_for_tic().await;
             let mut change = -((tics * DEATH_ROTATE) as i32);
             if curangle + change < iangle {
                 change = iangle - curangle;
@@ -348,7 +317,6 @@ async fn died(
                 player.angle += ANGLES as i32;
             }
             three_d_refresh(
-                ticker,
                 game_state,
                 level_state,
                 rc,
@@ -356,7 +324,7 @@ async fn died(
                 sound,
                 prj,
                 assets,
-                input.mode == InputMode::DemoPlayback,
+                rdr.input.mode == InputMode::DemoPlayback,
             )
             .await;
         }
@@ -370,9 +338,8 @@ async fn died(
     // fill source buffer with all red screen for the fizzle_fade
     rdr.bar(0, 0, prj.view_width, prj.view_height, 4);
 
-    input.clear_keys_down();
+    rdr.clear_keys_down();
     rdr.fizzle_fade(
-        ticker,
         source_buffer,
         rdr.active_buffer() + prj.screenofs,
         prj.view_width,
@@ -381,7 +348,7 @@ async fn died(
         FizzleFadeAbortable::No,
     );
     rdr.set_buffer_offset(rdr.buffer_offset() - prj.screenofs);
-    input.wait_user_input(100);
+    rdr.wait_user_input(100);
     //TODO SD_WaitSoundDone
 
     // TODO editor support here (tedlevel)
@@ -1180,14 +1147,11 @@ fn scan_info_plane(
 pub async fn play_demo(
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
-    ticker: &Ticker,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
-    vga: &VGA,
     sound: &mut Sound,
     rc: RayCast,
-    rdr: &VGARenderer,
-    input: &mut Input,
+    rdr: &mut VGARenderer,
     prj: ProjectionConfig,
     assets: &Assets,
     loader: &dyn Loader,
@@ -1201,11 +1165,8 @@ pub async fn play_demo(
     game_state.difficulty = Difficulty::Hard;
     demo_reader.skip(3); // length not needed (in Vec len)
 
-    let mut input = Input::init_demo_playback(
-        ticker.time_count.clone(),
-        input.input_monitoring.clone(),
-        demo_reader.unread_bytes().to_vec(),
-    );
+    let demo_input = Input::init_demo_playback(demo_reader.unread_bytes().to_vec());
+    rdr.use_demo_input(demo_input);
 
     rdr.fade_out().await;
     win_state.set_font_color(0, 15);
@@ -1221,23 +1182,23 @@ pub async fn play_demo(
     let (prj, rc, benchmark_result) = play_loop(
         wolf_config,
         iw_config,
-        ticker,
         &mut level_state,
         &mut game_state,
         win_state,
         menu_state,
         &mut control_state,
-        vga,
         sound,
         rc,
         rdr,
-        &mut input,
         prj,
         assets,
         loader,
         benchmark,
     )
     .await;
+
+    rdr.restore_player_input().expect("player input restored");
+
     (
         prj,
         rc,
