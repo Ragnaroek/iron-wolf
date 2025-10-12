@@ -36,7 +36,6 @@ test:
 
 test-all: build-sdl-tracing build-web test
 
-
 ## Misc
 profile:
 	sudo -E cargo flamegraph --bench core_loop -- --bench
