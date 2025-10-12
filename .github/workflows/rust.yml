@@ -18,8 +18,12 @@ jobs:
           - nightly
     steps:
       - uses: actions/checkout@v4
+
       - name: Install Rust
         run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+
+      - name: Install wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
 
       - name: Update
         run: |
