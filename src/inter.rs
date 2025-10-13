@@ -1110,7 +1110,7 @@ async fn preload(iw_config: &IWConfig, rdr: &mut VGARenderer) {
     let height = 48;
     let total = 100;
     for current in 0..total {
-        rdr.vga.draw_frame();
+        rdr.display();
 
         let w = width - 10;
         rdr.bar(x + 5, y + height - 3, w, 2, BLACK);

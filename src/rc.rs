@@ -11,6 +11,7 @@ use crate::assets::{Font, TileData, WolfVariant};
 use crate::assets::{GAMEPAL, Graphic, GraphicNum};
 use crate::config::WolfConfig;
 use crate::def::{Button, NUM_BUTTONS, NUM_MOUSE_BUTTONS};
+use crate::start::quit;
 use crate::time::{self, Ticker, get_count};
 use crate::vl;
 
@@ -172,6 +173,12 @@ impl VGARenderer {
             variant,
             input,
             prev_input: None,
+        }
+    }
+
+    pub fn display(&mut self) {
+        if self.vga.draw_frame() {
+            quit(None);
         }
     }
 

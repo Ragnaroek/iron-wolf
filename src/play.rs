@@ -356,7 +356,7 @@ pub async fn play_loop(
         let want_frame_start = next_frame_start + (TARGET_FRAME_DURATION / 2); // target mid frame time
         let wait_time = want_frame_start.saturating_duration_since(Instant::now());
         sleep(wait_time.as_millis_f64() as u32).await;
-        rdr.vga.draw_frame();
+        rdr.display();
 
         if rdr.input.mode == InputMode::DemoPlayback {
             demo_tic += 1;

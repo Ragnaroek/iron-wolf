@@ -2490,7 +2490,7 @@ async fn confirm(
         && !rdr.key_pressed(NumCode::N)
         && !rdr.key_pressed(NumCode::Escape)
     {
-        rdr.vga.draw_frame();
+        rdr.display();
 
         if time_count >= 10 {
             if tick {
@@ -2570,7 +2570,7 @@ async fn handle_menu_loop(
 
     let exit;
     loop {
-        rdr.vga.draw_frame();
+        rdr.display();
 
         // CHANGE GUN SHAPE
         if rdr.ticker.get_count() > timer {
@@ -2677,7 +2677,7 @@ async fn tic_delay(rdr: &mut VGARenderer, count: u64) {
         if ci.dir != ControlDirection::None {
             break;
         }
-        rdr.vga.draw_frame();
+        rdr.display();
         rdr.ticker.tics(1).await
     }
 }

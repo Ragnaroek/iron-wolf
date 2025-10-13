@@ -68,7 +68,7 @@ impl DiskAnim {
         }
         self.which = !self.which;
 
-        rdr.vga.draw_frame();
+        rdr.display();
 
         if !iw_config.options.fast_loading {
             std::thread::sleep(Duration::from_millis(40));
@@ -260,7 +260,7 @@ async fn finish_signon(rdr: &mut VGARenderer, win_state: &mut WindowState) {
 
     win_state.set_font_color(0, 15);
 
-    rdr.vga.draw_frame();
+    rdr.display();
 }
 
 async fn demo_loop(
