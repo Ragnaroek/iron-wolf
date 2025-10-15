@@ -17,7 +17,7 @@ use crate::game::AREATILE;
 use crate::inter::write;
 use crate::map::MapSegs;
 use crate::play::{ProjectionConfig, draw_play_border, finish_palette_shifts};
-use crate::rc::{FizzleFadeAbortable, VGARenderer};
+use crate::rc::{FizzleFadeAbortable, RenderContext};
 use crate::sd::{DigiMode, Sound};
 use crate::start::quit;
 use crate::state::{
@@ -2800,16 +2800,16 @@ pub fn get_state_by_id(id: u16) -> Option<&'static StateType> {
 }
 
 fn t_projectile(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &mut VGARenderer,
     _: &mut ControlState,
-    rc_conf: &ProjectionConfig,
+    prj_conf: &ProjectionConfig,
     assets: &Assets,
-    rc: &RayCast,
+    cast: &RayCast,
 ) {
     let player_x = level_state.player().x;
     let player_y = level_state.player().y;
@@ -2817,9 +2817,9 @@ fn t_projectile(
     let speed = Fixed::new_from_i32(level_state.obj(k).speed * tics as i32);
     {
         let mut delta_x =
-            fixed_by_frac(speed, rc_conf.cos(level_state.obj(k).angle as usize)).to_i32();
+            fixed_by_frac(speed, prj_conf.cos(level_state.obj(k).angle as usize)).to_i32();
         let mut delta_y =
-            -fixed_by_frac(speed, rc_conf.sin(level_state.obj(k).angle as usize)).to_i32();
+            -fixed_by_frac(speed, prj_conf.sin(level_state.obj(k).angle as usize)).to_i32();
 
         if delta_x > 0x10000 {
             delta_x = 0x10000;
@@ -2837,7 +2837,7 @@ fn t_projectile(
 
     if !projectile_try_move(k, level_state) {
         if level_state.obj(k).class == ClassType::Rocket {
-            sound.play_sound_loc_actor(SoundName::MISSILEHIT, assets, rc, level_state.obj(k));
+            sound.play_sound_loc_actor(SoundName::MISSILEHIT, assets, cast, level_state.obj(k));
             level_state.mut_obj(k).state = Some(&S_BOOM1);
         } else {
             level_state.mut_obj(k).state = None; // mark for removal
@@ -2854,7 +2854,7 @@ fn t_projectile(
             _ => 0,
         } as i32;
 
-        take_damage(k, damage, level_state, game_state, rdr);
+        take_damage(rc, k, damage, level_state, game_state);
         level_state.mut_obj(k).state = None; // mark for removal
         return;
     }
@@ -2885,18 +2885,18 @@ fn projectile_try_move(k: ObjKey, level_state: &LevelState) -> bool {
 }
 
 fn t_path(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
-    rc: &RayCast,
+    cast: &RayCast,
 ) {
-    if sight_player(k, level_state, game_state, sound, assets, rc, tics) {
+    if sight_player(k, level_state, game_state, sound, assets, cast, tics) {
         return;
     }
 
@@ -2922,7 +2922,7 @@ fn t_path(
 
         let dist = level_state.obj(k).distance;
         if mov < dist {
-            move_obj(k, level_state, game_state, rdr, mov, tics);
+            move_obj(rc, k, level_state, game_state, mov, tics);
             break;
         }
 
@@ -2950,12 +2950,12 @@ fn t_path(
 }
 
 fn t_dog_chase(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -2996,7 +2996,7 @@ fn t_dog_chase(
 
         let dist = level_state.obj(k).distance;
         if mov < dist {
-            move_obj(k, level_state, game_state, rdr, mov, tics);
+            move_obj(rc, k, level_state, game_state, mov, tics);
             break;
         }
 
@@ -3023,12 +3023,12 @@ fn t_dog_chase(
 }
 
 fn t_bite(
+    rc: &mut RenderContext,
     k: ObjKey,
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3049,7 +3049,7 @@ fn t_bite(
         dy -= TILEGLOBAL;
         if dy <= MIN_ACTOR_DIST {
             if rnd_t() < 180 {
-                take_damage(k, (rnd_t() >> 4) as i32, level_state, game_state, rdr);
+                take_damage(rc, k, (rnd_t() >> 4) as i32, level_state, game_state);
                 return;
             }
         }
@@ -3088,12 +3088,12 @@ fn dir_type(u: u16) -> DirType {
 }
 
 fn t_stand(
+    _: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3103,12 +3103,12 @@ fn t_stand(
 }
 
 fn t_chase(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -3184,7 +3184,7 @@ fn t_chase(
         }
 
         if mov < level_state.obj(k).distance {
-            move_obj(k, level_state, game_state, rdr, mov, tics);
+            move_obj(rc, k, level_state, game_state, mov, tics);
             break;
         }
 
@@ -3211,12 +3211,12 @@ fn t_chase(
 }
 
 fn t_ghosts(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -3237,7 +3237,7 @@ fn t_ghosts(
     let mut mov = level_state.obj(k).speed * tics as i32;
     while mov != 0 {
         if mov < level_state.obj(k).distance {
-            move_obj(k, level_state, game_state, rdr, mov, tics);
+            move_obj(rc, k, level_state, game_state, mov, tics);
             break;
         }
 
@@ -3259,12 +3259,12 @@ fn t_ghosts(
 }
 
 fn t_schabb(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -3322,7 +3322,7 @@ fn t_schabb(
         }
 
         if mov < level_state.obj(k).distance {
-            move_obj(k, level_state, game_state, rdr, mov, tics);
+            move_obj(rc, k, level_state, game_state, mov, tics);
             break;
         }
 
@@ -3351,12 +3351,12 @@ fn t_schabb(
 }
 
 fn t_schabb_throw(
+    _: &mut RenderContext,
     k: ObjKey,
     _: u64,
     level_state: &mut LevelState,
     _: &mut GameState,
     sound: &mut Sound,
-    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3397,12 +3397,12 @@ fn t_schabb_throw(
 }
 
 fn t_fake(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -3434,7 +3434,7 @@ fn t_fake(
     let mut mov = obj.speed * tics as i32;
     while mov != 0 {
         if mov < level_state.obj(k).distance {
-            move_obj(k, level_state, game_state, rdr, mov, tics);
+            move_obj(rc, k, level_state, game_state, mov, tics);
             break;
         }
 
@@ -3457,12 +3457,12 @@ fn t_fake(
 }
 
 fn t_fake_fire(
+    _: &mut RenderContext,
     k: ObjKey,
     _: u64,
     level_state: &mut LevelState,
     _: &mut GameState,
     sound: &mut Sound,
-    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3503,12 +3503,12 @@ fn t_fake_fire(
 }
 
 fn a_hitler_morph(
+    _: &mut RenderContext,
     k: ObjKey,
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -3542,12 +3542,12 @@ fn a_hitler_morph(
 }
 
 fn a_mecha_sound(
+    _: &mut RenderContext,
     k: ObjKey,
     _: u64,
     level_state: &mut LevelState,
     _: &mut GameState,
     sound: &mut Sound,
-    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3560,12 +3560,12 @@ fn a_mecha_sound(
 }
 
 fn a_slurpie(
+    _: &mut RenderContext,
     k: ObjKey,
     _: u64,
     level_state: &mut LevelState,
     _: &mut GameState,
     sound: &mut Sound,
-    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3854,12 +3854,12 @@ fn spawn(actors: &mut Actors, actor_at: &mut Vec<Vec<At>>, obj: ObjType) {
 
 /// Try to damage the player, based on skill level and player's speed
 fn t_shoot(
+    rc: &mut RenderContext,
     k: ObjKey,
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3909,7 +3909,7 @@ fn t_shoot(
             rnd_t() >> 4
         };
 
-        take_damage(k, damage as i32, level_state, game_state, rdr)
+        take_damage(rc, k, damage as i32, level_state, game_state)
     }
 
     let obj = level_state.obj(k);
@@ -3936,12 +3936,12 @@ fn t_shoot(
 }
 
 fn a_death_scream(
+    _: &mut RenderContext,
     k: ObjKey,
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -3956,7 +3956,7 @@ pub fn do_death_scream(
     game_state: &mut GameState,
     sound: &mut Sound,
     assets: &Assets,
-    rc: &RayCast,
+    cast: &RayCast,
 ) {
     let obj = level_state.obj(k);
     if game_state.map_on == 9 && rnd_t() == 0 {
@@ -3966,7 +3966,7 @@ pub fn do_death_scream(
             | ClassType::Officer
             | ClassType::SS
             | ClassType::Dog => {
-                sound.play_sound_loc_actor(SoundName::DEATHSCREAM6, assets, rc, obj);
+                sound.play_sound_loc_actor(SoundName::DEATHSCREAM6, assets, cast, obj);
                 return;
             }
             _ => { /* play nothing */ }
@@ -3975,24 +3975,24 @@ pub fn do_death_scream(
 
     match obj.class {
         ClassType::Mutant => {
-            sound.play_sound_loc_actor(SoundName::AHHHG, assets, rc, obj);
+            sound.play_sound_loc_actor(SoundName::AHHHG, assets, cast, obj);
         }
         ClassType::Guard => {
             sound.play_sound_loc_actor(
                 GUARD_DEATH_SCREAMS[(rnd_t() % 8) as usize],
                 assets,
-                rc,
+                cast,
                 obj,
             );
         }
         ClassType::Officer => {
-            sound.play_sound_loc_actor(SoundName::NEINSOVAS, assets, rc, obj);
+            sound.play_sound_loc_actor(SoundName::NEINSOVAS, assets, cast, obj);
         }
         ClassType::SS => {
-            sound.play_sound_loc_actor(SoundName::LEBEN, assets, rc, obj);
+            sound.play_sound_loc_actor(SoundName::LEBEN, assets, cast, obj);
         }
         ClassType::Dog => {
-            sound.play_sound_loc_actor(SoundName::DOGDEATH, assets, rc, obj);
+            sound.play_sound_loc_actor(SoundName::DOGDEATH, assets, cast, obj);
         }
         ClassType::Boss => {
             sound.play_sound(SoundName::MUTTI, assets);
@@ -4149,12 +4149,12 @@ pub fn spawn_bj_victory(level_state: &mut LevelState) {
 }
 
 fn t_bj_run(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -4163,7 +4163,7 @@ fn t_bj_run(
     let mut mov = BJ_RUN_SPEED * tics as i32;
     while mov > 0 {
         if mov < level_state.obj(k).distance {
-            move_obj(k, level_state, game_state, rdr, mov, tics);
+            move_obj(rc, k, level_state, game_state, mov, tics);
             break;
         }
         {
@@ -4185,28 +4185,28 @@ fn t_bj_run(
 }
 
 fn t_bj_jump(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    rdr: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
     _: &RayCast,
 ) {
     let mov = BJ_JUMP_SPEED * tics as i32;
-    move_obj(k, level_state, game_state, rdr, mov, tics);
+    move_obj(rc, k, level_state, game_state, mov, tics);
 }
 
 fn t_bj_yell(
+    _: &mut RenderContext,
     k: ObjKey,
     _: u64,
     level_state: &mut LevelState,
     _: &mut GameState,
     sound: &mut Sound,
-    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     assets: &Assets,
@@ -4217,12 +4217,12 @@ fn t_bj_yell(
 }
 
 fn t_bj_done(
+    _: &mut RenderContext,
     _: ObjKey,
     _: u64,
     _: &mut LevelState,
     game_state: &mut GameState,
     _: &mut Sound,
-    _: &mut VGARenderer,
     _: &mut ControlState,
     _: &ProjectionConfig,
     _: &Assets,
@@ -4232,18 +4232,18 @@ fn t_bj_done(
 }
 
 fn a_start_death_cam(
+    rc: &mut RenderContext,
     k: ObjKey,
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &mut VGARenderer,
     _: &mut ControlState,
     prj: &ProjectionConfig,
     _: &Assets,
     _: &RayCast,
 ) {
-    finish_palette_shifts(game_state, &rdr.vga);
+    finish_palette_shifts(game_state, &rc.vga);
 
     if game_state.victory_flag {
         game_state.play_state = PlayState::Victorious;
@@ -4251,19 +4251,19 @@ fn a_start_death_cam(
     }
     game_state.victory_flag = true;
 
-    rdr.bar(0, 0, 320, 200 - STATUS_LINES, 127);
-    rdr.fizzle_fade(
-        rdr.buffer_offset(),
-        rdr.active_buffer(),
+    rc.bar(0, 0, 320, 200 - STATUS_LINES, 127);
+    rc.fizzle_fade(
+        rc.buffer_offset(),
+        rc.active_buffer(),
         320,
         200 - STATUS_LINES,
         70,
         FizzleFadeAbortable::No,
     );
-    rdr.set_buffer_offset(rdr.active_buffer());
+    rc.set_buffer_offset(rc.active_buffer());
 
-    write(rdr, 0, 7, "Let's see that again!");
-    rdr.wait_user_input(300);
+    write(rc, 0, 7, "Let's see that again!");
+    rc.wait_user_input(300);
 
     // line angle up exactly
     new_state(level_state.mut_player(), &S_DEATH_CAM);
@@ -4297,12 +4297,12 @@ fn a_start_death_cam(
     level_state.mut_player().tiley = (level_state.player().y >> TILESHIFT) as usize;
 
     // go back to the game
-    let offset_prev = rdr.buffer_offset();
+    let offset_prev = rc.buffer_offset();
     for i in 0..3 {
-        rdr.set_buffer_offset(SCREENLOC[i]);
-        draw_play_border(rdr, prj.view_width, prj.view_height);
+        rc.set_buffer_offset(SCREENLOC[i]);
+        draw_play_border(rc, prj.view_width, prj.view_height);
     }
-    rdr.set_buffer_offset(offset_prev);
+    rc.set_buffer_offset(offset_prev);
 
     game_state.fizzle_in = true;
     let obj = level_state.mut_obj(k);

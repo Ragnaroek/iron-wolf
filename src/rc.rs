@@ -71,7 +71,7 @@ pub struct Input {
     pub dir_scan: [NumCode; 4],
 }
 
-pub struct VGARenderer {
+pub struct RenderContext {
     pub vga: VGA,
     pub ticker: time::Ticker,
     linewidth: usize,
@@ -149,7 +149,7 @@ impl Input {
     }
 }
 
-impl VGARenderer {
+impl RenderContext {
     pub fn init(
         vga: VGA,
         ticker: time::Ticker,
@@ -159,8 +159,8 @@ impl VGARenderer {
         texts: Vec<String>,
         variant: &'static WolfVariant,
         input: Input,
-    ) -> VGARenderer {
-        VGARenderer {
+    ) -> RenderContext {
+        RenderContext {
             vga,
             ticker,
             linewidth: 80,

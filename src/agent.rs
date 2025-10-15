@@ -15,11 +15,11 @@ use crate::fixed::{Fixed, ZERO, fixed_by_frac};
 use crate::game::AREATILE;
 use crate::map;
 use crate::play::{ProjectionConfig, start_bonus_flash, start_damage_flash};
+use crate::rc::RenderContext;
 use crate::sd::Sound;
 use crate::state::{check_line, damage_actor};
 use crate::us1::draw_string;
 use crate::user::rnd_t;
-use crate::rc::VGARenderer;
 
 const ANGLE_SCALE: i32 = 20;
 const MOVE_SCALE: i32 = 150;
@@ -169,18 +169,18 @@ static ATTACK_INFO: [[AttackInfo; 4]; 4] = [
 ];
 
 fn t_attack(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &mut VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     assets: &Assets,
-    rc: &RayCast,
+    cast: &RayCast,
 ) {
-    update_face(tics, game_state, sound, rdr);
+    update_face(rc, tics, game_state, sound);
 
     if game_state.victory_flag {
         victory_spin(tics, level_state);
@@ -227,13 +227,13 @@ fn t_attack(
                 level_state.update_obj(k, |obj| obj.state = Some(&S_PLAYER));
                 if game_state.ammo <= 0 {
                     game_state.weapon = Some(WeaponType::Knife);
-                    draw_weapon(&game_state, rdr);
+                    draw_weapon(rc, &game_state);
                 } else {
                     if game_state.weapon.is_some()
                         && game_state.weapon.unwrap() != game_state.chosen_weapon
                     {
                         game_state.weapon = Some(game_state.chosen_weapon);
-                        draw_weapon(&game_state, rdr);
+                        draw_weapon(rc, &game_state);
                     }
                 }
                 game_state.attack_frame = 0;
@@ -249,13 +249,13 @@ fn t_attack(
                 if control_state.button_state[Button::Attack as usize] {
                     game_state.attack_frame -= 2;
                 }
-                weapon_attack(level_state, game_state, sound, rdr, prj, assets, rc);
+                weapon_attack(rc, level_state, game_state, sound, prj, assets, cast);
             }
             1 => {
-                weapon_attack(level_state, game_state, sound, rdr, prj, assets, rc);
+                weapon_attack(rc, level_state, game_state, sound, prj, assets, cast);
             }
             2 => {
-                knife_attack(level_state, game_state, rdr, prj, sound, assets, rc);
+                knife_attack(rc, level_state, game_state, prj, sound, assets, cast);
             }
             3 => {
                 if game_state.ammo != 0 && control_state.button_state[Button::Attack as usize] {
@@ -273,32 +273,32 @@ fn t_attack(
 }
 
 fn weapon_attack(
+    rc: &mut RenderContext,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &mut VGARenderer,
     prj: &ProjectionConfig,
     assets: &Assets,
-    rc: &RayCast,
+    cast: &RayCast,
 ) {
     if game_state.ammo == 0 {
         // can only happen with chain gun
         game_state.attack_frame += 1;
         return;
     }
-    gun_attack(level_state, game_state, sound, rdr, prj, assets, rc);
+    gun_attack(rc, level_state, game_state, sound, prj, assets, cast);
     game_state.ammo -= 1;
-    draw_ammo(&game_state, rdr);
+    draw_ammo(rc, &game_state);
 }
 
 fn knife_attack(
+    rc: &mut RenderContext,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    rdr: &mut VGARenderer,
     prj: &ProjectionConfig,
     sound: &mut Sound,
     assets: &Assets,
-    rc: &RayCast,
+    cast: &RayCast,
 ) {
     sound.play_sound(SoundName::ATKKNIFE, assets);
 
@@ -324,25 +324,25 @@ fn knife_attack(
         return; //missed
     }
     damage_actor(
+        rc,
         closest.expect("closest enemy"),
         level_state,
         game_state,
-        rdr,
         sound,
         assets,
-        rc,
+        cast,
         (rnd_t() >> 4) as usize,
     )
 }
 
 fn gun_attack(
+    rc: &mut RenderContext,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &mut VGARenderer,
     prj: &ProjectionConfig,
     assets: &Assets,
-    rc: &RayCast,
+    cast: &RayCast,
 ) {
     match game_state.weapon {
         Some(WeaponType::Pistol) => {
@@ -413,13 +413,13 @@ fn gun_attack(
     }
 
     damage_actor(
+        rc,
         k,
         level_state,
         game_state,
-        rdr,
         sound,
         assets,
-        rc,
+        cast,
         damage as usize,
     );
 }
@@ -450,27 +450,27 @@ fn victory_spin(tics: u64, level_state: &mut LevelState) {
 }
 
 fn t_player(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &mut VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     assets: &Assets,
-    rc: &RayCast,
+    cast: &RayCast,
 ) {
     if game_state.victory_flag {
         victory_spin(tics, level_state);
         return;
     }
 
-    update_face(tics, game_state, sound, rdr);
-    check_weapon_change(game_state, rdr, control_state);
+    update_face(rc, tics, game_state, sound);
+    check_weapon_change(rc, game_state, control_state);
 
     if control_state.button_state(Button::Use) {
-        cmd_use(level_state, game_state, sound, assets, rc, control_state);
+        cmd_use(level_state, game_state, sound, assets, cast, control_state);
     }
 
     if control_state.button_state(Button::Attack) && !control_state.button_held(Button::Attack) {
@@ -643,11 +643,11 @@ fn init_areas(player: ObjType, area_by_player: &mut Vec<bool>) {
 }
 
 pub fn take_damage(
+    rc: &mut RenderContext,
     attacker: ObjKey,
     points_param: i32,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    rdr: &mut VGARenderer,
 ) {
     if game_state.victory_flag {
         return;
@@ -676,15 +676,15 @@ pub fn take_damage(
 
     game_state.got_gat_gun = false;
 
-    draw_health(game_state, rdr);
-    draw_face(game_state, rdr);
+    draw_health(rc, game_state);
+    draw_face(rc, game_state);
 
     // TODO SPEAR make eyes bug on major damage
 }
 
 fn check_weapon_change(
+    rc: &mut RenderContext,
     game_state: &mut GameState,
-    rdr: &mut VGARenderer,
     control_state: &mut ControlState,
 ) {
     if game_state.ammo == 0 {
@@ -698,7 +698,7 @@ fn check_weapon_change(
             let weapon = WeaponType::from_usize(weapon_i);
             game_state.weapon = Some(weapon);
             game_state.chosen_weapon = weapon;
-            draw_weapon(game_state, rdr);
+            draw_weapon(rc, game_state);
             return;
         }
     }
@@ -868,8 +868,8 @@ pub fn thrust(
 }
 
 pub fn give_points(
+    rc: &mut RenderContext,
     game_state: &mut GameState,
-    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
     points: u32,
@@ -877,27 +877,27 @@ pub fn give_points(
     game_state.score += points;
     while game_state.score >= game_state.next_extra {
         game_state.next_extra += EXTRA_POINTS;
-        give_extra_man(game_state, rdr, sound, assets);
+        give_extra_man(rc, game_state, sound, assets);
     }
-    draw_score(&game_state, rdr)
+    draw_score(rc, &game_state)
 }
 
 pub fn give_extra_man(
+    rc: &mut RenderContext,
     game_state: &mut GameState,
-    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
 ) {
     if game_state.lives < 9 {
         game_state.lives += 1;
     }
-    draw_lives(game_state, rdr);
+    draw_lives(rc, game_state);
     sound.play_sound(SoundName::BONUS1UP, assets);
 }
 
 pub fn get_bonus(
+    rc: &mut RenderContext,
     game_state: &mut GameState,
-    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
     check: &mut StaticType,
@@ -908,30 +908,30 @@ pub fn get_bonus(
                 return;
             }
             sound.play_sound(SoundName::HEALTH2, assets);
-            heal_self(game_state, rdr, 25);
+            heal_self(rc, game_state, 25);
         }
         StaticKind::BoKey1 | StaticKind::BoKey2 | StaticKind::BoKey3 | StaticKind::BoKey4 => {
-            give_key(game_state, rdr, check.item_number);
+            give_key(rc, game_state, check.item_number);
             sound.play_sound(SoundName::GETKEY, assets);
         }
         StaticKind::BoCross => {
             sound.play_sound(SoundName::BONUS1, assets);
-            give_points(game_state, rdr, sound, assets, 100);
+            give_points(rc, game_state, sound, assets, 100);
             game_state.treasure_count += 1;
         }
         StaticKind::BoChalice => {
             sound.play_sound(SoundName::BONUS2, assets);
-            give_points(game_state, rdr, sound, assets, 500);
+            give_points(rc, game_state, sound, assets, 500);
             game_state.treasure_count += 1;
         }
         StaticKind::BoBible => {
             sound.play_sound(SoundName::BONUS3, assets);
-            give_points(game_state, rdr, sound, assets, 1000);
+            give_points(rc, game_state, sound, assets, 1000);
             game_state.treasure_count += 1;
         }
         StaticKind::BoCrown => {
             sound.play_sound(SoundName::BONUS4, assets);
-            give_points(game_state, rdr, sound, assets, 5000);
+            give_points(rc, game_state, sound, assets, 5000);
             game_state.treasure_count += 1;
         }
         StaticKind::BoClip => {
@@ -939,32 +939,32 @@ pub fn get_bonus(
                 return;
             }
             sound.play_sound(SoundName::GETAMMO, assets);
-            give_ammo(game_state, rdr, 8);
+            give_ammo(rc, game_state, 8);
         }
         StaticKind::BoClip2 => {
             if game_state.ammo == 99 {
                 return;
             }
             sound.play_sound(SoundName::GETAMMO, assets);
-            give_ammo(game_state, rdr, 4);
+            give_ammo(rc, game_state, 4);
         }
         StaticKind::BoMachinegun => {
             sound.play_sound(SoundName::GETMACHINE, assets);
-            give_weapon(game_state, rdr, WeaponType::MachineGun);
+            give_weapon(rc, game_state, WeaponType::MachineGun);
         }
         StaticKind::BoChaingun => {
             sound.play_sound(SoundName::GETGATLING, assets);
-            give_weapon(game_state, rdr, WeaponType::ChainGun);
+            give_weapon(rc, game_state, WeaponType::ChainGun);
 
-            status_draw_pic(rdr, 17, 4, GraphicNum::GOTGATLINGPIC);
+            status_draw_pic(rc, 17, 4, GraphicNum::GOTGATLINGPIC);
             game_state.face_count = 0;
             game_state.got_gat_gun = true;
         }
         StaticKind::BoFullheal => {
             sound.play_sound(SoundName::BONUS1UP, assets);
-            heal_self(game_state, rdr, 99);
-            give_ammo(game_state, rdr, 25);
-            give_extra_man(game_state, rdr, sound, assets);
+            heal_self(rc, game_state, 99);
+            give_ammo(rc, game_state, 25);
+            give_extra_man(rc, game_state, sound, assets);
             game_state.treasure_count += 1;
         }
         StaticKind::BoFood => {
@@ -972,21 +972,21 @@ pub fn get_bonus(
                 return;
             }
             sound.play_sound(SoundName::HEALTH1, assets);
-            heal_self(game_state, rdr, 10);
+            heal_self(rc, game_state, 10);
         }
         StaticKind::BoAlpo => {
             if game_state.health == 100 {
                 return;
             }
             sound.play_sound(SoundName::HEALTH1, assets);
-            heal_self(game_state, rdr, 4);
+            heal_self(rc, game_state, 4);
         }
         StaticKind::BoGibs => {
             if game_state.health > 10 {
                 return;
             }
             sound.play_sound(SoundName::SLURPIE, assets);
-            heal_self(game_state, rdr, 1);
+            heal_self(rc, game_state, 1);
         }
         StaticKind::BoSpear => {
             panic!("get spear");
@@ -997,7 +997,7 @@ pub fn get_bonus(
     check.sprite = Sprite::None; // remove from list
 }
 
-fn give_key(game_state: &mut GameState, rdr: &mut VGARenderer, key: StaticKind) {
+fn give_key(rc: &mut RenderContext, game_state: &mut GameState, key: StaticKind) {
     let key_value = match key {
         StaticKind::BoKey1 => 1 << 0,
         StaticKind::BoKey2 => 1 << 1,
@@ -1007,44 +1007,44 @@ fn give_key(game_state: &mut GameState, rdr: &mut VGARenderer, key: StaticKind) 
     };
 
     game_state.keys |= key_value;
-    draw_keys(game_state, rdr);
+    draw_keys(rc, game_state);
 }
 
-fn heal_self(game_state: &mut GameState, rdr: &mut VGARenderer, points: i32) {
+fn heal_self(rc: &mut RenderContext, game_state: &mut GameState, points: i32) {
     game_state.health += points;
     if game_state.health > 100 {
         game_state.health = 100;
     }
-    draw_health(&game_state, rdr);
+    draw_health(rc, &game_state);
 
     game_state.got_gat_gun = false;
 
-    draw_face(&game_state, rdr);
+    draw_face(rc, &game_state);
 }
 
-fn give_weapon(game_state: &mut GameState, rdr: &mut VGARenderer, weapon: WeaponType) {
-    give_ammo(game_state, rdr, 6);
+fn give_weapon(rc: &mut RenderContext, game_state: &mut GameState, weapon: WeaponType) {
+    give_ammo(rc, game_state, 6);
     if game_state.best_weapon < weapon {
         game_state.best_weapon = weapon;
         game_state.weapon = Some(weapon);
         game_state.chosen_weapon = weapon;
     }
-    draw_weapon(game_state, rdr);
+    draw_weapon(rc, game_state);
 }
 
-fn give_ammo(game_state: &mut GameState, rdr: &mut VGARenderer, ammo: i32) {
+fn give_ammo(rc: &mut RenderContext, game_state: &mut GameState, ammo: i32) {
     if game_state.ammo <= 0 {
         // knife was out
         if game_state.attack_frame <= 0 {
             game_state.weapon = Some(game_state.chosen_weapon);
-            draw_weapon(&game_state, rdr)
+            draw_weapon(rc, &game_state)
         }
     }
     game_state.ammo += ammo;
     if game_state.ammo > 99 {
         game_state.ammo = 99;
     }
-    draw_ammo(game_state, rdr);
+    draw_ammo(rc, game_state);
 }
 
 fn clip_move(
@@ -1144,47 +1144,47 @@ fn set_move(k: ObjKey, level_state: &mut LevelState, dx: i32, dy: i32) {
     obj.y = dy;
 }
 
-pub fn draw_health(state: &GameState, rdr: &mut VGARenderer) {
-    latch_number(rdr, 21, 16, 3, state.health);
+pub fn draw_health(rc: &mut RenderContext, state: &GameState) {
+    latch_number(rc, 21, 16, 3, state.health);
 }
 
-pub fn draw_lives(state: &GameState, rdr: &mut VGARenderer) {
-    latch_number(rdr, 14, 16, 1, state.lives);
+pub fn draw_lives(rc: &mut RenderContext, state: &GameState) {
+    latch_number(rc, 14, 16, 1, state.lives);
 }
 
-pub fn draw_level(state: &GameState, rdr: &mut VGARenderer) {
-    latch_number(rdr, 2, 16, 2, state.map_on as i32 + 1);
+pub fn draw_level(rc: &mut RenderContext, state: &GameState) {
+    latch_number(rc, 2, 16, 2, state.map_on as i32 + 1);
 }
 
-pub fn draw_ammo(state: &GameState, rdr: &mut VGARenderer) {
-    latch_number(rdr, 27, 16, 2, state.ammo);
+pub fn draw_ammo(rc: &mut RenderContext, state: &GameState) {
+    latch_number(rc, 27, 16, 2, state.ammo);
 }
 
-pub fn draw_face(state: &GameState, rdr: &mut VGARenderer) {
+pub fn draw_face(rc: &mut RenderContext, state: &GameState) {
     if state.health > 0 {
         status_draw_pic(
-            rdr,
+            rc,
             17,
             4,
             face_pic(3 * ((100 - state.health as usize) / 16) + state.face_frame),
         );
     } else {
         // TODO draw mutant face if last attack was needleobj
-        status_draw_pic(rdr, 17, 4, GraphicNum::FACE8APIC)
+        status_draw_pic(rc, 17, 4, GraphicNum::FACE8APIC)
     }
 }
 
-pub fn draw_fps(rdr: &mut VGARenderer, fps_str: &str) {
-    let offset_prev = rdr.buffer_offset();
+pub fn draw_fps(rc: &mut RenderContext, fps_str: &str) {
+    let offset_prev = rc.buffer_offset();
     for i in 0..3 {
-        rdr.set_buffer_offset(SCREENLOC[i]);
-        draw_string(rdr, 1, fps_str, 0, 0, 5);
+        rc.set_buffer_offset(SCREENLOC[i]);
+        draw_string(rc, 1, fps_str, 0, 0, 5);
     }
-    rdr.set_buffer_offset(offset_prev);
+    rc.set_buffer_offset(offset_prev);
 }
 
 /// Calls draw face if time to change
-fn update_face(tics: u64, state: &mut GameState, sound: &mut Sound, rdr: &mut VGARenderer) {
+fn update_face(rc: &mut RenderContext, tics: u64, state: &mut GameState, sound: &mut Sound) {
     if sound.is_sound_playing(SoundName::GETGATLING) {
         return;
     }
@@ -1196,38 +1196,38 @@ fn update_face(tics: u64, state: &mut GameState, sound: &mut Sound, rdr: &mut VG
             state.face_frame = 1;
         }
         state.face_count = 0;
-        draw_face(state, rdr);
+        draw_face(rc, state);
     }
 }
 
-pub fn draw_keys(state: &GameState, rdr: &mut VGARenderer) {
+pub fn draw_keys(rc: &mut RenderContext, state: &GameState) {
     if state.keys & 1 != 0 {
-        status_draw_pic(rdr, 30, 4, GraphicNum::GOLDKEYPIC);
+        status_draw_pic(rc, 30, 4, GraphicNum::GOLDKEYPIC);
     } else {
-        status_draw_pic(rdr, 30, 4, GraphicNum::NOKEYPIC)
+        status_draw_pic(rc, 30, 4, GraphicNum::NOKEYPIC)
     }
 
     if state.keys & 2 != 0 {
-        status_draw_pic(rdr, 30, 20, GraphicNum::SILVERKEYPIC);
+        status_draw_pic(rc, 30, 20, GraphicNum::SILVERKEYPIC);
     } else {
-        status_draw_pic(rdr, 30, 20, GraphicNum::NOKEYPIC);
+        status_draw_pic(rc, 30, 20, GraphicNum::NOKEYPIC);
     }
 }
 
-pub fn draw_weapon(state: &GameState, rdr: &mut VGARenderer) {
-    status_draw_pic(rdr, 32, 8, weapon_pic(state.weapon))
+pub fn draw_weapon(rc: &mut RenderContext, state: &GameState) {
+    status_draw_pic(rc, 32, 8, weapon_pic(state.weapon))
 }
 
-pub fn draw_score(state: &GameState, rdr: &mut VGARenderer) {
-    latch_number(rdr, 6, 16, 6, state.score as i32);
+pub fn draw_score(rc: &mut RenderContext, state: &GameState) {
+    latch_number(rc, 6, 16, 6, state.score as i32);
 }
 
-fn latch_number(rdr: &mut VGARenderer, x_start: usize, y: usize, width: usize, num: i32) {
+fn latch_number(rc: &mut RenderContext, x_start: usize, y: usize, width: usize, num: i32) {
     let str = num.to_string();
     let mut w_cnt = width;
     let mut x = x_start;
     while str.len() < w_cnt {
-        status_draw_pic(rdr, x, y, GraphicNum::NBLANKPIC);
+        status_draw_pic(rc, x, y, GraphicNum::NBLANKPIC);
         x += 1;
         w_cnt -= 1;
     }
@@ -1240,19 +1240,19 @@ fn latch_number(rdr: &mut VGARenderer, x_start: usize, y: usize, width: usize, n
     let mut chars = str.chars();
     while c < str.len() {
         let ch = chars.next().unwrap();
-        status_draw_pic(rdr, x, y, n_pic(ch.to_digit(10).unwrap() as usize));
+        status_draw_pic(rc, x, y, n_pic(ch.to_digit(10).unwrap() as usize));
         x += 1;
         c += 1;
     }
 }
 
 /// x in bytes
-fn status_draw_pic(rdr: &mut VGARenderer, x: usize, y: usize, pic: GraphicNum) {
-    let offset_prev = rdr.buffer_offset();
+fn status_draw_pic(rc: &mut RenderContext, x: usize, y: usize, pic: GraphicNum) {
+    let offset_prev = rc.buffer_offset();
     for i in 0..3 {
-        rdr.set_buffer_offset(SCREENLOC[i]);
+        rc.set_buffer_offset(SCREENLOC[i]);
         let y_status = (200 - STATUS_LINES) + y;
-        rdr.pic(x * 8, y_status, pic);
+        rc.pic(x * 8, y_status, pic);
     }
-    rdr.set_buffer_offset(offset_prev);
+    rc.set_buffer_offset(offset_prev);
 }

@@ -14,7 +14,7 @@ use crate::fixed::{Fixed, ZERO};
 use crate::game::setup_game_level;
 use crate::loader::{DiskLoader, Loader};
 use crate::play::ProjectionConfig;
-use crate::rc::{Input, VGARenderer};
+use crate::rc::{Input, RenderContext};
 use crate::start::{OBJ_TYPE_LEN, STAT_TYPE_LEN, save_the_game};
 use crate::time::new_test_ticker;
 
@@ -37,7 +37,7 @@ fn test_do_load_and_save_save0() {
         patch_path: None,
     };
 
-    let (_, mut rdr, assets) = start_test_iw(&loader);
+    let (_, mut rc, assets) = start_test_iw(&loader);
 
     let mut game_state = new_game_state();
     game_state.difficulty = Difficulty::Baby;
@@ -67,10 +67,10 @@ fn test_do_load_and_save_save0() {
     game_state.push_wall_state = 666;
     game_state.loaded_game = true;
     let checksum_passed = do_load(
+        &mut rc,
         &iw_config,
         &mut level_state,
         &mut game_state,
-        &mut rdr,
         &assets,
         &loader,
         0,
@@ -90,10 +90,10 @@ fn test_do_load_and_save_save0() {
     // save the state as save9 and check if it is the ~same as save0 (there are some differences in an iw
     // save saved game)
     save_the_game(
+        &mut rc,
         &iw_config,
         &level_state,
         &game_state,
-        &mut rdr,
         &loader,
         9,
         "e1m2",
@@ -104,10 +104,10 @@ fn test_do_load_and_save_save0() {
 
     // load save9 again, it should result in the same game state as the load of save0
     let checksum_passed = do_load(
+        &mut rc,
         &iw_config,
         &mut level_state,
         &mut game_state,
-        &mut rdr,
         &assets,
         &loader,
         9, /*only difference to load before*/
@@ -387,7 +387,7 @@ fn test_do_load_save1() {
         patch_path: None,
     };
 
-    let (_, mut rdr, assets) = start_test_iw(&loader);
+    let (_, mut rc, assets) = start_test_iw(&loader);
 
     let mut game_state = new_game_state();
     let mut level_state = setup_game_level(&mut game_state, &assets, true).expect("level state");
@@ -397,10 +397,10 @@ fn test_do_load_save1() {
 
     game_state.loaded_game = true;
     let checksum_passed = do_load(
+        &mut rc,
         &iw_config,
         &mut level_state,
         &mut game_state,
-        &mut rdr,
         &assets,
         &loader,
         1,
@@ -467,7 +467,7 @@ fn reset_partial_obj_type(obj: &mut ObjType) {
     obj.temp3 = -45;
 }
 
-fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, VGARenderer, Assets) {
+fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, RenderContext, Assets) {
     let wolf_config = config::load_wolf_config(loader);
     let mut vga = VGABuilder::new()
         .video_mode(0x13)
@@ -485,7 +485,7 @@ fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, VGARenderer, Assets)
     let prj = new_view_size(wolf_config.viewsize);
     let input = Input::init_demo_playback(Vec::with_capacity(0));
     let ticker = new_test_ticker();
-    let rdr = VGARenderer::init(
+    let rc = RenderContext::init(
         vga,
         ticker,
         graphics,
@@ -496,7 +496,7 @@ fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, VGARenderer, Assets)
         input,
     );
 
-    (prj, rdr, assets)
+    (prj, rc, assets)
 }
 
 // testdata

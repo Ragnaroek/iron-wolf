@@ -2,19 +2,19 @@ use vga::input::NumCode;
 
 use crate::assets::Font;
 use crate::def::WindowState;
-use crate::rc::VGARenderer;
+use crate::rc::RenderContext;
 use crate::time::TICK_BASE;
 use crate::vh::{WHITE, draw_tile_8};
 
 const MAX_STRING: usize = 128; // Maximum input string size
 
-pub fn print(rdr: &mut VGARenderer, win_state: &mut WindowState, str: &str) {
+pub fn print(rc: &mut RenderContext, win_state: &mut WindowState, str: &str) {
     let lines: Vec<&str> = str.split("\n").collect();
     for i in 0..lines.len() {
         let line = lines[i];
-        let (w, h) = measure_string(&rdr.fonts[win_state.font_number], line);
+        let (w, h) = measure_string(&rc.fonts[win_state.font_number], line);
         draw_string(
-            rdr,
+            rc,
             win_state.font_number,
             line,
             win_state.print_x,
@@ -33,54 +33,40 @@ pub fn print(rdr: &mut VGARenderer, win_state: &mut WindowState, str: &str) {
 
 /// Prints a string in the current window. Newlines are
 /// supported.
-pub fn c_print(rdr: &mut VGARenderer, win_state: &mut WindowState, str: &str) {
+pub fn c_print(rc: &mut RenderContext, win_state: &mut WindowState, str: &str) {
     let lines = str.split("\n");
     for line in lines {
         if !line.is_empty() {
-            c_print_line(rdr, win_state, line);
+            c_print_line(rc, win_state, line);
         }
     }
 }
 
 /// Prints a string centered on the current line and
 /// advances to the next line. Newlines are not supported.
-pub fn c_print_line(rdr: &mut VGARenderer, win_state: &mut WindowState, str: &str) {
-    let font = &rdr.fonts[win_state.font_number];
+pub fn c_print_line(rc: &mut RenderContext, win_state: &mut WindowState, str: &str) {
+    let font = &rc.fonts[win_state.font_number];
     let (w, h) = measure_string(font, str);
     if w > win_state.window_w {
         panic!("c_print_line - String exceeds width")
     }
     let px = win_state.window_x + ((win_state.window_w - w) / 2);
     let py = win_state.print_y;
-    draw_string(
-        rdr,
-        win_state.font_number,
-        str,
-        px,
-        py,
-        win_state.font_color,
-    );
+    draw_string(rc, win_state.font_number, str, px, py, win_state.font_color);
     win_state.print_y += h;
 }
 
 /// Prints a string centered in the current window.
-pub fn print_centered(rdr: &mut VGARenderer, win_state: &mut WindowState, str: &str) {
-    let font = &rdr.fonts[win_state.font_number];
+pub fn print_centered(rc: &mut RenderContext, win_state: &mut WindowState, str: &str) {
+    let font = &rc.fonts[win_state.font_number];
     let (w, h) = measure_string(font, str);
     let px = win_state.window_x + ((win_state.window_w - w) / 2);
     let py = win_state.window_y + ((win_state.window_h - h) / 2);
-    draw_string(
-        rdr,
-        win_state.font_number,
-        str,
-        px,
-        py,
-        win_state.font_color,
-    );
+    draw_string(rc, win_state.font_number, str, px, py, win_state.font_color);
 }
 
 pub fn draw_string(
-    rdr: &mut VGARenderer,
+    rc: &mut RenderContext,
     font_num: usize,
     str: &str,
     px_in: usize,
@@ -91,12 +77,12 @@ pub fn draw_string(
     for c in str.chars() {
         let ext_ascii_val = c as usize;
         if ext_ascii_val <= 255 {
-            let width = rdr.fonts[font_num].width[ext_ascii_val] as usize;
-            for y in 0..rdr.fonts[font_num].height as usize {
+            let width = rc.fonts[font_num].width[ext_ascii_val] as usize;
+            for y in 0..rc.fonts[font_num].height as usize {
                 for x in 0..width {
-                    let pix_data = rdr.fonts[font_num].data[ext_ascii_val][y * width + x];
+                    let pix_data = rc.fonts[font_num].data[ext_ascii_val][y * width + x];
                     if pix_data != 0 {
-                        rdr.plot(px + x, py + y, color)
+                        rc.plot(px + x, py + y, color)
                     }
                 }
             }
@@ -122,7 +108,7 @@ pub fn measure_string(font: &Font, str: &str) -> (usize, usize) {
 }
 
 pub fn draw_window(
-    rdr: &mut VGARenderer,
+    rc: &mut RenderContext,
     win_state: &mut WindowState,
     x: usize,
     y: usize,
@@ -141,28 +127,28 @@ pub fn draw_window(
     let sw = (width + 1) * 8;
     let sh = (height + 1) * 8;
 
-    clear_window(rdr, win_state);
+    clear_window(rc, win_state);
 
-    draw_tile_8(rdr, sx, sy, 0);
-    draw_tile_8(rdr, sx, sy + sh, 5);
+    draw_tile_8(rc, sx, sy, 0);
+    draw_tile_8(rc, sx, sy + sh, 5);
     let mut i = sx + 8;
     while i <= sx + sw - 8 {
-        draw_tile_8(rdr, i, sy, 1);
-        draw_tile_8(rdr, i, sy + sh, 6);
+        draw_tile_8(rc, i, sy, 1);
+        draw_tile_8(rc, i, sy + sh, 6);
         i += 8;
     }
-    draw_tile_8(rdr, i, sy, 2);
-    draw_tile_8(rdr, i, sy + sh, 7);
+    draw_tile_8(rc, i, sy, 2);
+    draw_tile_8(rc, i, sy + sh, 7);
     i = sy + 8;
     while i <= sy + sh - 8 {
-        draw_tile_8(rdr, sx, i, 3);
-        draw_tile_8(rdr, sx + sw, i, 4);
+        draw_tile_8(rc, sx, i, 3);
+        draw_tile_8(rc, sx + sw, i, 4);
         i += 8;
     }
 }
 
-pub fn clear_window(rdr: &mut VGARenderer, win_state: &mut WindowState) {
-    rdr.bar(
+pub fn clear_window(rc: &mut RenderContext, win_state: &mut WindowState) {
+    rc.bar(
         win_state.window_x,
         win_state.window_y,
         win_state.window_w,
@@ -174,7 +160,7 @@ pub fn clear_window(rdr: &mut VGARenderer, win_state: &mut WindowState) {
 /// max_chars = 0 for maximum chars
 /// max_width = 0 for maximum width
 pub fn line_input(
-    rdr: &mut VGARenderer,
+    rc: &mut RenderContext,
     win_state: &mut WindowState,
     x: usize,
     y: usize,
@@ -188,23 +174,23 @@ pub fn line_input(
     let mut redraw = true;
     let mut update_cursor = false;
     let mut cursor_moved = true;
-    let mut last_time = rdr.ticker.get_count();
+    let mut last_time = rc.ticker.get_count();
     let mut cursor = new_cursor(initial_input.len());
     let mut input_str = String::from(initial_input);
     let mut old_str = String::from(initial_input);
 
-    rdr.clear_last_scan();
-    rdr.clear_last_ascii();
+    rc.clear_last_scan();
+    rc.clear_last_ascii();
     while !done {
         if update_cursor {
-            cursor.xor_i(rdr, win_state, x, y, &input_str);
+            cursor.xor_i(rc, win_state, x, y, &input_str);
             update_cursor = false;
         }
 
-        let mut c = rdr.last_ascii();
-        let last_scan = rdr.last_scan();
-        rdr.clear_last_scan();
-        rdr.clear_last_ascii();
+        let mut c = rc.last_ascii();
+        let last_scan = rc.last_scan();
+        rc.clear_last_scan();
+        rc.clear_last_ascii();
 
         let last_cursor_pos = cursor.pos;
 
@@ -268,7 +254,7 @@ pub fn line_input(
             _ => {}
         }
 
-        let font = &rdr.fonts[win_state.font_number];
+        let font = &rc.fonts[win_state.font_number];
 
         if c != '\0' {
             let len = input_str.len();
@@ -289,14 +275,14 @@ pub fn line_input(
             update_cursor = false;
             cursor_moved = false;
             // clear the old cursor
-            cursor.clear(rdr, win_state, x, y, &old_str, last_cursor_pos);
+            cursor.clear(rc, win_state, x, y, &old_str, last_cursor_pos);
         }
 
         if redraw {
             // clear out old string and cursor
-            cursor.clear(rdr, win_state, x, y, &old_str, last_cursor_pos);
+            cursor.clear(rc, win_state, x, y, &old_str, last_cursor_pos);
             draw_string(
-                rdr,
+                rc,
                 win_state.font_number,
                 &old_str,
                 x,
@@ -305,7 +291,7 @@ pub fn line_input(
             );
             old_str = input_str.clone();
             draw_string(
-                rdr,
+                rc,
                 win_state.font_number,
                 &input_str,
                 x,
@@ -315,23 +301,23 @@ pub fn line_input(
             redraw = false;
         }
 
-        let count = rdr.ticker.get_count();
+        let count = rc.ticker.get_count();
         if count - last_time > TICK_BASE / 2 {
             last_time = count;
             update_cursor = true;
         }
         if update_cursor {
-            cursor.xor_i(rdr, win_state, x, y, &input_str);
+            cursor.xor_i(rc, win_state, x, y, &input_str);
             update_cursor = false;
         }
 
         // don't poll to fast, otherwise key inputs will be missed
-        while rdr.ticker.get_count() < (count + TICK_BASE / 8) {}
+        while rc.ticker.get_count() < (count + TICK_BASE / 8) {}
     }
 
     if !result {
         draw_string(
-            rdr,
+            rc,
             win_state.font_number,
             &old_str,
             x,
@@ -340,7 +326,7 @@ pub fn line_input(
         );
     }
 
-    rdr.clear_keys_down();
+    rc.clear_keys_down();
 
     return (input_str, !result);
 }
@@ -361,13 +347,13 @@ fn new_cursor(pos: usize) -> Cursor {
 impl Cursor {
     fn xor_i(
         &mut self,
-        rdr: &mut VGARenderer,
+        rc: &mut RenderContext,
         win_state: &mut WindowState,
         x: usize,
         y: usize,
         str: &str,
     ) {
-        let font = &rdr.fonts[win_state.font_number];
+        let font = &rc.fonts[win_state.font_number];
 
         let str_before_cursor = &str[..self.pos];
         let (w, _) = measure_string(font, str_before_cursor);
@@ -376,7 +362,7 @@ impl Cursor {
         self.status ^= true;
         if self.status {
             draw_string(
-                rdr,
+                rc,
                 win_state.font_number,
                 "\u{80}",
                 px,
@@ -385,7 +371,7 @@ impl Cursor {
             );
         } else {
             draw_string(
-                rdr,
+                rc,
                 win_state.font_number,
                 "\u{80}",
                 px,
@@ -397,20 +383,20 @@ impl Cursor {
 
     fn clear(
         &self,
-        rdr: &mut VGARenderer,
+        rc: &mut RenderContext,
         win_state: &mut WindowState,
         x: usize,
         y: usize,
         str: &str,
         pos: usize,
     ) {
-        let font = &rdr.fonts[win_state.font_number];
+        let font = &rc.fonts[win_state.font_number];
 
         let str_before_cursor = &str[..pos];
         let (w, _) = measure_string(font, str_before_cursor);
         let px = x + w - 1;
         draw_string(
-            rdr,
+            rc,
             win_state.font_number,
             "\u{80}",
             px,

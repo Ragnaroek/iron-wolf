@@ -32,7 +32,7 @@ use crate::menu::{
     message,
 };
 use crate::play::{self, DEMO_TICS, ProjectionConfig, draw_play_border};
-use crate::rc::{Input, VGARenderer};
+use crate::rc::{Input, RenderContext};
 use crate::sd::Sound;
 use crate::time;
 use crate::us1::c_print;
@@ -60,15 +60,15 @@ fn new_disk_anim(x: usize, y: usize) -> DiskAnim {
 }
 
 impl DiskAnim {
-    fn disk_flop_anim(&mut self, rdr: &mut VGARenderer, iw_config: &IWConfig) {
+    fn disk_flop_anim(&mut self, rc: &mut RenderContext, iw_config: &IWConfig) {
         if self.which {
-            rdr.pic(self.x, self.y, GraphicNum::CDISKLOADING2PIC)
+            rc.pic(self.x, self.y, GraphicNum::CDISKLOADING2PIC)
         } else {
-            rdr.pic(self.x, self.y, GraphicNum::CDISKLOADING1PIC)
+            rc.pic(self.x, self.y, GraphicNum::CDISKLOADING1PIC)
         }
         self.which = !self.which;
 
-        rdr.display();
+        rc.display();
 
         if !iw_config.options.fast_loading {
             std::thread::sleep(Duration::from_millis(40));
@@ -106,7 +106,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
         vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
         let input = Input::init_player(&wolf_config);
-        let mut rdr = VGARenderer::init(
+        let mut rc = RenderContext::init(
             vga,
             ticker,
             graphics,
@@ -118,16 +118,16 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
         );
 
         if let Some(which_demo) = check_timedemo_env() {
-            let prj = init_projection(&wolf_config, &rdr.vga);
-            let rc = init_ray_cast(prj.view_width);
+            let prj = init_projection(&wolf_config, &rc.vga);
+            let cast = init_ray_cast(prj.view_width);
             let (_, _, abort, benchmark_result) = play_demo(
+                &mut rc,
                 &mut wolf_config,
                 &iw_config,
                 &mut win_state,
                 &mut menu_state,
                 &mut sound,
-                rc,
-                &mut rdr,
+                cast,
                 prj,
                 &assets,
                 &loader,
@@ -155,15 +155,15 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
                 exit(0);
             }
         } else {
-            let prj = init_game(&wolf_config, &mut rdr, &mut win_state).await;
-            let rc = init_ray_cast(prj.view_width);
+            let prj = init_game(&mut rc, &wolf_config, &mut win_state).await;
+            let cast = init_ray_cast(prj.view_width);
 
             demo_loop(
+                &mut rc,
                 &mut wolf_config,
                 &iw_config,
                 &mut sound,
-                rc,
-                &mut rdr,
+                cast,
                 prj,
                 &assets,
                 &mut win_state,
@@ -211,15 +211,15 @@ fn init_projection(wolf_config: &WolfConfig, vga: &VGA) -> ProjectionConfig {
 }
 
 async fn init_game(
+    rc: &mut RenderContext,
     wolf_config: &WolfConfig,
-    rdr: &mut VGARenderer,
     win_state: &mut WindowState,
 ) -> ProjectionConfig {
-    let prj = init_projection(wolf_config, &rdr.vga);
-    signon_screen(&mut rdr.vga);
-    intro_screen(rdr);
+    let prj = init_projection(wolf_config, &rc.vga);
+    signon_screen(&mut rc.vga);
+    intro_screen(rc);
     // TODO InitRedShifts
-    finish_signon(rdr, win_state).await;
+    finish_signon(rc, win_state).await;
     prj
 }
 
@@ -236,39 +236,39 @@ pub fn new_view_size(view_size: u16) -> ProjectionConfig {
     play::calc_projection(w, h)
 }
 
-pub fn show_view_size(rdr: &mut VGARenderer, view_size: u16) {
+pub fn show_view_size(rc: &mut RenderContext, view_size: u16) {
     let (w, h) = dim_from_viewsize(view_size);
-    draw_play_border(rdr, w, h);
+    draw_play_border(rc, w, h);
 }
 
-async fn finish_signon(rdr: &mut VGARenderer, win_state: &mut WindowState) {
-    let peek = rdr.vga.read_mem(0);
-    rdr.bar(0, 189, 300, 11, peek);
+async fn finish_signon(rc: &mut RenderContext, win_state: &mut WindowState) {
+    let peek = rc.vga.read_mem(0);
+    rc.bar(0, 189, 300, 11, peek);
 
     win_state.window_x = 0;
     win_state.window_w = 320;
     win_state.print_y = 190;
     win_state.set_font_color(14, 4);
-    c_print(rdr, win_state, "Press a key");
+    c_print(rc, win_state, "Press a key");
 
-    rdr.ack();
+    rc.ack();
 
-    rdr.bar(0, 189, 300, 11, peek);
+    rc.bar(0, 189, 300, 11, peek);
     win_state.print_y = 190;
     win_state.set_font_color(10, 4);
-    c_print(rdr, win_state, "Working...");
+    c_print(rc, win_state, "Working...");
 
     win_state.set_font_color(0, 15);
 
-    rdr.display();
+    rc.display();
 }
 
 async fn demo_loop(
+    rc: &mut RenderContext,
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
     sound: &mut Sound,
-    rc_param: RayCast,
-    rdr: &mut VGARenderer,
+    cast_param: RayCast,
     prj_param: ProjectionConfig,
     assets: &Assets,
     win_state: &mut WindowState,
@@ -278,47 +278,47 @@ async fn demo_loop(
     sound.play_music(intro_song(loader.variant()), assets, loader);
 
     if !iw_config.options.no_wait {
-        pg_13(rdr).await;
+        pg_13(rc).await;
     }
 
     let mut last_demo = 0;
 
     let mut prj = prj_param;
-    let mut rc = rc_param;
+    let mut cast = cast_param;
     loop {
         while !iw_config.options.no_wait {
             // title screen & demo loop
-            rdr.pic(0, 0, GraphicNum::TITLEPIC);
-            rdr.fade_in().await;
-            if rdr.wait_user_input(time::TICK_BASE * 15) {
+            rc.pic(0, 0, GraphicNum::TITLEPIC);
+            rc.fade_in().await;
+            if rc.wait_user_input(time::TICK_BASE * 15) {
                 break;
             }
-            rdr.fade_out().await;
+            rc.fade_out().await;
 
             // credits page
-            rdr.pic(0, 0, GraphicNum::CREDITSPIC);
-            rdr.fade_in().await;
-            if rdr.wait_user_input(time::TICK_BASE * 10) {
+            rc.pic(0, 0, GraphicNum::CREDITSPIC);
+            rc.fade_in().await;
+            if rc.wait_user_input(time::TICK_BASE * 10) {
                 break;
             }
-            rdr.fade_out().await;
+            rc.fade_out().await;
 
             // high scores
-            draw_high_scores(rdr, win_state, &wolf_config.high_scores);
-            rdr.fade_in().await;
-            if rdr.wait_user_input(time::TICK_BASE * 10) {
+            draw_high_scores(rc, win_state, &wolf_config.high_scores);
+            rc.fade_in().await;
+            if rc.wait_user_input(time::TICK_BASE * 10) {
                 break;
             }
 
             // demo
-            let (prj_demo, rc_demo, abort, _) = play_demo(
+            let (prj_demo, cast_demo, abort, _) = play_demo(
+                rc,
                 wolf_config,
                 iw_config,
                 win_state,
                 menu_state,
                 sound,
-                rc,
-                rdr,
+                cast,
                 prj,
                 assets,
                 loader,
@@ -326,18 +326,18 @@ async fn demo_loop(
                 false,
             )
             .await;
-            rc = rc_demo;
+            cast = cast_demo;
             prj = prj_demo;
             last_demo = (last_demo + 1) % 4;
 
-            rdr.set_buffer_offset(rdr.active_buffer());
+            rc.set_buffer_offset(rc.active_buffer());
 
             if abort {
                 break;
             }
         }
 
-        rdr.fade_out().await;
+        rc.fade_out().await;
 
         let mut game_state = new_game_state();
         let mut level_state =
@@ -345,13 +345,13 @@ async fn demo_loop(
 
         // TODO RecordDemo()
         let update = control_panel(
+            rc,
             wolf_config,
             iw_config,
             &mut level_state,
             &mut game_state,
             sound,
-            rc,
-            rdr,
+            cast,
             prj,
             assets,
             win_state,
@@ -361,16 +361,16 @@ async fn demo_loop(
         )
         .await;
         prj = update.projection_config;
-        rc = update.ray_cast;
+        cast = update.ray_cast;
 
-        (prj, rc) = game_loop(
+        (prj, cast) = game_loop(
+            rc,
             wolf_config,
             iw_config,
             &mut level_state,
             &mut game_state,
             sound,
-            rc,
-            rdr,
+            cast,
             prj,
             assets,
             win_state,
@@ -378,7 +378,7 @@ async fn demo_loop(
             loader,
         )
         .await;
-        rdr.fade_out().await;
+        rc.fade_out().await;
     }
 }
 
@@ -403,14 +403,14 @@ fn signon_screen(vga: &mut VGA) {
     }
 }
 
-async fn pg_13(rdr: &mut VGARenderer) {
-    rdr.fade_out().await;
-    rdr.bar(0, 0, 320, 200, 0x82);
-    rdr.pic(216, 110, GraphicNum::PG13PIC);
+async fn pg_13(rc: &mut RenderContext) {
+    rc.fade_out().await;
+    rc.bar(0, 0, 320, 200, 0x82);
+    rc.pic(216, 110, GraphicNum::PG13PIC);
 
-    rdr.fade_in().await;
-    rdr.wait_user_input(time::TICK_BASE * 7);
-    rdr.fade_out().await;
+    rc.fade_in().await;
+    rc.wait_user_input(time::TICK_BASE * 7);
+    rc.fade_out().await;
 }
 
 pub fn quit(err: Option<&str>) -> ! {
@@ -420,10 +420,10 @@ pub fn quit(err: Option<&str>) -> ! {
 }
 
 pub fn save_the_game(
+    rc: &mut RenderContext,
     iw_config: &IWConfig,
     level_state: &LevelState,
     game_state: &GameState,
-    rdr: &mut VGARenderer,
     loader: &dyn Loader,
     which: usize,
     name: &str,
@@ -442,15 +442,15 @@ pub fn save_the_game(
     }
     writer.write_bytes(&header);
 
-    disk_anim.disk_flop_anim(rdr, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config);
     write_game_state(writer, game_state);
     let (offset, checksum) = do_write_checksum(writer, SAVEGAME_NAME_LEN, 0);
 
-    disk_anim.disk_flop_anim(rdr, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config);
     write_level_ratios(writer, game_state);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
 
-    disk_anim.disk_flop_anim(rdr, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config);
     for x in 0..MAP_SIZE {
         for y in 0..MAP_SIZE {
             writer.write_u8(level_state.level.tile_map[x][y] as u8);
@@ -458,7 +458,7 @@ pub fn save_the_game(
     }
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
 
-    disk_anim.disk_flop_anim(rdr, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config);
     for x in 0..MAP_SIZE {
         for y in 0..MAP_SIZE {
             match level_state.actor_at[x][y] {
@@ -489,40 +489,40 @@ pub fn save_the_game(
 
     for i in 0..level_state.actors.len() {
         let k = ObjKey(i);
-        disk_anim.disk_flop_anim(rdr, iw_config);
+        disk_anim.disk_flop_anim(rc, iw_config);
         if level_state.actors.exists(k) {
             write_obj_type(writer, level_state.obj(k));
         }
     }
-    disk_anim.disk_flop_anim(rdr, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config);
     write_obj_type(writer, &null_obj_type());
 
     let offset = writer.offset(); // no checksum over obj_type, reset the offset
     writer.write_u16(level_state.statics.len() as u16);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
 
-    disk_anim.disk_flop_anim(rdr, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config);
     for i in 0..level_state.statics.len() {
         write_static(writer, &level_state.statics[i]);
     }
     writer.skip((MAX_STATS - level_state.statics.len()) * STAT_TYPE_LEN);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
 
-    disk_anim.disk_flop_anim(rdr, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config);
     for i in 0..level_state.doors.len() {
         writer.write_u16(level_state.doors[i].position);
     }
     writer.skip((MAX_DOORS - level_state.doors.len()) * 2);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
 
-    disk_anim.disk_flop_anim(rdr, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config);
     for door in &level_state.doors {
         write_door(writer, door);
     }
     writer.skip((MAX_DOORS - level_state.doors.len()) * DOOR_TYPE_LEN);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
 
-    disk_anim.disk_flop_anim(rdr, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config);
     writer.write_u16(game_state.push_wall_state as u16);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
     writer.write_u16(game_state.push_wall_x as u16);
@@ -670,24 +670,24 @@ fn write_door(writer: &mut DataWriter, door: &DoorType) {
 
 // Returns true if the savegame file passed the checksum test, otherwise returns false.
 pub async fn load_the_game(
+    rc: &mut RenderContext,
     iw_config: &IWConfig,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     win_state: &mut WindowState,
-    rdr: &mut VGARenderer,
     assets: &Assets,
     loader: &dyn Loader,
     which: usize,
     x: usize,
     y: usize,
 ) {
-    rdr.fade_in().await;
+    rc.fade_in().await;
 
     let checksums_matched = do_load(
+        rc,
         iw_config,
         level_state,
         game_state,
-        rdr,
         assets,
         loader,
         which,
@@ -695,18 +695,18 @@ pub async fn load_the_game(
         y,
     );
     if !checksums_matched {
-        message(rdr, win_state, &STR_SAVE_CHEAT);
+        message(rc, win_state, &STR_SAVE_CHEAT);
 
-        rdr.clear_keys_down();
-        rdr.ack();
+        rc.clear_keys_down();
+        rc.ack();
     }
 }
 
 pub fn do_load(
+    rc: &mut RenderContext,
     iw_config: &IWConfig,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    rdr: &mut VGARenderer,
     assets: &Assets,
     loader: &dyn Loader,
     which: usize,
@@ -718,16 +718,16 @@ pub fn do_load(
     let reader = &mut DataReader::new_with_offset(&data, SAVEGAME_NAME_LEN); //first 32 bytes are savegame name
 
     // reconstruct GameState
-    disk_anim.disk_flop_anim(rdr, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config);
     load_game_state(reader, game_state);
     let (offset, checksum) = do_read_checksum(reader, SAVEGAME_NAME_LEN, 0);
 
     // reconstruct LevelRatio
-    disk_anim.disk_flop_anim(rdr, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config);
     load_level_ratios(reader, game_state);
     let (offset, checksum) = do_read_checksum(reader, offset, checksum);
 
-    disk_anim.disk_flop_anim(rdr, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config);
     *level_state = setup_game_level(game_state, assets, false).expect("set up game level"); // TODO replace expect with Quit()
 
     // load tilemap
@@ -781,7 +781,7 @@ pub fn do_load(
 
     let mut i = 1;
     loop {
-        disk_anim.disk_flop_anim(rdr, iw_config);
+        disk_anim.disk_flop_anim(rc, iw_config);
         let actor = read_obj_type(reader);
         if actor.active == ActiveType::BadObject {
             break;

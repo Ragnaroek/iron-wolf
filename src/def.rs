@@ -8,7 +8,7 @@ use crate::fixed::Fixed;
 use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::map::{MapFileType, MapSegs, MapType};
 use crate::play::ProjectionConfig;
-use crate::rc::{PAGE_1_START, PAGE_2_START, PAGE_3_START, VGARenderer};
+use crate::rc::{PAGE_1_START, PAGE_2_START, PAGE_3_START, RenderContext};
 use crate::sd::Sound;
 use crate::start::quit;
 use opl::AdlSound;
@@ -881,29 +881,29 @@ pub struct Assets {
 }
 
 type Think = fn(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &mut VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     assets: &Assets,
-    rc: &RayCast,
+    cast: &RayCast,
 );
 
 type Action = fn(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &mut VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
     assets: &Assets,
-    rc: &RayCast,
+    cast: &RayCast,
 );
 
 #[derive(Eq, Debug)]

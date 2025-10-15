@@ -2,43 +2,43 @@ use vga::input::NumCode;
 
 use crate::def::{At, GameState, LevelState, ObjKey, ObjType, PlayState, WindowState};
 use crate::play::center_window;
-use crate::rc::VGARenderer;
+use crate::rc::RenderContext;
 use crate::us1::{line_input, print, print_centered};
 
 pub async fn debug_keys(
-    rdr: &mut VGARenderer,
+    rc: &mut RenderContext,
     win_state: &mut WindowState,
     game_state: &mut GameState,
     player: &ObjType,
 ) {
-    if rdr.key_pressed(NumCode::F) {
-        center_window(rdr, win_state, 14, 4);
+    if rc.key_pressed(NumCode::F) {
+        center_window(rc, win_state, 14, 4);
         print(
-            rdr,
+            rc,
             win_state,
             &format!("X:{}\nY:{}\nA:{}", player.x, player.y, player.angle),
         );
-        rdr.ack();
+        rc.ack();
         return;
     }
-    if rdr.key_pressed(NumCode::G) {
-        center_window(rdr, win_state, 12, 2);
+    if rc.key_pressed(NumCode::G) {
+        center_window(rc, win_state, 12, 2);
         if game_state.god_mode {
-            print_centered(rdr, win_state, "God mode OFF");
+            print_centered(rc, win_state, "God mode OFF");
         } else {
-            print_centered(rdr, win_state, "God mode ON");
+            print_centered(rc, win_state, "God mode ON");
         }
-        rdr.ack();
+        rc.ack();
         game_state.god_mode = !game_state.god_mode;
         return;
-    } else if rdr.key_pressed(NumCode::W) {
-        center_window(rdr, win_state, 26, 3);
+    } else if rc.key_pressed(NumCode::W) {
+        center_window(rc, win_state, 26, 3);
 
         win_state.print_y += 6;
-        print(rdr, win_state, "  Warp to which level(1-10):");
+        print(rc, win_state, "  Warp to which level(1-10):");
 
         let (str, esc) = line_input(
-            rdr,
+            rc,
             win_state,
             win_state.print_x,
             win_state.print_y,

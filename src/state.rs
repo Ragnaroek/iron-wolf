@@ -21,9 +21,9 @@ use crate::draw::RayCast;
 use crate::fixed::ZERO;
 use crate::game::AREATILE;
 use crate::map::MapSegs;
+use crate::rc::RenderContext;
 use crate::sd::{DigiMode, Sound};
 use crate::user::rnd_t;
-use crate::rc::VGARenderer;
 
 static OPPOSITE: [DirType; 9] = [
     DirType::West,
@@ -665,10 +665,10 @@ pub fn select_run_dir(
 /// ob->x			= adjusted for new position
 /// ob->y
 pub fn move_obj(
+    rc: &mut RenderContext,
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    rdr: &mut VGARenderer,
     mov: i32,
     tics: u64,
 ) {
@@ -722,7 +722,7 @@ pub fn move_obj(
 
         let class = level_state.obj(k).class;
         if class == ClassType::Ghost || class == ClassType::Spectre {
-            take_damage(k, (tics * 2) as i32, level_state, game_state, rdr)
+            take_damage(rc, k, (tics * 2) as i32, level_state, game_state)
         }
 
         // back up
@@ -1112,13 +1112,13 @@ pub fn check_line(level_state: &LevelState, obj: &ObjType) -> bool {
 }
 
 pub fn damage_actor(
+    rc: &mut RenderContext,
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    rc: &RayCast,
+    cast: &RayCast,
     damage_param: usize,
 ) {
     game_state.made_noise = true;
@@ -1131,10 +1131,10 @@ pub fn damage_actor(
 
     level_state.update_obj(k, |obj| obj.hitpoints -= damage as i32);
     if level_state.obj(k).hitpoints <= 0 {
-        kill_actor(k, level_state, game_state, rdr, sound, assets, rc);
+        kill_actor(rc, k, level_state, game_state, sound, assets, cast);
     } else {
         if level_state.obj(k).flags & FL_ATTACKMODE == 0 {
-            first_sighting(k, level_state, sound, assets, rc); // put into combat mode
+            first_sighting(k, level_state, sound, assets, cast); // put into combat mode
         }
 
         let obj = level_state.mut_obj(k);
@@ -1173,13 +1173,13 @@ pub fn damage_actor(
 }
 
 fn kill_actor(
+    rc: &mut RenderContext,
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    rdr: &mut VGARenderer,
     sound: &mut Sound,
     assets: &Assets,
-    rc: &RayCast,
+    cast: &RayCast,
 ) {
     {
         let (tile_x, tile_y) = {
@@ -1193,22 +1193,22 @@ fn kill_actor(
 
         match level_state.obj(k).class {
             ClassType::Guard => {
-                give_points(game_state, rdr, sound, assets, 100);
+                give_points(rc, game_state, sound, assets, 100);
                 new_state(level_state.mut_obj(k), &S_GRDDIE1);
                 place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
             }
             ClassType::Officer => {
-                give_points(game_state, rdr, sound, assets, 400);
+                give_points(rc, game_state, sound, assets, 400);
                 new_state(level_state.mut_obj(k), &S_OFCDIE1);
                 place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
             }
             ClassType::Mutant => {
-                give_points(game_state, rdr, sound, assets, 700);
+                give_points(rc, game_state, sound, assets, 700);
                 new_state(level_state.mut_obj(k), &S_MUTDIE1);
                 place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
             }
             ClassType::SS => {
-                give_points(game_state, rdr, sound, assets, 500);
+                give_points(rc, game_state, sound, assets, 500);
                 new_state(level_state.mut_obj(k), &S_SSDIE1);
                 if game_state.best_weapon < WeaponType::MachineGun {
                     place_item_type(level_state, StaticKind::BoMachinegun, tile_x, tile_y);
@@ -1217,11 +1217,11 @@ fn kill_actor(
                 }
             }
             ClassType::Dog => {
-                give_points(game_state, rdr, sound, assets, 200);
+                give_points(rc, game_state, sound, assets, 200);
                 new_state(level_state.mut_obj(k), &S_DOGDIE1);
             }
             ClassType::Boss => {
-                give_points(game_state, rdr, sound, assets, 5000);
+                give_points(rc, game_state, sound, assets, 5000);
                 new_state(level_state.mut_obj(k), &S_BOSSDIE1);
                 place_item_type(level_state, StaticKind::BoKey1, tile_x, tile_y);
             }
@@ -1235,7 +1235,7 @@ fn kill_actor(
                 todo!("kill fat");
             }
             ClassType::Schabb => {
-                give_points(game_state, rdr, sound, assets, 5000);
+                give_points(rc, game_state, sound, assets, 5000);
                 game_state.kill_x = level_state.player().x as usize;
                 game_state.kill_y = level_state.player().y as usize;
                 if sound.digi_mode() != DigiMode::Off {
@@ -1243,18 +1243,18 @@ fn kill_actor(
                 } else {
                     new_state(level_state.mut_obj(k), &S_SCHABBDIE1_10);
                 }
-                do_death_scream(k, level_state, game_state, sound, assets, rc);
+                do_death_scream(k, level_state, game_state, sound, assets, cast);
             }
             ClassType::Fake => {
-                give_points(game_state, rdr, sound, assets, 2000);
+                give_points(rc, game_state, sound, assets, 2000);
                 new_state(level_state.mut_obj(k), &S_FAKEDIE1);
             }
             ClassType::MechaHitler => {
-                give_points(game_state, rdr, sound, assets, 5000);
+                give_points(rc, game_state, sound, assets, 5000);
                 new_state(level_state.mut_obj(k), &S_MECHADIE1);
             }
             ClassType::RealHitler => {
-                give_points(game_state, rdr, sound, assets, 5000);
+                give_points(rc, game_state, sound, assets, 5000);
                 game_state.kill_x = level_state.player().x as usize;
                 game_state.kill_y = level_state.player().y as usize;
 
@@ -1264,7 +1264,7 @@ fn kill_actor(
                     new_state(level_state.mut_obj(k), &S_HITLERDIE1_5);
                 }
 
-                do_death_scream(k, level_state, game_state, sound, assets, rc);
+                do_death_scream(k, level_state, game_state, sound, assets, cast);
             }
             _ => { /* ignore kill on this class of obj */ }
         }

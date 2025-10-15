@@ -4,7 +4,7 @@ mod scale_test;
 
 use crate::gamedata::{SpriteData, SpritePost};
 use crate::play::ProjectionConfig;
-use crate::rc::{SCREENBWIDE, VGARenderer};
+use crate::rc::{RenderContext, SCREENBWIDE};
 
 pub static MAP_MASKS_1: [u8; 4 * 8] = [
     1, 3, 7, 15, 15, 15, 15, 15, 2, 6, 14, 14, 14, 14, 14, 14, 4, 12, 12, 12, 12, 12, 12, 12, 8, 8,
@@ -127,7 +127,7 @@ fn build_comp_scale(scaler_height: usize, view_height: usize) -> Scaler {
 }
 
 pub fn scale_shape(
-    rdr: &mut VGARenderer,
+    rc: &mut RenderContext,
     wall_height: &Vec<i32>,
     prj: &ProjectionConfig,
     x_center: usize,
@@ -161,7 +161,7 @@ pub fn scale_shape(
                 if wall_height[line_x] >= height as i32 {
                     continue; // obscured by closer wall
                 }
-                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth);
+                scale_line(rc, scaler, sprite, posts, line_x, slinewidth);
             }
             continue;
         }
@@ -184,13 +184,13 @@ pub fn scale_shape(
 
         if left_vis {
             if right_vis {
-                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth);
+                scale_line(rc, scaler, sprite, posts, line_x, slinewidth);
             } else {
                 // find first visible line from the right
                 while wall_height[line_x + slinewidth - 1] >= height as i32 {
                     slinewidth -= 1;
                 }
-                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth);
+                scale_line(rc, scaler, sprite, posts, line_x, slinewidth);
             }
         } else {
             if !right_vis {
@@ -201,7 +201,7 @@ pub fn scale_shape(
                 line_x += 1;
                 slinewidth -= 1;
             }
-            scale_line(rdr, scaler, sprite, posts, line_x, slinewidth);
+            scale_line(rc, scaler, sprite, posts, line_x, slinewidth);
             break; // the rest of the left part of the shape is gone
         }
     }
@@ -233,7 +233,7 @@ pub fn scale_shape(
         // handle single pixe lines
         if slinewidth == 1 {
             if wall_height[line_x] < height as i32 {
-                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth);
+                scale_line(rc, scaler, sprite, posts, line_x, slinewidth);
             }
             continue;
         }
@@ -250,12 +250,12 @@ pub fn scale_shape(
         let right_vis = wall_height[line_x + slinewidth - 1] < height as i32;
         if left_vis {
             if right_vis {
-                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth);
+                scale_line(rc, scaler, sprite, posts, line_x, slinewidth);
             } else {
                 while wall_height[line_x + slinewidth - 1] >= height as i32 {
                     slinewidth -= 1;
                 }
-                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth);
+                scale_line(rc, scaler, sprite, posts, line_x, slinewidth);
                 break; // the rest of the shape is gone
             }
         } else {
@@ -264,7 +264,7 @@ pub fn scale_shape(
                     line_x += 1;
                     slinewidth -= 1;
                 }
-                scale_line(rdr, scaler, sprite, posts, line_x, slinewidth);
+                scale_line(rc, scaler, sprite, posts, line_x, slinewidth);
             } else {
                 continue; // totally obscurred
             }
@@ -274,7 +274,7 @@ pub fn scale_shape(
 
 // simple = no clipping
 pub fn simple_scale_shape(
-    rdr: &mut VGARenderer,
+    rc: &mut RenderContext,
     prj: &ProjectionConfig,
     x_center: usize,
     sprite: &SpriteData,
@@ -297,7 +297,7 @@ pub fn simple_scale_shape(
         }
 
         line_x -= slinewidth;
-        scale_line(rdr, scaler, sprite, posts, line_x, slinewidth);
+        scale_line(rc, scaler, sprite, posts, line_x, slinewidth);
     }
 
     // scale to the right
@@ -320,57 +320,57 @@ pub fn simple_scale_shape(
             continue;
         }
 
-        scale_line(rdr, scaler, sprite, posts, line_x, slinewidth);
+        scale_line(rc, scaler, sprite, posts, line_x, slinewidth);
         line_x += slinewidth;
     }
 }
 
 fn scale_line(
-    rdr: &mut VGARenderer,
+    rc: &mut RenderContext,
     scaler: &Scaler,
     sprite: &SpriteData,
     posts: &Vec<SpritePost>,
     line_x: usize,
     slinewidth: usize,
 ) {
-    let mut mem_offset = (line_x >> 2) + rdr.buffer_offset();
+    let mut mem_offset = (line_x >> 2) + rc.buffer_offset();
     let mask_ix = (((line_x & 3) << 3) + slinewidth) - 1;
 
     let mask3 = MAP_MASKS_3[mask_ix];
     let mask2 = MAP_MASKS_2[mask_ix];
     let mask1 = MAP_MASKS_1[mask_ix];
     if mask3 != 0 {
-        scale(rdr, scaler, sprite, posts, mem_offset, mask1);
+        scale(rc, scaler, sprite, posts, mem_offset, mask1);
         mem_offset += 1;
-        scale(rdr, scaler, sprite, posts, mem_offset, mask2);
+        scale(rc, scaler, sprite, posts, mem_offset, mask2);
         mem_offset += 1;
-        scale(rdr, scaler, sprite, posts, mem_offset, mask3);
+        scale(rc, scaler, sprite, posts, mem_offset, mask3);
     } else if mask2 != 0 {
-        scale(rdr, scaler, sprite, posts, mem_offset, mask1);
+        scale(rc, scaler, sprite, posts, mem_offset, mask1);
         mem_offset += 1;
-        scale(rdr, scaler, sprite, posts, mem_offset, mask2);
+        scale(rc, scaler, sprite, posts, mem_offset, mask2);
     } else {
         //mask1
-        scale(rdr, scaler, sprite, posts, mem_offset, mask1);
+        scale(rc, scaler, sprite, posts, mem_offset, mask1);
     }
 }
 
 fn scale(
-    rdr: &mut VGARenderer,
+    rc: &mut RenderContext,
     scaler: &Scaler,
     sprite: &SpriteData,
     posts: &Vec<SpritePost>,
     mem_offset: usize,
     mask: u8,
 ) {
-    rdr.set_mask(mask);
+    rc.set_mask(mask);
     for post in posts {
         let mut of = post.pixel_offset;
         for p in post.start..post.end {
             if let Some(pix_scaler) = &scaler.pixel_scalers[p] {
                 let pix = sprite.pixel_pool[of];
                 for mem_dest in &pix_scaler.mem_dests {
-                    rdr.write_mem(mem_offset + *mem_dest as usize, pix)
+                    rc.write_mem(mem_offset + *mem_dest as usize, pix)
                 }
             }
             of += 1;

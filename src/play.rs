@@ -34,7 +34,7 @@ use crate::inter::clear_split_vwb;
 use crate::loader::Loader;
 use crate::menu::{GameStateUpdate, LSA_X, LSA_Y, Menu, MenuState, control_panel, message};
 use crate::rc::{
-    DIR_SCAN_EAST, DIR_SCAN_NORTH, DIR_SCAN_SOUTH, DIR_SCAN_WEST, InputMode, VGARenderer,
+    DIR_SCAN_EAST, DIR_SCAN_NORTH, DIR_SCAN_SOUTH, DIR_SCAN_WEST, InputMode, RenderContext,
 };
 use crate::scale::{CompiledScaler, setup_scaling};
 use crate::sd::Sound;
@@ -289,6 +289,7 @@ fn calc_sines() -> Vec<Fixed> {
 }
 
 pub async fn play_loop(
+    rc: &mut RenderContext,
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
     level_state: &mut LevelState,
@@ -297,8 +298,7 @@ pub async fn play_loop(
     menu_state: &mut MenuState,
     control_state: &mut ControlState,
     sound: &mut Sound,
-    rc_param: RayCast,
-    rdr: &mut VGARenderer,
+    cast_param: RayCast,
     prj_param: ProjectionConfig,
     assets: &Assets,
     loader: &dyn Loader,
@@ -313,8 +313,8 @@ pub async fn play_loop(
     game_state.face_count = 0;
     // TODO funnyticcount = 0?
     // TODO lasttimeout = 0??
-    rdr.ticker.clear_count();
-    rdr.clear_keys_down();
+    rc.ticker.clear_count();
+    rc.clear_keys_down();
     clear_palette_shifts(game_state);
 
     let mut fps_buffer_ptr = 0;
@@ -337,12 +337,12 @@ pub async fn play_loop(
     let play_loop_start = Instant::now();
 
     let mut prj = prj_param;
-    let mut rc = rc_param;
+    let mut cast = cast_param;
     let mut _frame_id: u64 = 0;
     let mut demo_tic = 0;
     while game_state.play_state == PlayState::StillPlaying {
         let r_start_frame = if iw_config.options.show_frame_rate || benchmark {
-            draw_play_border(rdr, prj.view_width, prj.view_height); //clear border, as the fps count is written on the border
+            draw_play_border(rc, prj.view_width, prj.view_height); //clear border, as the fps count is written on the border
             Some(Instant::now())
         } else {
             None
@@ -352,13 +352,13 @@ pub async fn play_loop(
         let span = info_span!("frame", id = _frame_id);
         _frame_id += 1;
 
-        let (next_frame_start, curr_tics) = rdr.ticker.next_tics_time(1);
+        let (next_frame_start, curr_tics) = rc.ticker.next_tics_time(1);
         let want_frame_start = next_frame_start + (TARGET_FRAME_DURATION / 2); // target mid frame time
         let wait_time = want_frame_start.saturating_duration_since(Instant::now());
         sleep(wait_time.as_millis_f64() as u32).await;
-        rdr.display();
+        rc.display();
 
-        if rdr.input.mode == InputMode::DemoPlayback {
+        if rc.input.mode == InputMode::DemoPlayback {
             demo_tic += 1;
             if demo_tic < DEMO_TICS {
                 /* Don't sleep to long (not DEMO_TICS long) to give the other task some room
@@ -376,61 +376,61 @@ pub async fn play_loop(
             None
         };
 
-        let mut tics = rdr.ticker.get_count().saturating_sub(curr_tics); // in the best case next_tics many tics, saturating in case the count is reset/non-monotonic
+        let mut tics = rc.ticker.get_count().saturating_sub(curr_tics); // in the best case next_tics many tics, saturating in case the count is reset/non-monotonic
         if tics == 0 {
             tics = 1;
         }
-        if rdr.input.mode == InputMode::DemoPlayback {
+        if rc.input.mode == InputMode::DemoPlayback {
             tics = DEMO_TICS;
         }
 
         #[cfg(feature = "tracing")]
         span.in_scope(|| {
             update_game_state(
+                rc,
                 tics,
                 level_state,
                 game_state,
                 control_state,
                 sound,
-                rdr,
                 &prj,
-                &rc,
+                &cast,
                 assets,
             )
         });
         #[cfg(not(feature = "tracing"))]
         update_game_state(
+            rc,
             tics,
             level_state,
             game_state,
             control_state,
             sound,
-            rdr,
             &prj,
-            &rc,
+            &cast,
             assets,
         );
 
-        update_palette_shifts(game_state, &rdr.vga, &shifts, tics).await;
+        update_palette_shifts(game_state, &rc.vga, &shifts, tics).await;
 
         three_d_refresh(
+            rc,
             game_state,
             level_state,
-            &mut rc,
-            rdr,
+            &mut cast,
             sound,
             &prj,
             assets,
-            rdr.input.mode == InputMode::DemoPlayback,
+            rc.input.mode == InputMode::DemoPlayback,
         )
         .await;
 
         let update = check_keys(
+            rc,
             wolf_config,
             iw_config,
             sound,
-            rc,
-            rdr,
+            cast,
             assets,
             win_state,
             menu_state,
@@ -441,15 +441,15 @@ pub async fn play_loop(
         )
         .await;
         prj = update.projection_config;
-        rc = update.ray_cast;
+        cast = update.ray_cast;
 
         if let Some(which) = update.load {
             load_the_game(
+                rc,
                 iw_config,
                 level_state,
                 game_state,
                 win_state,
-                rdr,
                 assets,
                 loader,
                 which,
@@ -457,19 +457,19 @@ pub async fn play_loop(
                 LSA_Y + 5,
             )
             .await;
-            update_status_bar(game_state, rdr);
+            update_status_bar(rc, game_state);
         }
 
-        if rdr.input.mode == InputMode::DemoPlayback {
-            if rdr.check_ack() {
-                rdr.clear_keys_down();
+        if rc.input.mode == InputMode::DemoPlayback {
+            if rc.check_ack() {
+                rc.clear_keys_down();
                 game_state.play_state = PlayState::Abort;
             }
         }
 
         if iw_config.options.show_frame_rate {
             fps_buffer_ptr = update_fps(
-                rdr,
+                rc,
                 r_start_frame.expect("r_start_frame"),
                 u_start_frame.expect("u_start_frame"),
                 &mut fps_buffer,
@@ -487,34 +487,34 @@ pub async fn play_loop(
         // TODO SD_Poll() ?
         // TODO UpdateSoundLoc
 
-        let offset_prev = rdr.buffer_offset();
+        let offset_prev = rc.buffer_offset();
         for i in 0..3 {
-            rdr.set_buffer_offset(SCREENLOC[i]);
+            rc.set_buffer_offset(SCREENLOC[i]);
         }
-        rdr.set_buffer_offset(offset_prev);
+        rc.set_buffer_offset(offset_prev);
     }
 
     if benchmark {
         benchmark_result.as_mut().unwrap().total = play_loop_start.elapsed();
     }
 
-    (prj, rc, benchmark_result)
+    (prj, cast, benchmark_result)
 }
 
 fn update_game_state(
+    rc: &mut RenderContext,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     control_state: &mut ControlState,
     sound: &mut Sound,
-    rdr: &mut VGARenderer,
     prj: &ProjectionConfig,
-    rc: &RayCast,
+    cast: &RayCast,
     assets: &Assets,
 ) {
-    poll_controls(rdr, control_state, tics);
-    if rdr.input.mode == InputMode::DemoPlayback {
-        if rdr.input.demo_ptr == rdr.input.demo_buffer.as_ref().expect("demo_data").len() {
+    poll_controls(rc, control_state, tics);
+    if rc.input.mode == InputMode::DemoPlayback {
+        if rc.input.demo_ptr == rc.input.demo_buffer.as_ref().expect("demo_data").len() {
             game_state.play_state = PlayState::Completed;
         }
     }
@@ -523,22 +523,22 @@ fn update_game_state(
 
     game_state.made_noise = false;
 
-    move_doors(level_state, game_state, sound, assets, rc, tics);
+    move_doors(level_state, game_state, sound, assets, cast, tics);
     move_push_walls(level_state, game_state, tics);
 
     for i in 0..level_state.actors.len() {
         let k = ObjKey(i);
         if level_state.actors.exists(k) {
             do_actor(
+                rc,
                 k,
                 tics,
                 level_state,
                 game_state,
                 sound,
-                rdr,
                 control_state,
                 prj,
-                rc,
+                cast,
                 assets,
             );
         }
@@ -546,15 +546,15 @@ fn update_game_state(
 }
 
 fn do_actor(
+    rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    rdr: &mut VGARenderer,
     control_state: &mut ControlState,
     prj: &ProjectionConfig,
-    rc: &RayCast,
+    cast: &RayCast,
     assets: &Assets,
 ) {
     if level_state.obj(k).active == ActiveType::No
@@ -586,16 +586,16 @@ fn do_actor(
             .think
         {
             think(
+                rc,
                 k,
                 tics,
                 level_state,
                 game_state,
                 sound,
-                rdr,
                 control_state,
                 prj,
                 assets,
-                rc,
+                cast,
             );
             if level_state.obj(k).state.is_none() {
                 level_state.actors.drop_obj(k);
@@ -622,16 +622,16 @@ fn do_actor(
     while level_state.obj(k).tic_count <= 0 {
         if let Some(action) = level_state.obj(k).state.expect("state").action {
             action(
+                rc,
                 k,
                 tics,
                 level_state,
                 game_state,
                 sound,
-                rdr,
                 control_state,
                 prj,
                 assets,
-                rc,
+                cast,
             );
             if level_state.obj(k).state.is_none() {
                 level_state.actors.drop_obj(k);
@@ -656,16 +656,16 @@ fn do_actor(
 
     if let Some(think) = level_state.obj(k).state.expect("state").think {
         think(
+            rc,
             k,
             tics,
             level_state,
             game_state,
             sound,
-            rdr,
             control_state,
             prj,
             assets,
-            rc,
+            cast,
         );
         if level_state.obj(k).state.is_none() {
             level_state.actors.drop_obj(k);
@@ -687,7 +687,7 @@ fn do_actor(
 }
 
 fn update_fps(
-    rdr: &mut VGARenderer,
+    rc: &mut RenderContext,
     r_start_frame: Instant,
     u_start_frame: Instant,
     fps_buffer: &mut Vec<Option<Fps>>,
@@ -711,7 +711,7 @@ fn update_fps(
         (1.0 / r_avg) * DEMO_TICS as f32,
         (1.0 / u_avg)
     );
-    draw_fps(rdr, &fps_str);
+    draw_fps(rc, &fps_str);
     next_ptr
 }
 
@@ -729,94 +729,94 @@ fn avg_fps(fps_buffer: &Vec<Option<Fps>>) -> (f32, f32) {
     (sum_r / l, sum_u / l)
 }
 
-pub async fn draw_play_screen(state: &GameState, rdr: &mut VGARenderer, prj: &ProjectionConfig) {
-    rdr.fade_out().await;
+pub async fn draw_play_screen(rc: &mut RenderContext, state: &GameState, prj: &ProjectionConfig) {
+    rc.fade_out().await;
 
-    let offset_prev = rdr.buffer_offset();
+    let offset_prev = rc.buffer_offset();
     for i in 0..3 {
-        rdr.set_buffer_offset(SCREENLOC[i]);
-        draw_play_border(rdr, prj.view_width, prj.view_height);
-        rdr.pic(0, 200 - STATUS_LINES, GraphicNum::STATUSBARPIC);
+        rc.set_buffer_offset(SCREENLOC[i]);
+        draw_play_border(rc, prj.view_width, prj.view_height);
+        rc.pic(0, 200 - STATUS_LINES, GraphicNum::STATUSBARPIC);
     }
-    rdr.set_buffer_offset(offset_prev);
+    rc.set_buffer_offset(offset_prev);
 
-    update_status_bar(state, rdr);
+    update_status_bar(rc, state);
 }
 
-pub fn update_status_bar(state: &GameState, rdr: &mut VGARenderer) {
-    draw_face(state, rdr);
-    draw_health(state, rdr);
-    draw_lives(state, rdr);
-    draw_level(state, rdr);
-    draw_ammo(state, rdr);
-    draw_keys(state, rdr);
-    draw_weapon(state, rdr);
-    draw_score(state, rdr);
+pub fn update_status_bar(rc: &mut RenderContext, state: &GameState) {
+    draw_face(rc, state);
+    draw_health(rc, state);
+    draw_lives(rc, state);
+    draw_level(rc, state);
+    draw_ammo(rc, state);
+    draw_keys(rc, state);
+    draw_weapon(rc, state);
+    draw_score(rc, state);
 }
 
-fn draw_all_play_border_sides(rdr: &mut VGARenderer, prj: &ProjectionConfig) {
+fn draw_all_play_border_sides(rc: &mut RenderContext, prj: &ProjectionConfig) {
     for i in 0..3 {
-        rdr.set_buffer_offset(SCREENLOC[i]);
-        draw_play_border_side(rdr, prj);
+        rc.set_buffer_offset(SCREENLOC[i]);
+        draw_play_border_side(rc, prj);
     }
 }
 
 /// To fix window overwrites
-fn draw_play_border_side(rdr: &mut VGARenderer, prj: &ProjectionConfig) {
+fn draw_play_border_side(rc: &mut RenderContext, prj: &ProjectionConfig) {
     let xl = 160 - prj.view_width / 2;
     let yl = (200 - STATUS_LINES - prj.view_height) / 2;
 
-    rdr.bar(0, 0, xl - 1, 200 - STATUS_LINES, 127);
-    rdr.bar(xl + prj.view_width + 1, 0, xl - 2, 200 - STATUS_LINES, 127);
+    rc.bar(0, 0, xl - 1, 200 - STATUS_LINES, 127);
+    rc.bar(xl + prj.view_width + 1, 0, xl - 2, 200 - STATUS_LINES, 127);
 
-    vw_vlin(rdr, yl - 1, yl + prj.view_height, xl - 1, 0);
-    vw_vlin(rdr, yl - 1, yl + prj.view_height, xl + prj.view_width, 125);
+    vw_vlin(rc, yl - 1, yl + prj.view_height, xl - 1, 0);
+    vw_vlin(rc, yl - 1, yl + prj.view_height, xl + prj.view_width, 125);
 }
 
-pub fn draw_all_play_border(rdr: &mut VGARenderer, prj: &ProjectionConfig) {
+pub fn draw_all_play_border(rc: &mut RenderContext, prj: &ProjectionConfig) {
     for i in 0..3 {
-        rdr.set_buffer_offset(SCREENLOC[i]);
-        draw_play_border(rdr, prj.view_width, prj.view_height);
+        rc.set_buffer_offset(SCREENLOC[i]);
+        draw_play_border(rc, prj.view_width, prj.view_height);
     }
 }
 
-pub fn draw_play_border(rdr: &mut VGARenderer, width: usize, height: usize) {
+pub fn draw_play_border(rc: &mut RenderContext, width: usize, height: usize) {
     //clear the background:
-    rdr.bar(0, 0, 320, 200 - STATUS_LINES, 127);
+    rc.bar(0, 0, 320, 200 - STATUS_LINES, 127);
 
     let xl = 160 - width / 2;
     let yl = (200 - STATUS_LINES - height) / 2;
 
     //view area
-    rdr.bar(xl, yl, width, height, 0);
+    rc.bar(xl, yl, width, height, 0);
 
     //border around the view area
-    vw_hlin(rdr, xl - 1, xl + width, yl - 1, 0);
-    vw_hlin(rdr, xl - 1, xl + width, yl + height, 125);
-    vw_vlin(rdr, yl - 1, yl + height, xl - 1, 0);
-    vw_vlin(rdr, yl - 1, yl + height, xl + width, 125);
+    vw_hlin(rc, xl - 1, xl + width, yl - 1, 0);
+    vw_hlin(rc, xl - 1, xl + width, yl + height, 125);
+    vw_vlin(rc, yl - 1, yl + height, xl - 1, 0);
+    vw_vlin(rc, yl - 1, yl + height, xl + width, 125);
 
-    rdr.plot(xl - 1, yl + height, 124);
+    rc.plot(xl - 1, yl + height, 124);
 }
 
-fn vw_hlin(rdr: &mut VGARenderer, x: usize, z: usize, y: usize, c: u8) {
-    rdr.hlin(x, y, (z - x) + 1, c)
+fn vw_hlin(rc: &mut RenderContext, x: usize, z: usize, y: usize, c: u8) {
+    rc.hlin(x, y, (z - x) + 1, c)
 }
 
-fn vw_vlin(rdr: &mut VGARenderer, y: usize, z: usize, x: usize, c: u8) {
-    rdr.vlin(x, y, (z - y) + 1, c)
+fn vw_vlin(rc: &mut RenderContext, y: usize, z: usize, x: usize, c: u8) {
+    rc.vlin(x, y, (z - y) + 1, c)
 }
 
 ///	Generates a window of a given width & height in the
 /// middle of the screen
 pub fn center_window(
-    rdr: &mut VGARenderer,
+    rc: &mut RenderContext,
     win_state: &mut WindowState,
     width: usize,
     height: usize,
 ) {
     draw_window(
-        rdr,
+        rc,
         win_state,
         ((320 / 8) - width) / 2,
         ((160 / 8) - height) / 2,
@@ -827,11 +827,11 @@ pub fn center_window(
 
 #[cfg_attr(feature = "tracing", instrument(skip_all))]
 async fn check_keys(
+    rc: &mut RenderContext,
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
     sound: &mut Sound,
-    rc: RayCast,
-    rdr: &mut VGARenderer,
+    cast: RayCast,
     assets: &Assets,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
@@ -840,26 +840,26 @@ async fn check_keys(
     prj: ProjectionConfig,
     loader: &dyn Loader,
 ) -> GameStateUpdate {
-    if rdr.input.mode == InputMode::DemoPlayback {
-        return GameStateUpdate::with_render_update(prj, rc);
+    if rc.input.mode == InputMode::DemoPlayback {
+        return GameStateUpdate::with_render_update(prj, cast);
     }
 
-    if rdr.key_pressed(NumCode::BackSpace)
-        && rdr.key_pressed(NumCode::LShift)
-        && rdr.key_pressed(NumCode::Alt)
+    if rc.key_pressed(NumCode::BackSpace)
+        && rc.key_pressed(NumCode::LShift)
+        && rc.key_pressed(NumCode::Alt)
         && check_param("goobers")
     {
         clear_split_vwb(win_state);
 
-        message(rdr, win_state, "Debugging keys are\nnow available!");
-        rdr.clear_keys_down();
-        rdr.ack();
+        message(rc, win_state, "Debugging keys are\nnow available!");
+        rc.clear_keys_down();
+        rc.ack();
         win_state.debug_ok = true;
-        draw_all_play_border_sides(rdr, &prj);
-        return GameStateUpdate::with_render_update(prj, rc);
+        draw_all_play_border_sides(rc, &prj);
+        return GameStateUpdate::with_render_update(prj, cast);
     }
 
-    let scan = rdr.last_scan();
+    let scan = rc.last_scan();
     if scan == NumCode::F1
         || scan == NumCode::F2
         || scan == NumCode::F3
@@ -871,18 +871,18 @@ async fn check_keys(
         || scan == NumCode::F9
         || scan == NumCode::Escape
     {
-        rdr.fade_out().await;
+        rc.fade_out().await;
         menu_state.select_menu(Menu::Top);
-        let prev_buffer = rdr.buffer_offset();
-        rdr.set_buffer_offset(rdr.active_buffer());
+        let prev_buffer = rc.buffer_offset();
+        rc.set_buffer_offset(rc.active_buffer());
         let update = control_panel(
+            rc,
             wolf_config,
             iw_config,
             level_state,
             game_state,
             sound,
-            rc,
-            rdr,
+            cast,
             prj,
             assets,
             win_state,
@@ -891,13 +891,13 @@ async fn check_keys(
             scan,
         )
         .await;
-        rdr.set_buffer_offset(prev_buffer);
+        rc.set_buffer_offset(prev_buffer);
 
         win_state.set_font_color(0, 15);
-        rdr.clear_keys_down();
-        draw_play_screen(game_state, rdr, &update.projection_config).await;
+        rc.clear_keys_down();
+        draw_play_screen(rc, game_state, &update.projection_config).await;
         if !game_state.start_game && !game_state.loaded_game {
-            rdr.fade_in().await;
+            rc.fade_in().await;
             start_music(game_state, sound, assets, loader);
         }
 
@@ -910,50 +910,50 @@ async fn check_keys(
         return update;
     };
 
-    if rdr.key_pressed(NumCode::Tab) && (win_state.debug_ok || iw_config.options.enable_debug) {
-        let prev_buffer = rdr.buffer_offset();
-        rdr.set_buffer_offset(rdr.active_buffer());
+    if rc.key_pressed(NumCode::Tab) && (win_state.debug_ok || iw_config.options.enable_debug) {
+        let prev_buffer = rc.buffer_offset();
+        rc.set_buffer_offset(rc.active_buffer());
 
         win_state.font_number = 0;
         win_state.set_font_color(0, 15);
-        debug_keys(rdr, win_state, game_state, level_state.player()).await;
+        debug_keys(rc, win_state, game_state, level_state.player()).await;
 
-        rdr.set_buffer_offset(prev_buffer);
-        return GameStateUpdate::with_render_update(prj, rc);
+        rc.set_buffer_offset(prev_buffer);
+        return GameStateUpdate::with_render_update(prj, cast);
     }
 
-    return GameStateUpdate::with_render_update(prj, rc);
+    return GameStateUpdate::with_render_update(prj, cast);
 }
 
 // reads input delta since last tic and manipulates the player state
-fn poll_controls(rdr: &mut VGARenderer, state: &mut ControlState, tics: u64) {
+fn poll_controls(rc: &mut RenderContext, state: &mut ControlState, tics: u64) {
     state.control.x = 0;
     state.control.y = 0;
     state.button_held.copy_from_slice(&state.button_state);
 
-    if rdr.input.mode == InputMode::DemoPlayback {
-        let demo_data = rdr.input.demo_buffer.as_ref().expect("demo data");
-        let mut button_bits = demo_data[rdr.input.demo_ptr];
-        rdr.input.demo_ptr += 1;
+    if rc.input.mode == InputMode::DemoPlayback {
+        let demo_data = rc.input.demo_buffer.as_ref().expect("demo data");
+        let mut button_bits = demo_data[rc.input.demo_ptr];
+        rc.input.demo_ptr += 1;
         for i in 0..NUM_BUTTONS {
             state.button_state[i] = (button_bits & 1) != 0;
             button_bits >>= 1;
         }
 
-        state.control.x = (demo_data[rdr.input.demo_ptr] as i8) as i32;
-        rdr.input.demo_ptr += 1;
+        state.control.x = (demo_data[rc.input.demo_ptr] as i8) as i32;
+        rc.input.demo_ptr += 1;
 
-        state.control.y = (demo_data[rdr.input.demo_ptr] as i8) as i32;
-        rdr.input.demo_ptr += 1;
+        state.control.y = (demo_data[rc.input.demo_ptr] as i8) as i32;
+        rc.input.demo_ptr += 1;
 
         state.control.x *= tics as i32;
         state.control.y *= tics as i32;
         return;
     }
 
-    poll_keyboard_buttons(rdr, state);
+    poll_keyboard_buttons(rc, state);
 
-    poll_keyboard_move(rdr, state, tics);
+    poll_keyboard_move(rc, state, tics);
     //TODO Mouse Move
     //TODO Joystick Move?
 
@@ -974,29 +974,29 @@ fn poll_controls(rdr: &mut VGARenderer, state: &mut ControlState, tics: u64) {
     }
 }
 
-fn poll_keyboard_buttons(rdr: &mut VGARenderer, state: &mut ControlState) {
+fn poll_keyboard_buttons(rc: &mut RenderContext, state: &mut ControlState) {
     for i in 0..NUM_BUTTONS {
-        state.button_state[i] = rdr.key_pressed(rdr.input.button_scan[i])
+        state.button_state[i] = rc.key_pressed(rc.input.button_scan[i])
     }
 }
 
-fn poll_keyboard_move(rdr: &mut VGARenderer, state: &mut ControlState, tics: u64) {
+fn poll_keyboard_move(rc: &mut RenderContext, state: &mut ControlState, tics: u64) {
     let move_factor = if state.button_state[Button::Run as usize] {
         RUN_MOVE * tics
     } else {
         BASE_MOVE * tics
     } as i32;
 
-    if rdr.key_pressed(rdr.input.dir_scan[DIR_SCAN_NORTH]) {
+    if rc.key_pressed(rc.input.dir_scan[DIR_SCAN_NORTH]) {
         state.control.y -= move_factor;
     }
-    if rdr.key_pressed(rdr.input.dir_scan[DIR_SCAN_SOUTH]) {
+    if rc.key_pressed(rc.input.dir_scan[DIR_SCAN_SOUTH]) {
         state.control.y += move_factor;
     }
-    if rdr.key_pressed(rdr.input.dir_scan[DIR_SCAN_WEST]) {
+    if rc.key_pressed(rc.input.dir_scan[DIR_SCAN_WEST]) {
         state.control.x -= move_factor;
     }
-    if rdr.key_pressed(rdr.input.dir_scan[DIR_SCAN_EAST]) {
+    if rc.key_pressed(rc.input.dir_scan[DIR_SCAN_EAST]) {
         state.control.x += move_factor;
     }
 }
