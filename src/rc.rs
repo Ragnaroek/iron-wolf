@@ -7,10 +7,10 @@ use std::sync::atomic::AtomicUsize;
 use vga::input::MouseButton;
 use vga::{CRTReg, SCReg, VGA, input::NumCode};
 
-use crate::assets::{Font, TileData, WolfVariant};
-use crate::assets::{GAMEPAL, Graphic, GraphicNum};
+use crate::assets::{Font, GAMEPAL, Graphic, GraphicNum, TileData, WolfVariant};
 use crate::config::WolfConfig;
-use crate::def::{Button, NUM_BUTTONS, NUM_MOUSE_BUTTONS};
+use crate::def::{Assets, Button, NUM_BUTTONS, NUM_MOUSE_BUTTONS};
+use crate::play::ProjectionConfig;
 use crate::start::quit;
 use crate::time::{self, Ticker, get_count};
 use crate::vl;
@@ -81,8 +81,10 @@ pub struct RenderContext {
     pub fonts: Vec<Font>,
     pub tiles: TileData,
     pub texts: Vec<String>,
+    pub assets: Assets,
     pub variant: &'static WolfVariant,
     pub input: Input,
+    pub projection: ProjectionConfig,
 
     prev_input: Option<Input>,
 }
@@ -157,8 +159,10 @@ impl RenderContext {
         fonts: Vec<Font>,
         tiles: TileData,
         texts: Vec<String>,
+        assets: Assets,
         variant: &'static WolfVariant,
         input: Input,
+        projection: ProjectionConfig,
     ) -> RenderContext {
         RenderContext {
             vga,
@@ -170,8 +174,10 @@ impl RenderContext {
             fonts,
             tiles,
             texts,
+            assets,
             variant,
             input,
+            projection,
             prev_input: None,
         }
     }

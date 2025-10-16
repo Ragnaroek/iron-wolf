@@ -7,7 +7,6 @@ use crate::draw::RayCast;
 use crate::fixed::Fixed;
 use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::map::{MapFileType, MapSegs, MapType};
-use crate::play::ProjectionConfig;
 use crate::rc::{PAGE_1_START, PAGE_2_START, PAGE_3_START, RenderContext};
 use crate::sd::Sound;
 use crate::start::quit;
@@ -888,8 +887,6 @@ type Think = fn(
     game_state: &mut GameState,
     sound: &mut Sound,
     control_state: &mut ControlState,
-    prj: &ProjectionConfig,
-    assets: &Assets,
     cast: &RayCast,
 );
 
@@ -901,8 +898,6 @@ type Action = fn(
     game_state: &mut GameState,
     sound: &mut Sound,
     control_state: &mut ControlState,
-    prj: &ProjectionConfig,
-    assets: &Assets,
     cast: &RayCast,
 );
 

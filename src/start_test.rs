@@ -6,14 +6,13 @@ use crate::assets;
 use crate::config;
 use crate::config::default_iw_config;
 use crate::def::{
-    ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction, DoorLock, DoorType,
-    GameState, LevelState, MAP_SIZE, NUM_AREAS, ObjKey, ObjType, Sprite, StaticKind, StaticType,
-    WeaponType, new_game_state,
+    ActiveType, At, ClassType, Difficulty, Dir, DirType, DoorAction, DoorLock, DoorType, GameState,
+    LevelState, MAP_SIZE, NUM_AREAS, ObjKey, ObjType, Sprite, StaticKind, StaticType, WeaponType,
+    new_game_state,
 };
 use crate::fixed::{Fixed, ZERO};
 use crate::game::setup_game_level;
 use crate::loader::{DiskLoader, Loader};
-use crate::play::ProjectionConfig;
 use crate::rc::{Input, RenderContext};
 use crate::start::{OBJ_TYPE_LEN, STAT_TYPE_LEN, save_the_game};
 use crate::time::new_test_ticker;
@@ -37,16 +36,16 @@ fn test_do_load_and_save_save0() {
         patch_path: None,
     };
 
-    let (_, mut rc, assets) = start_test_iw(&loader);
+    let mut rc = start_test_iw(&loader);
 
     let mut game_state = new_game_state();
     game_state.difficulty = Difficulty::Baby;
     game_state.episode = episode; // set this here so that correct level is set up in 'setup_game_level' call
     game_state.map_on = map_on;
     let mut level_state_init =
-        setup_game_level(&mut game_state, &assets, true).expect("level state");
+        setup_game_level(&mut game_state, &rc.assets, true).expect("level state");
 
-    let mut level_state = setup_game_level(&mut game_state, &assets, true).expect("level state");
+    let mut level_state = setup_game_level(&mut game_state, &rc.assets, true).expect("level state");
 
     let mut iw_config = default_iw_config().expect("config");
     iw_config.options.fast_loading = true;
@@ -71,7 +70,6 @@ fn test_do_load_and_save_save0() {
         &iw_config,
         &mut level_state,
         &mut game_state,
-        &assets,
         &loader,
         0,
         0,
@@ -108,7 +106,6 @@ fn test_do_load_and_save_save0() {
         &iw_config,
         &mut level_state,
         &mut game_state,
-        &assets,
         &loader,
         9, /*only difference to load before*/
         0,
@@ -387,10 +384,10 @@ fn test_do_load_save1() {
         patch_path: None,
     };
 
-    let (_, mut rc, assets) = start_test_iw(&loader);
+    let mut rc = start_test_iw(&loader);
 
     let mut game_state = new_game_state();
-    let mut level_state = setup_game_level(&mut game_state, &assets, true).expect("level state");
+    let mut level_state = setup_game_level(&mut game_state, &rc.assets, true).expect("level state");
 
     let mut iw_config = default_iw_config().expect("config");
     iw_config.options.fast_loading = true;
@@ -401,7 +398,6 @@ fn test_do_load_save1() {
         &iw_config,
         &mut level_state,
         &mut game_state,
-        &assets,
         &loader,
         1,
         0,
@@ -467,7 +463,7 @@ fn reset_partial_obj_type(obj: &mut ObjType) {
     obj.temp3 = -45;
 }
 
-fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, RenderContext, Assets) {
+fn start_test_iw(loader: &dyn Loader) -> RenderContext {
     let wolf_config = config::load_wolf_config(loader);
     let mut vga = VGABuilder::new()
         .video_mode(0x13)
@@ -482,7 +478,7 @@ fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, RenderContext, Asset
         assets::load_all_graphics(loader, &None).expect("load all graphics");
     let assets = assets::load_graphic_assets(loader).expect("load graphic assets");
 
-    let prj = new_view_size(wolf_config.viewsize);
+    let projection = new_view_size(wolf_config.viewsize);
     let input = Input::init_demo_playback(Vec::with_capacity(0));
     let ticker = new_test_ticker();
     let rc = RenderContext::init(
@@ -492,11 +488,13 @@ fn start_test_iw(loader: &dyn Loader) -> (ProjectionConfig, RenderContext, Asset
         fonts,
         tiles,
         texts,
+        assets,
         loader.variant(),
         input,
+        projection,
     );
 
-    (prj, rc, assets)
+    rc
 }
 
 // testdata

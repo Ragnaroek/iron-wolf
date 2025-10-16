@@ -17,10 +17,10 @@ use crate::act2::get_state_by_id;
 use crate::assets::{self, GAMEPAL, GraphicNum, SIGNON};
 use crate::config::{WolfConfig, check_timedemo_env};
 use crate::def::{
-    ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction, DoorLock, DoorType,
-    GameState, HEIGHT_RATIO, IWConfig, LevelRatio, LevelState, MAP_SIZE, MAX_DOORS, MAX_STATS,
-    NUM_AREAS, ObjKey, ObjType, PLAYER_KEY, Sprite, StaticKind, StaticType, WeaponType,
-    WindowState, new_game_state,
+    ActiveType, At, ClassType, Difficulty, Dir, DirType, DoorAction, DoorLock, DoorType, GameState,
+    HEIGHT_RATIO, IWConfig, LevelRatio, LevelState, MAP_SIZE, MAX_DOORS, MAX_STATS, NUM_AREAS,
+    ObjKey, ObjType, PLAYER_KEY, Sprite, StaticKind, StaticType, WeaponType, WindowState,
+    new_game_state,
 };
 use crate::draw::{RayCast, init_ray_cast};
 use crate::fixed::Fixed;
@@ -106,21 +106,25 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
         vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
         let input = Input::init_player(&wolf_config);
-        let mut rc = RenderContext::init(
-            vga,
-            ticker,
-            graphics,
-            fonts,
-            tiles,
-            texts,
-            loader.variant(),
-            input,
-        );
 
         if let Some(which_demo) = check_timedemo_env() {
-            let prj = init_projection(&wolf_config, &rc.vga);
-            let cast = init_ray_cast(prj.view_width);
-            let (_, _, abort, benchmark_result) = play_demo(
+            let projection = init_projection(&wolf_config, &vga);
+            let cast = init_ray_cast(projection.view_width);
+
+            let mut rc = RenderContext::init(
+                vga,
+                ticker,
+                graphics,
+                fonts,
+                tiles,
+                texts,
+                assets,
+                loader.variant(),
+                input,
+                projection,
+            );
+
+            let (_, abort, benchmark_result) = play_demo(
                 &mut rc,
                 &mut wolf_config,
                 &iw_config,
@@ -128,8 +132,6 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
                 &mut menu_state,
                 &mut sound,
                 cast,
-                prj,
-                &assets,
                 &loader,
                 which_demo,
                 true,
@@ -155,8 +157,22 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
                 exit(0);
             }
         } else {
-            let prj = init_game(&mut rc, &wolf_config, &mut win_state).await;
-            let cast = init_ray_cast(prj.view_width);
+            let projection = init_projection(&wolf_config, &vga);
+            let cast = init_ray_cast(projection.view_width);
+            let mut rc = RenderContext::init(
+                vga,
+                ticker,
+                graphics,
+                fonts,
+                tiles,
+                texts,
+                assets,
+                loader.variant(),
+                input,
+                projection,
+            );
+
+            init_game(&mut rc, &mut win_state).await;
 
             demo_loop(
                 &mut rc,
@@ -164,8 +180,6 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
                 &iw_config,
                 &mut sound,
                 cast,
-                prj,
-                &assets,
                 &mut win_state,
                 &mut menu_state,
                 &loader,
@@ -210,17 +224,11 @@ fn init_projection(wolf_config: &WolfConfig, vga: &VGA) -> ProjectionConfig {
     new_view_size(wolf_config.viewsize)
 }
 
-async fn init_game(
-    rc: &mut RenderContext,
-    wolf_config: &WolfConfig,
-    win_state: &mut WindowState,
-) -> ProjectionConfig {
-    let prj = init_projection(wolf_config, &rc.vga);
+async fn init_game(rc: &mut RenderContext, win_state: &mut WindowState) {
     signon_screen(&mut rc.vga);
     intro_screen(rc);
     // TODO InitRedShifts
     finish_signon(rc, win_state).await;
-    prj
 }
 
 /// Returns width, height dimensions
@@ -269,13 +277,11 @@ async fn demo_loop(
     iw_config: &IWConfig,
     sound: &mut Sound,
     cast_param: RayCast,
-    prj_param: ProjectionConfig,
-    assets: &Assets,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
 ) {
-    sound.play_music(intro_song(loader.variant()), assets, loader);
+    sound.play_music(intro_song(loader.variant()), &rc.assets, loader);
 
     if !iw_config.options.no_wait {
         pg_13(rc).await;
@@ -283,7 +289,6 @@ async fn demo_loop(
 
     let mut last_demo = 0;
 
-    let mut prj = prj_param;
     let mut cast = cast_param;
     loop {
         while !iw_config.options.no_wait {
@@ -311,7 +316,7 @@ async fn demo_loop(
             }
 
             // demo
-            let (prj_demo, cast_demo, abort, _) = play_demo(
+            let (cast_demo, abort, _) = play_demo(
                 rc,
                 wolf_config,
                 iw_config,
@@ -319,15 +324,12 @@ async fn demo_loop(
                 menu_state,
                 sound,
                 cast,
-                prj,
-                assets,
                 loader,
                 last_demo,
                 false,
             )
             .await;
             cast = cast_demo;
-            prj = prj_demo;
             last_demo = (last_demo + 1) % 4;
 
             rc.set_buffer_offset(rc.active_buffer());
@@ -341,7 +343,7 @@ async fn demo_loop(
 
         let mut game_state = new_game_state();
         let mut level_state =
-            setup_game_level(&mut game_state, assets, false).expect("setup game level");
+            setup_game_level(&mut game_state, &rc.assets, false).expect("setup game level");
 
         // TODO RecordDemo()
         let update = control_panel(
@@ -352,18 +354,15 @@ async fn demo_loop(
             &mut game_state,
             sound,
             cast,
-            prj,
-            assets,
             win_state,
             menu_state,
             loader,
             NumCode::None,
         )
         .await;
-        prj = update.projection_config;
         cast = update.ray_cast;
 
-        (prj, cast) = game_loop(
+        cast = game_loop(
             rc,
             wolf_config,
             iw_config,
@@ -371,8 +370,6 @@ async fn demo_loop(
             &mut game_state,
             sound,
             cast,
-            prj,
-            assets,
             win_state,
             menu_state,
             loader,
@@ -675,7 +672,6 @@ pub async fn load_the_game(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     win_state: &mut WindowState,
-    assets: &Assets,
     loader: &dyn Loader,
     which: usize,
     x: usize,
@@ -683,17 +679,7 @@ pub async fn load_the_game(
 ) {
     rc.fade_in().await;
 
-    let checksums_matched = do_load(
-        rc,
-        iw_config,
-        level_state,
-        game_state,
-        assets,
-        loader,
-        which,
-        x,
-        y,
-    );
+    let checksums_matched = do_load(rc, iw_config, level_state, game_state, loader, which, x, y);
     if !checksums_matched {
         message(rc, win_state, &STR_SAVE_CHEAT);
 
@@ -707,7 +693,6 @@ pub fn do_load(
     iw_config: &IWConfig,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    assets: &Assets,
     loader: &dyn Loader,
     which: usize,
     x: usize,
@@ -728,7 +713,7 @@ pub fn do_load(
     let (offset, checksum) = do_read_checksum(reader, offset, checksum);
 
     disk_anim.disk_flop_anim(rc, iw_config);
-    *level_state = setup_game_level(game_state, assets, false).expect("set up game level"); // TODO replace expect with Quit()
+    *level_state = setup_game_level(game_state, &rc.assets, false).expect("set up game level"); // TODO replace expect with Quit()
 
     // load tilemap
     for x in 0..MAP_SIZE {

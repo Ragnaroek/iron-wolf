@@ -299,11 +299,9 @@ pub async fn play_loop(
     control_state: &mut ControlState,
     sound: &mut Sound,
     cast_param: RayCast,
-    prj_param: ProjectionConfig,
-    assets: &Assets,
     loader: &dyn Loader,
     benchmark: bool,
-) -> (ProjectionConfig, RayCast, Option<BenchmarkResult>) {
+) -> (RayCast, Option<BenchmarkResult>) {
     let shifts = init_colour_shifts();
 
     game_state.play_state = PlayState::StillPlaying;
@@ -336,13 +334,12 @@ pub async fn play_loop(
 
     let play_loop_start = Instant::now();
 
-    let mut prj = prj_param;
     let mut cast = cast_param;
     let mut _frame_id: u64 = 0;
     let mut demo_tic = 0;
     while game_state.play_state == PlayState::StillPlaying {
         let r_start_frame = if iw_config.options.show_frame_rate || benchmark {
-            draw_play_border(rc, prj.view_width, prj.view_height); //clear border, as the fps count is written on the border
+            draw_play_border(rc, rc.projection.view_width, rc.projection.view_height); //clear border, as the fps count is written on the border
             Some(Instant::now())
         } else {
             None
@@ -393,9 +390,7 @@ pub async fn play_loop(
                 game_state,
                 control_state,
                 sound,
-                &prj,
                 &cast,
-                assets,
             )
         });
         #[cfg(not(feature = "tracing"))]
@@ -406,9 +401,7 @@ pub async fn play_loop(
             game_state,
             control_state,
             sound,
-            &prj,
             &cast,
-            assets,
         );
 
         update_palette_shifts(game_state, &rc.vga, &shifts, tics).await;
@@ -419,8 +412,6 @@ pub async fn play_loop(
             level_state,
             &mut cast,
             sound,
-            &prj,
-            assets,
             rc.input.mode == InputMode::DemoPlayback,
         )
         .await;
@@ -431,16 +422,13 @@ pub async fn play_loop(
             iw_config,
             sound,
             cast,
-            assets,
             win_state,
             menu_state,
             level_state,
             game_state,
-            prj,
             loader,
         )
         .await;
-        prj = update.projection_config;
         cast = update.ray_cast;
 
         if let Some(which) = update.load {
@@ -450,7 +438,6 @@ pub async fn play_loop(
                 level_state,
                 game_state,
                 win_state,
-                assets,
                 loader,
                 which,
                 LSA_X + 8,
@@ -498,7 +485,7 @@ pub async fn play_loop(
         benchmark_result.as_mut().unwrap().total = play_loop_start.elapsed();
     }
 
-    (prj, cast, benchmark_result)
+    (cast, benchmark_result)
 }
 
 fn update_game_state(
@@ -508,9 +495,7 @@ fn update_game_state(
     game_state: &mut GameState,
     control_state: &mut ControlState,
     sound: &mut Sound,
-    prj: &ProjectionConfig,
     cast: &RayCast,
-    assets: &Assets,
 ) {
     poll_controls(rc, control_state, tics);
     if rc.input.mode == InputMode::DemoPlayback {
@@ -523,7 +508,7 @@ fn update_game_state(
 
     game_state.made_noise = false;
 
-    move_doors(level_state, game_state, sound, assets, cast, tics);
+    move_doors(level_state, game_state, sound, &rc.assets, cast, tics);
     move_push_walls(level_state, game_state, tics);
 
     for i in 0..level_state.actors.len() {
@@ -537,9 +522,7 @@ fn update_game_state(
                 game_state,
                 sound,
                 control_state,
-                prj,
                 cast,
-                assets,
             );
         }
     }
@@ -553,9 +536,7 @@ fn do_actor(
     game_state: &mut GameState,
     sound: &mut Sound,
     control_state: &mut ControlState,
-    prj: &ProjectionConfig,
     cast: &RayCast,
-    assets: &Assets,
 ) {
     if level_state.obj(k).active == ActiveType::No
         && !level_state.area_by_player[level_state.obj(k).area_number]
@@ -593,8 +574,6 @@ fn do_actor(
                 game_state,
                 sound,
                 control_state,
-                prj,
-                assets,
                 cast,
             );
             if level_state.obj(k).state.is_none() {
@@ -629,8 +608,6 @@ fn do_actor(
                 game_state,
                 sound,
                 control_state,
-                prj,
-                assets,
                 cast,
             );
             if level_state.obj(k).state.is_none() {
@@ -663,8 +640,6 @@ fn do_actor(
             game_state,
             sound,
             control_state,
-            prj,
-            assets,
             cast,
         );
         if level_state.obj(k).state.is_none() {
@@ -729,13 +704,13 @@ fn avg_fps(fps_buffer: &Vec<Option<Fps>>) -> (f32, f32) {
     (sum_r / l, sum_u / l)
 }
 
-pub async fn draw_play_screen(rc: &mut RenderContext, state: &GameState, prj: &ProjectionConfig) {
+pub async fn draw_play_screen(rc: &mut RenderContext, state: &GameState) {
     rc.fade_out().await;
 
     let offset_prev = rc.buffer_offset();
     for i in 0..3 {
         rc.set_buffer_offset(SCREENLOC[i]);
-        draw_play_border(rc, prj.view_width, prj.view_height);
+        draw_play_border(rc, rc.projection.view_width, rc.projection.view_height);
         rc.pic(0, 200 - STATUS_LINES, GraphicNum::STATUSBARPIC);
     }
     rc.set_buffer_offset(offset_prev);
@@ -754,29 +729,41 @@ pub fn update_status_bar(rc: &mut RenderContext, state: &GameState) {
     draw_score(rc, state);
 }
 
-fn draw_all_play_border_sides(rc: &mut RenderContext, prj: &ProjectionConfig) {
+fn draw_all_play_border_sides(rc: &mut RenderContext) {
     for i in 0..3 {
         rc.set_buffer_offset(SCREENLOC[i]);
-        draw_play_border_side(rc, prj);
+        draw_play_border_side(rc);
     }
 }
 
 /// To fix window overwrites
-fn draw_play_border_side(rc: &mut RenderContext, prj: &ProjectionConfig) {
-    let xl = 160 - prj.view_width / 2;
-    let yl = (200 - STATUS_LINES - prj.view_height) / 2;
+fn draw_play_border_side(rc: &mut RenderContext) {
+    let xl = 160 - rc.projection.view_width / 2;
+    let yl = (200 - STATUS_LINES - rc.projection.view_height) / 2;
 
     rc.bar(0, 0, xl - 1, 200 - STATUS_LINES, 127);
-    rc.bar(xl + prj.view_width + 1, 0, xl - 2, 200 - STATUS_LINES, 127);
+    rc.bar(
+        xl + rc.projection.view_width + 1,
+        0,
+        xl - 2,
+        200 - STATUS_LINES,
+        127,
+    );
 
-    vw_vlin(rc, yl - 1, yl + prj.view_height, xl - 1, 0);
-    vw_vlin(rc, yl - 1, yl + prj.view_height, xl + prj.view_width, 125);
+    vw_vlin(rc, yl - 1, yl + rc.projection.view_height, xl - 1, 0);
+    vw_vlin(
+        rc,
+        yl - 1,
+        yl + rc.projection.view_height,
+        xl + rc.projection.view_width,
+        125,
+    );
 }
 
-pub fn draw_all_play_border(rc: &mut RenderContext, prj: &ProjectionConfig) {
+pub fn draw_all_play_border(rc: &mut RenderContext) {
     for i in 0..3 {
         rc.set_buffer_offset(SCREENLOC[i]);
-        draw_play_border(rc, prj.view_width, prj.view_height);
+        draw_play_border(rc, rc.projection.view_width, rc.projection.view_height);
     }
 }
 
@@ -832,16 +819,14 @@ async fn check_keys(
     iw_config: &IWConfig,
     sound: &mut Sound,
     cast: RayCast,
-    assets: &Assets,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    prj: ProjectionConfig,
     loader: &dyn Loader,
 ) -> GameStateUpdate {
     if rc.input.mode == InputMode::DemoPlayback {
-        return GameStateUpdate::with_render_update(prj, cast);
+        return GameStateUpdate::with_render_update(cast);
     }
 
     if rc.key_pressed(NumCode::BackSpace)
@@ -855,8 +840,8 @@ async fn check_keys(
         rc.clear_keys_down();
         rc.ack();
         win_state.debug_ok = true;
-        draw_all_play_border_sides(rc, &prj);
-        return GameStateUpdate::with_render_update(prj, cast);
+        draw_all_play_border_sides(rc);
+        return GameStateUpdate::with_render_update(cast);
     }
 
     let scan = rc.last_scan();
@@ -883,8 +868,6 @@ async fn check_keys(
             game_state,
             sound,
             cast,
-            prj,
-            assets,
             win_state,
             menu_state,
             loader,
@@ -895,10 +878,10 @@ async fn check_keys(
 
         win_state.set_font_color(0, 15);
         rc.clear_keys_down();
-        draw_play_screen(rc, game_state, &update.projection_config).await;
+        draw_play_screen(rc, game_state).await;
         if !game_state.start_game && !game_state.loaded_game {
             rc.fade_in().await;
-            start_music(game_state, sound, assets, loader);
+            start_music(game_state, sound, &rc.assets, loader);
         }
 
         if game_state.loaded_game {
@@ -919,10 +902,10 @@ async fn check_keys(
         debug_keys(rc, win_state, game_state, level_state.player()).await;
 
         rc.set_buffer_offset(prev_buffer);
-        return GameStateUpdate::with_render_update(prj, cast);
+        return GameStateUpdate::with_render_update(cast);
     }
 
-    return GameStateUpdate::with_render_update(prj, cast);
+    return GameStateUpdate::with_render_update(cast);
 }
 
 // reads input delta since last tic and manipulates the player state

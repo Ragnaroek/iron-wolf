@@ -23,8 +23,7 @@ use crate::loader::Loader;
 use crate::map;
 use crate::menu::MenuState;
 use crate::play::{
-    ProjectionConfig, draw_play_screen, finish_palette_shifts, new_control_state, play_loop,
-    start_music,
+    draw_play_screen, finish_palette_shifts, new_control_state, play_loop, start_music,
 };
 use crate::rc::{FizzleFadeAbortable, Input, InputMode, RenderContext};
 use crate::sd::Sound;
@@ -56,23 +55,20 @@ pub async fn game_loop(
     game_state: &mut GameState,
     sound: &mut Sound,
     cast_param: RayCast,
-    prj_param: ProjectionConfig,
-    assets: &Assets,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
-) -> (ProjectionConfig, RayCast) {
+) -> RayCast {
     let mut control_state: ControlState = new_control_state();
 
-    draw_play_screen(rc, &game_state, &prj_param).await;
+    draw_play_screen(rc, &game_state).await;
 
-    let mut prj = prj_param;
     let mut cast = cast_param;
     let mut restart = false;
     'game_loop: loop {
         if restart {
             restart = false;
-            draw_play_screen(rc, game_state, &prj).await;
+            draw_play_screen(rc, game_state).await;
             game_state.died = false;
         }
 
@@ -85,15 +81,15 @@ pub async fn game_loop(
         if game_state.loaded_game {
             game_state.loaded_game = false;
         } else {
-            *level_state = setup_game_level(game_state, assets, false).unwrap();
+            *level_state = setup_game_level(game_state, &rc.assets, false).unwrap();
         }
 
         win_state.in_game = true;
 
-        start_music(game_state, sound, assets, loader);
+        start_music(game_state, sound, &rc.assets, loader);
 
         if !game_state.died {
-            preload_graphics(rc, iw_config, &game_state, &prj).await;
+            preload_graphics(rc, iw_config, &game_state).await;
         } else {
             game_state.died = false;
         }
@@ -103,7 +99,7 @@ pub async fn game_loop(
 
         rc.fade_in().await;
 
-        let (prj_play, cast_play, _) = play_loop(
+        let (cast_play, _) = play_loop(
             rc,
             wolf_config,
             iw_config,
@@ -114,13 +110,10 @@ pub async fn game_loop(
             &mut control_state,
             sound,
             cast,
-            prj,
-            assets,
             loader,
             false,
         )
         .await;
-        prj = prj_play;
         cast = cast_play;
 
         win_state.in_game = false;
@@ -136,7 +129,7 @@ pub async fn game_loop(
                 draw_keys(rc, &game_state);
                 vw_fade_out(&rc.vga).await;
 
-                level_completed(rc, game_state, &prj, sound, assets, win_state, loader).await;
+                level_completed(rc, game_state, sound, win_state, loader).await;
 
                 game_state.old_score = game_state.score;
 
@@ -154,8 +147,8 @@ pub async fn game_loop(
             }
             PlayState::Died => {
                 let player = level_state.player();
-                cast.init_ray_cast_consts(&prj, player, game_state.push_wall_pos);
-                died(rc, level_state, game_state, &mut cast, sound, &prj, assets).await;
+                cast.init_ray_cast_consts(&rc.projection, player, game_state.push_wall_pos);
+                died(rc, level_state, game_state, &mut cast, sound).await;
                 if game_state.lives > -1 {
                     continue 'game_loop;
                 }
@@ -165,7 +158,6 @@ pub async fn game_loop(
                 check_highscore(
                     rc,
                     sound,
-                    assets,
                     win_state,
                     loader,
                     wolf_config,
@@ -175,17 +167,16 @@ pub async fn game_loop(
 
                 menu_state.reset();
 
-                return (prj, cast);
+                return cast;
             }
             PlayState::Victorious => {
                 rc.fade_out().await;
 
-                victory(rc, game_state, sound, assets, win_state, loader).await;
+                victory(rc, game_state, sound, win_state, loader).await;
 
                 check_highscore(
                     rc,
                     sound,
-                    assets,
                     win_state,
                     loader,
                     wolf_config,
@@ -195,7 +186,7 @@ pub async fn game_loop(
 
                 menu_state.reset();
 
-                return (prj, cast);
+                return cast;
             }
             PlayState::Warped | PlayState::Abort | PlayState::ResetGame => {
                 // do nothing and loop around the game loop
@@ -220,11 +211,9 @@ async fn died(
     game_state: &mut GameState,
     cast: &mut RayCast,
     sound: &mut Sound,
-    prj: &ProjectionConfig,
-    assets: &Assets,
 ) {
     game_state.weapon = None; // take away weapon
-    sound.play_sound(SoundName::PLAYERDEATH, assets);
+    sound.play_sound(SoundName::PLAYERDEATH, &rc.assets);
 
     let player = level_state.player();
 
@@ -288,8 +277,6 @@ async fn died(
                 level_state,
                 cast,
                 sound,
-                prj,
-                assets,
                 rc.input.mode == InputMode::DemoPlayback,
             )
             .await;
@@ -322,8 +309,6 @@ async fn died(
                 level_state,
                 cast,
                 sound,
-                prj,
-                assets,
                 rc.input.mode == InputMode::DemoPlayback,
             )
             .await;
@@ -333,21 +318,21 @@ async fn died(
     // fade to red
     finish_palette_shifts(game_state, &rc.vga);
 
-    let source_buffer = rc.buffer_offset() + prj.screenofs;
+    let source_buffer = rc.buffer_offset() + rc.projection.screenofs;
     rc.set_buffer_offset(source_buffer);
     // fill source buffer with all red screen for the fizzle_fade
-    rc.bar(0, 0, prj.view_width, prj.view_height, 4);
+    rc.bar(0, 0, rc.projection.view_width, rc.projection.view_height, 4);
 
     rc.clear_keys_down();
     rc.fizzle_fade(
         source_buffer,
-        rc.active_buffer() + prj.screenofs,
-        prj.view_width,
-        prj.view_height,
+        rc.active_buffer() + rc.projection.screenofs,
+        rc.projection.view_width,
+        rc.projection.view_height,
         70,
         FizzleFadeAbortable::No,
     );
-    rc.set_buffer_offset(rc.buffer_offset() - prj.screenofs);
+    rc.set_buffer_offset(rc.buffer_offset() - rc.projection.screenofs);
     rc.wait_user_input(100);
     //TODO SD_WaitSoundDone
 
@@ -1152,12 +1137,10 @@ pub async fn play_demo(
     menu_state: &mut MenuState,
     sound: &mut Sound,
     cast: RayCast,
-    prj: ProjectionConfig,
-    assets: &Assets,
     loader: &dyn Loader,
     demo_num: usize,
     benchmark: bool,
-) -> (ProjectionConfig, RayCast, bool, Option<BenchmarkResult>) {
+) -> (RayCast, bool, Option<BenchmarkResult>) {
     let demo_data = load_demo(loader, demo_graphic_num(demo_num)).expect("demo load");
     let mut demo_reader = DataReader::new(&demo_data);
     let mut game_state = new_game_state();
@@ -1170,16 +1153,16 @@ pub async fn play_demo(
 
     rc.fade_out().await;
     win_state.set_font_color(0, 15);
-    draw_play_screen(rc, &game_state, &prj).await;
+    draw_play_screen(rc, &game_state).await;
     rc.fade_in().await;
 
     let mut level_state =
-        setup_game_level(&mut game_state, assets, true).expect("setup game level");
-    start_music(&mut game_state, sound, assets, loader);
+        setup_game_level(&mut game_state, &rc.assets, true).expect("setup game level");
+    start_music(&mut game_state, sound, &rc.assets, loader);
 
     game_state.fizzle_in = true;
     let mut control_state = new_control_state();
-    let (prj, cast, benchmark_result) = play_loop(
+    let (cast, benchmark_result) = play_loop(
         rc,
         wolf_config,
         iw_config,
@@ -1190,8 +1173,6 @@ pub async fn play_demo(
         &mut control_state,
         sound,
         cast,
-        prj,
-        assets,
         loader,
         benchmark,
     )
@@ -1200,7 +1181,6 @@ pub async fn play_demo(
     rc.restore_player_input().expect("player input restored");
 
     (
-        prj,
         cast,
         game_state.play_state == PlayState::Abort,
         benchmark_result,

@@ -14,7 +14,7 @@ use crate::draw::RayCast;
 use crate::fixed::{Fixed, ZERO, fixed_by_frac};
 use crate::game::AREATILE;
 use crate::map;
-use crate::play::{ProjectionConfig, start_bonus_flash, start_damage_flash};
+use crate::play::{start_bonus_flash, start_damage_flash};
 use crate::rc::RenderContext;
 use crate::sd::Sound;
 use crate::state::{check_line, damage_actor};
@@ -176,8 +176,6 @@ fn t_attack(
     game_state: &mut GameState,
     sound: &mut Sound,
     control_state: &mut ControlState,
-    prj: &ProjectionConfig,
-    assets: &Assets,
     cast: &RayCast,
 ) {
     update_face(rc, tics, game_state, sound);
@@ -199,15 +197,7 @@ fn t_attack(
         control_state.button_state[Button::Attack as usize] = false;
     }
 
-    control_movement(
-        k,
-        level_state,
-        game_state,
-        sound,
-        control_state,
-        prj,
-        assets,
-    );
+    control_movement(rc, k, level_state, game_state, sound, control_state);
 
     if game_state.victory_flag {
         return;
@@ -249,13 +239,13 @@ fn t_attack(
                 if control_state.button_state[Button::Attack as usize] {
                     game_state.attack_frame -= 2;
                 }
-                weapon_attack(rc, level_state, game_state, sound, prj, assets, cast);
+                weapon_attack(rc, level_state, game_state, sound, cast);
             }
             1 => {
-                weapon_attack(rc, level_state, game_state, sound, prj, assets, cast);
+                weapon_attack(rc, level_state, game_state, sound, cast);
             }
             2 => {
-                knife_attack(rc, level_state, game_state, prj, sound, assets, cast);
+                knife_attack(rc, level_state, game_state, sound, cast);
             }
             3 => {
                 if game_state.ammo != 0 && control_state.button_state[Button::Attack as usize] {
@@ -277,8 +267,6 @@ fn weapon_attack(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    prj: &ProjectionConfig,
-    assets: &Assets,
     cast: &RayCast,
 ) {
     if game_state.ammo == 0 {
@@ -286,7 +274,7 @@ fn weapon_attack(
         game_state.attack_frame += 1;
         return;
     }
-    gun_attack(rc, level_state, game_state, sound, prj, assets, cast);
+    gun_attack(rc, level_state, game_state, sound, cast);
     game_state.ammo -= 1;
     draw_ammo(rc, &game_state);
 }
@@ -295,12 +283,10 @@ fn knife_attack(
     rc: &mut RenderContext,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    prj: &ProjectionConfig,
     sound: &mut Sound,
-    assets: &Assets,
     cast: &RayCast,
 ) {
-    sound.play_sound(SoundName::ATKKNIFE, assets);
+    sound.play_sound(SoundName::ATKKNIFE, &rc.assets);
 
     let mut dist = 0x7fffffff;
     let mut closest = None;
@@ -310,7 +296,8 @@ fn knife_attack(
             let check = &level_state.actors.obj(k);
             if check.flags & FL_SHOOTABLE != 0
                 && check.flags & FL_VISABLE != 0
-                && check.view_x.abs_diff(prj.center_x as i32) < prj.shoot_delta as u32
+                && check.view_x.abs_diff(rc.projection.center_x as i32)
+                    < rc.projection.shoot_delta as u32
             {
                 if check.trans_x.to_i32() < dist {
                     dist = check.trans_x.to_i32();
@@ -329,7 +316,6 @@ fn knife_attack(
         level_state,
         game_state,
         sound,
-        assets,
         cast,
         (rnd_t() >> 4) as usize,
     )
@@ -340,19 +326,17 @@ fn gun_attack(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    prj: &ProjectionConfig,
-    assets: &Assets,
     cast: &RayCast,
 ) {
     match game_state.weapon {
         Some(WeaponType::Pistol) => {
-            sound.play_sound(SoundName::ATKPISTOL, assets);
+            sound.play_sound(SoundName::ATKPISTOL, &rc.assets);
         }
         Some(WeaponType::MachineGun) => {
-            sound.play_sound(SoundName::ATKMACHINEGUN, assets);
+            sound.play_sound(SoundName::ATKMACHINEGUN, &rc.assets);
         }
         Some(WeaponType::ChainGun) => {
-            sound.play_sound(SoundName::ATKGATLING, assets);
+            sound.play_sound(SoundName::ATKGATLING, &rc.assets);
         }
         _ => { /* ignore anything else */ }
     }
@@ -370,7 +354,8 @@ fn gun_attack(
                 let check = &level_state.actors.obj(k);
                 if check.flags & FL_SHOOTABLE != 0
                     && check.flags & FL_VISABLE != 0
-                    && check.view_x.abs_diff(prj.center_x as i32) < prj.shoot_delta as u32
+                    && check.view_x.abs_diff(rc.projection.center_x as i32)
+                        < rc.projection.shoot_delta as u32
                 {
                     if check.trans_x.to_i32() < view_dist {
                         view_dist = check.trans_x.to_i32();
@@ -412,16 +397,7 @@ fn gun_attack(
         damage = rnd_t() / 6;
     }
 
-    damage_actor(
-        rc,
-        k,
-        level_state,
-        game_state,
-        sound,
-        assets,
-        cast,
-        damage as usize,
-    );
+    damage_actor(rc, k, level_state, game_state, sound, cast, damage as usize);
 }
 
 fn victory_spin(tics: u64, level_state: &mut LevelState) {
@@ -457,8 +433,6 @@ fn t_player(
     game_state: &mut GameState,
     sound: &mut Sound,
     control_state: &mut ControlState,
-    prj: &ProjectionConfig,
-    assets: &Assets,
     cast: &RayCast,
 ) {
     if game_state.victory_flag {
@@ -470,22 +444,21 @@ fn t_player(
     check_weapon_change(rc, game_state, control_state);
 
     if control_state.button_state(Button::Use) {
-        cmd_use(level_state, game_state, sound, assets, cast, control_state);
+        cmd_use(
+            level_state,
+            game_state,
+            sound,
+            &rc.assets,
+            cast,
+            control_state,
+        );
     }
 
     if control_state.button_state(Button::Attack) && !control_state.button_held(Button::Attack) {
         cmd_fire(level_state, game_state, control_state);
     }
 
-    control_movement(
-        k,
-        level_state,
-        game_state,
-        sound,
-        control_state,
-        prj,
-        assets,
-    );
+    control_movement(rc, k, level_state, game_state, sound, control_state);
     if game_state.victory_flag {
         return;
     }
@@ -705,13 +678,12 @@ fn check_weapon_change(
 }
 
 fn control_movement(
+    rc: &RenderContext,
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
     control_state: &mut ControlState,
-    prj: &ProjectionConfig,
-    assets: &Assets,
 ) {
     level_state.thrustspeed = 0;
 
@@ -726,12 +698,11 @@ fn control_movement(
                 angle += ANGLES_I32;
             }
             thrust(
+                rc,
                 k,
                 level_state,
                 game_state,
                 sound,
-                prj,
-                assets,
                 angle,
                 control_state.control.x * MOVE_SCALE,
             ); // move to left
@@ -741,12 +712,11 @@ fn control_movement(
                 angle -= ANGLES_I32;
             }
             thrust(
+                rc,
                 k,
                 level_state,
                 game_state,
                 sound,
-                prj,
-                assets,
                 angle,
                 -control_state.control.x * MOVE_SCALE,
             ); // move to right
@@ -777,12 +747,11 @@ fn control_movement(
     let ob = level_state.obj(k);
     if control_y < 0 {
         thrust(
+            rc,
             k,
             level_state,
             game_state,
             sound,
-            prj,
-            assets,
             ob.angle,
             -control_y * MOVE_SCALE,
         )
@@ -792,12 +761,11 @@ fn control_movement(
             angle -= ANGLES as i32;
         }
         thrust(
+            rc,
             k,
             level_state,
             game_state,
             sound,
-            prj,
-            assets,
             angle,
             control_y * BACKMOVE_SCALE,
         );
@@ -831,12 +799,11 @@ pub fn thrust_player(level_state: &mut LevelState) -> usize {
 }
 
 pub fn thrust(
+    rc: &RenderContext,
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     sound: &mut Sound,
-    prj: &ProjectionConfig,
-    assets: &Assets,
     angle: i32,
     speed_param: i32,
 ) {
@@ -849,14 +816,14 @@ pub fn thrust(
         speed_param
     });
 
-    let x_move = fixed_by_frac(speed, prj.cos(angle as usize));
-    let y_move = -fixed_by_frac(speed, prj.sin(angle as usize));
+    let x_move = fixed_by_frac(speed, rc.projection.cos(angle as usize));
+    let y_move = -fixed_by_frac(speed, rc.projection.sin(angle as usize));
 
     clip_move(
         k,
         level_state,
         sound,
-        assets,
+        &rc.assets,
         x_move.to_i32(),
         y_move.to_i32(),
     );
@@ -871,35 +838,28 @@ pub fn give_points(
     rc: &mut RenderContext,
     game_state: &mut GameState,
     sound: &mut Sound,
-    assets: &Assets,
     points: u32,
 ) {
     game_state.score += points;
     while game_state.score >= game_state.next_extra {
         game_state.next_extra += EXTRA_POINTS;
-        give_extra_man(rc, game_state, sound, assets);
+        give_extra_man(rc, game_state, sound);
     }
     draw_score(rc, &game_state)
 }
 
-pub fn give_extra_man(
-    rc: &mut RenderContext,
-    game_state: &mut GameState,
-    sound: &mut Sound,
-    assets: &Assets,
-) {
+pub fn give_extra_man(rc: &mut RenderContext, game_state: &mut GameState, sound: &mut Sound) {
     if game_state.lives < 9 {
         game_state.lives += 1;
     }
     draw_lives(rc, game_state);
-    sound.play_sound(SoundName::BONUS1UP, assets);
+    sound.play_sound(SoundName::BONUS1UP, &rc.assets);
 }
 
 pub fn get_bonus(
     rc: &mut RenderContext,
     game_state: &mut GameState,
     sound: &mut Sound,
-    assets: &Assets,
     check: &mut StaticType,
 ) {
     match check.item_number {
@@ -907,53 +867,53 @@ pub fn get_bonus(
             if game_state.health == 100 {
                 return;
             }
-            sound.play_sound(SoundName::HEALTH2, assets);
+            sound.play_sound(SoundName::HEALTH2, &rc.assets);
             heal_self(rc, game_state, 25);
         }
         StaticKind::BoKey1 | StaticKind::BoKey2 | StaticKind::BoKey3 | StaticKind::BoKey4 => {
             give_key(rc, game_state, check.item_number);
-            sound.play_sound(SoundName::GETKEY, assets);
+            sound.play_sound(SoundName::GETKEY, &rc.assets);
         }
         StaticKind::BoCross => {
-            sound.play_sound(SoundName::BONUS1, assets);
-            give_points(rc, game_state, sound, assets, 100);
+            sound.play_sound(SoundName::BONUS1, &rc.assets);
+            give_points(rc, game_state, sound, 100);
             game_state.treasure_count += 1;
         }
         StaticKind::BoChalice => {
-            sound.play_sound(SoundName::BONUS2, assets);
-            give_points(rc, game_state, sound, assets, 500);
+            sound.play_sound(SoundName::BONUS2, &rc.assets);
+            give_points(rc, game_state, sound, 500);
             game_state.treasure_count += 1;
         }
         StaticKind::BoBible => {
-            sound.play_sound(SoundName::BONUS3, assets);
-            give_points(rc, game_state, sound, assets, 1000);
+            sound.play_sound(SoundName::BONUS3, &rc.assets);
+            give_points(rc, game_state, sound, 1000);
             game_state.treasure_count += 1;
         }
         StaticKind::BoCrown => {
-            sound.play_sound(SoundName::BONUS4, assets);
-            give_points(rc, game_state, sound, assets, 5000);
+            sound.play_sound(SoundName::BONUS4, &rc.assets);
+            give_points(rc, game_state, sound, 5000);
             game_state.treasure_count += 1;
         }
         StaticKind::BoClip => {
             if game_state.ammo == 99 {
                 return;
             }
-            sound.play_sound(SoundName::GETAMMO, assets);
+            sound.play_sound(SoundName::GETAMMO, &rc.assets);
             give_ammo(rc, game_state, 8);
         }
         StaticKind::BoClip2 => {
             if game_state.ammo == 99 {
                 return;
             }
-            sound.play_sound(SoundName::GETAMMO, assets);
+            sound.play_sound(SoundName::GETAMMO, &rc.assets);
             give_ammo(rc, game_state, 4);
         }
         StaticKind::BoMachinegun => {
-            sound.play_sound(SoundName::GETMACHINE, assets);
+            sound.play_sound(SoundName::GETMACHINE, &rc.assets);
             give_weapon(rc, game_state, WeaponType::MachineGun);
         }
         StaticKind::BoChaingun => {
-            sound.play_sound(SoundName::GETGATLING, assets);
+            sound.play_sound(SoundName::GETGATLING, &rc.assets);
             give_weapon(rc, game_state, WeaponType::ChainGun);
 
             status_draw_pic(rc, 17, 4, GraphicNum::GOTGATLINGPIC);
@@ -961,31 +921,31 @@ pub fn get_bonus(
             game_state.got_gat_gun = true;
         }
         StaticKind::BoFullheal => {
-            sound.play_sound(SoundName::BONUS1UP, assets);
+            sound.play_sound(SoundName::BONUS1UP, &rc.assets);
             heal_self(rc, game_state, 99);
             give_ammo(rc, game_state, 25);
-            give_extra_man(rc, game_state, sound, assets);
+            give_extra_man(rc, game_state, sound);
             game_state.treasure_count += 1;
         }
         StaticKind::BoFood => {
             if game_state.health == 100 {
                 return;
             }
-            sound.play_sound(SoundName::HEALTH1, assets);
+            sound.play_sound(SoundName::HEALTH1, &rc.assets);
             heal_self(rc, game_state, 10);
         }
         StaticKind::BoAlpo => {
             if game_state.health == 100 {
                 return;
             }
-            sound.play_sound(SoundName::HEALTH1, assets);
+            sound.play_sound(SoundName::HEALTH1, &rc.assets);
             heal_self(rc, game_state, 4);
         }
         StaticKind::BoGibs => {
             if game_state.health > 10 {
                 return;
             }
-            sound.play_sound(SoundName::SLURPIE, assets);
+            sound.play_sound(SoundName::SLURPIE, &rc.assets);
             heal_self(rc, game_state, 1);
         }
         StaticKind::BoSpear => {
