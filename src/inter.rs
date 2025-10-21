@@ -8,7 +8,6 @@ use crate::loader::Loader;
 use crate::menu::{BORDER_COLOR, READ_HCOLOR, clear_ms_screen, draw_stripes};
 use crate::play::draw_all_play_border;
 use crate::rc::RenderContext;
-use crate::sd::Sound;
 use crate::start::quit;
 use crate::text::end_text;
 use crate::us1::{line_input, measure_string, print};
@@ -329,11 +328,10 @@ static PAR_TIMES: [ParTime; 60] = [
 pub async fn victory(
     rc: &mut RenderContext,
     game_state: &mut GameState,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     loader: &dyn Loader,
 ) {
-    sound.play_music(Music::URAHERO, &rc.assets, loader);
+    rc.sound.play_music(Music::URAHERO, &rc.assets, loader);
     clear_split_vwb(win_state);
 
     rc.bar(0, 0, 320, 200 - STATUS_LINES, 127);
@@ -435,7 +433,6 @@ pub fn clear_split_vwb(win_state: &mut WindowState) {
 
 pub async fn check_highscore(
     rc: &mut RenderContext,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     loader: &dyn Loader,
     wolf_config: &mut WolfConfig,
@@ -454,7 +451,7 @@ pub async fn check_highscore(
         }
     }
 
-    sound.play_music(Music::ROSTER, &rc.assets, loader);
+    rc.sound.play_music(Music::ROSTER, &rc.assets, loader);
 
     draw_high_scores(rc, win_state, &wolf_config.high_scores);
     rc.activate_buffer(rc.buffer_offset()).await;
@@ -549,7 +546,6 @@ fn to_fixed_width_string(u: u32) -> String {
 pub async fn level_completed(
     rc: &mut RenderContext,
     game_state: &mut GameState,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     loader: &dyn Loader,
 ) {
@@ -557,7 +553,7 @@ pub async fn level_completed(
 
     clear_split_vwb(win_state);
     rc.bar(0, 0, 320, 200 - STATUS_LINES, 127);
-    sound.play_music(Music::ENDLEVEL, &rc.assets, loader);
+    rc.sound.play_music(Music::ENDLEVEL, &rc.assets, loader);
 
     rc.clear_keys_down();
     rc.start_ack();
@@ -631,15 +627,14 @@ pub async fn level_completed(
                 let x = 36 - str.len() * 2;
                 write(rc, x, 7, &str);
                 if i % (PAR_AMOUNT / 10) == 0 {
-                    sound.play_sound(SoundName::ENDBONUS1, &rc.assets);
+                    rc.sound.play_sound(SoundName::ENDBONUS1, &rc.assets);
                 }
-                while sound.is_any_sound_playing() {
+                while rc.sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(rc);
                     if rc.check_ack() {
                         return done_normal_level_complete(
                             rc,
                             game_state,
-                            sound,
                             time_left,
                             kill_ratio,
                             secret_ratio,
@@ -654,7 +649,6 @@ pub async fn level_completed(
                     return done_normal_level_complete(
                         rc,
                         game_state,
-                        sound,
                         time_left,
                         kill_ratio,
                         secret_ratio,
@@ -665,14 +659,13 @@ pub async fn level_completed(
                 }
             }
 
-            sound.play_sound(SoundName::ENDBONUS2, &rc.assets);
-            while sound.is_any_sound_playing() {
+            rc.sound.play_sound(SoundName::ENDBONUS2, &rc.assets);
+            while rc.sound.is_any_sound_playing() {
                 bj_breather.poll_breathe(rc);
                 if rc.check_ack() {
                     return done_normal_level_complete(
                         rc,
                         game_state,
-                        sound,
                         time_left,
                         kill_ratio,
                         secret_ratio,
@@ -690,14 +683,13 @@ pub async fn level_completed(
             let x = RATIO_XX - str.len() * 2;
             write(rc, x, 14, &str);
             if i % 10 == 0 {
-                sound.play_sound(SoundName::ENDBONUS1, &rc.assets);
-                while sound.is_any_sound_playing() {
+                rc.sound.play_sound(SoundName::ENDBONUS1, &rc.assets);
+                while rc.sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(rc);
                     if rc.check_ack() {
                         return done_normal_level_complete(
                             rc,
                             game_state,
-                            sound,
                             time_left,
                             kill_ratio,
                             secret_ratio,
@@ -712,7 +704,6 @@ pub async fn level_completed(
                 return done_normal_level_complete(
                     rc,
                     game_state,
-                    sound,
                     time_left,
                     kill_ratio,
                     secret_ratio,
@@ -727,19 +718,18 @@ pub async fn level_completed(
             let str = bonus.to_string();
             let x = (RATIO_XX - 1) - str.len() * 2;
             write(rc, x, 7, &str);
-            sound.play_sound(SoundName::PERCENT100, &rc.assets);
+            rc.sound.play_sound(SoundName::PERCENT100, &rc.assets);
         } else if kill_ratio == 0 {
-            sound.force_play_sound(SoundName::NOBONUS, &rc.assets);
+            rc.sound.force_play_sound(SoundName::NOBONUS, &rc.assets);
         } else {
-            sound.play_sound(SoundName::ENDBONUS2, &rc.assets);
+            rc.sound.play_sound(SoundName::ENDBONUS2, &rc.assets);
         }
-        while sound.is_any_sound_playing() {
+        while rc.sound.is_any_sound_playing() {
             bj_breather.poll_breathe(rc);
             if rc.check_ack() {
                 return done_normal_level_complete(
                     rc,
                     game_state,
-                    sound,
                     time_left,
                     kill_ratio,
                     secret_ratio,
@@ -756,14 +746,13 @@ pub async fn level_completed(
             let x = RATIO_XX - str.len() * 2;
             write(rc, x, 16, &str);
             if i % 10 == 0 {
-                sound.play_sound(SoundName::ENDBONUS1, &rc.assets);
-                while sound.is_any_sound_playing() {
+                rc.sound.play_sound(SoundName::ENDBONUS1, &rc.assets);
+                while rc.sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(rc);
                     if rc.check_ack() {
                         return done_normal_level_complete(
                             rc,
                             game_state,
-                            sound,
                             time_left,
                             kill_ratio,
                             secret_ratio,
@@ -778,7 +767,6 @@ pub async fn level_completed(
                 return done_normal_level_complete(
                     rc,
                     game_state,
-                    sound,
                     time_left,
                     kill_ratio,
                     secret_ratio,
@@ -793,19 +781,18 @@ pub async fn level_completed(
             let str = bonus.to_string();
             let x = (RATIO_XX - 1) - str.len() * 2;
             write(rc, x, 7, &str);
-            sound.play_sound(SoundName::PERCENT100, &rc.assets);
+            rc.sound.play_sound(SoundName::PERCENT100, &rc.assets);
         } else if secret_ratio == 0 {
-            sound.force_play_sound(SoundName::NOBONUS, &rc.assets);
+            rc.sound.force_play_sound(SoundName::NOBONUS, &rc.assets);
         } else {
-            sound.play_sound(SoundName::ENDBONUS2, &rc.assets);
+            rc.sound.play_sound(SoundName::ENDBONUS2, &rc.assets);
         }
-        while sound.is_any_sound_playing() {
+        while rc.sound.is_any_sound_playing() {
             bj_breather.poll_breathe(rc);
             if rc.check_ack() {
                 return done_normal_level_complete(
                     rc,
                     game_state,
-                    sound,
                     time_left,
                     kill_ratio,
                     secret_ratio,
@@ -822,14 +809,13 @@ pub async fn level_completed(
             let x = RATIO_XX - str.len() * 2;
             write(rc, x, 18, &str);
             if i % 10 == 0 {
-                sound.play_sound(SoundName::ENDBONUS1, &rc.assets);
-                while sound.is_any_sound_playing() {
+                rc.sound.play_sound(SoundName::ENDBONUS1, &rc.assets);
+                while rc.sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(rc);
                     if rc.check_ack() {
                         return done_normal_level_complete(
                             rc,
                             game_state,
-                            sound,
                             time_left,
                             kill_ratio,
                             secret_ratio,
@@ -844,7 +830,6 @@ pub async fn level_completed(
                 return done_normal_level_complete(
                     rc,
                     game_state,
-                    sound,
                     time_left,
                     kill_ratio,
                     secret_ratio,
@@ -859,19 +844,18 @@ pub async fn level_completed(
             let str = bonus.to_string();
             let x = (RATIO_XX - 1) - str.len() * 2;
             write(rc, x, 7, &str);
-            sound.play_sound(SoundName::PERCENT100, &rc.assets);
+            rc.sound.play_sound(SoundName::PERCENT100, &rc.assets);
         } else if treasure_ratio == 0 {
-            sound.force_play_sound(SoundName::NOBONUS, &rc.assets);
+            rc.sound.force_play_sound(SoundName::NOBONUS, &rc.assets);
         } else {
-            sound.play_sound(SoundName::ENDBONUS2, &rc.assets);
+            rc.sound.play_sound(SoundName::ENDBONUS2, &rc.assets);
         }
-        while sound.is_any_sound_playing() {
+        while rc.sound.is_any_sound_playing() {
             bj_breather.poll_breathe(rc);
             if rc.check_ack() {
                 return done_normal_level_complete(
                     rc,
                     game_state,
-                    sound,
                     time_left,
                     kill_ratio,
                     secret_ratio,
@@ -885,7 +869,6 @@ pub async fn level_completed(
         return done_normal_level_complete(
             rc,
             game_state,
-            sound,
             time_left,
             kill_ratio,
             secret_ratio,
@@ -900,7 +883,7 @@ pub async fn level_completed(
     write(rc, 10, 16, "15000 bonus!");
     rc.fade_in().await;
 
-    give_points(rc, game_state, sound, 15000);
+    give_points(rc, game_state, 15000);
 
     return finish_level_complete(rc, game_state, &mut bj_breather).await;
 }
@@ -908,7 +891,6 @@ pub async fn level_completed(
 async fn done_normal_level_complete(
     rc: &mut RenderContext,
     game_state: &mut GameState,
-    sound: &mut Sound,
     time_left: i32,
     kill_ratio: i32,
     secret_ratio: i32,
@@ -942,7 +924,7 @@ async fn done_normal_level_complete(
     let x = 36 - str.len() * 2;
     write(rc, x, 7, &str);
 
-    give_points(rc, game_state, sound, bonus);
+    give_points(rc, game_state, bonus);
 
     // SAVE RATIO INFORMATION FOR ENDGAME
     game_state.level_ratios[game_state.map_on].kill = kill_ratio;

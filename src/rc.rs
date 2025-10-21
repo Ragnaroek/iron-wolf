@@ -11,6 +11,7 @@ use crate::assets::{Font, GAMEPAL, Graphic, GraphicNum, TileData, WolfVariant};
 use crate::config::WolfConfig;
 use crate::def::{Assets, Button, NUM_BUTTONS, NUM_MOUSE_BUTTONS};
 use crate::play::ProjectionConfig;
+use crate::sd::Sound;
 use crate::start::quit;
 use crate::time::{self, Ticker, get_count};
 use crate::vl;
@@ -85,6 +86,7 @@ pub struct RenderContext {
     pub variant: &'static WolfVariant,
     pub input: Input,
     pub projection: ProjectionConfig,
+    pub sound: Sound,
 
     prev_input: Option<Input>,
 }
@@ -163,6 +165,7 @@ impl RenderContext {
         variant: &'static WolfVariant,
         input: Input,
         projection: ProjectionConfig,
+        sound: Sound,
     ) -> RenderContext {
         RenderContext {
             vga,
@@ -178,6 +181,7 @@ impl RenderContext {
             variant,
             input,
             projection,
+            sound,
             prev_input: None,
         }
     }

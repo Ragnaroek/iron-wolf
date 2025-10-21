@@ -1116,7 +1116,6 @@ pub fn damage_actor(
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     cast: &RayCast,
     damage_param: usize,
 ) {
@@ -1130,10 +1129,10 @@ pub fn damage_actor(
 
     level_state.update_obj(k, |obj| obj.hitpoints -= damage as i32);
     if level_state.obj(k).hitpoints <= 0 {
-        kill_actor(rc, k, level_state, game_state, sound, cast);
+        kill_actor(rc, k, level_state, game_state, cast);
     } else {
         if level_state.obj(k).flags & FL_ATTACKMODE == 0 {
-            first_sighting(k, level_state, sound, &rc.assets, cast); // put into combat mode
+            first_sighting(k, level_state, &mut rc.sound, &rc.assets, cast); // put into combat mode
         }
 
         let obj = level_state.mut_obj(k);
@@ -1176,7 +1175,6 @@ fn kill_actor(
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     cast: &RayCast,
 ) {
     {
@@ -1191,22 +1189,22 @@ fn kill_actor(
 
         match level_state.obj(k).class {
             ClassType::Guard => {
-                give_points(rc, game_state, sound, 100);
+                give_points(rc, game_state, 100);
                 new_state(level_state.mut_obj(k), &S_GRDDIE1);
                 place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
             }
             ClassType::Officer => {
-                give_points(rc, game_state, sound, 400);
+                give_points(rc, game_state, 400);
                 new_state(level_state.mut_obj(k), &S_OFCDIE1);
                 place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
             }
             ClassType::Mutant => {
-                give_points(rc, game_state, sound, 700);
+                give_points(rc, game_state, 700);
                 new_state(level_state.mut_obj(k), &S_MUTDIE1);
                 place_item_type(level_state, StaticKind::BoClip2, tile_x, tile_y);
             }
             ClassType::SS => {
-                give_points(rc, game_state, sound, 500);
+                give_points(rc, game_state, 500);
                 new_state(level_state.mut_obj(k), &S_SSDIE1);
                 if game_state.best_weapon < WeaponType::MachineGun {
                     place_item_type(level_state, StaticKind::BoMachinegun, tile_x, tile_y);
@@ -1215,11 +1213,11 @@ fn kill_actor(
                 }
             }
             ClassType::Dog => {
-                give_points(rc, game_state, sound, 200);
+                give_points(rc, game_state, 200);
                 new_state(level_state.mut_obj(k), &S_DOGDIE1);
             }
             ClassType::Boss => {
-                give_points(rc, game_state, sound, 5000);
+                give_points(rc, game_state, 5000);
                 new_state(level_state.mut_obj(k), &S_BOSSDIE1);
                 place_item_type(level_state, StaticKind::BoKey1, tile_x, tile_y);
             }
@@ -1233,36 +1231,36 @@ fn kill_actor(
                 todo!("kill fat");
             }
             ClassType::Schabb => {
-                give_points(rc, game_state, sound, 5000);
+                give_points(rc, game_state, 5000);
                 game_state.kill_x = level_state.player().x as usize;
                 game_state.kill_y = level_state.player().y as usize;
-                if sound.digi_mode() != DigiMode::Off {
+                if rc.sound.digi_mode() != DigiMode::Off {
                     new_state(level_state.mut_obj(k), &S_SCHABBDIE1_140);
                 } else {
                     new_state(level_state.mut_obj(k), &S_SCHABBDIE1_10);
                 }
-                do_death_scream(k, level_state, game_state, sound, &rc.assets, cast);
+                do_death_scream(k, level_state, game_state, &mut rc.sound, &rc.assets, cast);
             }
             ClassType::Fake => {
-                give_points(rc, game_state, sound, 2000);
+                give_points(rc, game_state, 2000);
                 new_state(level_state.mut_obj(k), &S_FAKEDIE1);
             }
             ClassType::MechaHitler => {
-                give_points(rc, game_state, sound, 5000);
+                give_points(rc, game_state, 5000);
                 new_state(level_state.mut_obj(k), &S_MECHADIE1);
             }
             ClassType::RealHitler => {
-                give_points(rc, game_state, sound, 5000);
+                give_points(rc, game_state, 5000);
                 game_state.kill_x = level_state.player().x as usize;
                 game_state.kill_y = level_state.player().y as usize;
 
-                if sound.digi_mode() != DigiMode::Off {
+                if rc.sound.digi_mode() != DigiMode::Off {
                     new_state(level_state.mut_obj(k), &S_HITLERDIE1_140);
                 } else {
                     new_state(level_state.mut_obj(k), &S_HITLERDIE1_5);
                 }
 
-                do_death_scream(k, level_state, game_state, sound, &rc.assets, cast);
+                do_death_scream(k, level_state, game_state, &mut rc.sound, &rc.assets, cast);
             }
             _ => { /* ignore kill on this class of obj */ }
         }

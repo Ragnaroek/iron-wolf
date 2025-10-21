@@ -26,7 +26,6 @@ use crate::play::{
     draw_play_screen, finish_palette_shifts, new_control_state, play_loop, start_music,
 };
 use crate::rc::{FizzleFadeAbortable, Input, InputMode, RenderContext};
-use crate::sd::Sound;
 use crate::user::{HighScore, init_rnd_t};
 use crate::util::DataReader;
 use crate::vh::vw_fade_out;
@@ -53,7 +52,6 @@ pub async fn game_loop(
     iw_config: &IWConfig,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     cast_param: RayCast,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
@@ -86,7 +84,7 @@ pub async fn game_loop(
 
         win_state.in_game = true;
 
-        start_music(game_state, sound, &rc.assets, loader);
+        start_music(game_state, &mut rc.sound, &rc.assets, loader);
 
         if !game_state.died {
             preload_graphics(rc, iw_config, &game_state).await;
@@ -108,7 +106,6 @@ pub async fn game_loop(
             win_state,
             menu_state,
             &mut control_state,
-            sound,
             cast,
             loader,
             false,
@@ -129,7 +126,7 @@ pub async fn game_loop(
                 draw_keys(rc, &game_state);
                 vw_fade_out(&rc.vga).await;
 
-                level_completed(rc, game_state, sound, win_state, loader).await;
+                level_completed(rc, game_state, win_state, loader).await;
 
                 game_state.old_score = game_state.score;
 
@@ -148,7 +145,7 @@ pub async fn game_loop(
             PlayState::Died => {
                 let player = level_state.player();
                 cast.init_ray_cast_consts(&rc.projection, player, game_state.push_wall_pos);
-                died(rc, level_state, game_state, &mut cast, sound).await;
+                died(rc, level_state, game_state, &mut cast).await;
                 if game_state.lives > -1 {
                     continue 'game_loop;
                 }
@@ -157,7 +154,6 @@ pub async fn game_loop(
 
                 check_highscore(
                     rc,
-                    sound,
                     win_state,
                     loader,
                     wolf_config,
@@ -172,11 +168,10 @@ pub async fn game_loop(
             PlayState::Victorious => {
                 rc.fade_out().await;
 
-                victory(rc, game_state, sound, win_state, loader).await;
+                victory(rc, game_state, win_state, loader).await;
 
                 check_highscore(
                     rc,
-                    sound,
                     win_state,
                     loader,
                     wolf_config,
@@ -210,10 +205,9 @@ async fn died(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     cast: &mut RayCast,
-    sound: &mut Sound,
 ) {
     game_state.weapon = None; // take away weapon
-    sound.play_sound(SoundName::PLAYERDEATH, &rc.assets);
+    rc.sound.play_sound(SoundName::PLAYERDEATH, &rc.assets);
 
     let player = level_state.player();
 
@@ -276,7 +270,6 @@ async fn died(
                 game_state,
                 level_state,
                 cast,
-                sound,
                 rc.input.mode == InputMode::DemoPlayback,
             )
             .await;
@@ -308,7 +301,6 @@ async fn died(
                 game_state,
                 level_state,
                 cast,
-                sound,
                 rc.input.mode == InputMode::DemoPlayback,
             )
             .await;
@@ -1135,7 +1127,6 @@ pub async fn play_demo(
     iw_config: &IWConfig,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
-    sound: &mut Sound,
     cast: RayCast,
     loader: &dyn Loader,
     demo_num: usize,
@@ -1158,7 +1149,7 @@ pub async fn play_demo(
 
     let mut level_state =
         setup_game_level(&mut game_state, &rc.assets, true).expect("setup game level");
-    start_music(&mut game_state, sound, &rc.assets, loader);
+    start_music(&mut game_state, &mut rc.sound, &rc.assets, loader);
 
     game_state.fizzle_in = true;
     let mut control_state = new_control_state();
@@ -1171,7 +1162,6 @@ pub async fn play_demo(
         win_state,
         menu_state,
         &mut control_state,
-        sound,
         cast,
         loader,
         benchmark,

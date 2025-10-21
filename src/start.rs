@@ -33,7 +33,6 @@ use crate::menu::{
 };
 use crate::play::{self, DEMO_TICS, ProjectionConfig, draw_play_border};
 use crate::rc::{Input, RenderContext};
-use crate::sd::Sound;
 use crate::time;
 use crate::us1::c_print;
 use crate::util::{DataReader, DataWriter};
@@ -83,7 +82,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     let rt = tokio_runtime()?;
     let rt_ref = Arc::new(rt);
 
-    let mut sound = sd::startup(rt_ref.clone())?;
+    let sound = sd::startup(rt_ref.clone())?;
     let assets = assets::load_assets(&sound, &loader)?;
     let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, patch_config)?;
 
@@ -122,6 +121,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
                 loader.variant(),
                 input,
                 projection,
+                sound,
             );
 
             let (_, abort, benchmark_result) = play_demo(
@@ -130,7 +130,6 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
                 &iw_config,
                 &mut win_state,
                 &mut menu_state,
-                &mut sound,
                 cast,
                 &loader,
                 which_demo,
@@ -170,6 +169,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
                 loader.variant(),
                 input,
                 projection,
+                sound,
             );
 
             init_game(&mut rc, &mut win_state).await;
@@ -178,7 +178,6 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
                 &mut rc,
                 &mut wolf_config,
                 &iw_config,
-                &mut sound,
                 cast,
                 &mut win_state,
                 &mut menu_state,
@@ -275,13 +274,13 @@ async fn demo_loop(
     rc: &mut RenderContext,
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
-    sound: &mut Sound,
     cast_param: RayCast,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
 ) {
-    sound.play_music(intro_song(loader.variant()), &rc.assets, loader);
+    rc.sound
+        .play_music(intro_song(loader.variant()), &rc.assets, loader);
 
     if !iw_config.options.no_wait {
         pg_13(rc).await;
@@ -322,7 +321,6 @@ async fn demo_loop(
                 iw_config,
                 win_state,
                 menu_state,
-                sound,
                 cast,
                 loader,
                 last_demo,
@@ -352,7 +350,6 @@ async fn demo_loop(
             iw_config,
             &mut level_state,
             &mut game_state,
-            sound,
             cast,
             win_state,
             menu_state,
@@ -368,7 +365,6 @@ async fn demo_loop(
             iw_config,
             &mut level_state,
             &mut game_state,
-            sound,
             cast,
             win_state,
             menu_state,

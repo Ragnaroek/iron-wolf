@@ -2805,7 +2805,6 @@ fn t_projectile(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     _: &mut ControlState,
     cast: &RayCast,
 ) {
@@ -2835,7 +2834,12 @@ fn t_projectile(
 
     if !projectile_try_move(k, level_state) {
         if level_state.obj(k).class == ClassType::Rocket {
-            sound.play_sound_loc_actor(SoundName::MISSILEHIT, &rc.assets, cast, level_state.obj(k));
+            rc.sound.play_sound_loc_actor(
+                SoundName::MISSILEHIT,
+                &rc.assets,
+                cast,
+                level_state.obj(k),
+            );
             level_state.mut_obj(k).state = Some(&S_BOOM1);
         } else {
             level_state.mut_obj(k).state = None; // mark for removal
@@ -2888,11 +2892,18 @@ fn t_path(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     _: &mut ControlState,
     cast: &RayCast,
 ) {
-    if sight_player(k, level_state, game_state, sound, &rc.assets, cast, tics) {
+    if sight_player(
+        k,
+        level_state,
+        game_state,
+        &mut rc.sound,
+        &rc.assets,
+        cast,
+        tics,
+    ) {
         return;
     }
 
@@ -2951,7 +2962,6 @@ fn t_dog_chase(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut Sound,
     _: &mut ControlState,
     _: &RayCast,
 ) {
@@ -3022,11 +3032,10 @@ fn t_bite(
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     _: &mut ControlState,
     _: &RayCast,
 ) {
-    sound.play_sound(SoundName::DOGATTACK, &rc.assets);
+    rc.sound.play_sound(SoundName::DOGATTACK, &rc.assets);
 
     let mut dx = level_state.player().x - level_state.obj(k).x;
     if dx < 0 {
@@ -3085,7 +3094,6 @@ fn t_stand(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     _: &mut ControlState,
     rc_consts: &RayCast,
 ) {
@@ -3093,7 +3101,7 @@ fn t_stand(
         k,
         level_state,
         game_state,
-        sound,
+        &mut rc.sound,
         &rc.assets,
         rc_consts,
         tics,
@@ -3106,7 +3114,6 @@ fn t_chase(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut Sound,
     _: &mut ControlState,
     _: &RayCast,
 ) {
@@ -3212,7 +3219,6 @@ fn t_ghosts(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut Sound,
     _: &mut ControlState,
     _: &RayCast,
 ) {
@@ -3258,7 +3264,6 @@ fn t_schabb(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut Sound,
     _: &mut ControlState,
     _: &RayCast,
 ) {
@@ -3348,7 +3353,6 @@ fn t_schabb_throw(
     _: u64,
     level_state: &mut LevelState,
     _: &mut GameState,
-    sound: &mut Sound,
     _: &mut ControlState,
     cast: &RayCast,
 ) {
@@ -3383,7 +3387,8 @@ fn t_schabb_throw(
 
     level_state.actors.add_obj(obj);
 
-    sound.play_sound_loc_actor(SoundName::SCHABBSTHROW, &rc.assets, cast, &obj);
+    rc.sound
+        .play_sound_loc_actor(SoundName::SCHABBSTHROW, &rc.assets, cast, &obj);
 }
 
 fn t_fake(
@@ -3392,7 +3397,6 @@ fn t_fake(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut Sound,
     _: &mut ControlState,
     _: &RayCast,
 ) {
@@ -3450,7 +3454,6 @@ fn t_fake_fire(
     _: u64,
     level_state: &mut LevelState,
     _: &mut GameState,
-    sound: &mut Sound,
     _: &mut ControlState,
     cast: &RayCast,
 ) {
@@ -3485,7 +3488,8 @@ fn t_fake_fire(
 
     level_state.actors.add_obj(obj);
 
-    sound.play_sound_loc_actor(SoundName::FLAMETHROWER, &rc.assets, cast, &obj);
+    rc.sound
+        .play_sound_loc_actor(SoundName::FLAMETHROWER, &rc.assets, cast, &obj);
 }
 
 fn a_hitler_morph(
@@ -3494,7 +3498,6 @@ fn a_hitler_morph(
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut Sound,
     _: &mut ControlState,
     _: &RayCast,
 ) {
@@ -3531,13 +3534,13 @@ fn a_mecha_sound(
     _: u64,
     level_state: &mut LevelState,
     _: &mut GameState,
-    sound: &mut Sound,
     _: &mut ControlState,
     cast: &RayCast,
 ) {
     let obj = level_state.obj(k);
     if level_state.area_by_player[obj.area_number] {
-        sound.play_sound_loc_actor(SoundName::MECHSTEP, &rc.assets, cast, obj);
+        rc.sound
+            .play_sound_loc_actor(SoundName::MECHSTEP, &rc.assets, cast, obj);
     }
 }
 
@@ -3547,11 +3550,11 @@ fn a_slurpie(
     _: u64,
     level_state: &mut LevelState,
     _: &mut GameState,
-    sound: &mut Sound,
     _: &mut ControlState,
     cast: &RayCast,
 ) {
-    sound.play_sound_loc_actor(SoundName::SLURPIE, &rc.assets, cast, level_state.obj(k));
+    rc.sound
+        .play_sound_loc_actor(SoundName::SLURPIE, &rc.assets, cast, level_state.obj(k));
 }
 
 pub fn spawn_dead_guard(
@@ -3839,7 +3842,6 @@ fn t_shoot(
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     _: &mut ControlState,
     _: &RayCast,
 ) {
@@ -3893,22 +3895,22 @@ fn t_shoot(
     let obj = level_state.obj(k);
     match obj.class {
         ClassType::SS => {
-            sound.play_sound(SoundName::SSFIRE, &rc.assets);
+            rc.sound.play_sound(SoundName::SSFIRE, &rc.assets);
         }
         ClassType::Gift | ClassType::Fat => {
-            sound.play_sound(SoundName::MISSILEFIRE, &rc.assets);
+            rc.sound.play_sound(SoundName::MISSILEFIRE, &rc.assets);
         }
         ClassType::MechaHitler | ClassType::RealHitler | ClassType::Boss => {
-            sound.play_sound(SoundName::BOSSFIRE, &rc.assets);
+            rc.sound.play_sound(SoundName::BOSSFIRE, &rc.assets);
         }
         ClassType::Schabb => {
-            sound.play_sound(SoundName::SCHABBSTHROW, &rc.assets);
+            rc.sound.play_sound(SoundName::SCHABBSTHROW, &rc.assets);
         }
         ClassType::Fake => {
-            sound.play_sound(SoundName::FLAMETHROWER, &rc.assets);
+            rc.sound.play_sound(SoundName::FLAMETHROWER, &rc.assets);
         }
         _ => {
-            sound.play_sound(SoundName::NAZIFIRE, &rc.assets);
+            rc.sound.play_sound(SoundName::NAZIFIRE, &rc.assets);
         }
     }
 }
@@ -3919,11 +3921,17 @@ fn a_death_scream(
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     _: &mut ControlState,
     rc_consts: &RayCast,
 ) {
-    do_death_scream(k, level_state, game_state, sound, &rc.assets, rc_consts);
+    do_death_scream(
+        k,
+        level_state,
+        game_state,
+        &mut rc.sound,
+        &rc.assets,
+        rc_consts,
+    );
 }
 
 pub fn do_death_scream(
@@ -4130,7 +4138,6 @@ fn t_bj_run(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut Sound,
     _: &mut ControlState,
     _: &RayCast,
 ) {
@@ -4164,7 +4171,6 @@ fn t_bj_jump(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut Sound,
     _: &mut ControlState,
     _: &RayCast,
 ) {
@@ -4178,12 +4184,12 @@ fn t_bj_yell(
     _: u64,
     level_state: &mut LevelState,
     _: &mut GameState,
-    sound: &mut Sound,
     _: &mut ControlState,
     rc_consts: &RayCast,
 ) {
     let obj = level_state.obj(k);
-    sound.play_sound_loc_actor(SoundName::YEAH, &rc.assets, rc_consts, obj);
+    rc.sound
+        .play_sound_loc_actor(SoundName::YEAH, &rc.assets, rc_consts, obj);
 }
 
 fn t_bj_done(
@@ -4192,7 +4198,6 @@ fn t_bj_done(
     _: u64,
     _: &mut LevelState,
     game_state: &mut GameState,
-    _: &mut Sound,
     _: &mut ControlState,
     _: &RayCast,
 ) {
@@ -4205,7 +4210,6 @@ fn a_start_death_cam(
     _: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     _: &mut ControlState,
     _: &RayCast,
 ) {
@@ -4274,14 +4278,14 @@ fn a_start_death_cam(
     let obj = level_state.mut_obj(k);
     match obj.class {
         ClassType::Schabb => {
-            if sound.digi_mode() != DigiMode::Off {
+            if rc.sound.digi_mode() != DigiMode::Off {
                 new_state(level_state.mut_obj(k), &S_SCHABBDEATHCAM_140);
             } else {
                 new_state(level_state.mut_obj(k), &S_SCHABBDEATHCAM_10);
             }
         }
         ClassType::RealHitler => {
-            if sound.digi_mode() != DigiMode::Off {
+            if rc.sound.digi_mode() != DigiMode::Off {
                 new_state(level_state.mut_obj(k), &S_HITLERDEATHCAM_140);
             } else {
                 new_state(level_state.mut_obj(k), &S_HITLERDEATHCAM_5);

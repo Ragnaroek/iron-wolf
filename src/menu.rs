@@ -12,7 +12,7 @@ use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::play::BUTTON_JOY;
 use crate::rc::{ControlDirection, ControlInfo, RenderContext};
-use crate::sd::{DigiMode, MusicMode, Sound, SoundMode};
+use crate::sd::{DigiMode, MusicMode, SoundMode};
 use crate::start::{load_the_game, new_view_size, quit, save_the_game, show_view_size};
 use crate::text::help_screens;
 use crate::us1::{c_print, line_input, print};
@@ -812,14 +812,13 @@ pub async fn control_panel(
     iw_config: &IWConfig,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     cast: RayCast,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
     scan: NumCode,
 ) -> GameStateUpdate {
-    sound.play_music(Music::WONDERIN, &rc.assets, loader);
+    rc.sound.play_music(Music::WONDERIN, &rc.assets, loader);
     setup_control_panel(win_state, menu_state);
 
     let mut cast_return = cast;
@@ -827,7 +826,7 @@ pub async fn control_panel(
     let f_key_handle = match scan {
         NumCode::F1 => {
             if loader.variant().help_text_lump_id.is_some() {
-                Some(cp_read_this(rc, sound, loader).await)
+                Some(cp_read_this(rc, loader).await)
             } else {
                 None
             }
@@ -838,7 +837,6 @@ pub async fn control_panel(
                 iw_config,
                 level_state,
                 game_state,
-                sound,
                 win_state,
                 menu_state,
                 loader,
@@ -851,30 +849,21 @@ pub async fn control_panel(
                 iw_config,
                 level_state,
                 game_state,
-                sound,
                 win_state,
                 menu_state,
                 loader,
             )
             .await,
         ),
-        NumCode::F4 => Some(cp_sound(rc, sound, win_state, menu_state, loader).await),
+        NumCode::F4 => Some(cp_sound(rc, win_state, menu_state, loader).await),
         NumCode::F5 => {
-            let (handle, cast) = cp_change_view(
-                rc,
-                wolf_config,
-                iw_config,
-                sound,
-                cast_return,
-                win_state,
-                loader,
-            )
-            .await;
+            let (handle, cast) =
+                cp_change_view(rc, wolf_config, iw_config, cast_return, win_state, loader).await;
 
             cast_return = cast;
             Some(handle)
         }
-        NumCode::F6 => Some(cp_control(rc, sound, win_state, menu_state).await),
+        NumCode::F6 => Some(cp_control(rc, win_state, menu_state).await),
         _ => None,
     };
     if let Some(handle) = f_key_handle {
@@ -900,20 +889,19 @@ pub async fn control_panel(
         let menu_opt = menu_stack.last();
         if let Some(menu) = menu_opt {
             let handle = match menu {
-                Menu::Top => cp_main_menu(rc, sound, win_state, menu_state).await,
+                Menu::Top => cp_main_menu(rc, win_state, menu_state).await,
                 Menu::MainMenu(item) => match item {
                     MainMenuItem::NewGame => {
-                        cp_new_game(rc, game_state, sound, win_state, menu_state).await
+                        cp_new_game(rc, game_state, win_state, menu_state).await
                     }
-                    MainMenuItem::Sound => cp_sound(rc, sound, win_state, menu_state, loader).await,
-                    MainMenuItem::Control => cp_control(rc, sound, win_state, menu_state).await,
+                    MainMenuItem::Sound => cp_sound(rc, win_state, menu_state, loader).await,
+                    MainMenuItem::Control => cp_control(rc, win_state, menu_state).await,
                     MainMenuItem::LoadGame => {
                         cp_load_game(
                             rc,
                             iw_config,
                             level_state,
                             game_state,
-                            sound,
                             win_state,
                             menu_state,
                             loader,
@@ -926,7 +914,6 @@ pub async fn control_panel(
                             iw_config,
                             level_state,
                             game_state,
-                            sound,
                             win_state,
                             menu_state,
                             loader,
@@ -938,7 +925,6 @@ pub async fn control_panel(
                             rc,
                             wolf_config,
                             iw_config,
-                            sound,
                             cast_return,
                             win_state,
                             loader,
@@ -947,18 +933,18 @@ pub async fn control_panel(
                         cast_return = cast_new;
                         handle
                     }
-                    MainMenuItem::ReadThis => cp_read_this(rc, sound, loader).await,
+                    MainMenuItem::ReadThis => cp_read_this(rc, loader).await,
                     MainMenuItem::ViewScores => {
-                        cp_view_scores(rc, wolf_config, game_state, sound, win_state, loader).await
+                        cp_view_scores(rc, wolf_config, game_state, win_state, loader).await
                     }
                     MainMenuItem::Quit => MenuHandle::QuitMenu,
                     MainMenuItem::BackTo => MenuHandle::BackToGameLoop(None),
                 },
                 Menu::DifficultySelect => {
-                    cp_difficulty_select(rc, game_state, sound, win_state, menu_state).await
+                    cp_difficulty_select(rc, game_state, win_state, menu_state).await
                 }
                 Menu::CustomizeControls => {
-                    cp_custom_controls(rc, wolf_config, sound, win_state, menu_state, loader).await
+                    cp_custom_controls(rc, wolf_config, win_state, menu_state, loader).await
                 }
             };
             match handle {
@@ -978,21 +964,16 @@ pub async fn control_panel(
     }
 }
 
-async fn cp_read_this(
-    rc: &mut RenderContext,
-    sound: &mut Sound,
-    loader: &dyn Loader,
-) -> MenuHandle {
-    sound.play_music(Music::CORNER, &rc.assets, loader);
+async fn cp_read_this(rc: &mut RenderContext, loader: &dyn Loader) -> MenuHandle {
+    rc.sound.play_music(Music::CORNER, &rc.assets, loader);
     help_screens(rc).await;
-    sound.play_music(Music::WONDERIN, &rc.assets, loader);
+    rc.sound.play_music(Music::WONDERIN, &rc.assets, loader);
     MenuHandle::QuitMenu
 }
 
 async fn cp_custom_controls(
     rc: &mut RenderContext,
     wolf_config: &mut WolfConfig,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
@@ -1000,23 +981,23 @@ async fn cp_custom_controls(
     draw_custom_screen(rc, win_state, menu_state).await;
 
     menu_state.select_menu(Menu::CustomizeControls);
-    let handle = handle_menu(rc, sound, win_state, menu_state, fixup_custom).await;
+    let handle = handle_menu(rc, win_state, menu_state, fixup_custom).await;
 
     if let MenuHandle::Selected(which) = &handle {
         match which {
             0 => {
-                define_mouse_btns(rc, sound, win_state, menu_state);
+                define_mouse_btns(rc, win_state, menu_state);
                 draw_cust_mouse(rc, win_state, menu_state, true);
             }
             3 => {
                 todo!("implement joystick button change");
             }
             6 => {
-                define_key_btns(rc, sound, win_state, menu_state);
+                define_key_btns(rc, win_state, menu_state);
                 draw_cust_keybd(rc, win_state, menu_state, false);
             }
             8 => {
-                define_key_move(rc, sound, win_state, menu_state);
+                define_key_move(rc, win_state, menu_state);
                 draw_cust_keys(rc, win_state, menu_state, false);
             }
             _ => { /* do nothing */ }
@@ -1033,13 +1014,11 @@ async fn cp_custom_controls(
 
 fn define_mouse_btns(
     rc: &mut RenderContext,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
     enter_ctrl_data(
         rc,
-        sound,
         win_state,
         menu_state,
         2,
@@ -1052,13 +1031,11 @@ fn define_mouse_btns(
 
 fn define_key_btns(
     rc: &mut RenderContext,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
     enter_ctrl_data(
         rc,
-        sound,
         win_state,
         menu_state,
         8,
@@ -1071,13 +1048,11 @@ fn define_key_btns(
 
 fn define_key_move(
     rc: &mut RenderContext,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
     enter_ctrl_data(
         rc,
-        sound,
         win_state,
         menu_state,
         10,
@@ -1099,7 +1074,6 @@ type PrintRoutine = fn(rc: &mut RenderContext, win_state: &mut WindowState, i: u
 
 fn enter_ctrl_data(
     rc: &mut RenderContext,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     index: usize,
@@ -1108,7 +1082,7 @@ fn enter_ctrl_data(
     print_routine: PrintRoutine,
     input_type: InputType,
 ) {
-    sound.play_sound(SoundName::SHOOT, &rc.assets);
+    rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
     rc.clear_keys_down();
 
     win_state.print_y = CST_Y + 13 * index;
@@ -1175,7 +1149,7 @@ fn enter_ctrl_data(
                     } else {
                         win_state.print_x = x;
                         print(rc, win_state, "?");
-                        sound.play_sound(SoundName::HITWALL, &rc.assets);
+                        rc.sound.play_sound(SoundName::HITWALL, &rc.assets);
                     }
                     tick = !tick;
                     rc.ticker.clear_count();
@@ -1205,7 +1179,7 @@ fn enter_ctrl_data(
                             rc.input.button_mouse[button as usize - 1] =
                                 Button::from_usize(BUTTON_ORDER[which] as usize);
                             picked = true;
-                            sound.play_sound(SoundName::SHOOTDOOR, &rc.assets);
+                            rc.sound.play_sound(SoundName::SHOOTDOOR, &rc.assets);
                         }
                     }
                     InputType::Joystick => {
@@ -1216,7 +1190,7 @@ fn enter_ctrl_data(
                         if last_scan != NumCode::None {
                             rc.input.button_scan[BUTTON_ORDER[which] as usize] = last_scan;
                             picked = true;
-                            sound.play_sound(SoundName::SHOOT, &rc.assets);
+                            rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
                             rc.clear_keys_down();
                         }
                     }
@@ -1225,7 +1199,7 @@ fn enter_ctrl_data(
                         if last_scan != NumCode::None {
                             rc.input.dir_scan[MOVE_ORDER[which] as usize] = last_scan;
                             picked = true;
-                            sound.play_sound(SoundName::SHOOT, &rc.assets);
+                            rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
                             rc.clear_keys_down();
                         }
                     }
@@ -1265,7 +1239,7 @@ fn enter_ctrl_data(
                     }
                 }
                 redraw = true;
-                sound.play_sound(SoundName::MOVEGUN1, &rc.assets);
+                rc.sound.play_sound(SoundName::MOVEGUN1, &rc.assets);
                 loop {
                     let ci = read_any_control(rc);
                     if ci.dir == ControlDirection::None {
@@ -1286,7 +1260,7 @@ fn enter_ctrl_data(
                     }
                 }
                 redraw = true;
-                sound.play_sound(SoundName::MOVEGUN1, &rc.assets);
+                rc.sound.play_sound(SoundName::MOVEGUN1, &rc.assets);
                 loop {
                     let ci = read_any_control(rc);
                     if ci.dir == ControlDirection::None {
@@ -1306,7 +1280,7 @@ fn enter_ctrl_data(
         }
     }
 
-    sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
+    rc.sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
     wait_key_up(rc);
     cp_draw_window(rc, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
 }
@@ -1571,14 +1545,13 @@ fn print_cust_keys(rc: &mut RenderContext, win_state: &mut WindowState, i: usize
 
 async fn cp_main_menu(
     rc: &mut RenderContext,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) -> MenuHandle {
     draw_main_menu(rc, win_state, menu_state);
     rc.fade_in().await;
 
-    let handle = handle_menu(rc, sound, win_state, menu_state, no_op_routine).await;
+    let handle = handle_menu(rc, win_state, menu_state, no_op_routine).await;
 
     match handle {
         MenuHandle::Selected(selected) => {
@@ -1604,14 +1577,14 @@ async fn cp_main_menu(
             } else if selected_item == MainMenuItem::BackTo.id() {
                 return MenuHandle::BackToGameLoop(None);
             } else if selected_item == MainMenuItem::Quit.id() {
-                menu_quit(rc, sound, win_state, menu_state).await;
+                menu_quit(rc, win_state, menu_state).await;
                 MenuHandle::QuitMenu
             } else {
                 quit(Some("unknown menu selected"));
             }
         }
         MenuHandle::QuitMenu => {
-            menu_quit(rc, sound, win_state, menu_state).await;
+            menu_quit(rc, win_state, menu_state).await;
             MenuHandle::QuitMenu
         }
         _ => handle,
@@ -1621,14 +1594,13 @@ async fn cp_main_menu(
 async fn cp_new_game(
     rc: &mut RenderContext,
     game_state: &mut GameState,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) -> MenuHandle {
     loop {
         draw_new_episode(rc, win_state, menu_state).await;
 
-        let episode_handle = handle_menu(rc, sound, win_state, menu_state, no_op_routine).await;
+        let episode_handle = handle_menu(rc, win_state, menu_state, no_op_routine).await;
         if let MenuHandle::Selected(episode_selected) = episode_handle {
             let new_game_menu = menu_state
                 .menues
@@ -1636,7 +1608,7 @@ async fn cp_new_game(
                 .expect("NewGame menu not found");
 
             if new_game_menu.items[episode_selected].active == ItemActivity::EpisodeTeaser {
-                sound.play_sound(SoundName::NOWAY, &rc.assets);
+                rc.sound.play_sound(SoundName::NOWAY, &rc.assets);
                 message(
                     rc,
                     win_state,
@@ -1646,9 +1618,9 @@ async fn cp_new_game(
                 rc.ack();
                 continue;
             } else {
-                sound.play_sound(SoundName::SHOOT, &rc.assets);
+                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
                 if win_state.in_game {
-                    if confirm(rc, sound, win_state, CUR_GAME).await {
+                    if confirm(rc, win_state, CUR_GAME).await {
                         game_state.play_state = PlayState::ResetGame;
                         menu_fade_out(rc).await;
                     }
@@ -1667,57 +1639,56 @@ async fn cp_new_game(
 
 async fn cp_sound(
     rc: &mut RenderContext,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
 ) -> MenuHandle {
-    draw_sound_menu(rc, win_state, menu_state, sound).await;
+    draw_sound_menu(rc, win_state, menu_state).await;
     loop {
-        let sound_handle = handle_menu(rc, sound, win_state, menu_state, no_op_routine).await;
+        let sound_handle = handle_menu(rc, win_state, menu_state, no_op_routine).await;
         if let MenuHandle::Selected(which) = sound_handle {
             // SOUND EFFECTS
             if which == SoundItem::SoundEffectNone.pos() {
-                sound.set_sound_mode(SoundMode::Off);
-                draw_sound_menu(rc, win_state, menu_state, sound).await;
+                rc.sound.set_sound_mode(SoundMode::Off);
+                draw_sound_menu(rc, win_state, menu_state).await;
             }
             if which == SoundItem::SoundEffectPCSpeaker.pos() {
-                sound.set_sound_mode(SoundMode::PC);
-                draw_sound_menu(rc, win_state, menu_state, sound).await;
-                sound.play_sound(SoundName::SHOOT, &rc.assets);
+                rc.sound.set_sound_mode(SoundMode::PC);
+                draw_sound_menu(rc, win_state, menu_state).await;
+                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
             }
             if which == SoundItem::SoundEffectAdLib.pos() {
-                sound.set_sound_mode(SoundMode::AdLib);
-                draw_sound_menu(rc, win_state, menu_state, sound).await;
-                sound.play_sound(SoundName::SHOOT, &rc.assets);
+                rc.sound.set_sound_mode(SoundMode::AdLib);
+                draw_sound_menu(rc, win_state, menu_state).await;
+                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
             }
             // DIGITIZED SOUND
             if which == SoundItem::DigitizedNone.pos() {
-                sound.set_digi_mode(DigiMode::Off);
-                draw_sound_menu(rc, win_state, menu_state, sound).await;
+                rc.sound.set_digi_mode(DigiMode::Off);
+                draw_sound_menu(rc, win_state, menu_state).await;
             }
             if which == SoundItem::DigitizedSoundSource.pos() {
-                sound.set_digi_mode(DigiMode::SoundSource);
-                draw_sound_menu(rc, win_state, menu_state, sound).await;
-                sound.play_sound(SoundName::SHOOT, &rc.assets);
+                rc.sound.set_digi_mode(DigiMode::SoundSource);
+                draw_sound_menu(rc, win_state, menu_state).await;
+                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
             }
             if which == SoundItem::DigitizedSoundBlaster.pos() {
-                sound.set_digi_mode(DigiMode::SoundBlaster);
-                draw_sound_menu(rc, win_state, menu_state, sound).await;
-                sound.play_sound(SoundName::SHOOT, &rc.assets);
+                rc.sound.set_digi_mode(DigiMode::SoundBlaster);
+                draw_sound_menu(rc, win_state, menu_state).await;
+                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
             }
             // MUSIC
             if which == SoundItem::MusicNone.pos() {
-                sound.set_music_mode(MusicMode::Off);
-                draw_sound_menu(rc, win_state, menu_state, sound).await;
+                rc.sound.set_music_mode(MusicMode::Off);
+                draw_sound_menu(rc, win_state, menu_state).await;
             }
             if which == SoundItem::MusicAdLib.pos() {
-                let changed = sound.music_mode() != MusicMode::AdLib;
-                sound.set_music_mode(MusicMode::AdLib);
-                draw_sound_menu(rc, win_state, menu_state, sound).await;
-                sound.play_sound(SoundName::SHOOT, &rc.assets);
+                let changed = rc.sound.music_mode() != MusicMode::AdLib;
+                rc.sound.set_music_mode(MusicMode::AdLib);
+                draw_sound_menu(rc, win_state, menu_state).await;
+                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
                 if changed {
-                    sound.play_music(Music::WONDERIN, &rc.assets, loader);
+                    rc.sound.play_music(Music::WONDERIN, &rc.assets, loader);
                 }
             }
         } else {
@@ -1732,7 +1703,6 @@ async fn draw_sound_menu(
     rc: &mut RenderContext,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
-    sound: &Sound,
 ) {
     clear_ms_screen(rc);
     rc.pic(112, 184, GraphicNum::CMOUSELBACKPIC);
@@ -1757,30 +1727,30 @@ async fn draw_sound_menu(
 
         let mut on = false;
         if item.item == SoundItem::SoundEffectNone.pos() {
-            on = sound.sound_mode() == SoundMode::Off;
+            on = rc.sound.sound_mode() == SoundMode::Off;
         }
         if item.item == SoundItem::SoundEffectPCSpeaker.pos() {
-            on = sound.sound_mode() == SoundMode::PC;
+            on = rc.sound.sound_mode() == SoundMode::PC;
         }
         if item.item == SoundItem::SoundEffectAdLib.pos() {
-            on = sound.sound_mode() == SoundMode::AdLib;
+            on = rc.sound.sound_mode() == SoundMode::AdLib;
         }
 
         if item.item == SoundItem::DigitizedNone.pos() {
-            on = sound.digi_mode() == DigiMode::Off;
+            on = rc.sound.digi_mode() == DigiMode::Off;
         }
         if item.item == SoundItem::DigitizedSoundSource.pos() {
-            on = sound.digi_mode() == DigiMode::SoundSource;
+            on = rc.sound.digi_mode() == DigiMode::SoundSource;
         }
         if item.item == SoundItem::DigitizedSoundBlaster.pos() {
-            on = sound.digi_mode() == DigiMode::SoundBlaster;
+            on = rc.sound.digi_mode() == DigiMode::SoundBlaster;
         }
 
         if item.item == SoundItem::MusicNone.pos() {
-            on = sound.music_mode() == MusicMode::Off;
+            on = rc.sound.music_mode() == MusicMode::Off;
         }
         if item.item == SoundItem::MusicAdLib.pos() {
-            on = sound.music_mode() == MusicMode::AdLib;
+            on = rc.sound.music_mode() == MusicMode::AdLib;
         }
 
         if on {
@@ -1807,7 +1777,6 @@ async fn cp_load_game(
     iw_config: &IWConfig,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
@@ -1816,7 +1785,7 @@ async fn cp_load_game(
     let state = read_save_game_state(loader);
     draw_load_save_screen(rc, win_state, menu_state, &state, false).await;
     loop {
-        let load_handle = handle_menu(rc, sound, win_state, menu_state, no_op_routine).await;
+        let load_handle = handle_menu(rc, win_state, menu_state, no_op_routine).await;
         if let MenuHandle::Selected(which) = load_handle {
             if state[which].available {
                 draw_ls_action(rc, win_state, false);
@@ -1833,7 +1802,7 @@ async fn cp_load_game(
                     LSA_Y + 5,
                 )
                 .await;
-                sound.play_sound(SoundName::SHOOT, &rc.assets);
+                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
                 return MenuHandle::BackToGameLoop(Some(which));
             } // else: loop back to handle_menu
         } else {
@@ -1848,12 +1817,11 @@ async fn cp_view_scores(
     rc: &mut RenderContext,
     wolf_config: &WolfConfig,
     game_state: &mut GameState,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     loader: &dyn Loader,
 ) -> MenuHandle {
     if game_state.loaded_game || game_state.start_game || win_state.in_game {
-        if !confirm(rc, sound, win_state, END_GAME_STR).await {
+        if !confirm(rc, win_state, END_GAME_STR).await {
             return MenuHandle::OpenMenu(Menu::Top);
         }
         game_state.lives = 0;
@@ -1861,14 +1829,14 @@ async fn cp_view_scores(
         MenuHandle::BackToGameLoop(None) // let the game handle the PlayState::Died
     } else {
         win_state.font_number = 0;
-        sound.play_music(Music::ROSTER, &rc.assets, loader);
+        rc.sound.play_music(Music::ROSTER, &rc.assets, loader);
         draw_high_scores(rc, win_state, &wolf_config.high_scores);
         rc.fade_in().await;
         win_state.font_number = 1;
 
         rc.ack();
 
-        sound.play_music(Music::WONDERIN, &rc.assets, loader);
+        rc.sound.play_music(Music::WONDERIN, &rc.assets, loader);
         rc.fade_out().await;
 
         MenuHandle::QuitMenu
@@ -1880,7 +1848,6 @@ async fn cp_save_game(
     iw_config: &IWConfig,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
@@ -1889,12 +1856,12 @@ async fn cp_save_game(
     let state = read_save_game_state(loader);
     draw_load_save_screen(rc, win_state, menu_state, &state, true).await;
     loop {
-        let save_handle = handle_menu(rc, sound, win_state, menu_state, no_op_routine).await;
+        let save_handle = handle_menu(rc, win_state, menu_state, no_op_routine).await;
         if let MenuHandle::Selected(which) = save_handle {
             // TODO Check overwrite existing game
 
             if state[which].available {
-                if !confirm(rc, sound, win_state, GAME_SAVED).await {
+                if !confirm(rc, win_state, GAME_SAVED).await {
                     draw_load_save_screen(rc, win_state, menu_state, &state, true).await;
                     continue;
                 } else {
@@ -1903,7 +1870,7 @@ async fn cp_save_game(
                 }
             }
 
-            sound.play_sound(SoundName::SHOOT, &rc.assets);
+            rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
 
             let save_menu = &menu_state.menues[&Menu::MainMenu(MainMenuItem::SaveGame)];
             win_state.font_number = 0;
@@ -1949,7 +1916,7 @@ async fn cp_save_game(
                 return MenuHandle::BackToGameLoop(None);
             } else {
                 //TODO repaint entry
-                sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
+                rc.sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
                 continue;
             }
         } else {
@@ -2088,15 +2055,14 @@ fn draw_new_game_diff(
 async fn cp_difficulty_select(
     rc: &mut RenderContext,
     game_state: &mut GameState,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) -> MenuHandle {
     draw_difficulty_select(rc, win_state, menu_state).await;
-    let handle = handle_menu(rc, sound, win_state, menu_state, draw_new_game_diff).await;
+    let handle = handle_menu(rc, win_state, menu_state, draw_new_game_diff).await;
 
     if let MenuHandle::Selected(diff_selected) = handle {
-        sound.play_sound(SoundName::SHOOT, &rc.assets);
+        rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
         game_state.prepare_episode_select();
         game_state.difficulty = Difficulty::from_pos(diff_selected);
 
@@ -2178,7 +2144,6 @@ fn episode_pic(i: usize) -> GraphicNum {
 
 async fn cp_control(
     rc: &mut RenderContext,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) -> MenuHandle {
@@ -2187,7 +2152,7 @@ async fn cp_control(
     wait_key_up(rc);
 
     loop {
-        let handle = handle_menu(rc, sound, win_state, menu_state, no_op_routine).await;
+        let handle = handle_menu(rc, win_state, menu_state, no_op_routine).await;
 
         if let MenuHandle::Selected(which) = handle {
             if which == ControlItem::MouseEnabled.pos() {
@@ -2300,12 +2265,11 @@ async fn draw_ctl_screen(
 
 async fn menu_quit(
     rc: &mut RenderContext,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
 ) {
     let text = END_STRINGS[((rnd_t() & 0x07) + (rnd_t() & 1)) as usize];
-    if confirm(rc, sound, win_state, text).await {
+    if confirm(rc, win_state, text).await {
         //TODO stop music
         rc.fade_in().await;
         quit(None)
@@ -2318,7 +2282,6 @@ async fn cp_change_view(
     rc: &mut RenderContext,
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
-    sound: &mut Sound,
     cast: RayCast,
     win_state: &mut WindowState,
     loader: &dyn Loader,
@@ -2337,7 +2300,7 @@ async fn cp_change_view(
                     new_view = 4;
                 }
                 show_view_size(rc, new_view);
-                sound.play_sound(SoundName::HITWALL, &rc.assets);
+                rc.sound.play_sound(SoundName::HITWALL, &rc.assets);
                 tic_delay(rc, 10).await;
             }
             ControlDirection::North | ControlDirection::East => {
@@ -2346,7 +2309,7 @@ async fn cp_change_view(
                     new_view = 19;
                 }
                 show_view_size(rc, new_view);
-                sound.play_sound(SoundName::HITWALL, &rc.assets);
+                rc.sound.play_sound(SoundName::HITWALL, &rc.assets);
                 tic_delay(rc, 10).await;
             }
             _ => { /* ignore */ }
@@ -2358,7 +2321,7 @@ async fn cp_change_view(
         if rc.key_pressed(NumCode::Return) {
             break;
         } else if rc.key_pressed(NumCode::Escape) {
-            sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
+            rc.sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
             rc.fade_out().await;
             return (MenuHandle::OpenMenu(Menu::Top), cast);
         }
@@ -2366,7 +2329,7 @@ async fn cp_change_view(
 
     let mut cast_return = cast;
     if old_view != new_view {
-        sound.play_sound(SoundName::SHOOT, &rc.assets);
+        rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
         message(rc, win_state, "Thinking...");
         if !iw_config.options.fast_loading {
             sleep(2500).await;
@@ -2379,7 +2342,7 @@ async fn cp_change_view(
         rc.projection = new_projection;
     }
 
-    sound.play_sound(SoundName::SHOOT, &rc.assets);
+    rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
     rc.fade_out().await;
     return (MenuHandle::OpenMenu(Menu::Top), cast_return);
 }
@@ -2402,12 +2365,7 @@ async fn draw_change_view(rc: &mut RenderContext, win_state: &mut WindowState, v
 
 // helper
 
-async fn confirm(
-    rc: &mut RenderContext,
-    sound: &mut Sound,
-    win_state: &mut WindowState,
-    str: &str,
-) -> bool {
+async fn confirm(rc: &mut RenderContext, win_state: &mut WindowState, str: &str) -> bool {
     message(rc, win_state, str);
     rc.clear_keys_down();
 
@@ -2447,9 +2405,9 @@ async fn confirm(
     rc.clear_keys_down();
 
     if exit {
-        sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
+        rc.sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
     } else {
-        sound.play_sound(SoundName::SHOOT, &rc.assets);
+        rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
     }
     exit
 }
@@ -2457,12 +2415,11 @@ async fn confirm(
 /// Handle moving gun around a menu
 async fn handle_menu(
     rc: &mut RenderContext,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     routine: MenuRoutine,
 ) -> MenuHandle {
-    let handle = handle_menu_loop(rc, sound, win_state, menu_state, routine).await;
+    let handle = handle_menu_loop(rc, win_state, menu_state, routine).await;
 
     rc.clear_keys_down();
 
@@ -2474,7 +2431,6 @@ async fn handle_menu(
 
 async fn handle_menu_loop(
     rc: &mut RenderContext,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     routine: MenuRoutine,
@@ -2528,7 +2484,7 @@ async fn handle_menu_loop(
                         != ItemActivity::Deactive
                 {
                     y -= 6;
-                    draw_half_step(rc, sound, x, y).await;
+                    draw_half_step(rc, x, y).await;
                 }
 
                 loop {
@@ -2544,9 +2500,7 @@ async fn handle_menu_loop(
                     }
                 }
 
-                y = draw_gun(
-                    rc, sound, win_state, menu_state, x, y, which_pos, base_y, routine,
-                );
+                y = draw_gun(rc, win_state, menu_state, x, y, which_pos, base_y, routine);
 
                 // WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
                 tic_delay(rc, 20).await;
@@ -2559,7 +2513,7 @@ async fn handle_menu_loop(
                         != ItemActivity::Deactive
                 {
                     y += 6;
-                    draw_half_step(rc, sound, x, y).await;
+                    draw_half_step(rc, x, y).await;
                 }
 
                 loop {
@@ -2574,9 +2528,7 @@ async fn handle_menu_loop(
                         break;
                     }
                 }
-                y = draw_gun(
-                    rc, sound, win_state, menu_state, x, y, which_pos, base_y, routine,
-                );
+                y = draw_gun(rc, win_state, menu_state, x, y, which_pos, base_y, routine);
 
                 // WAIT FOR BUTTON-UP OR DELAY NEXT MOVE
                 tic_delay(rc, 20).await;
@@ -2585,12 +2537,12 @@ async fn handle_menu_loop(
         }
 
         if rc.key_pressed(NumCode::Space) || rc.key_pressed(NumCode::Return) {
-            sound.play_sound(SoundName::SHOOT, &rc.assets);
+            rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
             exit = MenuHandle::Selected(which_pos);
             break;
         }
         if rc.key_pressed(NumCode::Escape) {
-            sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
+            rc.sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
             exit = MenuHandle::QuitMenu;
             break;
         }
@@ -2610,9 +2562,9 @@ async fn tic_delay(rc: &mut RenderContext, count: u64) {
     }
 }
 
-async fn draw_half_step(rc: &mut RenderContext, sound: &mut Sound, x: usize, y: usize) {
+async fn draw_half_step(rc: &mut RenderContext, x: usize, y: usize) {
     rc.pic(x, y, GraphicNum::CCURSOR1PIC);
-    sound.play_sound(SoundName::MOVEGUN1, &rc.assets);
+    rc.sound.play_sound(SoundName::MOVEGUN1, &rc.assets);
 
     rc.ticker.tics(8).await;
 }
@@ -2640,7 +2592,6 @@ fn draw_menu_gun(rc: &mut RenderContext, item_info: &ItemInfo) {
 
 fn draw_gun(
     rc: &mut RenderContext,
-    sound: &mut Sound,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     x: usize,
@@ -2663,7 +2614,7 @@ fn draw_gun(
 
     routine(rc, win_state, menu_state, which_pos);
 
-    sound.play_sound(SoundName::MOVEGUN2, &rc.assets);
+    rc.sound.play_sound(SoundName::MOVEGUN2, &rc.assets);
 
     new_y
 }

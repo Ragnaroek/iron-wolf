@@ -16,7 +16,6 @@ use crate::fixed::{Fixed, ZERO, fixed_by_frac};
 use crate::play::ProjectionConfig;
 use crate::rc::{self, FizzleFadeAbortable, RenderContext};
 use crate::scale::{MAP_MASKS_1, scale_shape, simple_scale_shape};
-use crate::sd::Sound;
 
 const DEG90: usize = 900;
 const DEG180: usize = 1800;
@@ -567,7 +566,6 @@ pub async fn three_d_refresh(
     game_state: &mut GameState,
     level_state: &mut LevelState,
     cast: &mut RayCast,
-    sound: &mut Sound,
     demo_playback: bool,
 ) {
     rc.set_buffer_offset(rc.buffer_offset() + rc.projection.screenofs);
@@ -575,7 +573,7 @@ pub async fn three_d_refresh(
     clear_screen(rc, game_state);
     wall_refresh(rc, game_state, level_state, cast);
 
-    draw_scaleds(rc, game_state, level_state, &cast, sound);
+    draw_scaleds(rc, game_state, level_state, &cast);
 
     draw_player_weapon(rc, level_state, game_state, demo_playback);
 
@@ -915,7 +913,6 @@ fn draw_scaleds(
     game_state: &mut GameState,
     level_state: &mut LevelState,
     cast: &RayCast,
-    sound: &mut Sound,
 ) {
     let mut visptr = 0;
     // place static objects
@@ -932,7 +929,7 @@ fn draw_scaleds(
         let vis = &mut level_state.vislist[visptr];
         let can_grab = transform_tile(cast, &rc.projection, stat, vis);
         if can_grab && (stat.flags & FL_BONUS) != 0 {
-            get_bonus(rc, game_state, sound, stat);
+            get_bonus(rc, game_state, stat);
             continue;
         }
 

@@ -3,6 +3,7 @@
 extern crate iw;
 extern crate test;
 
+use iw::sd::test_sound;
 use std::path::PathBuf;
 use test::Bencher;
 
@@ -37,6 +38,8 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
     let prj = new_view_size(19);
     let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, &None)?;
 
+    let sound = test_sound();
+
     let vga = VGABuilder::new().video_mode(0x13).build()?;
     let input = Input::init_demo_playback(Vec::with_capacity(0));
     let ticker = new_test_ticker();
@@ -51,6 +54,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
         &assets::W3D1,
         input,
         prj,
+        sound,
     );
 
     let mut game_state = new_game_state();

@@ -173,7 +173,7 @@ pub struct DigiMixConfig {
     pub group: mixer::Group,
 }
 
-#[cfg(any(feature = "sdl", feature = "test"))]
+#[cfg(feature = "sdl")]
 pub struct Sound {
     modes: Arc<Mutex<Modes>>,
     opl: Arc<Mutex<OPL>>,
@@ -184,13 +184,26 @@ pub struct Sound {
     right_pos: u8,
 }
 
+#[cfg(feature = "test")]
+pub struct Sound {}
+
 #[cfg(feature = "web")]
 pub struct Sound {
     modes: Arc<Mutex<Modes>>,
     pub opl: OPL,
 }
 
-#[cfg(any(feature = "sdl", feature = "test"))]
+#[cfg(feature = "test")]
+pub fn test_sound() -> Sound {
+    Sound {}
+}
+
+#[cfg(feature = "test")]
+pub fn startup(_rt: Arc<Runtime>) -> Result<Sound, String> {
+    Ok(test_sound())
+}
+
+#[cfg(feature = "sdl")]
 pub fn startup(rt: Arc<Runtime>) -> Result<Sound, String> {
     let mut opl = opl::new()?;
     opl.init(opl::OPLSettings {
@@ -233,7 +246,7 @@ pub fn startup(_: Arc<Runtime>) -> Result<Sound, String> {
     })
 }
 
-#[cfg(any(feature = "sdl", feature = "test"))]
+#[cfg(feature = "sdl")]
 impl Sound {
     pub fn is_sound_playing(&mut self, sound: SoundName) -> bool {
         let playing_mon = self.sound_playing.lock().unwrap();
@@ -628,5 +641,95 @@ impl Sound {
 
     pub fn set_music_mode(&mut self, mode: MusicMode) {
         todo!("set music mode web")
+    }
+}
+
+#[cfg(feature = "test")]
+impl Sound {
+    pub fn is_sound_playing(&mut self, _sound: SoundName) -> bool {
+        true
+    }
+
+    pub fn is_any_sound_playing(&mut self) -> bool {
+        false
+    }
+
+    pub fn force_play_sound(&mut self, _sound: SoundName, _assets: &Assets) -> bool {
+        true
+    }
+
+    pub fn play_sound(&mut self, _sound: SoundName, _assets: &Assets) -> bool {
+        true
+    }
+
+    pub fn play_music(&mut self, _track: Music, _assets: &Assets, _loader: &dyn Loader) {
+        // do nothing
+    }
+
+    pub fn play_sound_loc_tile(
+        &mut self,
+        _sound: SoundName,
+        _assets: &Assets,
+        _rc: &RayCast,
+        _tile_x: usize,
+        _tile_y: usize,
+    ) {
+        // do nothing
+    }
+
+    pub fn play_sound_loc_actor(
+        &mut self,
+        _sound: SoundName,
+        _assets: &Assets,
+        _rc: &RayCast,
+        _obj: &ObjType,
+    ) {
+        // do nothing
+    }
+
+    fn play_sound_loc_global(
+        &mut self,
+        _sound: SoundName,
+        _assets: &Assets,
+        _rc: &RayCast,
+        _tile_x: usize,
+        _tile_y: usize,
+    ) {
+        // do nothing
+    }
+
+    pub fn prepare_digi_sound(
+        &self,
+        _channel: DigiChannel,
+        _original_data: Vec<u8>,
+    ) -> Result<DigiSound, String> {
+        Ok(DigiSound {
+            chunk: Box::new([0; 0]),
+            channel: DigiChannel::Any,
+        })
+    }
+
+    pub fn sound_mode(&self) -> SoundMode {
+        SoundMode::Off
+    }
+
+    pub fn set_sound_mode(&mut self, _mode: SoundMode) {
+        // mode can't be changed in test
+    }
+
+    pub fn digi_mode(&self) -> DigiMode {
+        DigiMode::Off
+    }
+
+    pub fn set_digi_mode(&mut self, _mode: DigiMode) {
+        // digi_mode can't be changed in test
+    }
+
+    pub fn music_mode(&self) -> MusicMode {
+        MusicMode::Off
+    }
+
+    pub fn set_music_mode(&mut self, _mode: MusicMode) {
+        // music_mode can't be changed in test
     }
 }

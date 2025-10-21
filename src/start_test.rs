@@ -14,6 +14,7 @@ use crate::fixed::{Fixed, ZERO};
 use crate::game::setup_game_level;
 use crate::loader::{DiskLoader, Loader};
 use crate::rc::{Input, RenderContext};
+use crate::sd;
 use crate::start::{OBJ_TYPE_LEN, STAT_TYPE_LEN, save_the_game};
 use crate::time::new_test_ticker;
 
@@ -470,6 +471,8 @@ fn start_test_iw(loader: &dyn Loader) -> RenderContext {
         .build()
         .expect("VGA test instance");
 
+    let sound = sd::test_sound();
+
     //enable Mode Y
     let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
     vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
@@ -492,6 +495,7 @@ fn start_test_iw(loader: &dyn Loader) -> RenderContext {
         loader.variant(),
         input,
         projection,
+        sound,
     );
 
     rc

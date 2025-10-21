@@ -297,7 +297,6 @@ pub async fn play_loop(
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     control_state: &mut ControlState,
-    sound: &mut Sound,
     cast_param: RayCast,
     loader: &dyn Loader,
     benchmark: bool,
@@ -383,26 +382,10 @@ pub async fn play_loop(
 
         #[cfg(feature = "tracing")]
         span.in_scope(|| {
-            update_game_state(
-                rc,
-                tics,
-                level_state,
-                game_state,
-                control_state,
-                sound,
-                &cast,
-            )
+            update_game_state(rc, tics, level_state, game_state, control_state, &cast)
         });
         #[cfg(not(feature = "tracing"))]
-        update_game_state(
-            rc,
-            tics,
-            level_state,
-            game_state,
-            control_state,
-            sound,
-            &cast,
-        );
+        update_game_state(rc, tics, level_state, game_state, control_state, &cast);
 
         update_palette_shifts(game_state, &rc.vga, &shifts, tics).await;
 
@@ -411,7 +394,6 @@ pub async fn play_loop(
             game_state,
             level_state,
             &mut cast,
-            sound,
             rc.input.mode == InputMode::DemoPlayback,
         )
         .await;
@@ -420,7 +402,6 @@ pub async fn play_loop(
             rc,
             wolf_config,
             iw_config,
-            sound,
             cast,
             win_state,
             menu_state,
@@ -494,7 +475,6 @@ fn update_game_state(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     control_state: &mut ControlState,
-    sound: &mut Sound,
     cast: &RayCast,
 ) {
     poll_controls(rc, control_state, tics);
@@ -508,22 +488,20 @@ fn update_game_state(
 
     game_state.made_noise = false;
 
-    move_doors(level_state, game_state, sound, &rc.assets, cast, tics);
+    move_doors(
+        level_state,
+        game_state,
+        &mut rc.sound,
+        &rc.assets,
+        cast,
+        tics,
+    );
     move_push_walls(level_state, game_state, tics);
 
     for i in 0..level_state.actors.len() {
         let k = ObjKey(i);
         if level_state.actors.exists(k) {
-            do_actor(
-                rc,
-                k,
-                tics,
-                level_state,
-                game_state,
-                sound,
-                control_state,
-                cast,
-            );
+            do_actor(rc, k, tics, level_state, game_state, control_state, cast);
         }
     }
 }
@@ -534,7 +512,6 @@ fn do_actor(
     tics: u64,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
     control_state: &mut ControlState,
     cast: &RayCast,
 ) {
@@ -566,16 +543,7 @@ fn do_actor(
             ))
             .think
         {
-            think(
-                rc,
-                k,
-                tics,
-                level_state,
-                game_state,
-                sound,
-                control_state,
-                cast,
-            );
+            think(rc, k, tics, level_state, game_state, control_state, cast);
             if level_state.obj(k).state.is_none() {
                 level_state.actors.drop_obj(k);
                 return;
@@ -600,16 +568,7 @@ fn do_actor(
     level_state.update_obj(k, |obj| obj.tic_count -= tics as i32);
     while level_state.obj(k).tic_count <= 0 {
         if let Some(action) = level_state.obj(k).state.expect("state").action {
-            action(
-                rc,
-                k,
-                tics,
-                level_state,
-                game_state,
-                sound,
-                control_state,
-                cast,
-            );
+            action(rc, k, tics, level_state, game_state, control_state, cast);
             if level_state.obj(k).state.is_none() {
                 level_state.actors.drop_obj(k);
                 return;
@@ -632,16 +591,7 @@ fn do_actor(
     }
 
     if let Some(think) = level_state.obj(k).state.expect("state").think {
-        think(
-            rc,
-            k,
-            tics,
-            level_state,
-            game_state,
-            sound,
-            control_state,
-            cast,
-        );
+        think(rc, k, tics, level_state, game_state, control_state, cast);
         if level_state.obj(k).state.is_none() {
             level_state.actors.drop_obj(k);
             return;
@@ -817,7 +767,6 @@ async fn check_keys(
     rc: &mut RenderContext,
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
-    sound: &mut Sound,
     cast: RayCast,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
@@ -866,7 +815,6 @@ async fn check_keys(
             iw_config,
             level_state,
             game_state,
-            sound,
             cast,
             win_state,
             menu_state,
@@ -881,7 +829,7 @@ async fn check_keys(
         draw_play_screen(rc, game_state).await;
         if !game_state.start_game && !game_state.loaded_game {
             rc.fade_in().await;
-            start_music(game_state, sound, &rc.assets, loader);
+            start_music(game_state, &mut rc.sound, &rc.assets, loader);
         }
 
         if game_state.loaded_game {
