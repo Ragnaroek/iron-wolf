@@ -3,7 +3,6 @@
 extern crate iw;
 extern crate test;
 
-use iw::sd::test_sound;
 use std::path::PathBuf;
 use test::Bencher;
 
@@ -16,9 +15,11 @@ use iw::draw::{init_ray_cast, wall_refresh};
 use iw::game::setup_game_level;
 use iw::loader::DiskLoader;
 use iw::rc::{Input, RenderContext};
+use iw::sd::test_sound;
 use iw::start::new_view_size;
 use iw::time::new_test_ticker;
 
+#[cfg(feature = "test")]
 #[bench]
 fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
     let mut data_path = PathBuf::new();
@@ -40,9 +41,16 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
 
     let sound = test_sound();
 
+    let mut game_state = new_game_state();
+
     let vga = VGABuilder::new().video_mode(0x13).build()?;
     let input = Input::init_demo_playback(Vec::with_capacity(0));
     let ticker = new_test_ticker();
+
+    let mut level_state = setup_game_level(&mut game_state, &assets, true).unwrap();
+    let player = level_state.player();
+    let mut cast = init_ray_cast(prj.view_width);
+    cast.init_ray_cast_consts(&prj, player, 0);
     let mut rc = RenderContext::init(
         vga,
         ticker,
@@ -54,20 +62,13 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
         &assets::W3D1,
         input,
         prj,
+        cast,
         sound,
     );
 
-    let mut game_state = new_game_state();
-
-    let mut level_state = setup_game_level(&mut game_state, &rc.assets, true).unwrap();
-
-    let player = level_state.player();
-    let mut cast = init_ray_cast(rc.projection.view_width);
-    cast.init_ray_cast_consts(&rc.projection, player, 0);
-
     b.iter(|| {
         for _ in 0..1000 {
-            wall_refresh(&mut rc, &game_state, &mut level_state, &mut cast);
+            wall_refresh(&mut rc, &game_state, &mut level_state);
         }
         {
             let player = level_state.mut_player();
@@ -76,7 +77,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
             player.angle = 98;
         }
         for _ in 0..1000 {
-            wall_refresh(&mut rc, &game_state, &mut level_state, &mut cast);
+            wall_refresh(&mut rc, &game_state, &mut level_state);
         }
         {
             let player = level_state.mut_player();
@@ -85,7 +86,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
             player.angle = 90;
         }
         for _ in 0..1000 {
-            wall_refresh(&mut rc, &game_state, &mut level_state, &mut cast);
+            wall_refresh(&mut rc, &game_state, &mut level_state);
         }
         {
             let player = level_state.mut_player();
@@ -94,7 +95,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
             player.angle = 334;
         }
         for _ in 0..1000 {
-            wall_refresh(&mut rc, &game_state, &mut level_state, &mut cast);
+            wall_refresh(&mut rc, &game_state, &mut level_state);
         }
         {
             let player = level_state.mut_player();
@@ -103,7 +104,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
             player.angle = 159;
         }
         for _ in 0..1000 {
-            wall_refresh(&mut rc, &game_state, &mut level_state, &mut cast);
+            wall_refresh(&mut rc, &game_state, &mut level_state);
         }
         {
             let player = level_state.mut_player();
@@ -112,7 +113,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
             player.angle = 290;
         }
         for _ in 0..1000 {
-            wall_refresh(&mut rc, &game_state, &mut level_state, &mut cast);
+            wall_refresh(&mut rc, &game_state, &mut level_state);
         }
     });
 

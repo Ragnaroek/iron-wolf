@@ -17,7 +17,7 @@ use crate::def::{
     MAX_STATS, NUM_AREAS, ObjKey, PlayState, Sprite, StaticType, VisObj, WeaponType, WindowState,
     new_game_state,
 };
-use crate::draw::{RayCast, three_d_refresh};
+use crate::draw::three_d_refresh;
 use crate::inter::{check_highscore, level_completed, preload_graphics, victory};
 use crate::loader::Loader;
 use crate::map;
@@ -52,16 +52,14 @@ pub async fn game_loop(
     iw_config: &IWConfig,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    cast_param: RayCast,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
-) -> RayCast {
+) {
     let mut control_state: ControlState = new_control_state();
 
     draw_play_screen(rc, &game_state).await;
 
-    let mut cast = cast_param;
     let mut restart = false;
     'game_loop: loop {
         if restart {
@@ -97,7 +95,7 @@ pub async fn game_loop(
 
         rc.fade_in().await;
 
-        let (cast_play, _) = play_loop(
+        let _ = play_loop(
             rc,
             wolf_config,
             iw_config,
@@ -106,12 +104,10 @@ pub async fn game_loop(
             win_state,
             menu_state,
             &mut control_state,
-            cast,
             loader,
             false,
         )
         .await;
-        cast = cast_play;
 
         win_state.in_game = false;
 
@@ -144,8 +140,9 @@ pub async fn game_loop(
             }
             PlayState::Died => {
                 let player = level_state.player();
-                cast.init_ray_cast_consts(&rc.projection, player, game_state.push_wall_pos);
-                died(rc, level_state, game_state, &mut cast).await;
+                rc.cast
+                    .init_ray_cast_consts(&rc.projection, player, game_state.push_wall_pos);
+                died(rc, level_state, game_state).await;
                 if game_state.lives > -1 {
                     continue 'game_loop;
                 }
@@ -162,8 +159,7 @@ pub async fn game_loop(
                 .await;
 
                 menu_state.reset();
-
-                return cast;
+                return;
             }
             PlayState::Victorious => {
                 rc.fade_out().await;
@@ -180,8 +176,7 @@ pub async fn game_loop(
                 .await;
 
                 menu_state.reset();
-
-                return cast;
+                return;
             }
             PlayState::Warped | PlayState::Abort | PlayState::ResetGame => {
                 // do nothing and loop around the game loop
@@ -200,12 +195,7 @@ fn new_high_score(game_state: &GameState) -> HighScore {
     }
 }
 
-async fn died(
-    rc: &mut RenderContext,
-    level_state: &mut LevelState,
-    game_state: &mut GameState,
-    cast: &mut RayCast,
-) {
+async fn died(rc: &mut RenderContext, level_state: &mut LevelState, game_state: &mut GameState) {
     game_state.weapon = None; // take away weapon
     rc.sound.play_sound(SoundName::PLAYERDEATH, &rc.assets);
 
@@ -269,7 +259,6 @@ async fn died(
                 rc,
                 game_state,
                 level_state,
-                cast,
                 rc.input.mode == InputMode::DemoPlayback,
             )
             .await;
@@ -300,7 +289,6 @@ async fn died(
                 rc,
                 game_state,
                 level_state,
-                cast,
                 rc.input.mode == InputMode::DemoPlayback,
             )
             .await;
@@ -1127,11 +1115,10 @@ pub async fn play_demo(
     iw_config: &IWConfig,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
-    cast: RayCast,
     loader: &dyn Loader,
     demo_num: usize,
     benchmark: bool,
-) -> (RayCast, bool, Option<BenchmarkResult>) {
+) -> (bool, Option<BenchmarkResult>) {
     let demo_data = load_demo(loader, demo_graphic_num(demo_num)).expect("demo load");
     let mut demo_reader = DataReader::new(&demo_data);
     let mut game_state = new_game_state();
@@ -1153,7 +1140,7 @@ pub async fn play_demo(
 
     game_state.fizzle_in = true;
     let mut control_state = new_control_state();
-    let (cast, benchmark_result) = play_loop(
+    let benchmark_result = play_loop(
         rc,
         wolf_config,
         iw_config,
@@ -1162,7 +1149,6 @@ pub async fn play_demo(
         win_state,
         menu_state,
         &mut control_state,
-        cast,
         loader,
         benchmark,
     )
@@ -1170,11 +1156,7 @@ pub async fn play_demo(
 
     rc.restore_player_input().expect("player input restored");
 
-    (
-        cast,
-        game_state.play_state == PlayState::Abort,
-        benchmark_result,
-    )
+    (game_state.play_state == PlayState::Abort, benchmark_result)
 }
 
 fn demo_graphic_num(demo_num: usize) -> GraphicNum {

@@ -3,19 +3,21 @@ use std::path::PathBuf;
 use vga::{SCReg, VGABuilder};
 
 use crate::assets;
-use crate::config;
-use crate::config::default_iw_config;
+use crate::config::{self, default_iw_config};
 use crate::def::{
     ActiveType, At, ClassType, Difficulty, Dir, DirType, DoorAction, DoorLock, DoorType, GameState,
     LevelState, MAP_SIZE, NUM_AREAS, ObjKey, ObjType, Sprite, StaticKind, StaticType, WeaponType,
     new_game_state,
 };
+use crate::draw::init_ray_cast;
 use crate::fixed::{Fixed, ZERO};
 use crate::game::setup_game_level;
 use crate::loader::{DiskLoader, Loader};
 use crate::rc::{Input, RenderContext};
 use crate::sd;
+use crate::start::start_test;
 use crate::start::{OBJ_TYPE_LEN, STAT_TYPE_LEN, save_the_game};
+use crate::test_util::start_test_iw;
 use crate::time::new_test_ticker;
 
 use super::new_view_size;
@@ -25,6 +27,7 @@ use super::{do_load, null_obj_type};
 // the same save game files (there are currently differences that are WiP to achieve
 // a full load of savegames in IW)
 #[test]
+#[cfg(feature = "test")]
 fn test_do_load_and_save_save0() {
     let episode = 0;
     let map_on = 1;
@@ -373,6 +376,7 @@ fn check_written_save_0(loader: &DiskLoader) {
 
 // save game 1 is a manipulated/cheated one. Lives were edited to 99.
 #[test]
+#[cfg(feature = "test")]
 fn test_do_load_save1() {
     let episode = 0;
     let map_on = 1;
@@ -462,43 +466,6 @@ fn reset_partial_obj_type(obj: &mut ObjType) {
     obj.temp1 = -24;
     obj.temp2 = -35;
     obj.temp3 = -45;
-}
-
-fn start_test_iw(loader: &dyn Loader) -> RenderContext {
-    let wolf_config = config::load_wolf_config(loader);
-    let mut vga = VGABuilder::new()
-        .video_mode(0x13)
-        .build()
-        .expect("VGA test instance");
-
-    let sound = sd::test_sound();
-
-    //enable Mode Y
-    let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
-    vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
-
-    let (graphics, fonts, tiles, texts) =
-        assets::load_all_graphics(loader, &None).expect("load all graphics");
-    let assets = assets::load_graphic_assets(loader).expect("load graphic assets");
-
-    let projection = new_view_size(wolf_config.viewsize);
-    let input = Input::init_demo_playback(Vec::with_capacity(0));
-    let ticker = new_test_ticker();
-    let rc = RenderContext::init(
-        vga,
-        ticker,
-        graphics,
-        fonts,
-        tiles,
-        texts,
-        assets,
-        loader.variant(),
-        input,
-        projection,
-        sound,
-    );
-
-    rc
 }
 
 // testdata

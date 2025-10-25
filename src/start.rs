@@ -22,7 +22,7 @@ use crate::def::{
     ObjKey, ObjType, PLAYER_KEY, Sprite, StaticKind, StaticType, WeaponType, WindowState,
     new_game_state,
 };
-use crate::draw::{RayCast, init_ray_cast};
+use crate::draw::init_ray_cast;
 use crate::fixed::Fixed;
 use crate::game::{game_loop, play_demo, setup_game_level};
 use crate::inter::draw_high_scores;
@@ -121,16 +121,16 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
                 loader.variant(),
                 input,
                 projection,
+                cast,
                 sound,
             );
 
-            let (_, abort, benchmark_result) = play_demo(
+            let (abort, benchmark_result) = play_demo(
                 &mut rc,
                 &mut wolf_config,
                 &iw_config,
                 &mut win_state,
                 &mut menu_state,
-                cast,
                 &loader,
                 which_demo,
                 true,
@@ -169,6 +169,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
                 loader.variant(),
                 input,
                 projection,
+                cast,
                 sound,
             );
 
@@ -178,7 +179,6 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
                 &mut rc,
                 &mut wolf_config,
                 &iw_config,
-                cast,
                 &mut win_state,
                 &mut menu_state,
                 &loader,
@@ -274,7 +274,6 @@ async fn demo_loop(
     rc: &mut RenderContext,
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
-    cast_param: RayCast,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
@@ -288,7 +287,6 @@ async fn demo_loop(
 
     let mut last_demo = 0;
 
-    let mut cast = cast_param;
     loop {
         while !iw_config.options.no_wait {
             // title screen & demo loop
@@ -315,19 +313,17 @@ async fn demo_loop(
             }
 
             // demo
-            let (cast_demo, abort, _) = play_demo(
+            let (abort, _) = play_demo(
                 rc,
                 wolf_config,
                 iw_config,
                 win_state,
                 menu_state,
-                cast,
                 loader,
                 last_demo,
                 false,
             )
             .await;
-            cast = cast_demo;
             last_demo = (last_demo + 1) % 4;
 
             rc.set_buffer_offset(rc.active_buffer());
@@ -344,28 +340,25 @@ async fn demo_loop(
             setup_game_level(&mut game_state, &rc.assets, false).expect("setup game level");
 
         // TODO RecordDemo()
-        let update = control_panel(
+        control_panel(
             rc,
             wolf_config,
             iw_config,
             &mut level_state,
             &mut game_state,
-            cast,
             win_state,
             menu_state,
             loader,
             NumCode::None,
         )
         .await;
-        cast = update.ray_cast;
 
-        cast = game_loop(
+        game_loop(
             rc,
             wolf_config,
             iw_config,
             &mut level_state,
             &mut game_state,
-            cast,
             win_state,
             menu_state,
             loader,

@@ -38,3 +38,6 @@ pub mod vl;
 
 #[cfg(feature = "web")]
 pub mod web;
+
+#[cfg(feature = "test")]
+pub mod test_util;

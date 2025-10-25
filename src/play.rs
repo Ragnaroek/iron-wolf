@@ -28,7 +28,7 @@ use crate::def::{
     FL_NEVERMARK, FL_NONMARK, FOCAL_LENGTH, GLOBAL1, GameState, IWConfig, LevelState, NUM_BUTTONS,
     ObjKey, PlayState, SCREENLOC, STATUS_LINES, TILEGLOBAL, WindowState,
 };
-use crate::draw::{RayCast, three_d_refresh};
+use crate::draw::three_d_refresh;
 use crate::fixed::Fixed;
 use crate::inter::clear_split_vwb;
 use crate::loader::Loader;
@@ -297,10 +297,9 @@ pub async fn play_loop(
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     control_state: &mut ControlState,
-    cast_param: RayCast,
     loader: &dyn Loader,
     benchmark: bool,
-) -> (RayCast, Option<BenchmarkResult>) {
+) -> Option<BenchmarkResult> {
     let shifts = init_colour_shifts();
 
     game_state.play_state = PlayState::StillPlaying;
@@ -333,7 +332,6 @@ pub async fn play_loop(
 
     let play_loop_start = Instant::now();
 
-    let mut cast = cast_param;
     let mut _frame_id: u64 = 0;
     let mut demo_tic = 0;
     while game_state.play_state == PlayState::StillPlaying {
@@ -381,11 +379,9 @@ pub async fn play_loop(
         }
 
         #[cfg(feature = "tracing")]
-        span.in_scope(|| {
-            update_game_state(rc, tics, level_state, game_state, control_state, &cast)
-        });
+        span.in_scope(|| update_game_state(rc, tics, level_state, game_state, control_state));
         #[cfg(not(feature = "tracing"))]
-        update_game_state(rc, tics, level_state, game_state, control_state, &cast);
+        update_game_state(rc, tics, level_state, game_state, control_state);
 
         update_palette_shifts(game_state, &rc.vga, &shifts, tics).await;
 
@@ -393,7 +389,6 @@ pub async fn play_loop(
             rc,
             game_state,
             level_state,
-            &mut cast,
             rc.input.mode == InputMode::DemoPlayback,
         )
         .await;
@@ -402,7 +397,6 @@ pub async fn play_loop(
             rc,
             wolf_config,
             iw_config,
-            cast,
             win_state,
             menu_state,
             level_state,
@@ -410,7 +404,6 @@ pub async fn play_loop(
             loader,
         )
         .await;
-        cast = update.ray_cast;
 
         if let Some(which) = update.load {
             load_the_game(
@@ -466,7 +459,7 @@ pub async fn play_loop(
         benchmark_result.as_mut().unwrap().total = play_loop_start.elapsed();
     }
 
-    (cast, benchmark_result)
+    benchmark_result
 }
 
 fn update_game_state(
@@ -475,7 +468,6 @@ fn update_game_state(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     control_state: &mut ControlState,
-    cast: &RayCast,
 ) {
     poll_controls(rc, control_state, tics);
     if rc.input.mode == InputMode::DemoPlayback {
@@ -488,20 +480,13 @@ fn update_game_state(
 
     game_state.made_noise = false;
 
-    move_doors(
-        level_state,
-        game_state,
-        &mut rc.sound,
-        &rc.assets,
-        cast,
-        tics,
-    );
+    move_doors(rc, level_state, game_state, tics);
     move_push_walls(level_state, game_state, tics);
 
     for i in 0..level_state.actors.len() {
         let k = ObjKey(i);
         if level_state.actors.exists(k) {
-            do_actor(rc, k, tics, level_state, game_state, control_state, cast);
+            do_actor(rc, k, tics, level_state, game_state, control_state);
         }
     }
 }
@@ -513,7 +498,6 @@ fn do_actor(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     control_state: &mut ControlState,
-    cast: &RayCast,
 ) {
     if level_state.obj(k).active == ActiveType::No
         && !level_state.area_by_player[level_state.obj(k).area_number]
@@ -543,7 +527,7 @@ fn do_actor(
             ))
             .think
         {
-            think(rc, k, tics, level_state, game_state, control_state, cast);
+            think(rc, k, tics, level_state, game_state, control_state);
             if level_state.obj(k).state.is_none() {
                 level_state.actors.drop_obj(k);
                 return;
@@ -568,7 +552,7 @@ fn do_actor(
     level_state.update_obj(k, |obj| obj.tic_count -= tics as i32);
     while level_state.obj(k).tic_count <= 0 {
         if let Some(action) = level_state.obj(k).state.expect("state").action {
-            action(rc, k, tics, level_state, game_state, control_state, cast);
+            action(rc, k, tics, level_state, game_state, control_state);
             if level_state.obj(k).state.is_none() {
                 level_state.actors.drop_obj(k);
                 return;
@@ -591,7 +575,7 @@ fn do_actor(
     }
 
     if let Some(think) = level_state.obj(k).state.expect("state").think {
-        think(rc, k, tics, level_state, game_state, control_state, cast);
+        think(rc, k, tics, level_state, game_state, control_state);
         if level_state.obj(k).state.is_none() {
             level_state.actors.drop_obj(k);
             return;
@@ -767,7 +751,6 @@ async fn check_keys(
     rc: &mut RenderContext,
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
-    cast: RayCast,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     level_state: &mut LevelState,
@@ -775,7 +758,7 @@ async fn check_keys(
     loader: &dyn Loader,
 ) -> GameStateUpdate {
     if rc.input.mode == InputMode::DemoPlayback {
-        return GameStateUpdate::with_render_update(cast);
+        return GameStateUpdate::without_update();
     }
 
     if rc.key_pressed(NumCode::BackSpace)
@@ -790,7 +773,7 @@ async fn check_keys(
         rc.ack();
         win_state.debug_ok = true;
         draw_all_play_border_sides(rc);
-        return GameStateUpdate::with_render_update(cast);
+        return GameStateUpdate::without_update();
     }
 
     let scan = rc.last_scan();
@@ -815,7 +798,6 @@ async fn check_keys(
             iw_config,
             level_state,
             game_state,
-            cast,
             win_state,
             menu_state,
             loader,
@@ -850,10 +832,10 @@ async fn check_keys(
         debug_keys(rc, win_state, game_state, level_state.player()).await;
 
         rc.set_buffer_offset(prev_buffer);
-        return GameStateUpdate::with_render_update(cast);
+        return GameStateUpdate::without_update();
     }
 
-    return GameStateUpdate::with_render_update(cast);
+    return GameStateUpdate::without_update();
 }
 
 // reads input delta since last tic and manipulates the player state

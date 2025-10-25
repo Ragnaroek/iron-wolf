@@ -1,12 +1,16 @@
 use crate::agent::S_PLAYER;
+use crate::assets;
 use crate::def::{
     Actors, ClassType, DirType, DoorAction, DoorLock, DoorType, FL_NEVERMARK, Level, LevelState,
     MAP_SIZE, MAX_ACTORS, ObjType,
 };
 use crate::draw::{Hit, Op, calc_height, init_ray_cast};
 use crate::fixed::Fixed;
+use crate::loader::{DiskLoader, Loader};
 use crate::map::MapSegs;
+use crate::rc::{Input, RenderContext};
 use crate::start::new_view_size;
+use crate::test_util::test_context;
 
 use super::RayCast;
 
@@ -313,17 +317,20 @@ fn test_init_ray_cast_consts() {
     assert_eq!(rc.view_y, 3788164);
 }
 
+#[cfg(feature = "test")]
 #[test]
 fn test_calc_height() {
     let prj = new_view_size(19);
     let mut player = test_player();
     player.angle = 63;
 
-    let mut rc = init_ray_cast(prj.view_width);
-    rc.init_ray_cast_consts(&prj, &player, 0);
-    rc.x_intercept = 1904384;
-    rc.y_intercept = 3670016;
-    assert_eq!(calc_height(prj.height_numerator, &rc), 562)
+    let mut rc = test_context();
+    let mut cast = init_ray_cast(prj.view_width);
+    cast.init_ray_cast_consts(&prj, &player, 0);
+    cast.x_intercept = 1904384;
+    cast.y_intercept = 3670016;
+    rc.cast = cast;
+    assert_eq!(calc_height(&rc), 562)
 }
 
 // Helper

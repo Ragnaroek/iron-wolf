@@ -520,13 +520,8 @@ impl RayCast {
 }
 
 #[cfg_attr(feature = "tracing", instrument(skip_all))]
-pub fn wall_refresh(
-    rc: &mut RenderContext,
-    game_state: &GameState,
-    level_state: &mut LevelState,
-    cast: &mut RayCast,
-) {
-    cast.init_ray_cast_consts(
+pub fn wall_refresh(rc: &mut RenderContext, game_state: &GameState, level_state: &mut LevelState) {
+    rc.cast.init_ray_cast_consts(
         &rc.projection,
         level_state.player(),
         game_state.push_wall_pos,
@@ -542,20 +537,20 @@ pub fn wall_refresh(
 
     //asm_refresh / ray casting core loop
     for pixx in 0..rc.projection.view_width {
-        cast.init_cast(&rc.projection, pixx);
-        cast.cast(level_state);
+        rc.cast.init_cast(&rc.projection, pixx);
+        rc.cast.cast(level_state);
 
-        match cast.hit {
+        match rc.cast.hit {
             Hit::VerticalWall | Hit::VerticalBorder => {
-                hit_vert_wall(rc, &mut scaler_state, cast, pixx, &level_state.level)
+                hit_vert_wall(rc, &mut scaler_state, pixx, &level_state.level)
             }
             Hit::HorizontalWall | Hit::HorizontalBorder => {
-                hit_horiz_wall(rc, &mut scaler_state, cast, pixx, &level_state.level)
+                hit_horiz_wall(rc, &mut scaler_state, pixx, &level_state.level)
             }
-            Hit::VerticalDoor => hit_vert_door(rc, &mut scaler_state, cast, pixx, &level_state),
-            Hit::HorizontalDoor => hit_horiz_door(rc, &mut scaler_state, cast, pixx, &level_state),
-            Hit::VerticalPushWall => hit_vert_push_wall(rc, &mut scaler_state, cast, pixx),
-            Hit::HorizontalPushWall => hit_horiz_push_wall(rc, &mut scaler_state, cast, pixx),
+            Hit::VerticalDoor => hit_vert_door(rc, &mut scaler_state, pixx, &level_state),
+            Hit::HorizontalDoor => hit_horiz_door(rc, &mut scaler_state, pixx, &level_state),
+            Hit::VerticalPushWall => hit_vert_push_wall(rc, &mut scaler_state, pixx),
+            Hit::HorizontalPushWall => hit_horiz_push_wall(rc, &mut scaler_state, pixx),
         }
     }
 }
@@ -565,15 +560,14 @@ pub async fn three_d_refresh(
     rc: &mut RenderContext,
     game_state: &mut GameState,
     level_state: &mut LevelState,
-    cast: &mut RayCast,
     demo_playback: bool,
 ) {
     rc.set_buffer_offset(rc.buffer_offset() + rc.projection.screenofs);
 
     clear_screen(rc, game_state);
-    wall_refresh(rc, game_state, level_state, cast);
+    wall_refresh(rc, game_state, level_state);
 
-    draw_scaleds(rc, game_state, level_state, &cast);
+    draw_scaleds(rc, game_state, level_state);
 
     draw_player_weapon(rc, level_state, game_state, demo_playback);
 
@@ -613,12 +607,12 @@ fn clear_screen(rc: &mut RenderContext, state: &GameState) {
 
 //Helper functions
 
-pub fn calc_height(height_numerator: i32, cast: &RayCast) -> i32 {
-    let gx = Fixed::new_from_i32(cast.x_intercept - cast.view_x);
-    let gxt = fixed_by_frac(gx, cast.view_cos);
+pub fn calc_height(rc: &RenderContext) -> i32 {
+    let gx = Fixed::new_from_i32(rc.cast.x_intercept - rc.cast.view_x);
+    let gxt = fixed_by_frac(gx, rc.cast.view_cos);
 
-    let gy = Fixed::new_from_i32(cast.y_intercept - cast.view_y);
-    let gyt = fixed_by_frac(gy, cast.view_sin);
+    let gy = Fixed::new_from_i32(rc.cast.y_intercept - rc.cast.view_y);
+    let gyt = fixed_by_frac(gy, rc.cast.view_sin);
 
     let mut nx = gxt.to_i32() - gyt.to_i32();
 
@@ -626,7 +620,7 @@ pub fn calc_height(height_numerator: i32, cast: &RayCast) -> i32 {
         nx = MIN_DIST;
     }
 
-    height_numerator / (nx >> 8)
+    rc.projection.height_numerator / (nx >> 8)
 }
 
 pub fn scale_post(rc: &mut RenderContext, scaler_state: &ScalerState, height: i32) {
@@ -655,35 +649,35 @@ pub fn scale_post(rc: &mut RenderContext, scaler_state: &ScalerState, height: i3
 pub fn hit_vert_wall(
     rc: &mut RenderContext,
     scaler_state: &mut ScalerState,
-    cast: &mut RayCast,
     pixx: usize,
     level: &Level,
 ) {
-    let mut post_source = (cast.y_intercept >> 4) & 0xFC0;
-    if cast.x_tilestep == -1 {
+    let mut post_source = (rc.cast.y_intercept >> 4) & 0xFC0;
+    if rc.cast.x_tilestep == -1 {
         post_source = 0xFC0 - post_source;
-        cast.x_intercept += TILEGLOBAL;
+        rc.cast.x_intercept += TILEGLOBAL;
     }
 
-    let height = calc_height(rc.projection.height_numerator, cast);
-    cast.wall_height[pixx] = height;
+    let height = calc_height(rc);
+    rc.cast.wall_height[pixx] = height;
 
     if scaler_state.last_side {
         scale_post(rc, scaler_state, height);
     }
 
     //check for adjacent door
-    let texture_ix = if cast.tile_hit & 0x040 != 0 {
-        cast.y_tile = cast.y_intercept >> TILESHIFT;
-        if level.tile_map[(cast.x_tile - cast.x_tilestep) as usize][cast.y_tile as usize] & 0x80
+    let texture_ix = if rc.cast.tile_hit & 0x040 != 0 {
+        rc.cast.y_tile = rc.cast.y_intercept >> TILESHIFT;
+        if level.tile_map[(rc.cast.x_tile - rc.cast.x_tilestep) as usize][rc.cast.y_tile as usize]
+            & 0x80
             != 0
         {
             door_wall(&rc.assets) + 3
         } else {
-            vert_wall(cast.tile_hit as usize & !0x40)
+            vert_wall(rc.cast.tile_hit as usize & !0x40)
         }
     } else {
-        vert_wall(cast.tile_hit as usize)
+        vert_wall(rc.cast.tile_hit as usize)
     };
 
     scaler_state.last_side = true;
@@ -696,36 +690,36 @@ pub fn hit_vert_wall(
 pub fn hit_horiz_wall(
     rc: &mut RenderContext,
     scaler_state: &mut ScalerState,
-    cast: &mut RayCast,
     pixx: usize,
     level: &Level,
 ) {
-    let mut post_source = (cast.x_intercept >> 4) & 0xFC0;
-    if cast.y_tilestep == -1 {
-        cast.y_intercept += TILEGLOBAL;
+    let mut post_source = (rc.cast.x_intercept >> 4) & 0xFC0;
+    if rc.cast.y_tilestep == -1 {
+        rc.cast.y_intercept += TILEGLOBAL;
     } else {
         post_source = 0xFC0 - post_source;
     }
 
-    let height = calc_height(rc.projection.height_numerator, cast);
-    cast.wall_height[pixx] = height;
+    let height = calc_height(rc);
+    rc.cast.wall_height[pixx] = height;
 
     if scaler_state.last_side {
         scale_post(rc, scaler_state, height);
     }
 
     //check for adjacent door
-    let texture_ix = if cast.tile_hit & 0x040 != 0 {
-        cast.x_tile = cast.x_intercept >> TILESHIFT;
-        if level.tile_map[cast.x_tile as usize][(cast.y_tile - cast.y_tilestep) as usize] & 0x80
+    let texture_ix = if rc.cast.tile_hit & 0x040 != 0 {
+        rc.cast.x_tile = rc.cast.x_intercept >> TILESHIFT;
+        if level.tile_map[rc.cast.x_tile as usize][(rc.cast.y_tile - rc.cast.y_tilestep) as usize]
+            & 0x80
             != 0
         {
             door_wall(&rc.assets) + 2
         } else {
-            horiz_wall(cast.tile_hit as usize & !0x40)
+            horiz_wall(rc.cast.tile_hit as usize & !0x40)
         }
     } else {
-        horiz_wall(cast.tile_hit as usize)
+        horiz_wall(rc.cast.tile_hit as usize)
     };
 
     scaler_state.last_side = true;
@@ -738,15 +732,14 @@ pub fn hit_horiz_wall(
 pub fn hit_horiz_door(
     rc: &mut RenderContext,
     scaler_state: &mut ScalerState,
-    cast: &mut RayCast,
     pixx: usize,
     level_state: &LevelState,
 ) {
-    let doornum = cast.tile_hit & 0x7F;
+    let doornum = rc.cast.tile_hit & 0x7F;
     let door = &level_state.doors[doornum as usize];
-    let post_source = ((cast.x_intercept - door.position as i32) >> 4) & 0xFC0;
-    let height = calc_height(rc.projection.height_numerator, cast);
-    cast.wall_height[pixx] = height;
+    let post_source = ((rc.cast.x_intercept - door.position as i32) >> 4) & 0xFC0;
+    let height = calc_height(rc);
+    rc.cast.wall_height[pixx] = height;
     if scaler_state.last_side {
         scale_post(rc, scaler_state, height);
     }
@@ -761,15 +754,14 @@ pub fn hit_horiz_door(
 pub fn hit_vert_door(
     rc: &mut RenderContext,
     scaler_state: &mut ScalerState,
-    cast: &mut RayCast,
     pixx: usize,
     level_state: &LevelState,
 ) {
-    let doornum = cast.tile_hit & 0x7F;
+    let doornum = rc.cast.tile_hit & 0x7F;
     let door = &level_state.doors[doornum as usize];
-    let post_source = ((cast.y_intercept - door.position as i32) >> 4) & 0xFC0;
-    let height = calc_height(rc.projection.height_numerator, cast);
-    cast.wall_height[pixx] = height;
+    let post_source = ((rc.cast.y_intercept - door.position as i32) >> 4) & 0xFC0;
+    let height = calc_height(rc);
+    rc.cast.wall_height[pixx] = height;
     if scaler_state.last_side {
         scale_post(rc, scaler_state, height);
     }
@@ -794,23 +786,18 @@ fn door_texture(door: &DoorType, assets: &Assets) -> usize {
     }
 }
 
-pub fn hit_horiz_push_wall(
-    rc: &mut RenderContext,
-    scaler_state: &mut ScalerState,
-    cast: &mut RayCast,
-    pixx: usize,
-) {
-    let mut post_source = (cast.x_intercept >> 4) & 0xFC0;
-    let offset = cast.push_wall_pos << 10;
-    if cast.y_tilestep == -1 {
-        cast.y_intercept += TILEGLOBAL - offset;
+pub fn hit_horiz_push_wall(rc: &mut RenderContext, scaler_state: &mut ScalerState, pixx: usize) {
+    let mut post_source = (rc.cast.x_intercept >> 4) & 0xFC0;
+    let offset = rc.cast.push_wall_pos << 10;
+    if rc.cast.y_tilestep == -1 {
+        rc.cast.y_intercept += TILEGLOBAL - offset;
     } else {
         post_source = 0xFC0 - post_source;
-        cast.y_intercept += offset;
+        rc.cast.y_intercept += offset;
     }
 
-    let height = calc_height(rc.projection.height_numerator, cast);
-    cast.wall_height[pixx] = height;
+    let height = calc_height(rc);
+    rc.cast.wall_height[pixx] = height;
 
     // TODO  if (lasttilehit == tilehit) in the same wall type as last time, so check for optimized draw
 
@@ -818,7 +805,7 @@ pub fn hit_horiz_push_wall(
         scale_post(rc, scaler_state, height);
     }
 
-    let texture_ix = horiz_wall(cast.tile_hit as usize & 63);
+    let texture_ix = horiz_wall(rc.cast.tile_hit as usize & 63);
     scaler_state.last_side = true;
     scaler_state.post_x = pixx;
     scaler_state.post_width = 1;
@@ -826,23 +813,18 @@ pub fn hit_horiz_push_wall(
     scaler_state.texture_ix = texture_ix;
 }
 
-pub fn hit_vert_push_wall(
-    rc: &mut RenderContext,
-    scaler_state: &mut ScalerState,
-    cast: &mut RayCast,
-    pixx: usize,
-) {
-    let mut post_source = (cast.y_intercept >> 4) & 0xFC0;
-    let offset = cast.push_wall_pos << 10;
-    if cast.x_tilestep == -1 {
+pub fn hit_vert_push_wall(rc: &mut RenderContext, scaler_state: &mut ScalerState, pixx: usize) {
+    let mut post_source = (rc.cast.y_intercept >> 4) & 0xFC0;
+    let offset = rc.cast.push_wall_pos << 10;
+    if rc.cast.x_tilestep == -1 {
         post_source = 0xFC0 - post_source;
-        cast.x_intercept += TILEGLOBAL - offset;
+        rc.cast.x_intercept += TILEGLOBAL - offset;
     } else {
-        cast.x_intercept += offset;
+        rc.cast.x_intercept += offset;
     }
 
-    let height = calc_height(rc.projection.height_numerator, cast);
-    cast.wall_height[pixx] = height;
+    let height = calc_height(rc);
+    rc.cast.wall_height[pixx] = height;
 
     // TODO if (lasttilehit == tilehit) in the same wall type as last time, so check for optimized draw
 
@@ -850,7 +832,7 @@ pub fn hit_vert_push_wall(
         scale_post(rc, scaler_state, height);
     }
 
-    let texture_ix = vert_wall(cast.tile_hit as usize & 63);
+    let texture_ix = vert_wall(rc.cast.tile_hit as usize & 63);
     scaler_state.last_side = true;
     scaler_state.post_x = pixx;
     scaler_state.post_width = 1;
@@ -908,12 +890,7 @@ fn draw_player_weapon(
 }
 
 #[cfg_attr(feature = "tracing", instrument(skip_all))]
-fn draw_scaleds(
-    rc: &mut RenderContext,
-    game_state: &mut GameState,
-    level_state: &mut LevelState,
-    cast: &RayCast,
-) {
+fn draw_scaleds(rc: &mut RenderContext, game_state: &mut GameState, level_state: &mut LevelState) {
     let mut visptr = 0;
     // place static objects
     for stat in &mut level_state.statics {
@@ -927,7 +904,7 @@ fn draw_scaleds(
         }
 
         let vis = &mut level_state.vislist[visptr];
-        let can_grab = transform_tile(cast, &rc.projection, stat, vis);
+        let can_grab = transform_tile(rc, stat, vis);
         if can_grab && (stat.flags & FL_BONUS) != 0 {
             get_bonus(rc, game_state, stat);
             continue;
@@ -970,7 +947,7 @@ fn draw_scaleds(
             || (vis[obj.tilex + 1][obj.tiley - 1] && tile[obj.tilex + 1][obj.tiley - 1] == 0)
         {
             obj.active = ActiveType::Yes;
-            transform_actor(cast, &rc.projection, obj);
+            transform_actor(rc, obj);
             if obj.view_height == 0 {
                 continue; // too close or far away
             }
@@ -1021,7 +998,6 @@ fn draw_scaleds(
         //let sprite_data = &rc.assets.sprites[vis_obj.sprite as usize];
         scale_shape(
             rc,
-            &cast.wall_height,
             vis_obj.view_x as usize,
             vis_obj.sprite as usize,
             vis_obj.view_height as usize,
@@ -1051,17 +1027,17 @@ fn calc_rotate(prj: &ProjectionConfig, player_angle: i32, obj: &ObjType) -> usiz
     angle as usize / (ANGLES / 8)
 }
 
-fn transform_actor(cast: &RayCast, prj: &ProjectionConfig, obj: &mut ObjType) {
-    let gx = Fixed::new_from_i32(obj.x - cast.view_x);
-    let gy = Fixed::new_from_i32(obj.y - cast.view_y);
+fn transform_actor(rc: &RenderContext, obj: &mut ObjType) {
+    let gx = Fixed::new_from_i32(obj.x - rc.cast.view_x);
+    let gy = Fixed::new_from_i32(obj.y - rc.cast.view_y);
 
-    let gxt = fixed_by_frac(gx, cast.view_cos);
-    let gyt = fixed_by_frac(gy, cast.view_sin);
+    let gxt = fixed_by_frac(gx, rc.cast.view_cos);
+    let gyt = fixed_by_frac(gy, rc.cast.view_sin);
     let nx = gxt.to_i32() - gyt.to_i32() - ACTOR_SIZE; // fudge the shape forward a bit, because
     // the midpoint could put parts of the shape
     // into an adjacent wall
-    let gxt = fixed_by_frac(gx, cast.view_sin);
-    let gyt = fixed_by_frac(gy, cast.view_cos);
+    let gxt = fixed_by_frac(gx, rc.cast.view_sin);
+    let gyt = fixed_by_frac(gy, rc.cast.view_cos);
     let ny = gyt.to_i32() + gxt.to_i32();
 
     // calculate perspective ratio
@@ -1075,29 +1051,24 @@ fn transform_actor(cast: &RayCast, prj: &ProjectionConfig, obj: &mut ObjType) {
         return;
     }
 
-    let (ny_scale, _) = ny.overflowing_mul(prj.scale);
-    obj.view_x = prj.center_x as i32 + ny_scale / nx;
+    let (ny_scale, _) = ny.overflowing_mul(rc.projection.scale);
+    obj.view_x = rc.projection.center_x as i32 + ny_scale / nx;
 
     // calculate height (heightnumerator/(nx>>8))
-    obj.view_height = prj.height_numerator / (nx >> 8);
+    obj.view_height = rc.projection.height_numerator / (nx >> 8);
 }
 
-fn transform_tile(
-    cast: &RayCast,
-    prj: &ProjectionConfig,
-    stat: &StaticType,
-    visobj: &mut VisObj,
-) -> bool {
+fn transform_tile(rc: &RenderContext, stat: &StaticType, visobj: &mut VisObj) -> bool {
     // translate point to view centered coordinates
-    let gx = Fixed::new_from_i32(((stat.tile_x as i32) << TILESHIFT) + 0x8000 - cast.view_x);
-    let gy = Fixed::new_from_i32(((stat.tile_y as i32) << TILESHIFT) + 0x8000 - cast.view_y);
+    let gx = Fixed::new_from_i32(((stat.tile_x as i32) << TILESHIFT) + 0x8000 - rc.cast.view_x);
+    let gy = Fixed::new_from_i32(((stat.tile_y as i32) << TILESHIFT) + 0x8000 - rc.cast.view_y);
 
-    let gxt = fixed_by_frac(gx, cast.view_cos);
-    let gyt = fixed_by_frac(gy, cast.view_sin);
+    let gxt = fixed_by_frac(gx, rc.cast.view_cos);
+    let gyt = fixed_by_frac(gy, rc.cast.view_sin);
     let nx = gxt.to_i32() - gyt.to_i32() - 0x2000; // 0x2000 is size of object
 
-    let gxt = fixed_by_frac(gx, cast.view_sin);
-    let gyt = fixed_by_frac(gy, cast.view_cos);
+    let gxt = fixed_by_frac(gx, rc.cast.view_sin);
+    let gyt = fixed_by_frac(gy, rc.cast.view_cos);
     let ny = gyt.to_i32() + gxt.to_i32();
 
     // calculate perspective ratio
@@ -1106,10 +1077,10 @@ fn transform_tile(
         visobj.view_height = 0;
         return false;
     }
-    visobj.view_x = prj.center_x as i32 + ny * prj.scale / nx;
+    visobj.view_x = rc.projection.center_x as i32 + ny * rc.projection.scale / nx;
 
     // calculate height (heightnumerator/(nx>>8))
-    visobj.view_height = prj.height_numerator / (nx >> 8);
+    visobj.view_height = rc.projection.height_numerator / (nx >> 8);
 
     // see if it should be grabbed
     if nx < TILEGLOBAL && ny > -TILEGLOBAL / 2 && ny < TILEGLOBAL / 2 {

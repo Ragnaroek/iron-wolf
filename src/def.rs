@@ -3,7 +3,6 @@
 mod def_test;
 
 use crate::assets::{DigiChannel, SoundName};
-use crate::draw::RayCast;
 use crate::fixed::Fixed;
 use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::map::{MapFileType, MapSegs, MapType};
@@ -885,7 +884,6 @@ type Think = fn(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     control_state: &mut ControlState,
-    cast: &RayCast,
 );
 
 type Action = fn(
@@ -895,7 +893,6 @@ type Action = fn(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     control_state: &mut ControlState,
-    cast: &RayCast,
 );
 
 #[derive(Eq, Debug)]

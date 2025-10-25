@@ -10,7 +10,6 @@ use crate::def::{
     PUSHABLE_TILE, PlayState, SCREENLOC, STATUS_LINES, Sprite, StateType, StaticKind, StaticType,
     TILEGLOBAL, TILESHIFT, WeaponType,
 };
-use crate::draw::RayCast;
 use crate::fixed::{Fixed, ZERO, fixed_by_frac};
 use crate::game::AREATILE;
 use crate::map;
@@ -175,7 +174,6 @@ fn t_attack(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     control_state: &mut ControlState,
-    cast: &RayCast,
 ) {
     update_face(rc, tics, game_state);
 
@@ -238,13 +236,13 @@ fn t_attack(
                 if control_state.button_state[Button::Attack as usize] {
                     game_state.attack_frame -= 2;
                 }
-                weapon_attack(rc, level_state, game_state, cast);
+                weapon_attack(rc, level_state, game_state);
             }
             1 => {
-                weapon_attack(rc, level_state, game_state, cast);
+                weapon_attack(rc, level_state, game_state);
             }
             2 => {
-                knife_attack(rc, level_state, game_state, cast);
+                knife_attack(rc, level_state, game_state);
             }
             3 => {
                 if game_state.ammo != 0 && control_state.button_state[Button::Attack as usize] {
@@ -261,28 +259,18 @@ fn t_attack(
     }
 }
 
-fn weapon_attack(
-    rc: &mut RenderContext,
-    level_state: &mut LevelState,
-    game_state: &mut GameState,
-    cast: &RayCast,
-) {
+fn weapon_attack(rc: &mut RenderContext, level_state: &mut LevelState, game_state: &mut GameState) {
     if game_state.ammo == 0 {
         // can only happen with chain gun
         game_state.attack_frame += 1;
         return;
     }
-    gun_attack(rc, level_state, game_state, cast);
+    gun_attack(rc, level_state, game_state);
     game_state.ammo -= 1;
     draw_ammo(rc, &game_state);
 }
 
-fn knife_attack(
-    rc: &mut RenderContext,
-    level_state: &mut LevelState,
-    game_state: &mut GameState,
-    cast: &RayCast,
-) {
+fn knife_attack(rc: &mut RenderContext, level_state: &mut LevelState, game_state: &mut GameState) {
     rc.sound.play_sound(SoundName::ATKKNIFE, &rc.assets);
 
     let mut dist = 0x7fffffff;
@@ -312,17 +300,11 @@ fn knife_attack(
         closest.expect("closest enemy"),
         level_state,
         game_state,
-        cast,
         (rnd_t() >> 4) as usize,
     )
 }
 
-fn gun_attack(
-    rc: &mut RenderContext,
-    level_state: &mut LevelState,
-    game_state: &mut GameState,
-    cast: &RayCast,
-) {
+fn gun_attack(rc: &mut RenderContext, level_state: &mut LevelState, game_state: &mut GameState) {
     match game_state.weapon {
         Some(WeaponType::Pistol) => {
             rc.sound.play_sound(SoundName::ATKPISTOL, &rc.assets);
@@ -392,7 +374,7 @@ fn gun_attack(
         damage = rnd_t() / 6;
     }
 
-    damage_actor(rc, k, level_state, game_state, cast, damage as usize);
+    damage_actor(rc, k, level_state, game_state, damage as usize);
 }
 
 fn victory_spin(tics: u64, level_state: &mut LevelState) {
@@ -427,7 +409,6 @@ fn t_player(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     control_state: &mut ControlState,
-    cast: &RayCast,
 ) {
     if game_state.victory_flag {
         victory_spin(tics, level_state);
@@ -438,14 +419,7 @@ fn t_player(
     check_weapon_change(rc, game_state, control_state);
 
     if control_state.button_state(Button::Use) {
-        cmd_use(
-            level_state,
-            game_state,
-            &mut rc.sound,
-            &rc.assets,
-            cast,
-            control_state,
-        );
+        cmd_use(rc, level_state, game_state, control_state);
     }
 
     if control_state.button_state(Button::Attack) && !control_state.button_held(Button::Attack) {
@@ -478,11 +452,9 @@ fn cmd_fire(
 }
 
 fn cmd_use(
+    rc: &mut RenderContext,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
-    assets: &Assets,
-    rc: &RayCast,
     control_state: &mut ControlState,
 ) {
     let check_x;
@@ -517,8 +489,8 @@ fn cmd_use(
         push_wall(
             level_state,
             game_state,
-            sound,
-            assets,
+            &mut rc.sound,
+            &rc.assets,
             check_x,
             check_y,
             dir,
@@ -540,24 +512,17 @@ fn cmd_use(
         }
         level_state.level.tile_map[check_x][check_y] += 1; // flip switch [to animate the lever to move up]
 
-        sound.play_sound(SoundName::LEVELDONE, assets);
-        while sound.is_any_sound_playing() {
+        rc.sound.play_sound(SoundName::LEVELDONE, &rc.assets);
+        while rc.sound.is_any_sound_playing() {
             std::thread::sleep(Duration::from_millis(1));
         }
     }
 
     if !control_state.button_held(Button::Use) && doornum & 0x80 != 0 {
         control_state.set_button_held(Button::Use, true);
-        operate_door(
-            (doornum & !0x80) as usize,
-            level_state,
-            game_state,
-            sound,
-            assets,
-            rc,
-        );
+        operate_door(rc, (doornum & !0x80) as usize, level_state, game_state);
     } else {
-        sound.play_sound(SoundName::DONOTHING, assets);
+        rc.sound.play_sound(SoundName::DONOTHING, &rc.assets);
     }
 }
 

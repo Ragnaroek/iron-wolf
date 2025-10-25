@@ -124,13 +124,7 @@ fn build_comp_scale(scaler_height: usize, view_height: usize) -> Scaler {
     scaler
 }
 
-pub fn scale_shape(
-    rc: &mut RenderContext,
-    wall_height: &Vec<i32>,
-    x_center: usize,
-    sprite_num: usize,
-    height: usize,
-) {
+pub fn scale_shape(rc: &mut RenderContext, x_center: usize, sprite_num: usize, height: usize) {
     let scale = height >> 3;
     if scale == 0 || scale > rc.projection.scaler.max_scale {
         return;
@@ -155,7 +149,7 @@ pub fn scale_shape(
         if slinewidth == 1 {
             line_x -= 1;
             if line_x < rc.projection.view_width {
-                if wall_height[line_x] >= height as i32 {
+                if rc.cast.wall_height[line_x] >= height as i32 {
                     continue; // obscured by closer wall
                 }
                 scale_line(rc, scale_ix, sprite_num, post_ptr, line_x, slinewidth);
@@ -176,15 +170,15 @@ pub fn scale_shape(
             line_x -= slinewidth;
         }
 
-        let left_vis = wall_height[line_x] < height as i32;
-        let right_vis = wall_height[line_x + slinewidth - 1] < height as i32;
+        let left_vis = rc.cast.wall_height[line_x] < height as i32;
+        let right_vis = rc.cast.wall_height[line_x + slinewidth - 1] < height as i32;
 
         if left_vis {
             if right_vis {
                 scale_line(rc, scale_ix, sprite_num, post_ptr, line_x, slinewidth);
             } else {
                 // find first visible line from the right
-                while wall_height[line_x + slinewidth - 1] >= height as i32 {
+                while rc.cast.wall_height[line_x + slinewidth - 1] >= height as i32 {
                     slinewidth -= 1;
                 }
                 scale_line(rc, scale_ix, sprite_num, post_ptr, line_x, slinewidth);
@@ -194,7 +188,7 @@ pub fn scale_shape(
                 continue; // totally obscured
             }
             // find first visible line from the left
-            while wall_height[line_x] >= height as i32 {
+            while rc.cast.wall_height[line_x] >= height as i32 {
                 line_x += 1;
                 slinewidth -= 1;
             }
@@ -229,7 +223,7 @@ pub fn scale_shape(
 
         // handle single pixe lines
         if slinewidth == 1 {
-            if wall_height[line_x] < height as i32 {
+            if rc.cast.wall_height[line_x] < height as i32 {
                 scale_line(rc, scale_ix, sprite_num, post_ptr, line_x, slinewidth);
             }
             continue;
@@ -243,13 +237,13 @@ pub fn scale_shape(
             continue;
         }
 
-        let left_vis = wall_height[line_x] < height as i32;
-        let right_vis = wall_height[line_x + slinewidth - 1] < height as i32;
+        let left_vis = rc.cast.wall_height[line_x] < height as i32;
+        let right_vis = rc.cast.wall_height[line_x + slinewidth - 1] < height as i32;
         if left_vis {
             if right_vis {
                 scale_line(rc, scale_ix, sprite_num, post_ptr, line_x, slinewidth);
             } else {
-                while wall_height[line_x + slinewidth - 1] >= height as i32 {
+                while rc.cast.wall_height[line_x + slinewidth - 1] >= height as i32 {
                     slinewidth -= 1;
                 }
                 scale_line(rc, scale_ix, sprite_num, post_ptr, line_x, slinewidth);
@@ -257,7 +251,7 @@ pub fn scale_shape(
             }
         } else {
             if right_vis {
-                while wall_height[line_x] >= height as i32 {
+                while rc.cast.wall_height[line_x] >= height as i32 {
                     line_x += 1;
                     slinewidth -= 1;
                 }

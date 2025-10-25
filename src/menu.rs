@@ -7,7 +7,7 @@ use vga::util::sleep;
 use crate::assets::{GraphicNum, Music, SoundName, W3D1, W3D3, W3D6, WolfVariant, is_sod};
 use crate::config::{WolfConfig, write_wolf_config};
 use crate::def::{Button, Difficulty, GameState, IWConfig, LevelState, PlayState, WindowState};
-use crate::draw::{RayCast, init_ray_cast};
+use crate::draw::init_ray_cast;
 use crate::inter::draw_high_scores;
 use crate::loader::Loader;
 use crate::play::BUTTON_JOY;
@@ -290,22 +290,15 @@ pub enum MenuHandle {
 
 pub struct GameStateUpdate {
     pub load: Option<usize>,
-    pub ray_cast: RayCast,
 }
 
 impl GameStateUpdate {
-    pub fn with_render_update(cast: RayCast) -> GameStateUpdate {
-        GameStateUpdate {
-            load: None,
-            ray_cast: cast,
-        }
+    pub fn without_update() -> GameStateUpdate {
+        GameStateUpdate { load: None }
     }
 
-    pub fn with_load(cast: RayCast, load: Option<usize>) -> GameStateUpdate {
-        GameStateUpdate {
-            load,
-            ray_cast: cast,
-        }
+    pub fn with_load(load: Option<usize>) -> GameStateUpdate {
+        GameStateUpdate { load }
     }
 }
 
@@ -812,7 +805,6 @@ pub async fn control_panel(
     iw_config: &IWConfig,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    cast: RayCast,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     loader: &dyn Loader,
@@ -820,8 +812,6 @@ pub async fn control_panel(
 ) -> GameStateUpdate {
     rc.sound.play_music(Music::WONDERIN, &rc.assets, loader);
     setup_control_panel(win_state, menu_state);
-
-    let mut cast_return = cast;
 
     let f_key_handle = match scan {
         NumCode::F1 => {
@@ -857,10 +847,7 @@ pub async fn control_panel(
         ),
         NumCode::F4 => Some(cp_sound(rc, win_state, menu_state, loader).await),
         NumCode::F5 => {
-            let (handle, cast) =
-                cp_change_view(rc, wolf_config, iw_config, cast_return, win_state, loader).await;
-
-            cast_return = cast;
+            let handle = cp_change_view(rc, wolf_config, iw_config, win_state, loader).await;
             Some(handle)
         }
         NumCode::F6 => Some(cp_control(rc, win_state, menu_state).await),
@@ -871,11 +858,11 @@ pub async fn control_panel(
             MenuHandle::QuitMenu | MenuHandle::OpenMenu(_) => {
                 // overrule any OpenMenu from the quick keys and return always to the game
                 rc.fade_out().await;
-                return GameStateUpdate::with_load(cast_return, None);
+                return GameStateUpdate::without_update();
             }
             MenuHandle::BackToGameLoop(load) => {
                 rc.fade_out().await;
-                return GameStateUpdate::with_load(cast_return, load);
+                return GameStateUpdate::with_load(load);
             }
             _ => { /* ignore */ }
         }
@@ -921,16 +908,8 @@ pub async fn control_panel(
                         .await
                     }
                     MainMenuItem::ChangeView => {
-                        let (handle, cast_new) = cp_change_view(
-                            rc,
-                            wolf_config,
-                            iw_config,
-                            cast_return,
-                            win_state,
-                            loader,
-                        )
-                        .await;
-                        cast_return = cast_new;
+                        let handle =
+                            cp_change_view(rc, wolf_config, iw_config, win_state, loader).await;
                         handle
                     }
                     MainMenuItem::ReadThis => cp_read_this(rc, loader).await,
@@ -954,12 +933,12 @@ pub async fn control_panel(
                 }
                 MenuHandle::BackToGameLoop(load) => {
                     rc.fade_out().await;
-                    return GameStateUpdate::with_load(cast_return, load);
+                    return GameStateUpdate::with_load(load);
                 }
                 _ => { /* ignore */ }
             }
         } else {
-            return GameStateUpdate::with_render_update(cast_return); // back to game loop
+            return GameStateUpdate::without_update(); // back to game loop
         }
     }
 }
@@ -2282,10 +2261,9 @@ async fn cp_change_view(
     rc: &mut RenderContext,
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
-    cast: RayCast,
     win_state: &mut WindowState,
     loader: &dyn Loader,
-) -> (MenuHandle, RayCast) {
+) -> MenuHandle {
     let old_view = (rc.projection.view_width / 16) as u16;
     let mut new_view = old_view;
     draw_change_view(rc, win_state, new_view).await;
@@ -2323,11 +2301,10 @@ async fn cp_change_view(
         } else if rc.key_pressed(NumCode::Escape) {
             rc.sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
             rc.fade_out().await;
-            return (MenuHandle::OpenMenu(Menu::Top), cast);
+            return MenuHandle::OpenMenu(Menu::Top);
         }
     }
 
-    let mut cast_return = cast;
     if old_view != new_view {
         rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
         message(rc, win_state, "Thinking...");
@@ -2335,7 +2312,7 @@ async fn cp_change_view(
             sleep(2500).await;
         }
         let new_projection = new_view_size(new_view);
-        cast_return = init_ray_cast(new_projection.view_width);
+        rc.cast = init_ray_cast(new_projection.view_width);
         wolf_config.viewsize = new_view;
         write_wolf_config(loader, wolf_config).expect("write config");
 
@@ -2344,7 +2321,8 @@ async fn cp_change_view(
 
     rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
     rc.fade_out().await;
-    return (MenuHandle::OpenMenu(Menu::Top), cast_return);
+
+    MenuHandle::OpenMenu(Menu::Top)
 }
 
 async fn draw_change_view(rc: &mut RenderContext, win_state: &mut WindowState, view_size: u16) {
