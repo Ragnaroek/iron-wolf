@@ -140,7 +140,7 @@ impl Input {
                 break;
             }
             if vga.draw_frame() {
-                break;
+                quit(None);
             }
         }
         false
@@ -424,7 +424,7 @@ impl RenderContext {
         self.ticker.clear_count();
         let mut frame = 0;
         loop {
-            self.vga.draw_frame();
+            self.display();
 
             if let FizzleFadeAbortable::Yes(_) = abortable {
                 if self.check_ack() {
