@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(feature = "test")]
 #[path = "./draw_test.rs"]
 mod draw_test;
 

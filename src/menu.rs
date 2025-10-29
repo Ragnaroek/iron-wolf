@@ -810,7 +810,7 @@ pub async fn control_panel(
     loader: &dyn Loader,
     scan: NumCode,
 ) -> GameStateUpdate {
-    rc.sound.play_music(Music::WONDERIN, &rc.assets, loader);
+    rc.play_music(Music::WONDERIN, loader);
     setup_control_panel(win_state, menu_state);
 
     let f_key_handle = match scan {
@@ -944,9 +944,9 @@ pub async fn control_panel(
 }
 
 async fn cp_read_this(rc: &mut RenderContext, loader: &dyn Loader) -> MenuHandle {
-    rc.sound.play_music(Music::CORNER, &rc.assets, loader);
+    rc.play_music(Music::CORNER, loader);
     help_screens(rc).await;
-    rc.sound.play_music(Music::WONDERIN, &rc.assets, loader);
+    rc.play_music(Music::WONDERIN, loader);
     MenuHandle::QuitMenu
 }
 
@@ -1061,7 +1061,7 @@ fn enter_ctrl_data(
     print_routine: PrintRoutine,
     input_type: InputType,
 ) {
-    rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+    rc.play_sound(SoundName::SHOOT);
     rc.clear_keys_down();
 
     win_state.print_y = CST_Y + 13 * index;
@@ -1128,7 +1128,7 @@ fn enter_ctrl_data(
                     } else {
                         win_state.print_x = x;
                         print(rc, win_state, "?");
-                        rc.sound.play_sound(SoundName::HITWALL, &rc.assets);
+                        rc.play_sound(SoundName::HITWALL);
                     }
                     tick = !tick;
                     rc.ticker.clear_count();
@@ -1158,7 +1158,7 @@ fn enter_ctrl_data(
                             rc.input.button_mouse[button as usize - 1] =
                                 Button::from_usize(BUTTON_ORDER[which] as usize);
                             picked = true;
-                            rc.sound.play_sound(SoundName::SHOOTDOOR, &rc.assets);
+                            rc.play_sound(SoundName::SHOOTDOOR);
                         }
                     }
                     InputType::Joystick => {
@@ -1169,7 +1169,7 @@ fn enter_ctrl_data(
                         if last_scan != NumCode::None {
                             rc.input.button_scan[BUTTON_ORDER[which] as usize] = last_scan;
                             picked = true;
-                            rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+                            rc.play_sound(SoundName::SHOOT);
                             rc.clear_keys_down();
                         }
                     }
@@ -1178,7 +1178,7 @@ fn enter_ctrl_data(
                         if last_scan != NumCode::None {
                             rc.input.dir_scan[MOVE_ORDER[which] as usize] = last_scan;
                             picked = true;
-                            rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+                            rc.play_sound(SoundName::SHOOT);
                             rc.clear_keys_down();
                         }
                     }
@@ -1218,7 +1218,7 @@ fn enter_ctrl_data(
                     }
                 }
                 redraw = true;
-                rc.sound.play_sound(SoundName::MOVEGUN1, &rc.assets);
+                rc.play_sound(SoundName::MOVEGUN1);
                 loop {
                     let ci = read_any_control(rc);
                     if ci.dir == ControlDirection::None {
@@ -1239,7 +1239,7 @@ fn enter_ctrl_data(
                     }
                 }
                 redraw = true;
-                rc.sound.play_sound(SoundName::MOVEGUN1, &rc.assets);
+                rc.play_sound(SoundName::MOVEGUN1);
                 loop {
                     let ci = read_any_control(rc);
                     if ci.dir == ControlDirection::None {
@@ -1259,7 +1259,7 @@ fn enter_ctrl_data(
         }
     }
 
-    rc.sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
+    rc.play_sound(SoundName::ESCPRESSED);
     wait_key_up(rc);
     cp_draw_window(rc, 5, win_state.print_y - 1, 310, 13, BKGD_COLOR);
 }
@@ -1587,7 +1587,7 @@ async fn cp_new_game(
                 .expect("NewGame menu not found");
 
             if new_game_menu.items[episode_selected].active == ItemActivity::EpisodeTeaser {
-                rc.sound.play_sound(SoundName::NOWAY, &rc.assets);
+                rc.play_sound(SoundName::NOWAY);
                 message(
                     rc,
                     win_state,
@@ -1597,7 +1597,7 @@ async fn cp_new_game(
                 rc.ack();
                 continue;
             } else {
-                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+                rc.play_sound(SoundName::SHOOT);
                 if win_state.in_game {
                     if confirm(rc, win_state, CUR_GAME).await {
                         game_state.play_state = PlayState::ResetGame;
@@ -1634,12 +1634,12 @@ async fn cp_sound(
             if which == SoundItem::SoundEffectPCSpeaker.pos() {
                 rc.sound.set_sound_mode(SoundMode::PC);
                 draw_sound_menu(rc, win_state, menu_state).await;
-                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+                rc.play_sound(SoundName::SHOOT);
             }
             if which == SoundItem::SoundEffectAdLib.pos() {
                 rc.sound.set_sound_mode(SoundMode::AdLib);
                 draw_sound_menu(rc, win_state, menu_state).await;
-                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+                rc.play_sound(SoundName::SHOOT);
             }
             // DIGITIZED SOUND
             if which == SoundItem::DigitizedNone.pos() {
@@ -1649,12 +1649,12 @@ async fn cp_sound(
             if which == SoundItem::DigitizedSoundSource.pos() {
                 rc.sound.set_digi_mode(DigiMode::SoundSource);
                 draw_sound_menu(rc, win_state, menu_state).await;
-                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+                rc.play_sound(SoundName::SHOOT);
             }
             if which == SoundItem::DigitizedSoundBlaster.pos() {
                 rc.sound.set_digi_mode(DigiMode::SoundBlaster);
                 draw_sound_menu(rc, win_state, menu_state).await;
-                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+                rc.play_sound(SoundName::SHOOT);
             }
             // MUSIC
             if which == SoundItem::MusicNone.pos() {
@@ -1665,9 +1665,9 @@ async fn cp_sound(
                 let changed = rc.sound.music_mode() != MusicMode::AdLib;
                 rc.sound.set_music_mode(MusicMode::AdLib);
                 draw_sound_menu(rc, win_state, menu_state).await;
-                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+                rc.play_sound(SoundName::SHOOT);
                 if changed {
-                    rc.sound.play_music(Music::WONDERIN, &rc.assets, loader);
+                    rc.play_music(Music::WONDERIN, loader);
                 }
             }
         } else {
@@ -1781,7 +1781,7 @@ async fn cp_load_game(
                     LSA_Y + 5,
                 )
                 .await;
-                rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+                rc.play_sound(SoundName::SHOOT);
                 return MenuHandle::BackToGameLoop(Some(which));
             } // else: loop back to handle_menu
         } else {
@@ -1808,14 +1808,14 @@ async fn cp_view_scores(
         MenuHandle::BackToGameLoop(None) // let the game handle the PlayState::Died
     } else {
         win_state.font_number = 0;
-        rc.sound.play_music(Music::ROSTER, &rc.assets, loader);
+        rc.play_music(Music::ROSTER, loader);
         draw_high_scores(rc, win_state, &wolf_config.high_scores);
         rc.fade_in().await;
         win_state.font_number = 1;
 
         rc.ack();
 
-        rc.sound.play_music(Music::WONDERIN, &rc.assets, loader);
+        rc.play_music(Music::WONDERIN, loader);
         rc.fade_out().await;
 
         MenuHandle::QuitMenu
@@ -1849,7 +1849,7 @@ async fn cp_save_game(
                 }
             }
 
-            rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+            rc.play_sound(SoundName::SHOOT);
 
             let save_menu = &menu_state.menues[&Menu::MainMenu(MainMenuItem::SaveGame)];
             win_state.font_number = 0;
@@ -1895,7 +1895,7 @@ async fn cp_save_game(
                 return MenuHandle::BackToGameLoop(None);
             } else {
                 //TODO repaint entry
-                rc.sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
+                rc.play_sound(SoundName::ESCPRESSED);
                 continue;
             }
         } else {
@@ -2041,7 +2041,7 @@ async fn cp_difficulty_select(
     let handle = handle_menu(rc, win_state, menu_state, draw_new_game_diff).await;
 
     if let MenuHandle::Selected(diff_selected) = handle {
-        rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+        rc.play_sound(SoundName::SHOOT);
         game_state.prepare_episode_select();
         game_state.difficulty = Difficulty::from_pos(diff_selected);
 
@@ -2278,7 +2278,7 @@ async fn cp_change_view(
                     new_view = 4;
                 }
                 show_view_size(rc, new_view);
-                rc.sound.play_sound(SoundName::HITWALL, &rc.assets);
+                rc.play_sound(SoundName::HITWALL);
                 tic_delay(rc, 10).await;
             }
             ControlDirection::North | ControlDirection::East => {
@@ -2287,7 +2287,7 @@ async fn cp_change_view(
                     new_view = 19;
                 }
                 show_view_size(rc, new_view);
-                rc.sound.play_sound(SoundName::HITWALL, &rc.assets);
+                rc.play_sound(SoundName::HITWALL);
                 tic_delay(rc, 10).await;
             }
             _ => { /* ignore */ }
@@ -2299,14 +2299,14 @@ async fn cp_change_view(
         if rc.key_pressed(NumCode::Return) {
             break;
         } else if rc.key_pressed(NumCode::Escape) {
-            rc.sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
+            rc.play_sound(SoundName::ESCPRESSED);
             rc.fade_out().await;
             return MenuHandle::OpenMenu(Menu::Top);
         }
     }
 
     if old_view != new_view {
-        rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+        rc.play_sound(SoundName::SHOOT);
         message(rc, win_state, "Thinking...");
         if !iw_config.options.fast_loading {
             sleep(2500).await;
@@ -2319,7 +2319,7 @@ async fn cp_change_view(
         rc.projection = new_projection;
     }
 
-    rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+    rc.play_sound(SoundName::SHOOT);
     rc.fade_out().await;
 
     MenuHandle::OpenMenu(Menu::Top)
@@ -2383,9 +2383,9 @@ async fn confirm(rc: &mut RenderContext, win_state: &mut WindowState, str: &str)
     rc.clear_keys_down();
 
     if exit {
-        rc.sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
+        rc.play_sound(SoundName::ESCPRESSED);
     } else {
-        rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+        rc.play_sound(SoundName::SHOOT);
     }
     exit
 }
@@ -2515,12 +2515,12 @@ async fn handle_menu_loop(
         }
 
         if rc.key_pressed(NumCode::Space) || rc.key_pressed(NumCode::Return) {
-            rc.sound.play_sound(SoundName::SHOOT, &rc.assets);
+            rc.play_sound(SoundName::SHOOT);
             exit = MenuHandle::Selected(which_pos);
             break;
         }
         if rc.key_pressed(NumCode::Escape) {
-            rc.sound.play_sound(SoundName::ESCPRESSED, &rc.assets);
+            rc.play_sound(SoundName::ESCPRESSED);
             exit = MenuHandle::QuitMenu;
             break;
         }
@@ -2542,7 +2542,7 @@ async fn tic_delay(rc: &mut RenderContext, count: u64) {
 
 async fn draw_half_step(rc: &mut RenderContext, x: usize, y: usize) {
     rc.pic(x, y, GraphicNum::CCURSOR1PIC);
-    rc.sound.play_sound(SoundName::MOVEGUN1, &rc.assets);
+    rc.play_sound(SoundName::MOVEGUN1);
 
     rc.ticker.tics(8).await;
 }
@@ -2592,7 +2592,7 @@ fn draw_gun(
 
     routine(rc, win_state, menu_state, which_pos);
 
-    rc.sound.play_sound(SoundName::MOVEGUN2, &rc.assets);
+    rc.play_sound(SoundName::MOVEGUN2);
 
     new_y
 }

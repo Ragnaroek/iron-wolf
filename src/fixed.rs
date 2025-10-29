@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(feature = "test")]
 #[path = "./fixed_test.rs"]
 mod fixed_test;
 

@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(feature = "test")]
 #[path = "./start_test.rs"]
 mod start_test;
 
@@ -278,8 +278,7 @@ async fn demo_loop(
     menu_state: &mut MenuState,
     loader: &dyn Loader,
 ) {
-    rc.sound
-        .play_music(intro_song(loader.variant()), &rc.assets, loader);
+    rc.play_music(intro_song(loader.variant()), loader);
 
     if !iw_config.options.no_wait {
         pg_13(rc).await;

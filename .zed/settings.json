@@ -8,8 +8,7 @@
       "initialization_options": {
         "cargo": {
           "features": [
-            "sdl",
-            "test"
+            "sdl"
           ]
         }
       }

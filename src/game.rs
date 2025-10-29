@@ -82,7 +82,7 @@ pub async fn game_loop(
 
         win_state.in_game = true;
 
-        start_music(game_state, &mut rc.sound, &rc.assets, loader);
+        start_music(rc, game_state, loader);
 
         if !game_state.died {
             preload_graphics(rc, iw_config, &game_state).await;
@@ -197,7 +197,7 @@ fn new_high_score(game_state: &GameState) -> HighScore {
 
 async fn died(rc: &mut RenderContext, level_state: &mut LevelState, game_state: &mut GameState) {
     game_state.weapon = None; // take away weapon
-    rc.sound.play_sound(SoundName::PLAYERDEATH, &rc.assets);
+    rc.play_sound(SoundName::PLAYERDEATH);
 
     let player = level_state.player();
 
@@ -1136,7 +1136,7 @@ pub async fn play_demo(
 
     let mut level_state =
         setup_game_level(&mut game_state, &rc.assets, true).expect("setup game level");
-    start_music(&mut game_state, &mut rc.sound, &rc.assets, loader);
+    start_music(rc, &mut game_state, loader);
 
     game_state.fizzle_in = true;
     let mut control_state = new_control_state();

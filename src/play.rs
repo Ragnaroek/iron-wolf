@@ -24,9 +24,9 @@ use crate::config::WolfConfig;
 use crate::debug::debug_keys;
 use crate::def::BenchmarkResult;
 use crate::def::{
-    ANGLE_QUAD, ANGLES, ActiveType, Assets, At, Button, Control, ControlState, FINE_ANGLES,
-    FL_NEVERMARK, FL_NONMARK, FOCAL_LENGTH, GLOBAL1, GameState, IWConfig, LevelState, NUM_BUTTONS,
-    ObjKey, PlayState, SCREENLOC, STATUS_LINES, TILEGLOBAL, WindowState,
+    ANGLE_QUAD, ANGLES, ActiveType, At, Button, Control, ControlState, FINE_ANGLES, FL_NEVERMARK,
+    FL_NONMARK, FOCAL_LENGTH, GLOBAL1, GameState, IWConfig, LevelState, NUM_BUTTONS, ObjKey,
+    PlayState, SCREENLOC, STATUS_LINES, TILEGLOBAL, WindowState,
 };
 use crate::draw::three_d_refresh;
 use crate::fixed::Fixed;
@@ -37,7 +37,6 @@ use crate::rc::{
     DIR_SCAN_EAST, DIR_SCAN_NORTH, DIR_SCAN_SOUTH, DIR_SCAN_WEST, InputMode, RenderContext,
 };
 use crate::scale::{CompiledScaler, setup_scaling};
-use crate::sd::Sound;
 use crate::start::load_the_game;
 use crate::time::TARGET_FRAME_DURATION;
 use crate::us1::draw_window;
@@ -811,7 +810,7 @@ async fn check_keys(
         draw_play_screen(rc, game_state).await;
         if !game_state.start_game && !game_state.loaded_game {
             rc.fade_in().await;
-            start_music(game_state, &mut rc.sound, &rc.assets, loader);
+            start_music(rc, game_state, loader);
         }
 
         if game_state.loaded_game {
@@ -1035,12 +1034,7 @@ pub fn finish_palette_shifts(game_state: &mut GameState, vga: &VGA) {
     }
 }
 
-pub fn start_music(
-    game_state: &mut GameState,
-    sound: &mut Sound,
-    assets: &Assets,
-    loader: &dyn Loader,
-) {
+pub fn start_music(rc: &mut RenderContext, game_state: &mut GameState, loader: &dyn Loader) {
     let track = SONGS[game_state.map_on + game_state.episode * 10];
-    sound.play_music(track, assets, loader);
+    rc.play_music(track, loader);
 }

@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(feature = "test")]
 #[path = "./sd_test.rs"]
 mod sd_test;
 

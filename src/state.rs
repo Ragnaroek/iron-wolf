@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(feature = "test")]
 #[path = "./state_test.rs"]
 mod state_test;
 
@@ -848,14 +848,12 @@ pub fn first_sighting(rc: &mut RenderContext, k: ObjKey, level_state: &mut Level
     let obj = level_state.mut_obj(k);
     match obj.class {
         ClassType::Guard => {
-            rc.sound
-                .play_sound_loc_actor(SoundName::HALT, &rc.assets, &rc.cast, obj);
+            rc.play_sound_loc_actor(SoundName::HALT, obj);
             new_state(obj, &S_GRDCHASE1);
             obj.speed *= 3; // go faster when chasing player
         }
         ClassType::Officer => {
-            rc.sound
-                .play_sound_loc_actor(SoundName::SPION, &rc.assets, &rc.cast, obj);
+            rc.play_sound_loc_actor(SoundName::SPION, obj);
             new_state(obj, &S_OFCCHASE1);
             obj.speed *= 5; // go faster when chasing player
         }
@@ -864,38 +862,32 @@ pub fn first_sighting(rc: &mut RenderContext, k: ObjKey, level_state: &mut Level
             obj.speed *= 3;
         }
         ClassType::Dog => {
-            rc.sound
-                .play_sound_loc_actor(SoundName::DOGBARK, &rc.assets, &rc.cast, obj);
+            rc.play_sound_loc_actor(SoundName::DOGBARK, obj);
             new_state(obj, &S_DOGCHASE1);
             obj.speed *= 2; // go faster when chasing player
         }
         ClassType::SS => {
-            rc.sound
-                .play_sound_loc_actor(SoundName::SCHUTZAD, &rc.assets, &rc.cast, obj);
+            rc.play_sound_loc_actor(SoundName::SCHUTZAD, obj);
             new_state(obj, &S_SSCHASE1);
             obj.speed *= 4;
         }
         ClassType::Boss => {
-            rc.sound
-                .play_sound_loc_actor(SoundName::GUTENTAG, &rc.assets, &rc.cast, obj);
+            rc.play_sound_loc_actor(SoundName::GUTENTAG, obj);
             new_state(obj, &S_BOSSCHASE1);
             obj.speed = SPD_PATROL * 3;
         }
         ClassType::Schabb => {
-            rc.sound
-                .play_sound_loc_actor(SoundName::SCHABBSHA, &rc.assets, &rc.cast, obj);
+            rc.play_sound_loc_actor(SoundName::SCHABBSHA, obj);
             new_state(obj, &S_SCHABBCHASE1);
             obj.speed *= 3;
         }
         ClassType::Fake => {
-            rc.sound
-                .play_sound_loc_actor(SoundName::TOTHUND, &rc.assets, &rc.cast, obj);
+            rc.play_sound_loc_actor(SoundName::TOTHUND, obj);
             new_state(obj, &S_FAKECHASE1);
             obj.speed *= 3;
         }
         ClassType::MechaHitler => {
-            rc.sound
-                .play_sound_loc_actor(SoundName::DIE, &rc.assets, &rc.cast, obj);
+            rc.play_sound_loc_actor(SoundName::DIE, obj);
             new_state(obj, &S_MECHACHASE1);
             obj.speed *= 3;
         }

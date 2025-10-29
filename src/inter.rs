@@ -331,7 +331,7 @@ pub async fn victory(
     win_state: &mut WindowState,
     loader: &dyn Loader,
 ) {
-    rc.sound.play_music(Music::URAHERO, &rc.assets, loader);
+    rc.play_music(Music::URAHERO, loader);
     clear_split_vwb(win_state);
 
     rc.bar(0, 0, 320, 200 - STATUS_LINES, 127);
@@ -451,7 +451,7 @@ pub async fn check_highscore(
         }
     }
 
-    rc.sound.play_music(Music::ROSTER, &rc.assets, loader);
+    rc.play_music(Music::ROSTER, loader);
 
     draw_high_scores(rc, win_state, &wolf_config.high_scores);
     rc.activate_buffer(rc.buffer_offset()).await;
@@ -553,7 +553,7 @@ pub async fn level_completed(
 
     clear_split_vwb(win_state);
     rc.bar(0, 0, 320, 200 - STATUS_LINES, 127);
-    rc.sound.play_music(Music::ENDLEVEL, &rc.assets, loader);
+    rc.play_music(Music::ENDLEVEL, loader);
 
     rc.clear_keys_down();
     rc.start_ack();
@@ -627,7 +627,7 @@ pub async fn level_completed(
                 let x = 36 - str.len() * 2;
                 write(rc, x, 7, &str);
                 if i % (PAR_AMOUNT / 10) == 0 {
-                    rc.sound.play_sound(SoundName::ENDBONUS1, &rc.assets);
+                    rc.play_sound(SoundName::ENDBONUS1);
                 }
                 while rc.sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(rc);
@@ -659,7 +659,7 @@ pub async fn level_completed(
                 }
             }
 
-            rc.sound.play_sound(SoundName::ENDBONUS2, &rc.assets);
+            rc.play_sound(SoundName::ENDBONUS2);
             while rc.sound.is_any_sound_playing() {
                 bj_breather.poll_breathe(rc);
                 if rc.check_ack() {
@@ -683,7 +683,7 @@ pub async fn level_completed(
             let x = RATIO_XX - str.len() * 2;
             write(rc, x, 14, &str);
             if i % 10 == 0 {
-                rc.sound.play_sound(SoundName::ENDBONUS1, &rc.assets);
+                rc.play_sound(SoundName::ENDBONUS1);
                 while rc.sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(rc);
                     if rc.check_ack() {
@@ -718,11 +718,11 @@ pub async fn level_completed(
             let str = bonus.to_string();
             let x = (RATIO_XX - 1) - str.len() * 2;
             write(rc, x, 7, &str);
-            rc.sound.play_sound(SoundName::PERCENT100, &rc.assets);
+            rc.play_sound(SoundName::PERCENT100);
         } else if kill_ratio == 0 {
-            rc.sound.force_play_sound(SoundName::NOBONUS, &rc.assets);
+            rc.force_play_sound(SoundName::NOBONUS);
         } else {
-            rc.sound.play_sound(SoundName::ENDBONUS2, &rc.assets);
+            rc.play_sound(SoundName::ENDBONUS2);
         }
         while rc.sound.is_any_sound_playing() {
             bj_breather.poll_breathe(rc);
@@ -746,7 +746,7 @@ pub async fn level_completed(
             let x = RATIO_XX - str.len() * 2;
             write(rc, x, 16, &str);
             if i % 10 == 0 {
-                rc.sound.play_sound(SoundName::ENDBONUS1, &rc.assets);
+                rc.play_sound(SoundName::ENDBONUS1);
                 while rc.sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(rc);
                     if rc.check_ack() {
@@ -781,11 +781,11 @@ pub async fn level_completed(
             let str = bonus.to_string();
             let x = (RATIO_XX - 1) - str.len() * 2;
             write(rc, x, 7, &str);
-            rc.sound.play_sound(SoundName::PERCENT100, &rc.assets);
+            rc.play_sound(SoundName::PERCENT100);
         } else if secret_ratio == 0 {
-            rc.sound.force_play_sound(SoundName::NOBONUS, &rc.assets);
+            rc.force_play_sound(SoundName::NOBONUS);
         } else {
-            rc.sound.play_sound(SoundName::ENDBONUS2, &rc.assets);
+            rc.play_sound(SoundName::ENDBONUS2);
         }
         while rc.sound.is_any_sound_playing() {
             bj_breather.poll_breathe(rc);
@@ -809,7 +809,7 @@ pub async fn level_completed(
             let x = RATIO_XX - str.len() * 2;
             write(rc, x, 18, &str);
             if i % 10 == 0 {
-                rc.sound.play_sound(SoundName::ENDBONUS1, &rc.assets);
+                rc.play_sound(SoundName::ENDBONUS1);
                 while rc.sound.is_any_sound_playing() {
                     bj_breather.poll_breathe(rc);
                     if rc.check_ack() {
@@ -844,11 +844,11 @@ pub async fn level_completed(
             let str = bonus.to_string();
             let x = (RATIO_XX - 1) - str.len() * 2;
             write(rc, x, 7, &str);
-            rc.sound.play_sound(SoundName::PERCENT100, &rc.assets);
+            rc.play_sound(SoundName::PERCENT100);
         } else if treasure_ratio == 0 {
-            rc.sound.force_play_sound(SoundName::NOBONUS, &rc.assets);
+            rc.force_play_sound(SoundName::NOBONUS);
         } else {
-            rc.sound.play_sound(SoundName::ENDBONUS2, &rc.assets);
+            rc.play_sound(SoundName::ENDBONUS2);
         }
         while rc.sound.is_any_sound_playing() {
             bj_breather.poll_breathe(rc);

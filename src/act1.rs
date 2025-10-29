@@ -1,13 +1,12 @@
 use crate::{
     assets::SoundName,
     def::{
-        Assets, At, Dir, DoorAction, DoorLock, DoorType, FL_BONUS, GameState, LevelState, MAP_SIZE,
+        At, Dir, DoorAction, DoorLock, DoorType, FL_BONUS, GameState, LevelState, MAP_SIZE,
         MAX_STATS, MIN_DIST, NUM_AREAS, Sprite, StaticInfo, StaticKind, StaticType, TILESHIFT,
     },
     game::AREATILE,
     map::MapSegs,
     rc::RenderContext,
-    sd::Sound,
 };
 
 const OPENTICS: u32 = 300;
@@ -378,7 +377,7 @@ pub fn operate_door(
         || door.lock == DoorLock::Lock4
     {
         if game_state.keys & (1 << (door.lock as usize - DoorLock::Lock1 as usize)) == 0 {
-            rc.sound.play_sound(SoundName::NOWAY, &rc.assets);
+            rc.play_sound(SoundName::NOWAY);
             return;
         }
     }
@@ -467,13 +466,7 @@ fn close_door(rc: &mut RenderContext, doornum: usize, level_state: &mut LevelSta
     let area = (level_state.level.map_segs.segs[0][door.tile_y * MAP_SIZE + door.tile_x] - AREATILE)
         as usize;
     if level_state.area_by_player[area] {
-        rc.sound.play_sound_loc_tile(
-            SoundName::CLOSEDOOR,
-            &rc.assets,
-            &rc.cast,
-            door.tile_x,
-            door.tile_y,
-        );
+        rc.play_sound_loc_tile(SoundName::CLOSEDOOR, door.tile_x, door.tile_y);
     }
 
     door.action = DoorAction::Closing;
@@ -528,13 +521,7 @@ fn door_opening(rc: &mut RenderContext, doornum: usize, level_state: &mut LevelS
 
         if level_state.area_by_player[area1] {
             let door = &level_state.doors[doornum as usize];
-            rc.sound.play_sound_loc_tile(
-                SoundName::OPENDOOR,
-                &rc.assets,
-                &rc.cast,
-                door.tile_x,
-                door.tile_y,
-            );
+            rc.play_sound_loc_tile(SoundName::OPENDOOR, door.tile_x, door.tile_y);
         }
     }
 
@@ -614,10 +601,9 @@ fn horiz_door_areas(level_state: &LevelState, tile_x: usize, tile_y: usize) -> (
 */
 
 pub fn push_wall(
+    rc: &mut RenderContext,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    sound: &mut Sound,
-    assets: &Assets,
     check_x: usize,
     check_y: usize,
     dir: Dir,
@@ -634,7 +620,7 @@ pub fn push_wall(
     match dir {
         Dir::North => {
             if level_state.actor_at[check_x][check_y - 1] != At::Nothing {
-                sound.play_sound(SoundName::NOWAY, assets);
+                rc.play_sound(SoundName::NOWAY);
                 return;
             }
             level_state.actor_at[check_x][check_y - 1] = At::Wall(old_tile);
@@ -642,7 +628,7 @@ pub fn push_wall(
         }
         Dir::East => {
             if level_state.actor_at[check_x + 1][check_y] != At::Nothing {
-                sound.play_sound(SoundName::NOWAY, assets);
+                rc.play_sound(SoundName::NOWAY);
                 return;
             }
             level_state.actor_at[check_x + 1][check_y] = At::Wall(old_tile);
@@ -650,7 +636,7 @@ pub fn push_wall(
         }
         Dir::South => {
             if level_state.actor_at[check_x][check_y + 1] != At::Nothing {
-                sound.play_sound(SoundName::NOWAY, assets);
+                rc.play_sound(SoundName::NOWAY);
                 return;
             }
             level_state.actor_at[check_x][check_y + 1] = At::Wall(old_tile);
@@ -658,7 +644,7 @@ pub fn push_wall(
         }
         Dir::West => {
             if level_state.actor_at[check_x - 1][check_y] != At::Nothing {
-                sound.play_sound(SoundName::NOWAY, assets);
+                rc.play_sound(SoundName::NOWAY);
                 return;
             }
             level_state.actor_at[check_x - 1][check_y] = At::Wall(old_tile);
@@ -675,7 +661,7 @@ pub fn push_wall(
     level_state.level.tile_map[check_x][check_y] |= 0xC0;
     level_state.level.info_map[check_x][check_y] = 0; // remove P tile info
 
-    sound.play_sound(SoundName::PUSHWALL, assets);
+    rc.play_sound(SoundName::PUSHWALL);
 }
 
 pub fn move_push_walls(level_state: &mut LevelState, game_state: &mut GameState, tics: u64) {

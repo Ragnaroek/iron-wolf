@@ -3,21 +3,22 @@
 extern crate iw;
 extern crate test;
 
-use std::path::PathBuf;
-use test::Bencher;
-
-use vga::VGABuilder;
-
-use iw::assets;
-use iw::config::default_iw_config;
-use iw::def::new_game_state;
-use iw::draw::{init_ray_cast, wall_refresh};
-use iw::game::setup_game_level;
-use iw::loader::DiskLoader;
-use iw::rc::{Input, RenderContext};
-use iw::sd::test_sound;
-use iw::start::new_view_size;
-use iw::time::new_test_ticker;
+#[cfg(feature = "test")]
+use {
+    iw::assets,
+    iw::config::default_iw_config,
+    iw::def::new_game_state,
+    iw::draw::{init_ray_cast, wall_refresh},
+    iw::game::setup_game_level,
+    iw::loader::DiskLoader,
+    iw::rc::{Input, RenderContext},
+    iw::sd,
+    iw::start::new_view_size,
+    iw::time::new_test_ticker,
+    std::path::PathBuf,
+    test::Bencher,
+    vga::VGABuilder,
+};
 
 #[cfg(feature = "test")]
 #[bench]
@@ -39,7 +40,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
     let prj = new_view_size(19);
     let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, &None)?;
 
-    let sound = test_sound();
+    let sound = sd::test_sound();
 
     let mut game_state = new_game_state();
 

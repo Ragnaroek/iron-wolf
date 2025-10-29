@@ -7,10 +7,11 @@ use std::sync::atomic::AtomicUsize;
 use vga::input::MouseButton;
 use vga::{CRTReg, SCReg, VGA, input::NumCode};
 
-use crate::assets::{Font, GAMEPAL, Graphic, GraphicNum, TileData, WolfVariant};
+use crate::assets::{Font, GAMEPAL, Graphic, GraphicNum, Music, SoundName, TileData, WolfVariant};
 use crate::config::WolfConfig;
-use crate::def::{Assets, Button, NUM_BUTTONS, NUM_MOUSE_BUTTONS};
+use crate::def::{Assets, Button, NUM_BUTTONS, NUM_MOUSE_BUTTONS, ObjType};
 use crate::draw::RayCast;
+use crate::loader::Loader;
 use crate::play::ProjectionConfig;
 use crate::sd::Sound;
 use crate::start::quit;
@@ -539,5 +540,29 @@ impl RenderContext {
         } else {
             ci.dir = ControlDirection::None;
         }
+    }
+
+    // sound helpers
+
+    pub fn play_sound(&mut self, sound: SoundName) -> bool {
+        self.sound.play_sound(sound, &self.assets) // TODO rename back to play_sound
+    }
+
+    pub fn force_play_sound(&mut self, sound: SoundName) -> bool {
+        self.sound.force_play_sound(sound, &self.assets)
+    }
+
+    pub fn play_music(&mut self, track: Music, loader: &dyn Loader) {
+        self.sound.play_music(track, &self.assets, loader);
+    }
+
+    pub fn play_sound_loc_tile(&mut self, sound: SoundName, tile_x: usize, tile_y: usize) {
+        self.sound
+            .play_sound_loc_tile(sound, &self.assets, &self.cast, tile_x, tile_y)
+    }
+
+    pub fn play_sound_loc_actor(&mut self, sound: SoundName, obj: &ObjType) {
+        self.sound
+            .play_sound_loc_actor(sound, &self.assets, &self.cast, obj);
     }
 }

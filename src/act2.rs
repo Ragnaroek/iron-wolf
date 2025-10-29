@@ -2832,12 +2832,7 @@ fn t_projectile(
 
     if !projectile_try_move(k, level_state) {
         if level_state.obj(k).class == ClassType::Rocket {
-            rc.sound.play_sound_loc_actor(
-                SoundName::MISSILEHIT,
-                &rc.assets,
-                &rc.cast,
-                level_state.obj(k),
-            );
+            rc.play_sound_loc_actor(SoundName::MISSILEHIT, level_state.obj(k));
             level_state.mut_obj(k).state = Some(&S_BOOM1);
         } else {
             level_state.mut_obj(k).state = None; // mark for removal
@@ -3022,7 +3017,7 @@ fn t_bite(
     game_state: &mut GameState,
     _: &mut ControlState,
 ) {
-    rc.sound.play_sound(SoundName::DOGATTACK, &rc.assets);
+    rc.play_sound(SoundName::DOGATTACK);
 
     let mut dx = level_state.player().x - level_state.obj(k).x;
     if dx < 0 {
@@ -3361,8 +3356,7 @@ fn t_schabb_throw(
 
     level_state.actors.add_obj(obj);
 
-    rc.sound
-        .play_sound_loc_actor(SoundName::SCHABBSTHROW, &rc.assets, &rc.cast, &obj);
+    rc.play_sound_loc_actor(SoundName::SCHABBSTHROW, &obj);
 }
 
 fn t_fake(
@@ -3460,8 +3454,7 @@ fn t_fake_fire(
 
     level_state.actors.add_obj(obj);
 
-    rc.sound
-        .play_sound_loc_actor(SoundName::FLAMETHROWER, &rc.assets, &rc.cast, &obj);
+    rc.play_sound_loc_actor(SoundName::FLAMETHROWER, &obj);
 }
 
 fn a_hitler_morph(
@@ -3509,8 +3502,7 @@ fn a_mecha_sound(
 ) {
     let obj = level_state.obj(k);
     if level_state.area_by_player[obj.area_number] {
-        rc.sound
-            .play_sound_loc_actor(SoundName::MECHSTEP, &rc.assets, &rc.cast, obj);
+        rc.play_sound_loc_actor(SoundName::MECHSTEP, obj);
     }
 }
 
@@ -3522,8 +3514,7 @@ fn a_slurpie(
     _: &mut GameState,
     _: &mut ControlState,
 ) {
-    rc.sound
-        .play_sound_loc_actor(SoundName::SLURPIE, &rc.assets, &rc.cast, level_state.obj(k));
+    rc.play_sound_loc_actor(SoundName::SLURPIE, level_state.obj(k));
 }
 
 pub fn spawn_dead_guard(
@@ -3863,22 +3854,22 @@ fn t_shoot(
     let obj = level_state.obj(k);
     match obj.class {
         ClassType::SS => {
-            rc.sound.play_sound(SoundName::SSFIRE, &rc.assets);
+            rc.play_sound(SoundName::SSFIRE);
         }
         ClassType::Gift | ClassType::Fat => {
-            rc.sound.play_sound(SoundName::MISSILEFIRE, &rc.assets);
+            rc.play_sound(SoundName::MISSILEFIRE);
         }
         ClassType::MechaHitler | ClassType::RealHitler | ClassType::Boss => {
-            rc.sound.play_sound(SoundName::BOSSFIRE, &rc.assets);
+            rc.play_sound(SoundName::BOSSFIRE);
         }
         ClassType::Schabb => {
-            rc.sound.play_sound(SoundName::SCHABBSTHROW, &rc.assets);
+            rc.play_sound(SoundName::SCHABBSTHROW);
         }
         ClassType::Fake => {
-            rc.sound.play_sound(SoundName::FLAMETHROWER, &rc.assets);
+            rc.play_sound(SoundName::FLAMETHROWER);
         }
         _ => {
-            rc.sound.play_sound(SoundName::NAZIFIRE, &rc.assets);
+            rc.play_sound(SoundName::NAZIFIRE);
         }
     }
 }
@@ -3908,8 +3899,7 @@ pub fn do_death_scream(
             | ClassType::Officer
             | ClassType::SS
             | ClassType::Dog => {
-                rc.sound
-                    .play_sound_loc_actor(SoundName::DEATHSCREAM6, &rc.assets, &rc.cast, obj);
+                rc.play_sound_loc_actor(SoundName::DEATHSCREAM6, obj);
                 return;
             }
             _ => { /* play nothing */ }
@@ -3918,43 +3908,34 @@ pub fn do_death_scream(
 
     match obj.class {
         ClassType::Mutant => {
-            rc.sound
-                .play_sound_loc_actor(SoundName::AHHHG, &rc.assets, &rc.cast, obj);
+            rc.play_sound_loc_actor(SoundName::AHHHG, obj);
         }
         ClassType::Guard => {
-            rc.sound.play_sound_loc_actor(
-                GUARD_DEATH_SCREAMS[(rnd_t() % 8) as usize],
-                &rc.assets,
-                &rc.cast,
-                obj,
-            );
+            rc.play_sound_loc_actor(GUARD_DEATH_SCREAMS[(rnd_t() % 8) as usize], obj);
         }
         ClassType::Officer => {
-            rc.sound
-                .play_sound_loc_actor(SoundName::NEINSOVAS, &rc.assets, &rc.cast, obj);
+            rc.play_sound_loc_actor(SoundName::NEINSOVAS, obj);
         }
         ClassType::SS => {
-            rc.sound
-                .play_sound_loc_actor(SoundName::LEBEN, &rc.assets, &rc.cast, obj);
+            rc.play_sound_loc_actor(SoundName::LEBEN, obj);
         }
         ClassType::Dog => {
-            rc.sound
-                .play_sound_loc_actor(SoundName::DOGDEATH, &rc.assets, &rc.cast, obj);
+            rc.play_sound_loc_actor(SoundName::DOGDEATH, obj);
         }
         ClassType::Boss => {
-            rc.sound.play_sound(SoundName::MUTTI, &rc.assets);
+            rc.play_sound(SoundName::MUTTI);
         }
         ClassType::Schabb => {
-            rc.sound.play_sound(SoundName::MEINGOTT, &rc.assets);
+            rc.play_sound(SoundName::MEINGOTT);
         }
         ClassType::Fake => {
-            rc.sound.play_sound(SoundName::HITLERHA, &rc.assets);
+            rc.play_sound(SoundName::HITLERHA);
         }
         ClassType::MechaHitler => {
-            rc.sound.play_sound(SoundName::SCHEIST, &rc.assets);
+            rc.play_sound(SoundName::SCHEIST);
         }
         ClassType::RealHitler => {
-            rc.sound.play_sound(SoundName::EVA, &rc.assets);
+            rc.play_sound(SoundName::EVA);
         }
         // TODO giftobj DONNERSND
         // TODO gretelobj MEINSND
@@ -4148,8 +4129,7 @@ fn t_bj_yell(
     _: &mut ControlState,
 ) {
     let obj = level_state.obj(k);
-    rc.sound
-        .play_sound_loc_actor(SoundName::YEAH, &rc.assets, &rc.cast, obj);
+    rc.play_sound_loc_actor(SoundName::YEAH, obj);
 }
 
 fn t_bj_done(
