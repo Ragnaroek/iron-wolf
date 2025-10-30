@@ -7,7 +7,7 @@ use std::sync::atomic::AtomicUsize;
 use vga::input::MouseButton;
 use vga::{CRTReg, SCReg, VGA, input::NumCode};
 
-use crate::assets::{Font, GAMEPAL, Graphic, GraphicNum, Music, SoundName, TileData, WolfVariant};
+use crate::assets::{GAMEPAL, GraphicNum, Music, SoundName, WolfVariant};
 use crate::config::WolfConfig;
 use crate::def::{Assets, Button, NUM_BUTTONS, NUM_MOUSE_BUTTONS, ObjType};
 use crate::draw::RayCast;
@@ -80,10 +80,6 @@ pub struct RenderContext {
     linewidth: usize,
     bufferofs: AtomicUsize,
     displayofs: AtomicUsize,
-    pub graphics: Vec<Graphic>,
-    pub fonts: Vec<Font>,
-    pub tiles: TileData,
-    pub texts: Vec<String>,
     pub assets: Assets,
     pub variant: &'static WolfVariant,
     pub input: Input,
@@ -160,10 +156,6 @@ impl RenderContext {
     pub fn init(
         vga: VGA,
         ticker: time::Ticker,
-        graphics: Vec<Graphic>,
-        fonts: Vec<Font>,
-        tiles: TileData,
-        texts: Vec<String>,
         assets: Assets,
         variant: &'static WolfVariant,
         input: Input,
@@ -177,10 +169,6 @@ impl RenderContext {
             linewidth: 80,
             bufferofs: AtomicUsize::new(PAGE_1_START),
             displayofs: AtomicUsize::new(PAGE_1_START),
-            graphics,
-            fonts,
-            tiles,
-            texts,
             assets,
             variant,
             input,
@@ -228,7 +216,7 @@ impl RenderContext {
             for _ in 0..height {
                 self.vga.write_mem_chunk(
                     dst_ix,
-                    &self.tiles.tile8[tile][src_ix..(src_ix + width_bytes)],
+                    &self.assets.tiles.tile8[tile][src_ix..(src_ix + width_bytes)],
                 );
                 dst_ix += self.linewidth;
                 src_ix += width_bytes;
@@ -237,7 +225,7 @@ impl RenderContext {
     }
 
     pub fn graphic_to_screen(&mut self, pic_num: usize, x: usize, y: usize) {
-        let width_bytes = self.graphics[pic_num].width >> 2;
+        let width_bytes = self.assets.graphics[pic_num].width >> 2;
         let mut mask = 1 << (x & 3);
         let mut src_ix = 0;
         let dst_offset = self.y_offset(y) + (x >> 2);
@@ -249,10 +237,10 @@ impl RenderContext {
                 mask = 1;
             }
             dst_ix = dst_offset;
-            for _ in 0..self.graphics[pic_num].height {
+            for _ in 0..self.assets.graphics[pic_num].height {
                 self.vga.write_mem_chunk(
                     dst_ix,
-                    &self.graphics[pic_num].data[src_ix..(src_ix + width_bytes)],
+                    &self.assets.graphics[pic_num].data[src_ix..(src_ix + width_bytes)],
                 );
                 dst_ix += self.linewidth;
                 src_ix += width_bytes;

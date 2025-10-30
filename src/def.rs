@@ -109,6 +109,24 @@ macro_rules! derive_from {
 }
 pub use derive_from;
 
+pub struct Graphic {
+    pub data: Vec<u8>,
+    pub width: usize,
+    pub height: usize,
+}
+
+#[derive(Debug)]
+pub struct Font {
+    pub height: u16,
+    pub location: [u16; 256],
+    pub width: [u8; 256],
+    pub data: Vec<Vec<u8>>,
+}
+
+pub struct TileData {
+    pub tile8: Vec<Vec<u8>>,
+}
+
 pub struct BenchmarkResult {
     pub total: Duration,
     pub real: Duration,
@@ -875,6 +893,10 @@ pub struct Assets {
     pub audio_headers: Vec<u32>,
     pub audio_sounds: Vec<AdlSound>,
     pub digi_sounds: HashMap<SoundName, DigiSound>,
+    pub graphics: Vec<Graphic>,
+    pub fonts: Vec<Font>,
+    pub tiles: TileData,
+    pub texts: Vec<String>,
 }
 
 type Think = fn(

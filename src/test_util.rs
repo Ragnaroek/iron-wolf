@@ -25,9 +25,7 @@ pub fn start_test_iw(loader: &dyn Loader) -> RenderContext {
     let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
     vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
 
-    let (graphics, fonts, tiles, texts) =
-        assets::load_all_graphics(loader, &None).expect("load all graphics");
-    let assets = assets::load_graphic_assets(loader).expect("load graphic assets");
+    let assets = assets::load_graphic_assets(loader, &None).expect("load graphic assets");
 
     let projection = new_view_size(wolf_config.viewsize);
     let input = Input::init_demo_playback(Vec::with_capacity(0));
@@ -36,10 +34,6 @@ pub fn start_test_iw(loader: &dyn Loader) -> RenderContext {
     let rc = RenderContext::init(
         vga,
         ticker,
-        graphics,
-        fonts,
-        tiles,
-        texts,
         assets,
         loader.variant(),
         input,

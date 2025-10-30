@@ -510,7 +510,7 @@ pub fn draw_high_scores(
         // level
         let completed_str = to_fixed_width_string(s.completed as u32); // Used fixed-width numbers (129...)
         let w = {
-            let font = &rc.fonts[win_state.font_number];
+            let font = &rc.assets.fonts[win_state.font_number];
             let (w, _) = measure_string(font, &completed_str);
             w
         };
@@ -521,7 +521,7 @@ pub fn draw_high_scores(
         // score
         let score_str = to_fixed_width_string(s.score);
         let w = {
-            let font = &rc.fonts[win_state.font_number];
+            let font = &rc.assets.fonts[win_state.font_number];
             let (w, _) = measure_string(font, &score_str);
             w
         };

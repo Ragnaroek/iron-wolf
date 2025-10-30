@@ -83,8 +83,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     let rt_ref = Arc::new(rt);
 
     let sound = sd::startup(rt_ref.clone())?;
-    let assets = assets::load_assets(&sound, &loader)?;
-    let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, patch_config)?;
+    let assets = assets::load_all_assets(&sound, &loader, patch_config)?;
 
     let ticker = time::new_ticker(rt_ref.clone());
 
@@ -113,10 +112,6 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
             let mut rc = RenderContext::init(
                 vga,
                 ticker,
-                graphics,
-                fonts,
-                tiles,
-                texts,
                 assets,
                 loader.variant(),
                 input,
@@ -161,10 +156,6 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
             let mut rc = RenderContext::init(
                 vga,
                 ticker,
-                graphics,
-                fonts,
-                tiles,
-                texts,
                 assets,
                 loader.variant(),
                 input,

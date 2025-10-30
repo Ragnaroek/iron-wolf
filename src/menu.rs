@@ -2750,7 +2750,7 @@ pub fn clear_ms_screen(rc: &mut RenderContext) {
 pub fn message(rc: &mut RenderContext, win_state: &mut WindowState, str: &str) {
     win_state.font_number = 1;
     win_state.font_color = 0;
-    let font = &rc.fonts[win_state.font_number];
+    let font = &rc.assets.fonts[win_state.font_number];
     let mut h = font.height as usize;
     let mut w: usize = 0;
     let mut mw: usize = 0;

@@ -4,7 +4,7 @@ use std::io::Cursor;
 
 use serde::{Deserialize, Serialize};
 
-use crate::def::{Assets, IWConfig, WeaponType};
+use crate::def::{Assets, Font, Graphic, IWConfig, TileData, WeaponType};
 use crate::gamedata;
 use crate::loader::Loader;
 use crate::map::{MapFileType, MapSegs, MapType, load_map, load_map_headers, load_map_offsets};
@@ -808,24 +808,6 @@ const STARTEXTERNS: usize = 136;
 const NUM_FONT: usize = 2;
 pub const NUM_DIGI_SOUNDS: usize = 47;
 
-pub struct Graphic {
-    pub data: Vec<u8>,
-    pub width: usize,
-    pub height: usize,
-}
-
-#[derive(Debug)]
-pub struct Font {
-    pub height: u16,
-    pub location: [u16; 256],
-    pub width: [u8; 256],
-    pub data: Vec<Vec<u8>>,
-}
-
-pub struct TileData {
-    pub tile8: Vec<Vec<u8>>,
-}
-
 pub struct Huffnode {
     bit0: u16,
     bit1: u16,
@@ -1096,7 +1078,7 @@ pub fn load_demo(loader: &dyn Loader, demo: GraphicNum) -> Result<Vec<u8>, Strin
     Ok(demo_data)
 }
 
-pub fn load_all_graphics(
+fn load_all_graphics(
     loader: &dyn Loader,
     patch_config: &Option<PatchConfig>,
 ) -> Result<(Vec<Graphic>, Vec<Font>, TileData, Vec<String>), String> {
@@ -1418,7 +1400,11 @@ pub fn load_map_headers_from_config(
 // gamedata stuff
 
 // loads all assets for the game into memory
-pub fn load_assets(sound: &Sound, loader: &dyn Loader) -> Result<Assets, String> {
+pub fn load_all_assets(
+    sound: &Sound,
+    loader: &dyn Loader,
+    patch_config: &Option<PatchConfig>,
+) -> Result<Assets, String> {
     let (map_offsets, map_headers) = load_map_headers_from_config(loader)?;
 
     let gamedata_bytes = loader.load_wolf_file(WolfFile::GameData);
@@ -1439,6 +1425,8 @@ pub fn load_assets(sound: &Sound, loader: &dyn Loader) -> Result<Assets, String>
 
     let game_maps = loader.load_wolf_file(WolfFile::GameMaps);
 
+    let (graphics, fonts, tiles, texts) = load_all_graphics(loader, patch_config)?;
+
     Ok(Assets {
         map_headers,
         map_offsets,
@@ -1449,10 +1437,17 @@ pub fn load_assets(sound: &Sound, loader: &dyn Loader) -> Result<Assets, String>
         audio_headers,
         audio_sounds,
         digi_sounds,
+        graphics,
+        fonts,
+        tiles,
+        texts,
     })
 }
 
-pub fn load_graphic_assets(loader: &dyn Loader) -> Result<Assets, String> {
+pub fn load_graphic_assets(
+    loader: &dyn Loader,
+    patch_config: &Option<PatchConfig>,
+) -> Result<Assets, String> {
     let (map_offsets, map_headers) = load_map_headers_from_config(loader)?;
 
     let gamedata_bytes = loader.load_wolf_file(WolfFile::GameData);
@@ -1462,6 +1457,8 @@ pub fn load_graphic_assets(loader: &dyn Loader) -> Result<Assets, String> {
     let textures = gamedata::load_all_textures(&mut gamedata_cursor, &gamedata_headers)?;
     let sprites = gamedata::load_all_sprites(&mut gamedata_cursor, &gamedata_headers)?;
     let game_maps = loader.load_wolf_file(WolfFile::GameMaps);
+
+    let (graphics, fonts, tiles, texts) = load_all_graphics(loader, patch_config)?;
 
     Ok(Assets {
         map_headers,
@@ -1473,5 +1470,9 @@ pub fn load_graphic_assets(loader: &dyn Loader) -> Result<Assets, String> {
         audio_headers: Vec::with_capacity(0),
         audio_sounds: Vec::with_capacity(0),
         digi_sounds: HashMap::new(),
+        graphics,
+        fonts,
+        tiles,
+        texts,
     })
 }

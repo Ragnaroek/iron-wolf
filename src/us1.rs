@@ -1,7 +1,6 @@
 use vga::input::NumCode;
 
-use crate::assets::Font;
-use crate::def::WindowState;
+use crate::def::{Font, WindowState};
 use crate::rc::RenderContext;
 use crate::time::TICK_BASE;
 use crate::vh::{WHITE, draw_tile_8};
@@ -12,7 +11,7 @@ pub fn print(rc: &mut RenderContext, win_state: &mut WindowState, str: &str) {
     let lines: Vec<&str> = str.split("\n").collect();
     for i in 0..lines.len() {
         let line = lines[i];
-        let (w, h) = measure_string(&rc.fonts[win_state.font_number], line);
+        let (w, h) = measure_string(&rc.assets.fonts[win_state.font_number], line);
         draw_string(
             rc,
             win_state.font_number,
@@ -45,7 +44,7 @@ pub fn c_print(rc: &mut RenderContext, win_state: &mut WindowState, str: &str) {
 /// Prints a string centered on the current line and
 /// advances to the next line. Newlines are not supported.
 pub fn c_print_line(rc: &mut RenderContext, win_state: &mut WindowState, str: &str) {
-    let font = &rc.fonts[win_state.font_number];
+    let font = &rc.assets.fonts[win_state.font_number];
     let (w, h) = measure_string(font, str);
     if w > win_state.window_w {
         panic!("c_print_line - String exceeds width")
@@ -58,7 +57,7 @@ pub fn c_print_line(rc: &mut RenderContext, win_state: &mut WindowState, str: &s
 
 /// Prints a string centered in the current window.
 pub fn print_centered(rc: &mut RenderContext, win_state: &mut WindowState, str: &str) {
-    let font = &rc.fonts[win_state.font_number];
+    let font = &rc.assets.fonts[win_state.font_number];
     let (w, h) = measure_string(font, str);
     let px = win_state.window_x + ((win_state.window_w - w) / 2);
     let py = win_state.window_y + ((win_state.window_h - h) / 2);
@@ -77,10 +76,10 @@ pub fn draw_string(
     for c in str.chars() {
         let ext_ascii_val = c as usize;
         if ext_ascii_val <= 255 {
-            let width = rc.fonts[font_num].width[ext_ascii_val] as usize;
-            for y in 0..rc.fonts[font_num].height as usize {
+            let width = rc.assets.fonts[font_num].width[ext_ascii_val] as usize;
+            for y in 0..rc.assets.fonts[font_num].height as usize {
                 for x in 0..width {
-                    let pix_data = rc.fonts[font_num].data[ext_ascii_val][y * width + x];
+                    let pix_data = rc.assets.fonts[font_num].data[ext_ascii_val][y * width + x];
                     if pix_data != 0 {
                         rc.plot(px + x, py + y, color)
                     }
@@ -254,7 +253,7 @@ pub fn line_input(
             _ => {}
         }
 
-        let font = &rc.fonts[win_state.font_number];
+        let font = &rc.assets.fonts[win_state.font_number];
 
         if c != '\0' {
             let len = input_str.len();
@@ -353,7 +352,7 @@ impl Cursor {
         y: usize,
         str: &str,
     ) {
-        let font = &rc.fonts[win_state.font_number];
+        let font = &rc.assets.fonts[win_state.font_number];
 
         let str_before_cursor = &str[..self.pos];
         let (w, _) = measure_string(font, str_before_cursor);
@@ -390,7 +389,7 @@ impl Cursor {
         str: &str,
         pos: usize,
     ) {
-        let font = &rc.fonts[win_state.font_number];
+        let font = &rc.assets.fonts[win_state.font_number];
 
         let str_before_cursor = &str[..pos];
         let (w, _) = measure_string(font, str_before_cursor);

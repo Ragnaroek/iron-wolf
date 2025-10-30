@@ -117,7 +117,7 @@ fn pages(str: &str) -> Vec<Page> {
 async fn show_article(rc: &mut RenderContext, which: usize) {
     rc.bar(0, 0, 320, 200, BACK_COLOR);
 
-    let pages = pages(&rc.texts[which]);
+    let pages = pages(&rc.assets.texts[which]);
 
     let mut layout_ctx = LayoutContext::new();
     layout_ctx.num_pages = pages.len();
@@ -252,7 +252,7 @@ fn handle_command(
             let g = parse_pic_command(text)?;
             rc.pic_lump(g.pic_x & !7, g.pic_y, g.pic_lump);
             let pic_num = g.pic_lump - rc.variant.start_pics;
-            let graphic_data = &rc.graphics[pic_num];
+            let graphic_data = &rc.assets.graphics[pic_num];
             // adjust margins
             let pic_mid = g.pic_x + graphic_data.width / 2;
             let margin = if pic_mid > SCREEN_MID {
@@ -342,7 +342,7 @@ fn handle_word(
     }
 
     let w = {
-        let font = &rc.fonts[layout_ctx.font_number];
+        let font = &rc.assets.fonts[layout_ctx.font_number];
         let (w, _) = measure_string(font, &word);
         w
     };
