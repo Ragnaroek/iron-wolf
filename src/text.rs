@@ -136,7 +136,7 @@ async fn show_article(rc: &mut RenderContext, which: usize) {
             first_page = false;
         }
 
-        rc.ack();
+        rc.ack().await;
         let last_scan = rc.last_scan();
         match last_scan {
             NumCode::Escape => break,

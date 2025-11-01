@@ -1,5 +1,6 @@
 #[cfg(feature = "tracing")]
 use tracing::instrument;
+use vga::util::sleep;
 
 use std::mem;
 use std::sync::atomic::AtomicUsize;
@@ -122,7 +123,7 @@ impl Input {
         }
     }
 
-    pub fn wait_user_input(&mut self, vga: &mut VGA, ticker: &Ticker, delay: u64) -> bool {
+    pub async fn wait_user_input(&mut self, vga: &mut VGA, ticker: &Ticker, delay: u64) -> bool {
         let last_count = get_count(&ticker.time_count);
         {
             vga.input_monitoring().clear_keyboard();
@@ -138,6 +139,7 @@ impl Input {
             if vga.draw_frame() {
                 quit(None);
             }
+            sleep(5).await
         }
         false
     }
@@ -467,9 +469,10 @@ impl RenderContext {
 
     // input handling
 
-    pub fn wait_user_input(&mut self, delay: u64) -> bool {
+    pub async fn wait_user_input(&mut self, delay: u64) -> bool {
         self.input
             .wait_user_input(&mut self.vga, &self.ticker, delay)
+            .await
     }
 
     pub fn start_ack(&mut self) {
@@ -479,8 +482,8 @@ impl RenderContext {
         // TODO clear joystick buttons
     }
 
-    pub fn ack(&mut self) -> bool {
-        self.wait_user_input(u64::MAX)
+    pub async fn ack(&mut self) -> bool {
+        self.wait_user_input(u64::MAX).await
     }
 
     pub fn check_ack(&mut self) -> bool {

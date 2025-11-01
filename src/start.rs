@@ -249,7 +249,7 @@ async fn finish_signon(rc: &mut RenderContext, win_state: &mut WindowState) {
     win_state.set_font_color(14, 4);
     c_print(rc, win_state, "Press a key");
 
-    rc.ack();
+    rc.ack().await;
 
     rc.bar(0, 189, 300, 11, peek);
     win_state.print_y = 190;
@@ -282,7 +282,7 @@ async fn demo_loop(
             // title screen & demo loop
             rc.pic(0, 0, GraphicNum::TITLEPIC);
             rc.fade_in().await;
-            if rc.wait_user_input(time::TICK_BASE * 15) {
+            if rc.wait_user_input(time::TICK_BASE * 15).await {
                 break;
             }
             rc.fade_out().await;
@@ -290,7 +290,7 @@ async fn demo_loop(
             // credits page
             rc.pic(0, 0, GraphicNum::CREDITSPIC);
             rc.fade_in().await;
-            if rc.wait_user_input(time::TICK_BASE * 10) {
+            if rc.wait_user_input(time::TICK_BASE * 10).await {
                 break;
             }
             rc.fade_out().await;
@@ -298,7 +298,7 @@ async fn demo_loop(
             // high scores
             draw_high_scores(rc, win_state, &wolf_config.high_scores);
             rc.fade_in().await;
-            if rc.wait_user_input(time::TICK_BASE * 10) {
+            if rc.wait_user_input(time::TICK_BASE * 10).await {
                 break;
             }
 
@@ -385,7 +385,7 @@ async fn pg_13(rc: &mut RenderContext) {
     rc.pic(216, 110, GraphicNum::PG13PIC);
 
     rc.fade_in().await;
-    rc.wait_user_input(time::TICK_BASE * 7);
+    rc.wait_user_input(time::TICK_BASE * 7).await;
     rc.fade_out().await;
 }
 
@@ -663,7 +663,7 @@ pub async fn load_the_game(
         message(rc, win_state, &STR_SAVE_CHEAT);
 
         rc.clear_keys_down();
-        rc.ack();
+        rc.ack().await;
     }
 }
 

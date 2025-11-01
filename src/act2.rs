@@ -1,6 +1,9 @@
 #[cfg(test)]
 #[path = "./act2_test.rs"]
 mod act2_test;
+
+use std::pin::Pin;
+
 use crate::act1::open_door;
 use crate::agent::{S_ATTACK, S_PLAYER, take_damage};
 use crate::assets::SoundName;
@@ -156,6 +159,7 @@ pub static S_GRDSTAND: StateType = StateType {
     tic_time: 0,
     think: Some(t_stand),
     action: None,
+    async_action: None,
     next: Some(&S_GRDSTAND),
 };
 
@@ -166,6 +170,7 @@ pub static S_GRDPATH1: StateType = StateType {
     tic_time: 20,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_GRDPATH1S),
 };
 
@@ -176,6 +181,7 @@ pub static S_GRDPATH1S: StateType = StateType {
     tic_time: 5,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_GRDPATH2),
 };
 
@@ -186,6 +192,7 @@ pub static S_GRDPATH2: StateType = StateType {
     tic_time: 15,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_GRDPATH3),
 };
 
@@ -196,6 +203,7 @@ pub static S_GRDPATH3: StateType = StateType {
     tic_time: 20,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_GRDPATH3S),
 };
 
@@ -206,6 +214,7 @@ pub static S_GRDPATH3S: StateType = StateType {
     tic_time: 5,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_GRDPATH4),
 };
 
@@ -216,6 +225,7 @@ pub static S_GRDPATH4: StateType = StateType {
     tic_time: 15,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_GRDPATH1),
 };
 
@@ -226,6 +236,7 @@ pub static S_GRDPAIN: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_GRDCHASE1),
 };
 
@@ -236,6 +247,7 @@ pub static S_GRDPAIN1: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_GRDCHASE1),
 };
 
@@ -246,6 +258,7 @@ pub static S_GRDSHOOT1: StateType = StateType {
     tic_time: 20,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_GRDSHOOT2),
 };
 
@@ -256,6 +269,7 @@ pub static S_GRDSHOOT2: StateType = StateType {
     tic_time: 20,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_GRDSHOOT3),
 };
 
@@ -266,6 +280,7 @@ pub static S_GRDSHOOT3: StateType = StateType {
     tic_time: 20,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_GRDCHASE1),
 };
 
@@ -276,6 +291,7 @@ pub static S_GRDCHASE1: StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_GRDCHASE1S),
 };
 
@@ -286,6 +302,7 @@ pub static S_GRDCHASE1S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_GRDCHASE2),
 };
 
@@ -296,6 +313,7 @@ pub static S_GRDCHASE2: StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_GRDCHASE3),
 };
 
@@ -306,6 +324,7 @@ pub static S_GRDCHASE3: StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_GRDCHASE3S),
 };
 
@@ -316,6 +335,7 @@ pub static S_GRDCHASE3S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_GRDCHASE4),
 };
 
@@ -326,6 +346,7 @@ pub static S_GRDCHASE4: StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_GRDCHASE1),
 };
 
@@ -336,6 +357,7 @@ pub static S_GRDDIE1: StateType = StateType {
     tic_time: 15,
     think: None,
     action: Some(a_death_scream),
+    async_action: None,
     next: Some(&S_GRDDIE2),
 };
 
@@ -346,6 +368,7 @@ pub static S_GRDDIE2: StateType = StateType {
     tic_time: 15,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_GRDDIE3),
 };
 
@@ -356,6 +379,7 @@ pub static S_GRDDIE3: StateType = StateType {
     tic_time: 15,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_GRDDIE4),
 };
 
@@ -366,6 +390,7 @@ pub static S_GRDDIE4: StateType = StateType {
     tic_time: 0,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_GRDDIE4),
 };
 
@@ -378,6 +403,7 @@ pub static S_BLINKYCHASE1: StateType = StateType {
     tic_time: 10,
     think: Some(t_ghosts),
     action: None,
+    async_action: None,
     next: Some(&S_BLINKYCHASE2),
 };
 
@@ -388,6 +414,7 @@ pub static S_BLINKYCHASE2: StateType = StateType {
     tic_time: 10,
     think: Some(t_ghosts),
     action: None,
+    async_action: None,
     next: Some(&S_BLINKYCHASE1),
 };
 
@@ -398,6 +425,7 @@ pub static S_INKYCHASE1: StateType = StateType {
     tic_time: 10,
     think: Some(t_ghosts),
     action: None,
+    async_action: None,
     next: Some(&S_INKYCHASE2),
 };
 
@@ -408,6 +436,7 @@ pub static S_INKYCHASE2: StateType = StateType {
     tic_time: 10,
     think: Some(t_ghosts),
     action: None,
+    async_action: None,
     next: Some(&S_INKYCHASE1),
 };
 
@@ -418,6 +447,7 @@ pub static S_PINKYCHASE1: StateType = StateType {
     tic_time: 10,
     think: Some(t_ghosts),
     action: None,
+    async_action: None,
     next: Some(&S_PINKYCHASE2),
 };
 
@@ -428,6 +458,7 @@ pub static S_PINKYCHASE2: StateType = StateType {
     tic_time: 10,
     think: Some(t_ghosts),
     action: None,
+    async_action: None,
     next: Some(&S_PINKYCHASE1),
 };
 
@@ -438,6 +469,7 @@ pub static S_CLYDECHASE1: StateType = StateType {
     tic_time: 10,
     think: Some(t_ghosts),
     action: None,
+    async_action: None,
     next: Some(&S_CLYDECHASE2),
 };
 
@@ -448,6 +480,7 @@ pub static S_CLYDECHASE2: StateType = StateType {
     tic_time: 10,
     think: Some(t_ghosts),
     action: None,
+    async_action: None,
     next: Some(&S_CLYDECHASE1),
 };
 
@@ -462,6 +495,7 @@ pub static S_DOGPATH1: StateType = StateType {
     tic_time: 20,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_DOGPATH1S),
 };
 
@@ -472,6 +506,7 @@ pub static S_DOGPATH1S: StateType = StateType {
     tic_time: 5,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_DOGPATH2),
 };
 
@@ -482,6 +517,7 @@ pub static S_DOGPATH2: StateType = StateType {
     tic_time: 15,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_DOGPATH3),
 };
 
@@ -492,6 +528,7 @@ pub static S_DOGPATH3: StateType = StateType {
     tic_time: 20,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_DOGPATH3S),
 };
 
@@ -502,6 +539,7 @@ pub static S_DOGPATH3S: StateType = StateType {
     tic_time: 5,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_DOGPATH4),
 };
 
@@ -512,6 +550,7 @@ pub static S_DOGPATH4: StateType = StateType {
     tic_time: 15,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_DOGPATH1),
 };
 
@@ -522,6 +561,7 @@ pub static S_DOGJUMP1: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_DOGJUMP2),
 };
 
@@ -532,6 +572,7 @@ pub static S_DOGJUMP2: StateType = StateType {
     tic_time: 10,
     think: Some(t_bite),
     action: None,
+    async_action: None,
     next: Some(&S_DOGJUMP3),
 };
 
@@ -542,6 +583,7 @@ pub static S_DOGJUMP3: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_DOGJUMP4),
 };
 
@@ -552,6 +594,7 @@ pub static S_DOGJUMP4: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_DOGJUMP5),
 };
 
@@ -562,6 +605,7 @@ pub static S_DOGJUMP5: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_DOGCHASE1),
 };
 
@@ -572,6 +616,7 @@ pub static S_DOGCHASE1: StateType = StateType {
     tic_time: 10,
     think: Some(t_dog_chase),
     action: None,
+    async_action: None,
     next: Some(&S_DOGCHASE1S),
 };
 
@@ -582,6 +627,7 @@ pub static S_DOGCHASE1S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_DOGCHASE2),
 };
 
@@ -592,6 +638,7 @@ pub static S_DOGCHASE2: StateType = StateType {
     tic_time: 8,
     think: Some(t_dog_chase),
     action: None,
+    async_action: None,
     next: Some(&S_DOGCHASE3),
 };
 
@@ -602,6 +649,7 @@ pub static S_DOGCHASE3: StateType = StateType {
     tic_time: 10,
     think: Some(t_dog_chase),
     action: None,
+    async_action: None,
     next: Some(&S_DOGCHASE3S),
 };
 
@@ -612,6 +660,7 @@ pub static S_DOGCHASE3S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_DOGCHASE4),
 };
 
@@ -622,6 +671,7 @@ pub static S_DOGCHASE4: StateType = StateType {
     tic_time: 8,
     think: Some(t_dog_chase),
     action: None,
+    async_action: None,
     next: Some(&S_DOGCHASE1),
 };
 
@@ -632,6 +682,7 @@ pub static S_DOGDIE1: StateType = StateType {
     tic_time: 15,
     think: None,
     action: Some(a_death_scream),
+    async_action: None,
     next: Some(&S_DOGDIE2),
 };
 
@@ -642,6 +693,7 @@ pub static S_DOGDIE2: StateType = StateType {
     tic_time: 15,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_DOGDIE3),
 };
 
@@ -652,6 +704,7 @@ pub static S_DOGDIE3: StateType = StateType {
     tic_time: 15,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_DOGDEAD),
 };
 
@@ -662,6 +715,7 @@ pub static S_DOGDEAD: StateType = StateType {
     tic_time: 15,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_DOGDEAD),
 };
 
@@ -674,6 +728,7 @@ pub static S_OFCSTAND: StateType = StateType {
     tic_time: 0,
     think: Some(t_stand),
     action: None,
+    async_action: None,
     next: Some(&S_OFCSTAND),
 };
 
@@ -684,6 +739,7 @@ pub static S_OFCPATH1: StateType = StateType {
     tic_time: 20,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_OFCPATH1S),
 };
 
@@ -694,6 +750,7 @@ pub static S_OFCPATH1S: StateType = StateType {
     tic_time: 5,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_OFCPATH2),
 };
 
@@ -704,6 +761,7 @@ pub static S_OFCPATH2: StateType = StateType {
     tic_time: 15,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_OFCPATH3),
 };
 
@@ -714,6 +772,7 @@ pub static S_OFCPATH3: StateType = StateType {
     tic_time: 20,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_OFCPATH3S),
 };
 
@@ -724,6 +783,7 @@ pub static S_OFCPATH3S: StateType = StateType {
     tic_time: 5,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_OFCPATH4),
 };
 
@@ -734,6 +794,7 @@ pub static S_OFCPATH4: StateType = StateType {
     tic_time: 15,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_OFCPATH1),
 };
 
@@ -744,6 +805,7 @@ pub static S_OFCPAIN: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_OFCCHASE1),
 };
 
@@ -754,6 +816,7 @@ pub static S_OFCPAIN1: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_OFCCHASE1),
 };
 
@@ -764,6 +827,7 @@ pub static S_OFCSHOOT1: StateType = StateType {
     tic_time: 6,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_OFCSHOOT2),
 };
 
@@ -774,6 +838,7 @@ pub static S_OFCSHOOT2: StateType = StateType {
     tic_time: 20,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_OFCSHOOT3),
 };
 
@@ -784,6 +849,7 @@ pub static S_OFCSHOOT3: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_OFCCHASE1),
 };
 
@@ -794,6 +860,7 @@ pub static S_OFCCHASE1: StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_OFCCHASE1S),
 };
 
@@ -804,6 +871,7 @@ pub static S_OFCCHASE1S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_OFCCHASE2),
 };
 
@@ -814,6 +882,7 @@ pub static S_OFCCHASE2: StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_OFCCHASE3),
 };
 
@@ -824,6 +893,7 @@ pub static S_OFCCHASE3: StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_OFCCHASE3S),
 };
 
@@ -834,6 +904,7 @@ pub static S_OFCCHASE3S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_OFCCHASE4),
 };
 
@@ -844,6 +915,7 @@ pub static S_OFCCHASE4: StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_OFCCHASE1),
 };
 
@@ -854,6 +926,7 @@ pub static S_OFCDIE1: StateType = StateType {
     tic_time: 11,
     think: None,
     action: Some(a_death_scream),
+    async_action: None,
     next: Some(&S_OFCDIE2),
 };
 
@@ -864,6 +937,7 @@ pub static S_OFCDIE2: StateType = StateType {
     tic_time: 11,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_OFCDIE3),
 };
 
@@ -874,6 +948,7 @@ pub static S_OFCDIE3: StateType = StateType {
     tic_time: 11,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_OFCDIE4),
 };
 
@@ -884,6 +959,7 @@ pub static S_OFCDIE4: StateType = StateType {
     tic_time: 11,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_OFCDIE5),
 };
 
@@ -894,6 +970,7 @@ pub static S_OFCDIE5: StateType = StateType {
     tic_time: 0,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_OFCDIE5),
 };
 
@@ -906,6 +983,7 @@ pub static S_MUTSTAND: StateType = StateType {
     tic_time: 0,
     think: Some(t_stand),
     action: None,
+    async_action: None,
     next: Some(&S_MUTSTAND),
 };
 
@@ -916,6 +994,7 @@ pub static S_MUTPATH1: StateType = StateType {
     tic_time: 20,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_MUTPATH1S),
 };
 
@@ -926,6 +1005,7 @@ pub static S_MUTPATH1S: StateType = StateType {
     tic_time: 5,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MUTPATH2),
 };
 
@@ -936,6 +1016,7 @@ pub static S_MUTPATH2: StateType = StateType {
     tic_time: 15,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_MUTPATH3),
 };
 
@@ -946,6 +1027,7 @@ pub static S_MUTPATH3: StateType = StateType {
     tic_time: 20,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_MUTPATH3S),
 };
 
@@ -956,6 +1038,7 @@ pub static S_MUTPATH3S: StateType = StateType {
     tic_time: 5,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MUTPATH4),
 };
 
@@ -966,6 +1049,7 @@ pub static S_MUTPATH4: StateType = StateType {
     tic_time: 15,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_MUTPATH1),
 };
 
@@ -976,6 +1060,7 @@ pub static S_MUTPAIN: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MUTCHASE1),
 };
 
@@ -986,6 +1071,7 @@ pub static S_MUTPAIN1: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MUTCHASE1),
 };
 
@@ -996,6 +1082,7 @@ pub static S_MUTSHOOT1: StateType = StateType {
     tic_time: 6,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_MUTSHOOT2),
 };
 
@@ -1006,6 +1093,7 @@ pub static S_MUTSHOOT2: StateType = StateType {
     tic_time: 20,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MUTSHOOT3),
 };
 
@@ -1016,6 +1104,7 @@ pub static S_MUTSHOOT3: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_MUTSHOOT4),
 };
 
@@ -1026,6 +1115,7 @@ pub static S_MUTSHOOT4: StateType = StateType {
     tic_time: 20,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MUTCHASE1),
 };
 
@@ -1036,6 +1126,7 @@ pub static S_MUTCHASE1: StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_MUTCHASE1S),
 };
 
@@ -1046,6 +1137,7 @@ pub static S_MUTCHASE1S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MUTCHASE2),
 };
 
@@ -1056,6 +1148,7 @@ pub static S_MUTCHASE2: StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_MUTCHASE3),
 };
 
@@ -1066,6 +1159,7 @@ pub static S_MUTCHASE3: StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_MUTCHASE3S),
 };
 
@@ -1076,6 +1170,7 @@ pub static S_MUTCHASE3S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MUTCHASE4),
 };
 
@@ -1086,6 +1181,7 @@ pub static S_MUTCHASE4: StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_MUTCHASE1),
 };
 
@@ -1096,6 +1192,7 @@ pub static S_MUTDIE1: StateType = StateType {
     tic_time: 7,
     think: None,
     action: Some(a_death_scream),
+    async_action: None,
     next: Some(&S_MUTDIE2),
 };
 
@@ -1106,6 +1203,7 @@ pub static S_MUTDIE2: StateType = StateType {
     tic_time: 7,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MUTDIE3),
 };
 
@@ -1116,6 +1214,7 @@ pub static S_MUTDIE3: StateType = StateType {
     tic_time: 7,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MUTDIE4),
 };
 
@@ -1126,6 +1225,7 @@ pub static S_MUTDIE4: StateType = StateType {
     tic_time: 7,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MUTDIE5),
 };
 
@@ -1136,6 +1236,7 @@ pub static S_MUTDIE5: StateType = StateType {
     tic_time: 0,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MUTDIE5),
 };
 
@@ -1148,6 +1249,7 @@ pub static S_SSSTAND: StateType = StateType {
     tic_time: 0,
     think: Some(t_stand),
     action: None,
+    async_action: None,
     next: Some(&S_SSSTAND),
 };
 
@@ -1158,6 +1260,7 @@ pub static S_SSPATH1: StateType = StateType {
     tic_time: 20,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_SSPATH1S),
 };
 
@@ -1168,6 +1271,7 @@ pub static S_SSPATH1S: StateType = StateType {
     tic_time: 5,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSPATH2),
 };
 
@@ -1178,6 +1282,7 @@ pub static S_SSPATH2: StateType = StateType {
     tic_time: 15,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_SSPATH3),
 };
 
@@ -1188,6 +1293,7 @@ pub static S_SSPATH3: StateType = StateType {
     tic_time: 20,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_SSPATH3S),
 };
 
@@ -1198,6 +1304,7 @@ pub static S_SSPATH3S: StateType = StateType {
     tic_time: 5,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSPATH4),
 };
 
@@ -1208,6 +1315,7 @@ pub static S_SSPATH4: StateType = StateType {
     tic_time: 15,
     think: Some(t_path),
     action: None,
+    async_action: None,
     next: Some(&S_SSPATH1),
 };
 
@@ -1218,6 +1326,7 @@ pub static S_SSPAIN: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSCHASE1),
 };
 
@@ -1228,6 +1337,7 @@ pub static S_SSPAIN1: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSCHASE1),
 };
 
@@ -1238,6 +1348,7 @@ pub static S_SSSHOOT1: StateType = StateType {
     tic_time: 20,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSSHOOT2),
 };
 
@@ -1248,6 +1359,7 @@ pub static S_SSSHOOT2: StateType = StateType {
     tic_time: 20,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_SSSHOOT3),
 };
 
@@ -1258,6 +1370,7 @@ pub static S_SSSHOOT3: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSSHOOT4),
 };
 
@@ -1268,6 +1381,7 @@ pub static S_SSSHOOT4: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_SSSHOOT5),
 };
 
@@ -1278,6 +1392,7 @@ pub static S_SSSHOOT5: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSSHOOT6),
 };
 
@@ -1288,6 +1403,7 @@ pub static S_SSSHOOT6: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_SSSHOOT7),
 };
 
@@ -1298,6 +1414,7 @@ pub static S_SSSHOOT7: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSSHOOT8),
 };
 
@@ -1308,6 +1425,7 @@ pub static S_SSSHOOT8: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_SSSHOOT9),
 };
 
@@ -1318,6 +1436,7 @@ pub static S_SSSHOOT9: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSCHASE1),
 };
 
@@ -1328,6 +1447,7 @@ pub static S_SSCHASE1: StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_SSCHASE1S),
 };
 
@@ -1338,6 +1458,7 @@ pub static S_SSCHASE1S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSCHASE2),
 };
 
@@ -1348,6 +1469,7 @@ pub static S_SSCHASE2: StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_SSCHASE3),
 };
 
@@ -1358,6 +1480,7 @@ pub static S_SSCHASE3: StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_SSCHASE3S),
 };
 
@@ -1368,6 +1491,7 @@ pub static S_SSCHASE3S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSCHASE4),
 };
 
@@ -1378,6 +1502,7 @@ pub static S_SSCHASE4: StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_SSCHASE1),
 };
 
@@ -1388,6 +1513,7 @@ pub static S_SSDIE1: StateType = StateType {
     tic_time: 15,
     think: None,
     action: Some(a_death_scream),
+    async_action: None,
     next: Some(&S_SSDIE2),
 };
 
@@ -1398,6 +1524,7 @@ pub static S_SSDIE2: StateType = StateType {
     tic_time: 15,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSDIE3),
 };
 
@@ -1408,6 +1535,7 @@ pub static S_SSDIE3: StateType = StateType {
     tic_time: 15,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSDIE4),
 };
 
@@ -1418,6 +1546,7 @@ pub static S_SSDIE4: StateType = StateType {
     tic_time: 0,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SSDIE4),
 };
 
@@ -1431,6 +1560,7 @@ pub static S_BOSSSTAND: StateType = StateType {
     tic_time: 0,
     think: Some(t_stand),
     action: None,
+    async_action: None,
     next: Some(&S_BOSSSTAND),
 };
 
@@ -1441,6 +1571,7 @@ pub static S_BOSSCHASE1: StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_BOSSCHASE1S),
 };
 
@@ -1451,6 +1582,7 @@ pub static S_BOSSCHASE1S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_BOSSCHASE2),
 };
 
@@ -1461,6 +1593,7 @@ pub static S_BOSSCHASE2: StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_BOSSCHASE3),
 };
 
@@ -1471,6 +1604,7 @@ pub static S_BOSSCHASE3: StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_BOSSCHASE3S),
 };
 
@@ -1481,6 +1615,7 @@ pub static S_BOSSCHASE3S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_BOSSCHASE4),
 };
 
@@ -1491,6 +1626,7 @@ pub static S_BOSSCHASE4: StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_BOSSCHASE1),
 };
 
@@ -1501,6 +1637,7 @@ pub static S_BOSSDIE1: StateType = StateType {
     tic_time: 15,
     think: None,
     action: Some(a_death_scream),
+    async_action: None,
     next: Some(&S_BOSSDIE2),
 };
 
@@ -1511,6 +1648,7 @@ pub static S_BOSSDIE2: StateType = StateType {
     tic_time: 15,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_BOSSDIE3),
 };
 
@@ -1521,6 +1659,7 @@ pub static S_BOSSDIE3: StateType = StateType {
     tic_time: 15,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_BOSSDIE4),
 };
 
@@ -1531,6 +1670,7 @@ pub static S_BOSSDIE4: StateType = StateType {
     tic_time: 0,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_BOSSDIE4),
 };
 
@@ -1541,6 +1681,7 @@ pub static S_BOSSSHOOT1: StateType = StateType {
     tic_time: 30,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_BOSSSHOOT2),
 };
 
@@ -1551,6 +1692,7 @@ pub static S_BOSSSHOOT2: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_BOSSSHOOT3),
 };
 
@@ -1561,6 +1703,7 @@ pub static S_BOSSSHOOT3: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_BOSSSHOOT4),
 };
 
@@ -1571,6 +1714,7 @@ pub static S_BOSSSHOOT4: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_BOSSSHOOT5),
 };
 
@@ -1581,6 +1725,7 @@ pub static S_BOSSSHOOT5: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_BOSSSHOOT6),
 };
 
@@ -1591,6 +1736,7 @@ pub static S_BOSSSHOOT6: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_BOSSSHOOT7),
 };
 
@@ -1601,6 +1747,7 @@ pub static S_BOSSSHOOT7: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_BOSSSHOOT8),
 };
 
@@ -1611,6 +1758,7 @@ pub static S_BOSSSHOOT8: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_BOSSCHASE1),
 };
 
@@ -1624,6 +1772,7 @@ pub static S_SCHABBSTAND: StateType = StateType {
     tic_time: 10,
     think: Some(t_stand),
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBSTAND),
 };
 
@@ -1634,6 +1783,7 @@ pub static S_SCHABBCHASE1: StateType = StateType {
     tic_time: 10,
     think: Some(t_schabb),
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBCHASE1S),
 };
 
@@ -1644,6 +1794,7 @@ pub static S_SCHABBCHASE1S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBCHASE2),
 };
 pub static S_SCHABBCHASE2: StateType = StateType {
@@ -1653,6 +1804,7 @@ pub static S_SCHABBCHASE2: StateType = StateType {
     tic_time: 8,
     think: Some(t_schabb),
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBCHASE3),
 };
 
@@ -1663,6 +1815,7 @@ pub static S_SCHABBCHASE3: StateType = StateType {
     tic_time: 10,
     think: Some(t_schabb),
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBCHASE3S),
 };
 
@@ -1673,6 +1826,7 @@ pub static S_SCHABBCHASE3S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBCHASE4),
 };
 
@@ -1683,6 +1837,7 @@ pub static S_SCHABBCHASE4: StateType = StateType {
     tic_time: 8,
     think: Some(t_schabb),
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBCHASE1),
 };
 
@@ -1693,6 +1848,7 @@ pub static S_SCHABBDEATHCAM_140: StateType = StateType {
     tic_time: 1,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBDIE1_140),
 };
 
@@ -1703,6 +1859,7 @@ pub static S_SCHABBDEATHCAM_10: StateType = StateType {
     tic_time: 1,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBDIE1_10),
 };
 
@@ -1713,6 +1870,7 @@ pub static S_SCHABBDIE1_140: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(a_death_scream),
+    async_action: None,
     next: Some(&S_SCHABBDIE2_140),
 };
 
@@ -1723,6 +1881,7 @@ pub static S_SCHABBDIE1_10: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(a_death_scream),
+    async_action: None,
     next: Some(&S_SCHABBDIE2_10),
 };
 
@@ -1733,6 +1892,7 @@ pub static S_SCHABBDIE2_140: StateType = StateType {
     tic_time: 140,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBDIE3),
 };
 
@@ -1743,6 +1903,7 @@ pub static S_SCHABBDIE2_10: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBDIE3),
 };
 
@@ -1753,6 +1914,7 @@ pub static S_SCHABBDIE3: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBDIE4),
 };
 
@@ -1763,6 +1925,7 @@ pub static S_SCHABBDIE4: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBDIE5),
 };
 
@@ -1773,6 +1936,7 @@ pub static S_SCHABBDIE5: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBDIE6),
 };
 
@@ -1782,7 +1946,8 @@ pub static S_SCHABBDIE6: StateType = StateType {
     sprite: Some(Sprite::SchabbDead),
     tic_time: 20,
     think: None,
-    action: Some(a_start_death_cam),
+    action: None,
+    async_action: Some(a_start_death_cam),
     next: Some(&S_SCHABBDIE6),
 };
 
@@ -1793,6 +1958,7 @@ pub static S_SCHABBSHOOT1: StateType = StateType {
     tic_time: 30,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_SCHABBSHOOT2),
 };
 
@@ -1803,6 +1969,7 @@ pub static S_SCHABBSHOOT2: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_schabb_throw),
+    async_action: None,
     next: Some(&S_SCHABBCHASE1),
 };
 
@@ -1813,6 +1980,7 @@ pub static S_NEEDLE1: StateType = StateType {
     tic_time: 6,
     think: Some(t_projectile),
     action: None,
+    async_action: None,
     next: Some(&S_NEEDLE2),
 };
 
@@ -1823,6 +1991,7 @@ pub static S_NEEDLE2: StateType = StateType {
     tic_time: 6,
     think: Some(t_projectile),
     action: None,
+    async_action: None,
     next: Some(&S_NEEDLE3),
 };
 
@@ -1833,6 +2002,7 @@ pub static S_NEEDLE3: StateType = StateType {
     tic_time: 6,
     think: Some(t_projectile),
     action: None,
+    async_action: None,
     next: Some(&S_NEEDLE4),
 };
 
@@ -1843,6 +2013,7 @@ pub static S_NEEDLE4: StateType = StateType {
     tic_time: 6,
     think: Some(t_projectile),
     action: None,
+    async_action: None,
     next: Some(&S_NEEDLE1),
 };
 
@@ -1853,6 +2024,7 @@ pub static S_BOOM1: StateType = StateType {
     tic_time: 6,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_BOOM2),
 };
 
@@ -1863,6 +2035,7 @@ pub static S_BOOM2: StateType = StateType {
     tic_time: 6,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_BOOM3),
 };
 
@@ -1873,6 +2046,7 @@ pub static S_BOOM3: StateType = StateType {
     tic_time: 6,
     think: None,
     action: None,
+    async_action: None,
     next: None,
 };
 
@@ -1883,6 +2057,7 @@ pub static S_FAKESTAND: StateType = StateType {
     tic_time: 0,
     think: Some(t_stand),
     action: None,
+    async_action: None,
     next: Some(&S_FAKESTAND),
 };
 
@@ -1893,6 +2068,7 @@ pub static S_FAKECHASE1: StateType = StateType {
     tic_time: 10,
     think: Some(t_fake),
     action: None,
+    async_action: None,
     next: Some(&S_FAKECHASE1S),
 };
 
@@ -1903,6 +2079,7 @@ pub static S_FAKECHASE1S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_FAKECHASE2),
 };
 
@@ -1913,6 +2090,7 @@ pub static S_FAKECHASE2: StateType = StateType {
     tic_time: 8,
     think: Some(t_fake),
     action: None,
+    async_action: None,
     next: Some(&S_FAKECHASE3),
 };
 
@@ -1923,6 +2101,7 @@ pub static S_FAKECHASE3: StateType = StateType {
     tic_time: 10,
     think: Some(t_fake),
     action: None,
+    async_action: None,
     next: Some(&S_FAKECHASE3S),
 };
 
@@ -1933,6 +2112,7 @@ pub static S_FAKECHASE3S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_FAKECHASE4),
 };
 
@@ -1943,6 +2123,7 @@ pub static S_FAKECHASE4: StateType = StateType {
     tic_time: 8,
     think: Some(t_fake),
     action: None,
+    async_action: None,
     next: Some(&S_FAKECHASE1),
 };
 
@@ -1953,6 +2134,7 @@ pub static S_FAKEDIE1: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(a_death_scream),
+    async_action: None,
     next: Some(&S_FAKEDIE2),
 };
 
@@ -1963,6 +2145,7 @@ pub static S_FAKEDIE2: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_FAKEDIE3),
 };
 
@@ -1973,6 +2156,7 @@ pub static S_FAKEDIE3: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_FAKEDIE4),
 };
 
@@ -1983,6 +2167,7 @@ pub static S_FAKEDIE4: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_FAKEDIE5),
 };
 
@@ -1993,6 +2178,7 @@ pub static S_FAKEDIE5: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_FAKEDIE6),
 };
 
@@ -2003,6 +2189,7 @@ pub static S_FAKEDIE6: StateType = StateType {
     tic_time: 0,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_FAKEDIE6),
 };
 
@@ -2013,6 +2200,7 @@ pub static S_FAKESHOOT1: StateType = StateType {
     tic_time: 8,
     think: None,
     action: Some(t_fake_fire),
+    async_action: None,
     next: Some(&S_FAKESHOOT2),
 };
 
@@ -2023,6 +2211,7 @@ pub static S_FAKESHOOT2: StateType = StateType {
     tic_time: 8,
     think: None,
     action: Some(t_fake_fire),
+    async_action: None,
     next: Some(&S_FAKESHOOT3),
 };
 
@@ -2033,6 +2222,7 @@ pub static S_FAKESHOOT3: StateType = StateType {
     tic_time: 8,
     think: None,
     action: Some(t_fake_fire),
+    async_action: None,
     next: Some(&S_FAKESHOOT4),
 };
 
@@ -2043,6 +2233,7 @@ pub static S_FAKESHOOT4: StateType = StateType {
     tic_time: 8,
     think: None,
     action: Some(t_fake_fire),
+    async_action: None,
     next: Some(&S_FAKESHOOT5),
 };
 
@@ -2053,6 +2244,7 @@ pub static S_FAKESHOOT5: StateType = StateType {
     tic_time: 8,
     think: None,
     action: Some(t_fake_fire),
+    async_action: None,
     next: Some(&S_FAKESHOOT6),
 };
 
@@ -2063,6 +2255,7 @@ pub static S_FAKESHOOT6: StateType = StateType {
     tic_time: 8,
     think: None,
     action: Some(t_fake_fire),
+    async_action: None,
     next: Some(&S_FAKESHOOT7),
 };
 
@@ -2073,6 +2266,7 @@ pub static S_FAKESHOOT7: StateType = StateType {
     tic_time: 8,
     think: None,
     action: Some(t_fake_fire),
+    async_action: None,
     next: Some(&S_FAKESHOOT8),
 };
 
@@ -2083,6 +2277,7 @@ pub static S_FAKESHOOT8: StateType = StateType {
     tic_time: 8,
     think: None,
     action: Some(t_fake_fire),
+    async_action: None,
     next: Some(&S_FAKESHOOT9),
 };
 
@@ -2093,6 +2288,7 @@ pub static S_FAKESHOOT9: StateType = StateType {
     tic_time: 8,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_FAKECHASE1),
 };
 
@@ -2103,6 +2299,7 @@ pub static S_FIRE1: StateType = StateType {
     tic_time: 6,
     think: Some(t_projectile),
     action: None,
+    async_action: None,
     next: Some(&S_FIRE2),
 };
 
@@ -2113,6 +2310,7 @@ pub static S_FIRE2: StateType = StateType {
     tic_time: 6,
     think: Some(t_projectile),
     action: None,
+    async_action: None,
     next: Some(&S_FIRE1),
 };
 
@@ -2123,6 +2321,7 @@ pub static S_MECHASTAND: StateType = StateType {
     tic_time: 0,
     think: Some(t_stand),
     action: None,
+    async_action: None,
     next: Some(&S_MECHASTAND),
 };
 
@@ -2133,6 +2332,7 @@ pub static S_MECHACHASE1: StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: Some(a_mecha_sound),
+    async_action: None,
     next: Some(&S_MECHACHASE1S),
 };
 
@@ -2143,6 +2343,7 @@ pub static S_MECHACHASE1S: StateType = StateType {
     tic_time: 6,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MECHACHASE2),
 };
 
@@ -2153,6 +2354,7 @@ pub static S_MECHACHASE2: StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_MECHACHASE3),
 };
 
@@ -2163,6 +2365,7 @@ pub static S_MECHACHASE3: StateType = StateType {
     tic_time: 10,
     think: Some(t_chase),
     action: Some(a_mecha_sound),
+    async_action: None,
     next: Some(&S_MECHACHASE3S),
 };
 
@@ -2173,6 +2376,7 @@ pub static S_MECHACHASE3S: StateType = StateType {
     tic_time: 6,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MECHACHASE4),
 };
 
@@ -2183,6 +2387,7 @@ pub static S_MECHACHASE4: StateType = StateType {
     tic_time: 8,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_MECHACHASE1),
 };
 
@@ -2193,6 +2398,7 @@ pub static S_MECHADIE1: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(a_death_scream),
+    async_action: None,
     next: Some(&S_MECHADIE2),
 };
 
@@ -2203,6 +2409,7 @@ pub static S_MECHADIE2: StateType = StateType {
     tic_time: 5,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MECHADIE3),
 };
 
@@ -2213,6 +2420,7 @@ pub static S_MECHADIE3: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(a_hitler_morph),
+    async_action: None,
     next: Some(&S_MECHADIE4),
 };
 
@@ -2223,6 +2431,7 @@ pub static S_MECHADIE4: StateType = StateType {
     tic_time: 0,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MECHADIE4),
 };
 
@@ -2233,6 +2442,7 @@ pub static S_MECHASHOOT1: StateType = StateType {
     tic_time: 30,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_MECHASHOOT2),
 };
 
@@ -2243,6 +2453,7 @@ pub static S_MECHASHOOT2: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_MECHASHOOT3),
 };
 
@@ -2253,6 +2464,7 @@ pub static S_MECHASHOOT3: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_MECHASHOOT4),
 };
 
@@ -2263,6 +2475,7 @@ pub static S_MECHASHOOT4: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_MECHASHOOT5),
 };
 
@@ -2273,6 +2486,7 @@ pub static S_MECHASHOOT5: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_MECHASHOOT6),
 };
 
@@ -2283,6 +2497,7 @@ pub static S_MECHASHOOT6: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_MECHACHASE1),
 };
 
@@ -2293,6 +2508,7 @@ pub static S_HITLERCHASE1: StateType = StateType {
     tic_time: 6,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_HITLERCHASE1S),
 };
 
@@ -2303,6 +2519,7 @@ pub static S_HITLERCHASE1S: StateType = StateType {
     tic_time: 4,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_HITLERCHASE2),
 };
 
@@ -2313,6 +2530,7 @@ pub static S_HITLERCHASE2: StateType = StateType {
     tic_time: 2,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_HITLERCHASE3),
 };
 
@@ -2323,6 +2541,7 @@ pub static S_HITLERCHASE3: StateType = StateType {
     tic_time: 6,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_HITLERCHASE3S),
 };
 
@@ -2333,6 +2552,7 @@ pub static S_HITLERCHASE3S: StateType = StateType {
     tic_time: 4,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_HITLERCHASE4),
 };
 
@@ -2343,6 +2563,7 @@ pub static S_HITLERCHASE4: StateType = StateType {
     tic_time: 2,
     think: Some(t_chase),
     action: None,
+    async_action: None,
     next: Some(&S_HITLERCHASE1),
 };
 
@@ -2353,6 +2574,7 @@ pub static S_HITLERDEATHCAM_140: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_HITLERDIE1_140),
 };
 
@@ -2363,6 +2585,7 @@ pub static S_HITLERDEATHCAM_5: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_HITLERDIE1_5),
 };
 
@@ -2373,6 +2596,7 @@ pub static S_HITLERDIE1_140: StateType = StateType {
     tic_time: 1,
     think: None,
     action: Some(a_death_scream),
+    async_action: None,
     next: Some(&S_HITLERDIE2_140),
 };
 
@@ -2383,6 +2607,7 @@ pub static S_HITLERDIE1_5: StateType = StateType {
     tic_time: 1,
     think: None,
     action: Some(a_death_scream),
+    async_action: None,
     next: Some(&S_HITLERDIE2_5),
 };
 
@@ -2393,6 +2618,7 @@ pub static S_HITLERDIE2_140: StateType = StateType {
     tic_time: 140,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_HITLERDIE3),
 };
 
@@ -2403,6 +2629,7 @@ pub static S_HITLERDIE2_5: StateType = StateType {
     tic_time: 5,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_HITLERDIE3),
 };
 
@@ -2413,6 +2640,7 @@ pub static S_HITLERDIE3: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(a_slurpie),
+    async_action: None,
     next: Some(&S_HITLERDIE4),
 };
 
@@ -2423,6 +2651,7 @@ pub static S_HITLERDIE4: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_HITLERDIE5),
 };
 
@@ -2433,6 +2662,7 @@ pub static S_HITLERDIE5: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_HITLERDIE6),
 };
 
@@ -2443,6 +2673,7 @@ pub static S_HITLERDIE6: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_HITLERDIE7),
 };
 
@@ -2453,6 +2684,7 @@ pub static S_HITLERDIE7: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_HITLERDIE8),
 };
 
@@ -2463,6 +2695,7 @@ pub static S_HITLERDIE8: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_HITLERDIE9),
 };
 
@@ -2473,6 +2706,7 @@ pub static S_HITLERDIE9: StateType = StateType {
     tic_time: 10,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_HITLERDIE10),
 };
 
@@ -2482,7 +2716,8 @@ pub static S_HITLERDIE10: StateType = StateType {
     sprite: Some(Sprite::HitlerDead),
     tic_time: 20,
     think: None,
-    action: Some(a_start_death_cam),
+    action: None,
+    async_action: Some(a_start_death_cam),
     next: Some(&S_HITLERDIE10),
 };
 
@@ -2493,6 +2728,7 @@ pub static S_HITLERSHOOT1: StateType = StateType {
     tic_time: 30,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_HITLERSHOOT2),
 };
 
@@ -2503,6 +2739,7 @@ pub static S_HITLERSHOOT2: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_HITLERSHOOT3),
 };
 
@@ -2513,6 +2750,7 @@ pub static S_HITLERSHOOT3: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_HITLERSHOOT4),
 };
 
@@ -2523,6 +2761,7 @@ pub static S_HITLERSHOOT4: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_HITLERSHOOT5),
 };
 
@@ -2533,6 +2772,7 @@ pub static S_HITLERSHOOT5: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_HITLERSHOOT6),
 };
 
@@ -2543,6 +2783,7 @@ pub static S_HITLERSHOOT6: StateType = StateType {
     tic_time: 10,
     think: None,
     action: Some(t_shoot),
+    async_action: None,
     next: Some(&S_HITLERCHASE1),
 };
 
@@ -3957,6 +4198,7 @@ pub static S_BJRUN1: StateType = StateType {
     tic_time: 12,
     think: Some(t_bj_run),
     action: None,
+    async_action: None,
     next: Some(&S_BJRUN1S),
 };
 
@@ -3967,6 +4209,7 @@ pub static S_BJRUN1S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_BJRUN2),
 };
 
@@ -3977,6 +4220,7 @@ pub static S_BJRUN2: StateType = StateType {
     tic_time: 8,
     think: Some(t_bj_run),
     action: None,
+    async_action: None,
     next: Some(&S_BJRUN3),
 };
 
@@ -3987,6 +4231,7 @@ pub static S_BJRUN3: StateType = StateType {
     tic_time: 12,
     think: Some(t_bj_run),
     action: None,
+    async_action: None,
     next: Some(&S_BJRUN3S),
 };
 
@@ -3997,6 +4242,7 @@ pub static S_BJRUN3S: StateType = StateType {
     tic_time: 3,
     think: None,
     action: None,
+    async_action: None,
     next: Some(&S_BJRUN4),
 };
 
@@ -4007,6 +4253,7 @@ pub static S_BJRUN4: StateType = StateType {
     tic_time: 8,
     think: Some(t_bj_run),
     action: None,
+    async_action: None,
     next: Some(&S_BJRUN1),
 };
 
@@ -4017,6 +4264,7 @@ pub static S_BJ_JUMP1: StateType = StateType {
     tic_time: 14,
     think: Some(t_bj_jump),
     action: None,
+    async_action: None,
     next: Some(&S_BJ_JUMP2),
 };
 
@@ -4027,6 +4275,7 @@ pub static S_BJ_JUMP2: StateType = StateType {
     tic_time: 14,
     think: Some(t_bj_jump),
     action: Some(t_bj_yell),
+    async_action: None,
     next: Some(&S_BJ_JUMP3),
 };
 
@@ -4037,6 +4286,7 @@ pub static S_BJ_JUMP3: StateType = StateType {
     tic_time: 14,
     think: Some(t_bj_jump),
     action: None,
+    async_action: None,
     next: Some(&S_BJ_JUMP4),
 };
 
@@ -4047,6 +4297,7 @@ pub static S_BJ_JUMP4: StateType = StateType {
     tic_time: 300,
     think: None,
     action: Some(t_bj_done),
+    async_action: None,
     next: Some(&S_BJ_JUMP4),
 };
 
@@ -4057,6 +4308,7 @@ pub static S_DEATH_CAM: StateType = StateType {
     tic_time: 0,
     think: None,
     action: None,
+    async_action: None,
     next: None,
 };
 
@@ -4143,96 +4395,100 @@ fn t_bj_done(
     game_state.play_state = PlayState::Victorious;
 }
 
-fn a_start_death_cam(
-    rc: &mut RenderContext,
+fn a_start_death_cam<'a>(
+    rc: &'a mut RenderContext,
     k: ObjKey,
     _: u64,
-    level_state: &mut LevelState,
-    game_state: &mut GameState,
-    _: &mut ControlState,
-) {
-    finish_palette_shifts(game_state, &rc.vga);
+    level_state: &'a mut LevelState,
+    game_state: &'a mut GameState,
+    _: &'a mut ControlState,
+) -> Pin<Box<dyn Future<Output = ()> + 'a>> {
+    Box::pin(async move {
+        finish_palette_shifts(game_state, &rc.vga);
 
-    if game_state.victory_flag {
-        game_state.play_state = PlayState::Victorious;
-        return;
-    }
-    game_state.victory_flag = true;
-
-    rc.bar(0, 0, 320, 200 - STATUS_LINES, 127);
-    rc.fizzle_fade(
-        rc.buffer_offset(),
-        rc.active_buffer(),
-        320,
-        200 - STATUS_LINES,
-        70,
-        FizzleFadeAbortable::No,
-    );
-    rc.set_buffer_offset(rc.active_buffer());
-
-    write(rc, 0, 7, "Let's see that again!");
-    rc.wait_user_input(300);
-
-    // line angle up exactly
-    new_state(level_state.mut_player(), &S_DEATH_CAM);
-    level_state.mut_player().x = game_state.kill_x as i32;
-    level_state.mut_player().y = game_state.kill_y as i32;
-
-    let dx = level_state.obj(k).x - level_state.player().x;
-    let dy = level_state.player().y - level_state.obj(k).y;
-
-    let mut fangle = (dy as f64).atan2(dx as f64);
-    if fangle < 0.0 {
-        fangle = std::f64::consts::PI * 2.0 + fangle;
-    }
-    let angle = ((fangle / (std::f64::consts::PI * 2.0)) * ANGLES_F64) as i32;
-    level_state.mut_player().angle = angle;
-    // try to position as close as possible without being in a wall
-    let mut dist = 0x14000;
-    loop {
-        let x_move = fixed_by_frac(Fixed::new_from_u32(dist), rc.projection.cos(angle as usize));
-        let y_move = -fixed_by_frac(Fixed::new_from_u32(dist), rc.projection.sin(angle as usize));
-
-        level_state.mut_player().x = level_state.obj(k).x - x_move.to_i32();
-        level_state.mut_player().y = level_state.obj(k).y - y_move.to_i32();
-        dist += 0x1000;
-
-        if check_position_player(level_state) {
-            break;
+        if game_state.victory_flag {
+            game_state.play_state = PlayState::Victorious;
+            return;
         }
-    }
-    level_state.mut_player().tilex = (level_state.player().x >> TILESHIFT) as usize;
-    level_state.mut_player().tiley = (level_state.player().y >> TILESHIFT) as usize;
+        game_state.victory_flag = true;
 
-    // go back to the game
-    let offset_prev = rc.buffer_offset();
-    for i in 0..3 {
-        rc.set_buffer_offset(SCREENLOC[i]);
-        draw_play_border(rc, rc.projection.view_width, rc.projection.view_height);
-    }
-    rc.set_buffer_offset(offset_prev);
+        rc.bar(0, 0, 320, 200 - STATUS_LINES, 127);
+        rc.fizzle_fade(
+            rc.buffer_offset(),
+            rc.active_buffer(),
+            320,
+            200 - STATUS_LINES,
+            70,
+            FizzleFadeAbortable::No,
+        );
+        rc.set_buffer_offset(rc.active_buffer());
 
-    game_state.fizzle_in = true;
-    let obj = level_state.mut_obj(k);
-    match obj.class {
-        ClassType::Schabb => {
-            if rc.sound.digi_mode() != DigiMode::Off {
-                new_state(level_state.mut_obj(k), &S_SCHABBDEATHCAM_140);
-            } else {
-                new_state(level_state.mut_obj(k), &S_SCHABBDEATHCAM_10);
+        write(rc, 0, 7, "Let's see that again!");
+        rc.wait_user_input(300).await;
+
+        // line angle up exactly
+        new_state(level_state.mut_player(), &S_DEATH_CAM);
+        level_state.mut_player().x = game_state.kill_x as i32;
+        level_state.mut_player().y = game_state.kill_y as i32;
+
+        let dx = level_state.obj(k).x - level_state.player().x;
+        let dy = level_state.player().y - level_state.obj(k).y;
+
+        let mut fangle = (dy as f64).atan2(dx as f64);
+        if fangle < 0.0 {
+            fangle = std::f64::consts::PI * 2.0 + fangle;
+        }
+        let angle = ((fangle / (std::f64::consts::PI * 2.0)) * ANGLES_F64) as i32;
+        level_state.mut_player().angle = angle;
+        // try to position as close as possible without being in a wall
+        let mut dist = 0x14000;
+        loop {
+            let x_move =
+                fixed_by_frac(Fixed::new_from_u32(dist), rc.projection.cos(angle as usize));
+            let y_move =
+                -fixed_by_frac(Fixed::new_from_u32(dist), rc.projection.sin(angle as usize));
+
+            level_state.mut_player().x = level_state.obj(k).x - x_move.to_i32();
+            level_state.mut_player().y = level_state.obj(k).y - y_move.to_i32();
+            dist += 0x1000;
+
+            if check_position_player(level_state) {
+                break;
             }
         }
-        ClassType::RealHitler => {
-            if rc.sound.digi_mode() != DigiMode::Off {
-                new_state(level_state.mut_obj(k), &S_HITLERDEATHCAM_140);
-            } else {
-                new_state(level_state.mut_obj(k), &S_HITLERDEATHCAM_5);
-            }
+        level_state.mut_player().tilex = (level_state.player().x >> TILESHIFT) as usize;
+        level_state.mut_player().tiley = (level_state.player().y >> TILESHIFT) as usize;
+
+        // go back to the game
+        let offset_prev = rc.buffer_offset();
+        for i in 0..3 {
+            rc.set_buffer_offset(SCREENLOC[i]);
+            draw_play_border(rc, rc.projection.view_width, rc.projection.view_height);
         }
-        // TODO giftobj
-        // TODO fatobj
-        _ => { /* ignore */ }
-    }
+        rc.set_buffer_offset(offset_prev);
+
+        game_state.fizzle_in = true;
+        let obj = level_state.mut_obj(k);
+        match obj.class {
+            ClassType::Schabb => {
+                if rc.sound.digi_mode() != DigiMode::Off {
+                    new_state(level_state.mut_obj(k), &S_SCHABBDEATHCAM_140);
+                } else {
+                    new_state(level_state.mut_obj(k), &S_SCHABBDEATHCAM_10);
+                }
+            }
+            ClassType::RealHitler => {
+                if rc.sound.digi_mode() != DigiMode::Off {
+                    new_state(level_state.mut_obj(k), &S_HITLERDEATHCAM_140);
+                } else {
+                    new_state(level_state.mut_obj(k), &S_HITLERDEATHCAM_5);
+                }
+            }
+            // TODO giftobj
+            // TODO fatobj
+            _ => { /* ignore */ }
+        }
+    })
 }
 
 fn check_position_player(level_state: &LevelState) -> bool {

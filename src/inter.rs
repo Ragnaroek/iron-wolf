@@ -416,7 +416,7 @@ pub async fn victory(
 
     rc.activate_buffer(rc.buffer_offset()).await;
     rc.fade_in().await;
-    rc.ack();
+    rc.ack().await;
 
     rc.fade_out().await;
 
@@ -481,7 +481,7 @@ pub async fn check_highscore(
         }
     } else {
         rc.clear_keys_down();
-        rc.wait_user_input(500);
+        rc.wait_user_input(500).await;
     }
 }
 
@@ -1039,7 +1039,7 @@ pub async fn preload_graphics(rc: &mut RenderContext, iw_config: &IWConfig, stat
 
     preload(rc, iw_config).await;
 
-    rc.wait_user_input(70);
+    rc.wait_user_input(70).await;
     rc.fade_out().await;
 
     draw_all_play_border(rc);

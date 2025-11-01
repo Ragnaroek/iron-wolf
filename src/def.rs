@@ -2,18 +2,19 @@
 #[path = "./def_test.rs"]
 mod def_test;
 
+use opl::AdlSound;
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::pin::Pin;
+use std::time::Duration;
+
 use crate::assets::{DigiChannel, SoundName};
 use crate::fixed::Fixed;
 use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::map::{MapFileType, MapSegs, MapType};
 use crate::rc::{PAGE_1_START, PAGE_2_START, PAGE_3_START, RenderContext};
 use crate::start::quit;
-use opl::AdlSound;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::time::Duration;
-
-use serde::Deserialize;
 
 pub const MAX_ACTORS: usize = 150;
 pub const MAX_STATS: usize = 400;
@@ -917,6 +918,15 @@ type Action = fn(
     control_state: &mut ControlState,
 );
 
+type AsyncAction = for<'a> fn(
+    rc: &'a mut RenderContext,
+    k: ObjKey,
+    tics: u64,
+    level_state: &'a mut LevelState,
+    game_state: &'a mut GameState,
+    control_state: &'a mut ControlState,
+) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
+
 #[derive(Eq, Debug)]
 pub struct StateType {
     pub id: u16, // non-changing ID of this state, will be used in save games
@@ -925,6 +935,7 @@ pub struct StateType {
     pub tic_time: u32,
     pub think: Option<Think>,
     pub action: Option<Action>,
+    pub async_action: Option<AsyncAction>,
     pub next: Option<&'static StateType>,
 }
 

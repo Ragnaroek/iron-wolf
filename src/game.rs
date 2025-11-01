@@ -313,7 +313,7 @@ async fn died(rc: &mut RenderContext, level_state: &mut LevelState, game_state: 
         FizzleFadeAbortable::No,
     );
     rc.set_buffer_offset(rc.buffer_offset() - rc.projection.screenofs);
-    rc.wait_user_input(100);
+    rc.wait_user_input(100).await;
     //TODO SD_WaitSoundDone
 
     // TODO editor support here (tedlevel)

@@ -377,10 +377,7 @@ pub async fn play_loop(
             tics = DEMO_TICS;
         }
 
-        #[cfg(feature = "tracing")]
-        span.in_scope(|| update_game_state(rc, tics, level_state, game_state, control_state));
-        #[cfg(not(feature = "tracing"))]
-        update_game_state(rc, tics, level_state, game_state, control_state);
+        update_game_state(rc, tics, level_state, game_state, control_state).await;
 
         update_palette_shifts(game_state, &rc.vga, &shifts, tics).await;
 
@@ -461,7 +458,7 @@ pub async fn play_loop(
     benchmark_result
 }
 
-fn update_game_state(
+async fn update_game_state(
     rc: &mut RenderContext,
     tics: u64,
     level_state: &mut LevelState,
@@ -485,12 +482,12 @@ fn update_game_state(
     for i in 0..level_state.actors.len() {
         let k = ObjKey(i);
         if level_state.actors.exists(k) {
-            do_actor(rc, k, tics, level_state, game_state, control_state);
+            do_actor(rc, k, tics, level_state, game_state, control_state).await;
         }
     }
 }
 
-fn do_actor(
+async fn do_actor(
     rc: &mut RenderContext,
     k: ObjKey,
     tics: u64,
@@ -552,6 +549,14 @@ fn do_actor(
     while level_state.obj(k).tic_count <= 0 {
         if let Some(action) = level_state.obj(k).state.expect("state").action {
             action(rc, k, tics, level_state, game_state, control_state);
+            if level_state.obj(k).state.is_none() {
+                level_state.actors.drop_obj(k);
+                return;
+            }
+        }
+
+        if let Some(async_action) = level_state.obj(k).state.expect("state").async_action {
+            async_action(rc, k, tics, level_state, game_state, control_state).await;
             if level_state.obj(k).state.is_none() {
                 level_state.actors.drop_obj(k);
                 return;
@@ -769,7 +774,7 @@ async fn check_keys(
 
         message(rc, win_state, "Debugging keys are\nnow available!");
         rc.clear_keys_down();
-        rc.ack();
+        rc.ack().await;
         win_state.debug_ok = true;
         draw_all_play_border_sides(rc);
         return GameStateUpdate::without_update();

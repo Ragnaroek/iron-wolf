@@ -56,6 +56,7 @@ pub static S_PLAYER: StateType = StateType {
     tic_time: 0,
     think: Some(t_player),
     action: None,
+    async_action: None,
     next: None,
 };
 
@@ -66,6 +67,7 @@ pub static S_ATTACK: StateType = StateType {
     tic_time: 0,
     think: Some(t_attack),
     action: None,
+    async_action: None,
     next: None,
 };
 
