@@ -312,6 +312,7 @@ pub fn line_input(
 
         // don't poll to fast, otherwise key inputs will be missed
         while rc.ticker.get_count() < (count + TICK_BASE / 8) {}
+        rc.display();
     }
 
     if !result {

@@ -1835,6 +1835,8 @@ async fn cp_save_game(
     let state = read_save_game_state(loader);
     draw_load_save_screen(rc, win_state, menu_state, &state, true).await;
     loop {
+        rc.display();
+
         let save_handle = handle_menu(rc, win_state, menu_state, no_op_routine).await;
         if let MenuHandle::Selected(which) = save_handle {
             // TODO Check overwrite existing game
