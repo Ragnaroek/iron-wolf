@@ -1025,6 +1025,8 @@ impl BjBreather {
             self.time_start = rc.ticker.get_count();
             self.max = 35;
         }
+
+        rc.display();
     }
 }
 
