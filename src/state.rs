@@ -4,11 +4,11 @@ mod state_test;
 
 use crate::act1::{open_door, place_item_type};
 use crate::act2::{
-    S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_FAKECHASE1, S_FAKEDIE1, S_GRDCHASE1,
-    S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_HITLERDIE1_5, S_HITLERDIE1_140, S_MECHACHASE1, S_MECHADIE1,
-    S_MUTCHASE1, S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1, S_OFCCHASE1, S_OFCDIE1, S_OFCPAIN, S_OFCPAIN1,
-    S_SCHABBCHASE1, S_SCHABBDIE1_10, S_SCHABBDIE1_140, S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1,
-    do_death_scream,
+    S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_FAKECHASE1, S_FAKEDIE1, S_GIFTCHASE1,
+    S_GIFTDIE1_5, S_GIFTDIE1_140, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_HITLERDIE1_5,
+    S_HITLERDIE1_140, S_MECHACHASE1, S_MECHADIE1, S_MUTCHASE1, S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1,
+    S_OFCCHASE1, S_OFCDIE1, S_OFCPAIN, S_OFCPAIN1, S_SCHABBCHASE1, S_SCHABBDIE1_10,
+    S_SCHABBDIE1_140, S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1, do_death_scream,
 };
 use crate::agent::{give_points, take_damage};
 use crate::assets::SoundName;
@@ -390,7 +390,7 @@ pub fn try_walk(k: ObjKey, level_state: &mut LevelState) -> bool {
 fn check_diag(level_state: &LevelState, x: usize, y: usize) -> bool {
     let actor = level_state.actor_at[x][y];
     match actor {
-        At::Obj(k) => level_state.obj(k).flags & FL_SHOOTABLE == 0,
+        At::Obj(k) => level_state.exists(k) && level_state.obj(k).flags & FL_SHOOTABLE == 0,
         At::Wall(_) => false,
         At::Nothing => true,
     }
@@ -399,7 +399,10 @@ fn check_diag(level_state: &LevelState, x: usize, y: usize) -> bool {
 fn check_side(level_state: &LevelState, x: usize, y: usize) -> (bool, i32) {
     let actor = level_state.actor_at[x][y];
     match actor {
-        At::Obj(k) => (level_state.obj(k).flags & FL_SHOOTABLE == 0, -1),
+        At::Obj(k) => (
+            level_state.exists(k) && level_state.obj(k).flags & FL_SHOOTABLE == 0,
+            -1,
+        ),
         At::Wall(tile) => {
             if tile >= 128 && tile < 256 {
                 return (true, (tile & 63) as i32);
@@ -861,38 +864,42 @@ pub fn first_sighting(rc: &mut RenderContext, k: ObjKey, level_state: &mut Level
             new_state(obj, &S_MUTCHASE1);
             obj.speed *= 3;
         }
-        ClassType::Dog => {
-            rc.play_sound_loc_actor(SoundName::DOGBARK, obj);
-            new_state(obj, &S_DOGCHASE1);
-            obj.speed *= 2; // go faster when chasing player
-        }
         ClassType::SS => {
             rc.play_sound_loc_actor(SoundName::SCHUTZAD, obj);
             new_state(obj, &S_SSCHASE1);
             obj.speed *= 4;
         }
+        ClassType::Dog => {
+            rc.play_sound_loc_actor(SoundName::DOGBARK, obj);
+            new_state(obj, &S_DOGCHASE1);
+            obj.speed *= 2; // go faster when chasing player
+        }
         ClassType::Boss => {
-            rc.play_sound_loc_actor(SoundName::GUTENTAG, obj);
+            rc.play_sound(SoundName::GUTENTAG);
             new_state(obj, &S_BOSSCHASE1);
             obj.speed = SPD_PATROL * 3;
         }
+        ClassType::Gift => {
+            rc.play_sound(SoundName::EINE);
+            new_state(obj, &S_GIFTCHASE1);
+            obj.speed *= 3;
+        }
         ClassType::Schabb => {
-            rc.play_sound_loc_actor(SoundName::SCHABBSHA, obj);
+            rc.play_sound(SoundName::SCHABBSHA);
             new_state(obj, &S_SCHABBCHASE1);
             obj.speed *= 3;
         }
         ClassType::Fake => {
-            rc.play_sound_loc_actor(SoundName::TOTHUND, obj);
+            rc.play_sound(SoundName::TOTHUND);
             new_state(obj, &S_FAKECHASE1);
             obj.speed *= 3;
         }
         ClassType::MechaHitler => {
-            rc.play_sound_loc_actor(SoundName::DIE, obj);
+            rc.play_sound(SoundName::DIE);
             new_state(obj, &S_MECHACHASE1);
             obj.speed *= 3;
         }
         // TODO realhitlerobj, DIESND
-        // TODO giftobj EINESND
         // TODO fatobj ERLAUBENSND
         // TODO gretelobj KEINSND
         _ => panic!(
@@ -1214,7 +1221,14 @@ fn kill_actor(
                 todo!("kill gretel");
             }
             ClassType::Gift => {
-                todo!("kill gift");
+                give_points(rc, game_state, 5000);
+                game_state.kill_x = level_state.player().x as usize;
+                game_state.kill_y = level_state.player().y as usize;
+                if rc.sound.digi_mode() != DigiMode::Off {
+                    new_state(level_state.mut_obj(k), &S_GIFTDIE1_140);
+                } else {
+                    new_state(level_state.mut_obj(k), &S_GIFTDIE1_5);
+                }
             }
             ClassType::Fat => {
                 todo!("kill fat");

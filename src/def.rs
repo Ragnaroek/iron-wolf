@@ -359,6 +359,11 @@ impl LevelState {
     }
 
     #[inline]
+    pub fn exists(&self, k: ObjKey) -> bool {
+        self.actors.exists(k)
+    }
+
+    #[inline]
     pub fn mut_obj(&mut self, k: ObjKey) -> &mut ObjType {
         self.actors.mut_obj(k)
     }
@@ -1105,8 +1110,18 @@ derive_from! {
         HitlerDie1 = 353, HitlerDie2 = 354, HitlerDie3 = 355, HitlerDie4 = 356,
         HitlerDie5 = 357, HitlerDie6 = 358, HitlerDie7 = 359,
 
+        // giftmacher
+        GiftW1 = 360, GiftW2 = 361, GiftW3 = 362, GiftW4 = 363,
+        GiftShoot1 = 364, GiftShoot2 = 365,
+
+        GiftDie1 = 366, GiftDie2 = 367, GiftDie3 = 368, GiftDead = 369,
+
         // Rocket, smoke and small explosion
-        Boom1 = 382, Boom2 = 383, Boom3 = 384, // TODO check numbers
+        Rocket1 = 370, Rocket2 = 371, Rocket3 = 372, Rocket4 = 373,
+        Rocket5 = 374, Rocket6 = 375, Rocket7 = 376, Rocket8 = 377,
+
+        Smoke1 = 378, Smoke2 = 379, Smoke3 = 380, Smoke4 = 381,
+        Boom1 = 382, Boom2 = 383, Boom3 = 384,
 
         // bj
         BJW1 = 408, BJW2 = 409, BJW3 = 410, BJW4 = 411,

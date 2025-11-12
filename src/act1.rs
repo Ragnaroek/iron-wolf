@@ -428,13 +428,17 @@ fn close_door(rc: &mut RenderContext, doornum: usize, level_state: &mut LevelSta
         }
         let check = level_state.actor_at[tile_x - 1][tile_y];
         if let At::Obj(k) = check {
-            if ((level_state.obj(k).x + MIN_DIST) >> TILESHIFT) as usize == tile_x {
+            if !level_state.exists(k)
+                || ((level_state.obj(k).x + MIN_DIST) >> TILESHIFT) as usize == tile_x
+            {
                 return;
             }
         }
         let check = level_state.actor_at[tile_x + 1][tile_y];
         if let At::Obj(k) = check {
-            if ((level_state.obj(k).x - MIN_DIST) >> TILESHIFT) as usize == tile_x {
+            if !level_state.exists(k)
+                || ((level_state.obj(k).x - MIN_DIST) >> TILESHIFT) as usize == tile_x
+            {
                 return;
             }
         }
@@ -449,13 +453,17 @@ fn close_door(rc: &mut RenderContext, doornum: usize, level_state: &mut LevelSta
         }
         let check = level_state.actor_at[tile_x][tile_y - 1];
         if let At::Obj(k) = check {
-            if ((level_state.obj(k).y + MIN_DIST) >> TILESHIFT) as usize == tile_y {
+            if !level_state.exists(k)
+                || ((level_state.obj(k).y + MIN_DIST) >> TILESHIFT) as usize == tile_y
+            {
                 return;
             }
         }
         let check = level_state.actor_at[tile_x][tile_y + 1];
         if let At::Obj(k) = check {
-            if ((level_state.obj(k).y - MIN_DIST) >> TILESHIFT) as usize == tile_y {
+            if !level_state.exists(k)
+                || ((level_state.obj(k).y - MIN_DIST) >> TILESHIFT) as usize == tile_y
+            {
                 return;
             }
         }

@@ -2017,6 +2017,273 @@ pub static S_NEEDLE4: StateType = StateType {
     next: Some(&S_NEEDLE1),
 };
 
+//
+// gift
+//
+pub static S_GIFTSTAND: StateType = StateType {
+    id: 40000,
+    rotate: 0,
+    sprite: Some(Sprite::GiftW1),
+    tic_time: 0,
+    think: Some(t_stand),
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTSTAND),
+};
+
+pub static S_GIFTCHASE1: StateType = StateType {
+    id: 40001,
+    rotate: 0,
+    sprite: Some(Sprite::GiftW1),
+    tic_time: 10,
+    think: Some(t_gift),
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTCHASE1S),
+};
+
+pub static S_GIFTCHASE1S: StateType = StateType {
+    id: 40002,
+    rotate: 0,
+    sprite: Some(Sprite::GiftW1),
+    tic_time: 3,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTCHASE2),
+};
+
+pub static S_GIFTCHASE2: StateType = StateType {
+    id: 40003,
+    rotate: 0,
+    sprite: Some(Sprite::GiftW2),
+    tic_time: 8,
+    think: Some(t_gift),
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTCHASE3),
+};
+
+pub static S_GIFTCHASE3: StateType = StateType {
+    id: 40004,
+    rotate: 0,
+    sprite: Some(Sprite::GiftW3),
+    tic_time: 10,
+    think: Some(t_gift),
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTCHASE3S),
+};
+
+pub static S_GIFTCHASE3S: StateType = StateType {
+    id: 40005,
+    rotate: 0,
+    sprite: Some(Sprite::GiftW3),
+    tic_time: 3,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTCHASE4),
+};
+
+pub static S_GIFTCHASE4: StateType = StateType {
+    id: 40006,
+    rotate: 0,
+    sprite: Some(Sprite::GiftW4),
+    tic_time: 8,
+    think: Some(t_gift),
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTCHASE1),
+};
+
+pub static S_GIFTDEATHCAM_140: StateType = StateType {
+    id: 40007,
+    rotate: 0,
+    sprite: Some(Sprite::GiftW1),
+    tic_time: 1,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTDIE1_140),
+};
+
+pub static S_GIFTDEATHCAM_5: StateType = StateType {
+    id: 40008,
+    rotate: 0,
+    sprite: Some(Sprite::GiftW1),
+    tic_time: 1,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTDIE1_5),
+};
+
+pub static S_GIFTDIE1_140: StateType = StateType {
+    id: 40009,
+    rotate: 0,
+    sprite: Some(Sprite::GiftW1),
+    tic_time: 1,
+    think: None,
+    action: Some(a_death_scream),
+    async_action: None,
+    next: Some(&S_GIFTDIE2_140),
+};
+
+pub static S_GIFTDIE1_5: StateType = StateType {
+    id: 40010,
+    rotate: 0,
+    sprite: Some(Sprite::GiftW1),
+    tic_time: 1,
+    think: None,
+    action: Some(a_death_scream),
+    async_action: None,
+    next: Some(&S_GIFTDIE2_5),
+};
+
+pub static S_GIFTDIE2_140: StateType = StateType {
+    id: 40011,
+    rotate: 0,
+    sprite: Some(Sprite::GiftW1),
+    tic_time: 140,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTDIE3),
+};
+
+pub static S_GIFTDIE2_5: StateType = StateType {
+    id: 40012,
+    rotate: 0,
+    sprite: Some(Sprite::GiftW1),
+    tic_time: 5,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTDIE3),
+};
+
+pub static S_GIFTDIE3: StateType = StateType {
+    id: 40013,
+    rotate: 0,
+    sprite: Some(Sprite::GiftDie1),
+    tic_time: 10,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTDIE4),
+};
+
+pub static S_GIFTDIE4: StateType = StateType {
+    id: 40014,
+    rotate: 0,
+    sprite: Some(Sprite::GiftDie2),
+    tic_time: 10,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTDIE5),
+};
+
+pub static S_GIFTDIE5: StateType = StateType {
+    id: 40015,
+    rotate: 0,
+    sprite: Some(Sprite::GiftDie3),
+    tic_time: 10,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTDIE6),
+};
+
+pub static S_GIFTDIE6: StateType = StateType {
+    id: 40016,
+    rotate: 0,
+    sprite: Some(Sprite::GiftDead),
+    tic_time: 20,
+    think: None,
+    action: None,
+    async_action: Some(a_start_death_cam),
+    next: Some(&S_GIFTDIE6),
+};
+
+pub static S_GIFTSHOOT1: StateType = StateType {
+    id: 40017,
+    rotate: 0,
+    sprite: Some(Sprite::GiftShoot1),
+    tic_time: 30,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GIFTSHOOT2),
+};
+
+pub static S_GIFTSHOOT2: StateType = StateType {
+    id: 40018,
+    rotate: 0,
+    sprite: Some(Sprite::GiftShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_gift_throw),
+    async_action: None,
+    next: Some(&S_GIFTCHASE1),
+};
+
+pub static S_ROCKET: StateType = StateType {
+    id: 40019,
+    rotate: 1,
+    sprite: Some(Sprite::Rocket1),
+    tic_time: 3,
+    think: Some(t_projectile),
+    action: Some(a_smoke),
+    async_action: None,
+    next: Some(&S_ROCKET),
+};
+
+pub static S_SMOKE1: StateType = StateType {
+    id: 40020,
+    rotate: 0,
+    sprite: Some(Sprite::Smoke1),
+    tic_time: 3,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_SMOKE2),
+};
+
+pub static S_SMOKE2: StateType = StateType {
+    id: 40021,
+    rotate: 0,
+    sprite: Some(Sprite::Smoke2),
+    tic_time: 3,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_SMOKE3),
+};
+
+pub static S_SMOKE3: StateType = StateType {
+    id: 40022,
+    rotate: 0,
+    sprite: Some(Sprite::Smoke3),
+    tic_time: 3,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_SMOKE4),
+};
+
+pub static S_SMOKE4: StateType = StateType {
+    id: 40023,
+    rotate: 0,
+    sprite: Some(Sprite::Smoke4),
+    tic_time: 3,
+    think: None,
+    action: None,
+    async_action: None,
+    next: None,
+};
+
 pub static S_BOOM1: StateType = StateType {
     id: 1115,
     rotate: 0,
@@ -2787,7 +3054,7 @@ pub static S_HITLERSHOOT6: StateType = StateType {
     next: Some(&S_HITLERCHASE1),
 };
 
-pub static STATES: [&'static StateType; 240] = [
+pub static STATES: [&'static StateType; 262] = [
     &S_PLAYER,
     &S_ATTACK,
     &S_GRDSTAND,
@@ -2958,6 +3225,28 @@ pub static STATES: [&'static StateType; 240] = [
     &S_NEEDLE2,
     &S_NEEDLE3,
     &S_NEEDLE4,
+    &S_GIFTSTAND,
+    &S_GIFTCHASE1,
+    &S_GIFTCHASE1S,
+    &S_GIFTCHASE2,
+    &S_GIFTCHASE3,
+    &S_GIFTCHASE3S,
+    &S_GIFTCHASE4,
+    &S_GIFTDIE1_140,
+    &S_GIFTDIE1_5,
+    &S_GIFTDIE2_140,
+    &S_GIFTDIE2_5,
+    &S_GIFTDIE3,
+    &S_GIFTDIE4,
+    &S_GIFTDIE5,
+    &S_GIFTDIE6,
+    &S_GIFTSHOOT1,
+    &S_GIFTSHOOT2,
+    &S_ROCKET,
+    &S_SMOKE1,
+    &S_SMOKE2,
+    &S_SMOKE3,
+    &S_SMOKE4,
     &S_BOOM1,
     &S_BOOM2,
     &S_BOOM3,
@@ -3118,6 +3407,32 @@ fn projectile_try_move(k: ObjKey, level_state: &LevelState) -> bool {
     }
 
     true
+}
+
+fn a_smoke(
+    _: &mut RenderContext,
+    k: ObjKey,
+    _: u64,
+    level_state: &mut LevelState,
+    _: &mut GameState,
+    _: &mut ControlState,
+) {
+    let tile_x = level_state.obj(k).tilex;
+    let tile_y = level_state.obj(k).tiley;
+    let mut obj = spawn_new_obj(
+        &mut level_state.level.map_segs,
+        tile_x,
+        tile_y,
+        &S_SMOKE1,
+        ClassType::Inert,
+    );
+    obj.tic_count = 6;
+    obj.x = level_state.obj(k).x;
+    obj.y = level_state.obj(k).y;
+    obj.active = ActiveType::Yes;
+    obj.flags = FL_NEVERMARK;
+
+    level_state.actors.add_obj(obj);
 }
 
 fn t_path(
@@ -3600,6 +3915,136 @@ fn t_schabb_throw(
     rc.play_sound_loc_actor(SoundName::SCHABBSTHROW, &obj);
 }
 
+fn t_gift(
+    rc: &mut RenderContext,
+    k: ObjKey,
+    tics: u64,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    _: &mut ControlState,
+) {
+    let mut dodge = false;
+    let dist = {
+        let obj = level_state.obj(k);
+        let player = level_state.player();
+        let dx = obj.tilex.abs_diff(player.tilex);
+        let dy = obj.tiley.abs_diff(player.tiley);
+        let dist = if dx > dy { dx } else { dy };
+        dist
+    };
+
+    let (player_tile_x, player_tile_y) = {
+        let player = level_state.player();
+        (player.tilex, player.tiley)
+    };
+
+    if check_line(level_state, level_state.obj(k)) {
+        if (rnd_t() as u64) < (tics << 3) {
+            // go into attack frame
+            let mut_obj = level_state.mut_obj(k);
+            new_state(mut_obj, &S_GIFTSHOOT1);
+            return;
+        }
+        dodge = true;
+    }
+
+    if level_state.obj(k).dir == DirType::NoDir {
+        if dodge {
+            select_dodge_dir(k, level_state, player_tile_x, player_tile_y);
+        } else {
+            select_chase_dir(k, level_state, player_tile_x, player_tile_y);
+        }
+
+        if level_state.obj(k).dir == DirType::NoDir {
+            return;
+        }
+    }
+
+    let obj = level_state.obj(k);
+    let mut mov = obj.speed * tics as i32;
+    while mov != 0 {
+        let distance = level_state.obj(k).distance;
+        if distance < 0 {
+            // waiting for a door to open
+            let door = &mut level_state.doors[(-distance - 1) as usize];
+            open_door(door);
+            if door.action != DoorAction::Open {
+                return;
+            }
+            level_state.update_obj(k, |obj| obj.distance = TILEGLOBAL) // go ahead, the door is now opoen
+        }
+
+        if mov < level_state.obj(k).distance {
+            move_obj(rc, k, level_state, game_state, mov, tics);
+            break;
+        }
+
+        // reached goal tile, so select another one
+
+        // fix position to account for round off during moving
+        level_state.update_obj(k, |obj| {
+            obj.x = ((obj.tilex as i32) << TILESHIFT) + TILEGLOBAL / 2;
+            obj.y = ((obj.tiley as i32) << TILESHIFT) + TILEGLOBAL / 2;
+        });
+
+        mov -= level_state.obj(k).distance;
+
+        if dist < 4 {
+            select_run_dir(k, level_state, player_tile_x, player_tile_y);
+        } else if dodge {
+            select_dodge_dir(k, level_state, player_tile_x, player_tile_y);
+        } else {
+            select_chase_dir(k, level_state, player_tile_x, player_tile_y);
+        }
+
+        if level_state.obj(k).dir == DirType::NoDir {
+            return;
+        }
+    }
+}
+
+fn t_gift_throw(
+    rc: &mut RenderContext,
+    k: ObjKey,
+    _: u64,
+    level_state: &mut LevelState,
+    _: &mut GameState,
+    _: &mut ControlState,
+) {
+    let player = level_state.player();
+    let delta_x = player.x - level_state.obj(k).x;
+    let delta_y = level_state.obj(k).y - player.y;
+
+    let mut angle = (delta_y as f64).atan2(delta_x as f64);
+    if angle < 0.0 {
+        angle = std::f64::consts::PI * 2.0 + angle;
+    }
+    let iangle = ((angle / (std::f64::consts::PI * 2.0)) * ANGLES_F64) as i32;
+
+    let tile_x = level_state.obj(k).tilex;
+    let tile_y = level_state.obj(k).tiley;
+    let mut obj = spawn_new_obj(
+        &mut level_state.level.map_segs,
+        tile_x,
+        tile_y,
+        &S_ROCKET,
+        ClassType::Rocket,
+    );
+
+    obj.tic_count = 1;
+    obj.x = level_state.obj(k).x;
+    obj.y = level_state.obj(k).y;
+    obj.dir = DirType::NoDir;
+    obj.angle = iangle;
+    obj.speed = 0x2000;
+    obj.flags = FL_NONMARK;
+    obj.active = ActiveType::Yes;
+
+    level_state.actors.add_obj(obj);
+
+    rc.play_sound_loc_actor(SoundName::MISSILEFIRE, &obj);
+}
+
 fn t_fake(
     rc: &mut RenderContext,
     k: ObjKey,
@@ -3868,6 +4313,26 @@ pub fn spawn_schabbs(
     }
 
     spawn(actors, actor_at, schabb);
+}
+
+pub fn spawn_gift(
+    map_data: &MapSegs,
+    actors: &mut Actors,
+    actor_at: &mut Vec<Vec<At>>,
+    game_state: &mut GameState,
+    x_tile: usize,
+    y_tile: usize,
+) {
+    let mut gift = spawn_new_obj(map_data, x_tile, y_tile, &S_GIFTSTAND, ClassType::Gift);
+    gift.speed = SPD_PATROL;
+    gift.hitpoints = START_HITPOINTS[game_state.difficulty as usize][EnemyType::Schabbs as usize];
+    gift.dir = DirType::North;
+    gift.flags = FL_SHOOTABLE | FL_AMBUSH;
+    if !game_state.loaded_game {
+        game_state.kill_total += 1;
+    }
+
+    spawn(actors, actor_at, gift);
 }
 
 pub fn spawn_fake_hitler(
@@ -4178,7 +4643,9 @@ pub fn do_death_scream(
         ClassType::RealHitler => {
             rc.play_sound(SoundName::EVA);
         }
-        // TODO giftobj DONNERSND
+        ClassType::Gift => {
+            rc.play_sound(SoundName::DONNER);
+        }
         // TODO gretelobj MEINSND
         // TODO fatobj ROSESND
         _ => todo!("death scream missing: {:?}", obj.class),
@@ -4484,7 +4951,13 @@ fn a_start_death_cam<'a>(
                     new_state(level_state.mut_obj(k), &S_HITLERDEATHCAM_5);
                 }
             }
-            // TODO giftobj
+            ClassType::Gift => {
+                if rc.sound.digi_mode() != DigiMode::Off {
+                    new_state(level_state.mut_obj(k), &S_GIFTDEATHCAM_140);
+                } else {
+                    new_state(level_state.mut_obj(k), &S_GIFTDEATHCAM_5);
+                }
+            }
             // TODO fatobj
             _ => { /* ignore */ }
         }

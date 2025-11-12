@@ -1006,6 +1006,9 @@ fn try_move(k: ObjKey, level_state: &mut LevelState) -> bool {
     for y in yl..=yh {
         for x in xl..=xh {
             if let At::Obj(k) = level_state.actor_at[x as usize][y as usize] {
+                if !level_state.exists(k) {
+                    continue;
+                }
                 let check = level_state.obj(k);
                 if (check.flags & FL_SHOOTABLE) != 0 {
                     let delta_x = ob.x - check.x;

@@ -2,8 +2,8 @@ use std::vec;
 
 use crate::act1::{spawn_door, spawn_static};
 use crate::act2::{
-    spawn_boss, spawn_dead_guard, spawn_fake_hitler, spawn_ghosts, spawn_hitler, spawn_patrol,
-    spawn_schabbs, spawn_stand,
+    spawn_boss, spawn_dead_guard, spawn_fake_hitler, spawn_ghosts, spawn_gift, spawn_hitler,
+    spawn_patrol, spawn_schabbs, spawn_stand,
 };
 use crate::agent::{
     DUMMY_PLAYER, draw_ammo, draw_face, draw_health, draw_keys, draw_level, draw_lives, draw_score,
@@ -958,7 +958,7 @@ fn scan_info_plane(
                     spawn_boss(map_data, &mut actors, actor_at, game_state, x, y);
                 }
                 215 => {
-                    todo!("gift");
+                    spawn_gift(map_data, &mut actors, actor_at, game_state, x, y);
                 }
                 216..=219 => {
                     spawn_stand(
