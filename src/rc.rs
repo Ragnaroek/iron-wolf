@@ -264,7 +264,7 @@ impl RenderContext {
     }
 
     #[cfg_attr(feature = "tracing", instrument(skip_all))]
-    pub async fn activate_buffer(&self, offset: usize) {
+    pub async fn activate_buffer(&mut self, offset: usize) {
         let addr_parts = offset.to_le_bytes();
         self.vga.set_crt_data(CRTReg::StartAdressLow, addr_parts[0]);
         self.vga
@@ -279,7 +279,7 @@ impl RenderContext {
         self.displayofs.load(std::sync::atomic::Ordering::Relaxed)
     }
 
-    pub fn write_mem(&self, offset: usize, v_in: u8) {
+    pub fn write_mem(&mut self, offset: usize, v_in: u8) {
         self.vga.write_mem(offset, v_in)
     }
 
@@ -389,12 +389,12 @@ impl RenderContext {
         }
     }
 
-    pub async fn fade_out(&self) {
-        vl::fade_out(&self.vga, 0, 255, 0, 0, 0, 30).await;
+    pub async fn fade_out(&mut self) {
+        vl::fade_out(&mut self.vga, 0, 255, 0, 0, 0, 30).await;
     }
 
-    pub async fn fade_in(&self) {
-        vl::fade_in(&self.vga, 0, 255, GAMEPAL, 30).await;
+    pub async fn fade_in(&mut self) {
+        vl::fade_in(&mut self.vga, 0, 255, GAMEPAL, 30).await;
     }
 
     #[cfg_attr(feature = "tracing", instrument(skip_all))]

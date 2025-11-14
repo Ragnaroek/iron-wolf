@@ -132,7 +132,7 @@ async fn show_article(rc: &mut RenderContext, which: usize) {
         }
 
         if first_page {
-            vl::fade_in(&rc.vga, 0, 255, GAMEPAL, 10).await;
+            vl::fade_in(&mut rc.vga, 0, 255, GAMEPAL, 10).await;
             first_page = false;
         }
 

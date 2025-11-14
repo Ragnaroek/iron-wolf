@@ -120,7 +120,7 @@ pub async fn game_loop(
             PlayState::Completed | PlayState::SecretLevel => {
                 game_state.keys = 0;
                 draw_keys(rc, &game_state);
-                vw_fade_out(&rc.vga).await;
+                vw_fade_out(&mut rc.vga).await;
 
                 level_completed(rc, game_state, win_state, loader).await;
 
@@ -296,7 +296,7 @@ async fn died(rc: &mut RenderContext, level_state: &mut LevelState, game_state: 
     }
 
     // fade to red
-    finish_palette_shifts(game_state, &rc.vga);
+    finish_palette_shifts(game_state, &mut rc.vga);
 
     let source_buffer = rc.buffer_offset() + rc.projection.screenofs;
     rc.set_buffer_offset(source_buffer);

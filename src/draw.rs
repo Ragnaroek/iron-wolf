@@ -640,7 +640,7 @@ pub fn scale_post(rc: &mut RenderContext, scaler_state: &ScalerState, height: i3
         if let Some(pix_scaler) = pix_scaler_opt {
             let pix = texture.bytes[scaler_state.post_source + pix_scaler.texture_src];
             for mem_dest in &pix_scaler.mem_dests {
-                rc.write_mem(offset + *mem_dest as usize, pix);
+                rc.vga.write_mem(offset + *mem_dest as usize, pix);
             }
         }
     }

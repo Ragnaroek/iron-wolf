@@ -4871,7 +4871,7 @@ fn a_start_death_cam<'a>(
     _: &'a mut ControlState,
 ) -> Pin<Box<dyn Future<Output = ()> + 'a>> {
     Box::pin(async move {
-        finish_palette_shifts(game_state, &rc.vga);
+        finish_palette_shifts(game_state, &mut rc.vga);
 
         if game_state.victory_flag {
             game_state.play_state = PlayState::Victorious;

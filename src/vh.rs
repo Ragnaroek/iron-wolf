@@ -17,11 +17,11 @@ pub fn vw_vlin(rc: &mut RenderContext, y: usize, z: usize, x: usize, color: u8) 
     rc.vlin(x, y, z - y + 1, color)
 }
 
-pub async fn vw_fade_out(vga: &VGA) {
+pub async fn vw_fade_out(vga: &mut VGA) {
     fade_out(vga, 0, 255, 0, 0, 0, 30).await
 }
 
-pub async fn vw_fade_in(vga: &VGA) {
+pub async fn vw_fade_in(vga: &mut VGA) {
     fade_in(vga, 0, 255, &GAMEPAL, 30).await
 }
 

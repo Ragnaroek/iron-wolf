@@ -379,7 +379,7 @@ pub async fn play_loop(
 
         update_game_state(rc, tics, level_state, game_state, control_state).await;
 
-        update_palette_shifts(game_state, &rc.vga, &shifts, tics).await;
+        update_palette_shifts(game_state, &mut rc.vga, &shifts, tics).await;
 
         three_d_refresh(
             rc,
@@ -986,7 +986,7 @@ fn clear_palette_shifts(game_state: &mut GameState) {
 #[cfg_attr(feature = "tracing", instrument(skip_all))]
 async fn update_palette_shifts(
     game_state: &mut GameState,
-    vga: &VGA,
+    vga: &mut VGA,
     shifts: &ColourShifts,
     tics: u64,
 ) {
@@ -1032,7 +1032,7 @@ async fn update_palette_shifts(
 }
 
 /// Resets palette to normal if needed
-pub fn finish_palette_shifts(game_state: &mut GameState, vga: &VGA) {
+pub fn finish_palette_shifts(game_state: &mut GameState, vga: &mut VGA) {
     if game_state.pal_shifted {
         game_state.pal_shifted = false;
         set_palette(vga, &GAMEPAL);

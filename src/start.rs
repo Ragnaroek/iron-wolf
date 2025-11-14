@@ -106,7 +106,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
         let input = Input::init_player(&wolf_config);
 
         if let Some(which_demo) = check_timedemo_env() {
-            let projection = init_projection(&wolf_config, &vga);
+            let projection = init_projection(&wolf_config, &mut vga);
             let cast = init_ray_cast(projection.view_width);
 
             let mut rc = RenderContext::init(
@@ -151,7 +151,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
                 exit(0);
             }
         } else {
-            let projection = init_projection(&wolf_config, &vga);
+            let projection = init_projection(&wolf_config, &mut vga);
             let cast = init_ray_cast(projection.view_width);
             let mut rc = RenderContext::init(
                 vga,
@@ -209,7 +209,7 @@ pub fn initial_window_state() -> WindowState {
     }
 }
 
-fn init_projection(wolf_config: &WolfConfig, vga: &VGA) -> ProjectionConfig {
+fn init_projection(wolf_config: &WolfConfig, vga: &mut VGA) -> ProjectionConfig {
     vl::set_palette(vga, GAMEPAL);
     new_view_size(wolf_config.viewsize)
 }

@@ -361,7 +361,7 @@ fn scale(
             if let Some(pix_scaler) = &rc.projection.scaler.scalers[scale_ix].pixel_scalers[p] {
                 let pix = sprite.pixel_pool[of];
                 for mem_dest in &pix_scaler.mem_dests {
-                    rc.write_mem(mem_offset + *mem_dest as usize, pix)
+                    rc.vga.write_mem(mem_offset + *mem_dest as usize, pix)
                 }
             }
             of += 1;

@@ -1,6 +1,6 @@
 use vga::{ColorReg, VGA};
 
-pub fn set_palette(vga: &VGA, palette: &[u8]) {
+pub fn set_palette(vga: &mut VGA, palette: &[u8]) {
     debug_assert_eq!(palette.len(), 768);
     vga.set_color_reg(ColorReg::AddressWriteMode, 0);
     for i in 0..768 {
@@ -8,7 +8,7 @@ pub fn set_palette(vga: &VGA, palette: &[u8]) {
     }
 }
 
-pub fn get_palette(vga: &VGA) -> Vec<u8> {
+pub fn get_palette(vga: &mut VGA) -> Vec<u8> {
     let mut palette = Vec::with_capacity(768);
     vga.set_color_reg(ColorReg::AddressReadMode, 0);
     for _ in 0..768 {
@@ -17,7 +17,7 @@ pub fn get_palette(vga: &VGA) -> Vec<u8> {
     palette
 }
 
-fn fill_palette(vga: &VGA, red: u8, green: u8, blue: u8) {
+fn fill_palette(vga: &mut VGA, red: u8, green: u8, blue: u8) {
     vga.set_color_reg(ColorReg::AddressWriteMode, 0);
     for _ in 0..256 {
         vga.set_color_reg(ColorReg::Data, red);
@@ -27,7 +27,7 @@ fn fill_palette(vga: &VGA, red: u8, green: u8, blue: u8) {
 }
 
 pub async fn fade_out(
-    vga: &VGA,
+    vga: &mut VGA,
     start: usize,
     end: usize,
     red: u8,
@@ -62,7 +62,7 @@ pub async fn fade_out(
     fill_palette(vga, red, green, blue);
 }
 
-pub async fn fade_in(vga: &VGA, start: usize, end: usize, palette: &[u8], steps: usize) {
+pub async fn fade_in(vga: &mut VGA, start: usize, end: usize, palette: &[u8], steps: usize) {
     let palette1 = get_palette(vga);
     let mut palette2 = palette1.clone();
 

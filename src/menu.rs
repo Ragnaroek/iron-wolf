@@ -2981,6 +2981,6 @@ fn numcode_name(scan: NumCode) -> &'static str {
     }
 }
 
-async fn menu_fade_out(rc: &RenderContext) {
-    vl::fade_out(&rc.vga, 0, 255, 43, 0, 0, 10).await
+async fn menu_fade_out(rc: &mut RenderContext) {
+    vl::fade_out(&mut rc.vga, 0, 255, 43, 0, 0, 10).await
 }
