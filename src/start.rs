@@ -85,7 +85,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     let sound = sd::startup(rt_ref.clone())?;
     let assets = assets::load_all_assets(&sound, &loader, patch_config)?;
 
-    let ticker = time::new_ticker(rt_ref.clone());
+    let ticker = time::new_ticker();
 
     let mut win_state = initial_window_state();
     let mut menu_state = initial_menu_state(loader.variant());

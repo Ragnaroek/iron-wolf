@@ -18,7 +18,6 @@ use crate::sd;
 use crate::start::start_test;
 use crate::start::{OBJ_TYPE_LEN, STAT_TYPE_LEN, save_the_game};
 use crate::test_util::start_test_iw;
-use crate::time::new_test_ticker;
 
 use super::new_view_size;
 use super::{do_load, null_obj_type};

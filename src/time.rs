@@ -1,10 +1,6 @@
 #[cfg(feature = "tracing")]
 use tracing::instrument;
 
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
-
-use tokio::runtime::Runtime;
 use web_time::{Duration, Instant};
 
 use vga::util::sleep;
@@ -12,77 +8,34 @@ use vga::util::sleep;
 pub const TICK_BASE: u64 = 70; //Hz
 const TARGET_NANOS: u128 = 1_000_000_000 / TICK_BASE as u128; //duration of one tick in nanos
 const TARGET_MILLIS: f64 = 1000.0 / TICK_BASE as f64;
-const TICK_SAMPLE_RATE: Duration = Duration::from_nanos((TARGET_NANOS / 2) as u64);
 // target frame duration at 70Hz
 pub const TARGET_FRAME_DURATION: Duration = Duration::from_nanos(TARGET_NANOS as u64);
 
 const MAX_TICS: u64 = 10;
 
-pub type TimeCount = Arc<AtomicU64>;
-
-pub fn new_time_count() -> TimeCount {
-    Arc::new(AtomicU64::new(0))
-}
-
-pub fn get_count(count: &TimeCount) -> u64 {
-    count.load(Ordering::Relaxed)
-}
-
-pub fn set_count(count: &TimeCount, new_val: u64) {
-    count.store(new_val, Ordering::Relaxed)
-}
-
 pub struct Ticker {
-    pub time_count: TimeCount,
-    pub last_count: AtomicU64,
-    pub ref_time: Arc<Mutex<Instant>>,
+    pub last_count: u64,
+    pub ref_time: Instant,
 }
 
-pub fn new_test_ticker() -> Ticker {
-    let ref_time = Arc::new(Mutex::new(Instant::now()));
-    let time_count = new_time_count();
+pub fn new_ticker() -> Ticker {
     Ticker {
-        time_count,
-        last_count: AtomicU64::new(0),
-        ref_time,
-    }
-}
-
-pub fn new_ticker(rt: Arc<Runtime>) -> Ticker {
-    let time_count = new_time_count();
-    let time_t = time_count.clone();
-
-    let ref_time = Arc::new(Mutex::new(Instant::now()));
-    let ref_time_t = ref_time.clone();
-
-    rt.spawn(async move {
-        loop {
-            std::thread::sleep(TICK_SAMPLE_RATE);
-            let ref_time = ref_time_t.lock().unwrap();
-            let elapsed = ref_time.elapsed().as_millis_f64();
-            drop(ref_time);
-            let tics = (elapsed / TARGET_MILLIS) as u64;
-            time_t.store(tics, std::sync::atomic::Ordering::Relaxed);
-        }
-    });
-
-    Ticker {
-        ref_time,
-        time_count,
-        last_count: AtomicU64::new(0),
+        last_count: 0,
+        ref_time: Instant::now(),
     }
 }
 
 impl Ticker {
     pub fn get_count(&self) -> u64 {
-        get_count(&self.time_count)
+        let elapsed = self.ref_time.elapsed().as_millis_f64();
+        (elapsed / TARGET_MILLIS) as u64
     }
 
     // returns the count the next tic is based on
     pub fn next_tics_time(&self, delta_tic: u64) -> (Instant, u64) {
         let count = self.get_count();
         (
-            *self.ref_time.lock().unwrap()
+            self.ref_time
                 + Duration::from_nanos(
                     ((count + delta_tic) as f64 * TARGET_MILLIS * 1_000_000.0) as u64,
                 ),
@@ -90,17 +43,16 @@ impl Ticker {
         )
     }
 
-    pub fn clear_count(&self) {
-        *self.ref_time.lock().unwrap() = Instant::now();
-        self.time_count.store(0, Ordering::Relaxed);
+    pub fn clear_count(&mut self) {
+        self.ref_time = Instant::now();
+        self.last_count = 0;
     }
 
     #[cfg_attr(feature = "tracing", instrument(skip_all))]
-    pub async fn wait_for_tic(&self) -> u64 {
-        let last_time_count = self.last_count.load(Ordering::Relaxed);
-        if last_time_count > get_count(&self.time_count) {
+    pub async fn wait_for_tic(&mut self) -> u64 {
+        if self.last_count > self.get_count() {
             // if the game was paused a LONG time
-            set_count(&self.time_count, last_time_count);
+            self.clear_count();
         }
 
         let mut tics;
@@ -108,20 +60,17 @@ impl Ticker {
         let mut get_times = Duration::ZERO;
         loop {
             let get_start = Instant::now();
-            new_time = get_count(&self.time_count);
+            new_time = self.get_count();
             get_times += Instant::now() - get_start;
-            tics = new_time.saturating_sub(last_time_count);
+            tics = new_time.saturating_sub(self.last_count);
             if tics != 0 {
                 break;
             }
         }
-        self.last_count.store(new_time, Ordering::Relaxed);
+        self.last_count = new_time;
 
         if tics > MAX_TICS {
-            set_count(
-                &self.time_count,
-                get_count(&self.time_count) - (tics - MAX_TICS),
-            );
+            self.clear_count();
             tics = MAX_TICS
         }
         tics

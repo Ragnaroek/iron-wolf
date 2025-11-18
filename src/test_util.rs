@@ -9,7 +9,7 @@ use crate::loader::{DiskLoader, Loader};
 use crate::rc::{Input, RenderContext};
 use crate::sd;
 use crate::start::new_view_size;
-use crate::time::new_test_ticker;
+use crate::time::new_ticker;
 
 #[cfg(feature = "test")]
 pub fn start_test_iw(loader: &dyn Loader) -> RenderContext {
@@ -29,7 +29,7 @@ pub fn start_test_iw(loader: &dyn Loader) -> RenderContext {
 
     let projection = new_view_size(wolf_config.viewsize);
     let input = Input::init_demo_playback(Vec::with_capacity(0));
-    let ticker = new_test_ticker();
+    let ticker = new_ticker();
     let cast = init_ray_cast(projection.view_width);
     let rc = RenderContext::init(
         vga,

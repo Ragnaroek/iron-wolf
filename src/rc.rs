@@ -16,7 +16,7 @@ use crate::loader::Loader;
 use crate::play::ProjectionConfig;
 use crate::sd::Sound;
 use crate::start::quit;
-use crate::time::{self, Ticker, get_count};
+use crate::time::{self, Ticker};
 use crate::vl;
 
 pub const SCREENBWIDE: usize = 80;
@@ -124,7 +124,7 @@ impl Input {
     }
 
     pub async fn wait_user_input(&mut self, vga: &mut VGA, ticker: &Ticker, delay: u64) -> bool {
-        let last_count = get_count(&ticker.time_count);
+        let last_count = ticker.get_count();
         {
             vga.input_monitoring().clear_keyboard();
         }
@@ -133,7 +133,7 @@ impl Input {
                 return true;
             }
 
-            if get_count(&ticker.time_count) - last_count > delay {
+            if ticker.get_count() - last_count > delay {
                 break;
             }
             if vga.draw_frame() {
