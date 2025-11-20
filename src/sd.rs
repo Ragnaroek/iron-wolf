@@ -554,24 +554,28 @@ fn sound_loc(rc: &RayCast, gx_param: Fixed, gy_param: Fixed) -> (u8, u8) {
 
 #[cfg(feature = "web")]
 impl Sound {
-    pub fn is_sound_playing(&mut self, sound: SoundName) -> bool {
-        todo!("impl is_sound_playing for web");
+    pub fn is_sound_playing(&mut self, _sound: SoundName) -> bool {
+        // todo "impl is_sound_playing for web"
+        true
     }
 
     pub fn is_any_sound_playing(&mut self) -> bool {
-        todo!("impl is_any_sound_playing for web");
+        // todo! "impl is_any_sound_playing for web"
+        false
     }
 
-    pub fn force_play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
-        todo!("impl force play sound web");
+    pub fn force_play_sound(&mut self, _sound: SoundName, _assets: &Assets) -> bool {
+        // todo ("impl force play sound web"
+        true
     }
 
-    pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
-        todo!("impl play sound web");
+    pub fn play_sound(&mut self, _sound: SoundName, _assets: &Assets) -> bool {
+        // todo "impl play sound web"
+        true
     }
 
-    pub fn play_music(&mut self, track: Music, assets: &Assets, loader: &dyn Loader) {
-        todo!("impl play music web");
+    pub fn play_music(&mut self, _track: Music, _assets: &Assets, _loader: &dyn Loader) {
+        // todo "impl play music web"
     }
 
     pub fn play_sound_loc_tile(
@@ -583,7 +587,7 @@ impl Sound {
         tile_x: usize,
         tile_y: usize,
     ) {
-        todo!("impl play sound loc tile web");
+        // todo! "impl play sound loc tile web"
     }
 
     pub fn play_sound_loc_actor(
@@ -593,7 +597,7 @@ impl Sound {
         rc: &RayCast,
         obj: &ObjType,
     ) {
-        todo!("impl play sound actor web");
+        // todo "impl play sound actor web"
     }
 
     fn play_sound_loc_global(
@@ -604,7 +608,7 @@ impl Sound {
         tile_x: usize,
         tile_y: usize,
     ) {
-        todo!("impl play sound loc global web");
+        // todo!("impl play sound loc global web"
     }
 
     pub fn prepare_digi_sound(
@@ -620,27 +624,30 @@ impl Sound {
     }
 
     pub fn sound_mode(&self) -> SoundMode {
-        todo!("sound mode web")
+        // todo "sound mode web"
+        SoundMode::Off
     }
 
     pub fn set_sound_mode(&mut self, mode: SoundMode) {
-        todo!("set sound mode web")
+        // todo "set sound mode web"
     }
 
     pub fn digi_mode(&self) -> DigiMode {
-        todo!("digi mode web")
+        // todo "digi mode web"
+        DigiMode::Off
     }
 
     pub fn set_digi_mode(&mut self, mode: DigiMode) {
-        todo!("set digi mode web")
+        // todo "set digi mode web"
     }
 
     pub fn music_mode(&self) -> MusicMode {
-        todo!("music mode web")
+        // todo "music mode web"
+        MusicMode::Off
     }
 
     pub fn set_music_mode(&mut self, mode: MusicMode) {
-        todo!("set music mode web")
+        // todo "set music mode web"
     }
 }
 
