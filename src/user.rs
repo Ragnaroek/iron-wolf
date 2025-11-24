@@ -1,7 +1,5 @@
-use std::{
-    sync::atomic::{AtomicUsize, Ordering},
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use web_time::Instant;
 
 #[derive(Debug)]
 pub struct HighScore {
@@ -31,10 +29,7 @@ static RND_INDEX: AtomicUsize = AtomicUsize::new(0);
 
 pub fn init_rnd_t(randomize: bool) {
     let ix = if randomize {
-        let time = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
+        let time = Instant::now().elapsed().as_secs();
         (time & 0xFF) as usize
     } else {
         0
