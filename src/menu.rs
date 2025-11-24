@@ -2434,6 +2434,7 @@ async fn handle_menu_loop(
 
     let exit;
     loop {
+        sleep(5).await; // don't go to fast in the menu loop, otherwise other asyncs may starve
         rc.display();
 
         // CHANGE GUN SHAPE
