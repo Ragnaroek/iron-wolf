@@ -45,7 +45,7 @@ pub const ANGLE_1: u32 = ANGLE_45 / 45;
 pub const DEATH_ROTATE: u64 = 2;
 
 // TODO Check whether indexes are correct
-static ELEVATOR_BACK_TO: [usize; 6] = [1, 1, 7, 3, 4, 3];
+static ELEVATOR_BACK_TO: [usize; 6] = [0, 0, 6, 2, 4, 2];
 
 pub async fn game_loop(
     rc: &mut RenderContext,
