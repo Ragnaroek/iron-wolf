@@ -907,7 +907,6 @@ pub fn first_sighting(rc: &mut RenderContext, k: ObjKey, level_state: &mut Level
         }
         // TODO realhitlerobj, DIESND
         // TODO fatobj ERLAUBENSND
-        // TODO gretelobj KEINSND
         _ => panic!(
             "first sight for class type not implemented: {:?}",
             obj.class
