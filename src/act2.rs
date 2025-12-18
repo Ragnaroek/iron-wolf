@@ -3061,7 +3061,219 @@ pub static S_HITLERSHOOT6: StateType = StateType {
     next: Some(&S_HITLERCHASE1),
 };
 
-pub static STATES: [&'static StateType; 262] = [
+//
+// gretel
+//
+pub static S_GRETELSTAND: StateType = StateType {
+    id: 11200,
+    rotate: 0,
+    sprite: Some(Sprite::GretelW1),
+    tic_time: 0,
+    think: Some(t_stand),
+    action: None,
+    async_action: None,
+    next: Some(&S_GRETELSTAND),
+};
+
+pub static S_GRETELCHASE1: StateType = StateType {
+    id: 11201,
+    rotate: 0,
+    sprite: Some(Sprite::GretelW1),
+    tic_time: 10,
+    think: Some(t_chase),
+    action: None,
+    async_action: None,
+    next: Some(&S_GRETELCHASE1S),
+};
+
+pub static S_GRETELCHASE1S: StateType = StateType {
+    id: 11202,
+    rotate: 0,
+    sprite: Some(Sprite::GretelW1),
+    tic_time: 3,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GRETELCHASE2),
+};
+
+pub static S_GRETELCHASE2: StateType = StateType {
+    id: 11203,
+    rotate: 0,
+    sprite: Some(Sprite::GretelW2),
+    tic_time: 8,
+    think: Some(t_chase),
+    action: None,
+    async_action: None,
+    next: Some(&S_GRETELCHASE3),
+};
+
+pub static S_GRETELCHASE3: StateType = StateType {
+    id: 11204,
+    rotate: 0,
+    sprite: Some(Sprite::GretelW3),
+    tic_time: 10,
+    think: Some(t_chase),
+    action: None,
+    async_action: None,
+    next: Some(&S_GRETELCHASE3S),
+};
+
+pub static S_GRETELCHASE3S: StateType = StateType {
+    id: 11205,
+    rotate: 0,
+    sprite: Some(Sprite::GretelW3),
+    tic_time: 3,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GRETELCHASE4),
+};
+
+pub static S_GRETELCHASE4: StateType = StateType {
+    id: 11206,
+    rotate: 0,
+    sprite: Some(Sprite::GretelW4),
+    tic_time: 8,
+    think: Some(t_chase),
+    action: None,
+    async_action: None,
+    next: Some(&S_GRETELCHASE1),
+};
+
+pub static S_GRETELDIE1: StateType = StateType {
+    id: 11207,
+    rotate: 0,
+    sprite: Some(Sprite::GretelDie1),
+    tic_time: 15,
+    think: None,
+    action: Some(a_death_scream),
+    async_action: None,
+    next: Some(&S_GRETELDIE2),
+};
+
+pub static S_GRETELDIE2: StateType = StateType {
+    id: 11208,
+    rotate: 0,
+    sprite: Some(Sprite::GretelDie2),
+    tic_time: 15,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GRETELDIE3),
+};
+
+pub static S_GRETELDIE3: StateType = StateType {
+    id: 11209,
+    rotate: 0,
+    sprite: Some(Sprite::GretelDie3),
+    tic_time: 15,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GRETELDIE4),
+};
+
+pub static S_GRETELDIE4: StateType = StateType {
+    id: 11210,
+    rotate: 0,
+    sprite: Some(Sprite::GretelDead),
+    tic_time: 0,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GRETELDIE4),
+};
+
+pub static S_GRETELSHOOT1: StateType = StateType {
+    id: 11211,
+    rotate: 0,
+    sprite: Some(Sprite::GretelShoot1),
+    tic_time: 30,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GRETELSHOOT2),
+};
+
+pub static S_GRETELSHOOT2: StateType = StateType {
+    id: 11212,
+    rotate: 0,
+    sprite: Some(Sprite::GretelShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    async_action: None,
+    next: Some(&S_GRETELSHOOT3),
+};
+
+pub static S_GRETELSHOOT3: StateType = StateType {
+    id: 11213,
+    rotate: 0,
+    sprite: Some(Sprite::GretelShoot3),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    async_action: None,
+    next: Some(&S_GRETELSHOOT4),
+};
+
+pub static S_GRETELSHOOT4: StateType = StateType {
+    id: 11214,
+    rotate: 0,
+    sprite: Some(Sprite::GretelShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    async_action: None,
+    next: Some(&S_GRETELSHOOT5),
+};
+
+pub static S_GRETELSHOOT5: StateType = StateType {
+    id: 11215,
+    rotate: 0,
+    sprite: Some(Sprite::GretelShoot3),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    async_action: None,
+    next: Some(&S_GRETELSHOOT6),
+};
+
+pub static S_GRETELSHOOT6: StateType = StateType {
+    id: 11216,
+    rotate: 0,
+    sprite: Some(Sprite::GretelShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    async_action: None,
+    next: Some(&S_GRETELSHOOT7),
+};
+
+pub static S_GRETELSHOOT7: StateType = StateType {
+    id: 11217,
+    rotate: 0,
+    sprite: Some(Sprite::GretelShoot3),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    async_action: None,
+    next: Some(&S_GRETELSHOOT8),
+};
+
+pub static S_GRETELSHOOT8: StateType = StateType {
+    id: 11218,
+    rotate: 0,
+    sprite: Some(Sprite::GretelShoot1),
+    tic_time: 10,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_GRETELCHASE1),
+};
+
+pub static STATES: [&'static StateType; 281] = [
     &S_PLAYER,
     &S_ATTACK,
     &S_GRDSTAND,
@@ -3324,6 +3536,25 @@ pub static STATES: [&'static StateType; 262] = [
     &S_HITLERSHOOT4,
     &S_HITLERSHOOT5,
     &S_HITLERSHOOT6,
+    &S_GRETELSTAND,
+    &S_GRETELCHASE1,
+    &S_GRETELCHASE1S,
+    &S_GRETELCHASE2,
+    &S_GRETELCHASE3,
+    &S_GRETELCHASE3S,
+    &S_GRETELCHASE4,
+    &S_GRETELDIE1,
+    &S_GRETELDIE2,
+    &S_GRETELDIE3,
+    &S_GRETELDIE4,
+    &S_GRETELSHOOT1,
+    &S_GRETELSHOOT2,
+    &S_GRETELSHOOT3,
+    &S_GRETELSHOOT4,
+    &S_GRETELSHOOT5,
+    &S_GRETELSHOOT6,
+    &S_GRETELSHOOT7,
+    &S_GRETELSHOOT8,
 ];
 
 pub fn get_state_by_id(id: u16) -> Option<&'static StateType> {
@@ -3683,6 +3914,7 @@ fn t_chase(
                 ClassType::Mutant => Some(&S_MUTSHOOT1),
                 ClassType::SS => Some(&S_SSSHOOT1),
                 ClassType::Boss => Some(&S_BOSSSHOOT1),
+                ClassType::Gretel => Some(&S_GRETELSHOOT1),
                 ClassType::MechaHitler => Some(&S_MECHASHOOT1),
                 ClassType::RealHitler => Some(&S_HITLERSHOOT1),
                 _ => panic!("impl state change for {:?}", obj.class),
@@ -4302,6 +4534,26 @@ pub fn spawn_boss(
     spawn(actors, actor_at, boss);
 }
 
+pub fn spawn_gretel(
+    map_data: &MapSegs,
+    actors: &mut Actors,
+    actor_at: &mut Vec<Vec<At>>,
+    game_state: &mut GameState,
+    x_tile: usize,
+    y_tile: usize,
+) {
+    let mut gretel = spawn_new_obj(map_data, x_tile, y_tile, &S_GRETELSTAND, ClassType::Gretel);
+    gretel.speed = SPD_PATROL;
+    gretel.hitpoints = START_HITPOINTS[game_state.difficulty as usize][EnemyType::Gretel as usize];
+    gretel.dir = DirType::North;
+    gretel.flags = FL_SHOOTABLE | FL_AMBUSH;
+    if !game_state.loaded_game {
+        game_state.kill_total += 1;
+    }
+
+    spawn(actors, actor_at, gretel);
+}
+
 pub fn spawn_schabbs(
     map_data: &MapSegs,
     actors: &mut Actors,
@@ -4653,7 +4905,9 @@ pub fn do_death_scream(
         ClassType::Gift => {
             rc.play_sound(SoundName::DONNER);
         }
-        // TODO gretelobj MEINSND
+        ClassType::Gretel => {
+            rc.play_sound(SoundName::MEIN);
+        }
         // TODO fatobj ROSESND
         _ => todo!("death scream missing: {:?}", obj.class),
     }

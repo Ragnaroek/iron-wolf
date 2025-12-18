@@ -5,10 +5,11 @@ mod state_test;
 use crate::act1::{open_door, place_item_type};
 use crate::act2::{
     S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_FAKECHASE1, S_FAKEDIE1, S_GIFTCHASE1,
-    S_GIFTDIE1_5, S_GIFTDIE1_140, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_HITLERDIE1_5,
-    S_HITLERDIE1_140, S_MECHACHASE1, S_MECHADIE1, S_MUTCHASE1, S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1,
-    S_OFCCHASE1, S_OFCDIE1, S_OFCPAIN, S_OFCPAIN1, S_SCHABBCHASE1, S_SCHABBDIE1_10,
-    S_SCHABBDIE1_140, S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1, do_death_scream,
+    S_GIFTDIE1_5, S_GIFTDIE1_140, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_GRETELCHASE1,
+    S_GRETELDIE1, S_HITLERDIE1_5, S_HITLERDIE1_140, S_MECHACHASE1, S_MECHADIE1, S_MUTCHASE1,
+    S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1, S_OFCCHASE1, S_OFCDIE1, S_OFCPAIN, S_OFCPAIN1,
+    S_SCHABBCHASE1, S_SCHABBDIE1_10, S_SCHABBDIE1_140, S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1,
+    do_death_scream,
 };
 use crate::agent::{give_points, take_damage};
 use crate::assets::SoundName;
@@ -879,6 +880,11 @@ pub fn first_sighting(rc: &mut RenderContext, k: ObjKey, level_state: &mut Level
             new_state(obj, &S_BOSSCHASE1);
             obj.speed = SPD_PATROL * 3;
         }
+        ClassType::Gretel => {
+            rc.play_sound(SoundName::KEIN);
+            new_state(obj, &S_GRETELCHASE1);
+            obj.speed *= 3;
+        }
         ClassType::Gift => {
             rc.play_sound(SoundName::EINE);
             new_state(obj, &S_GIFTCHASE1);
@@ -1218,7 +1224,9 @@ fn kill_actor(
                 place_item_type(level_state, StaticKind::BoKey1, tile_x, tile_y);
             }
             ClassType::Gretel => {
-                todo!("kill gretel");
+                give_points(rc, game_state, 5000);
+                new_state(level_state.mut_obj(k), &S_GRETELDIE1);
+                place_item_type(level_state, StaticKind::BoKey1, tile_x, tile_y);
             }
             ClassType::Gift => {
                 give_points(rc, game_state, 5000);

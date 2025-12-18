@@ -1123,6 +1123,14 @@ derive_from! {
         Smoke1 = 378, Smoke2 = 379, Smoke3 = 380, Smoke4 = 381,
         Boom1 = 382, Boom2 = 383, Boom3 = 384,
 
+        // gretel
+        GretelW1 = 385, GretelW2 = 386 , GretelW3 = 387, GretelW4 = 388,
+        GretelShoot1 = 389, GretelShoot2 = 390, GretelShoot3 = 391, GretelDead = 392,
+
+        GretelDie1 = 393, GretelDie2 = 394, GretelDie3 = 395,
+
+        // TODO fat face
+
         // bj
         BJW1 = 408, BJW2 = 409, BJW3 = 410, BJW4 = 411,
         BJJump1 = 412, BJJump2 = 413, BJJump3 = 414, BJJump4 = 415,
