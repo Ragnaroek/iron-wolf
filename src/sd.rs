@@ -17,7 +17,7 @@ use crate::{
     start::quit,
 };
 
-use opl::OPL;
+use opl::{OPL, OPLSettings};
 
 #[cfg(any(feature = "sdl", feature = "test"))]
 use sdl2::audio::{self, AudioCVT, AudioFormat};
@@ -152,12 +152,12 @@ struct Modes {
     music: MusicMode,
 }
 
-fn default_modes() -> Arc<Mutex<Modes>> {
-    Arc::new(Mutex::new(Modes {
+fn default_modes() -> Modes {
+    Modes {
         sound: SoundMode::AdLib,
         digi: DigiMode::SoundBlaster,
         music: MusicMode::AdLib,
-    }))
+    }
 }
 
 pub struct DigiInfo {
@@ -189,7 +189,7 @@ pub struct Sound {}
 
 #[cfg(feature = "web")]
 pub struct Sound {
-    modes: Arc<Mutex<Modes>>,
+    modes: Modes,
     pub opl: OPL,
 }
 
@@ -203,14 +203,16 @@ pub fn startup(_rt: Arc<Runtime>) -> Result<Sound, String> {
     Ok(test_sound())
 }
 
+const OPL_SETTINGS: OPLSettings = OPLSettings {
+    mixer_rate: 49716,
+    imf_clock_rate: 700,
+    adl_clock_rate: 140,
+};
+
 #[cfg(feature = "sdl")]
 pub fn startup(rt: Arc<Runtime>) -> Result<Sound, String> {
-    let mut opl = opl::new()?;
-    opl.init(opl::OPLSettings {
-        mixer_rate: 49716,
-        imf_clock_rate: 700,
-        adl_clock_rate: 140,
-    });
+    let mut opl = OPL::new()?;
+    opl.init(OPL_SETTINGS);
 
     mixer::open_audio(44100, mixer::AUDIO_S16LSB, 2, 2048)?;
     let (mix_freq, mix_format, mix_channels) = mixer::query_spec()?;
@@ -228,7 +230,7 @@ pub fn startup(rt: Arc<Runtime>) -> Result<Sound, String> {
     Ok(Sound {
         opl: Arc::new(Mutex::new(opl)),
         mix_config: Arc::new(Mutex::new(mix_config)),
-        modes: default_modes(),
+        modes: Arc::new(Mutex::new(default_modes())),
         rt,
         sound_playing: Arc::new(Mutex::new(None)),
         left_pos: 0,
@@ -237,9 +239,10 @@ pub fn startup(rt: Arc<Runtime>) -> Result<Sound, String> {
 }
 
 #[cfg(feature = "web")]
-pub fn startup(_: Arc<Runtime>) -> Result<Sound, String> {
+pub async fn startup(_: Arc<Runtime>) -> Result<Sound, String> {
     //"TODO impl proper web sd startup (currently a dummy)")
-    let opl = opl::new()?;
+    let mut opl = OPL::new().await?;
+    opl.init(OPL_SETTINGS).await?;
     Ok(Sound {
         modes: default_modes(),
         opl: opl,
@@ -367,20 +370,7 @@ impl Sound {
             return;
         }
 
-        let variant = loader.variant();
-        let trackno = track as usize;
-        let offset = assets.audio_headers[variant.start_music + trackno];
-        let len = assets.audio_headers[variant.start_music + trackno + 1] - offset;
-
-        //read the full chunk with size bytes at the beginning and tags at the end
-        let track_chunk = loader
-            .load_wolf_file_slice(WolfFile::AudioData, offset as u64, len as usize)
-            .expect("load track data");
-
-        let track_size = u16::from_le_bytes(track_chunk[0..2].try_into().unwrap()) as usize;
-
-        let mut track_data = vec![0; track_size];
-        track_data.copy_from_slice(&track_chunk[2..(track_size + 2)]);
+        let track_data = load_track(track, assets, loader);
 
         let mut opl_mon = self.opl.lock().unwrap();
         opl_mon.play_imf(track_data).expect("play imf")
@@ -499,11 +489,7 @@ impl Sound {
         mode_mon.music = mode;
         if mode == MusicMode::Off {
             let mut opl_mon = self.opl.lock().expect("opl lock");
-            opl_mon.stop_imf().expect("stop music");
-            opl_mon.write_reg(0xBD, 0).expect("flush effects");
-            for i in 0..MAX_TRACKS as u32 {
-                opl_mon.write_reg(0xB0 + i + 1, 0).expect("flush freq");
-            }
+            clear_music(&mut opl_mon).expect("clear music");
         }
     }
 }
@@ -514,6 +500,33 @@ fn map_audio_format(format: mixer::AudioFormat) -> AudioFormat {
         mixer::AUDIO_S16LSB => AudioFormat::S16LSB,
         _ => todo!("impl mapping"),
     }
+}
+
+fn clear_music(opl: &mut OPL) -> Result<(), String> {
+    opl.stop_imf()?;
+    opl.write_reg(0xBD, 0)?;
+    for i in 0..MAX_TRACKS as u32 {
+        opl.write_reg(0xB0 + i + 1, 0)?;
+    }
+    Ok(())
+}
+
+fn load_track(track: Music, assets: &Assets, loader: &dyn Loader) -> Vec<u8> {
+    let variant = loader.variant();
+    let trackno = track as usize;
+    let offset = assets.audio_headers[variant.start_music + trackno];
+    let len = assets.audio_headers[variant.start_music + trackno + 1] - offset;
+
+    //read the full chunk with size bytes at the beginning and tags at the end
+    let track_chunk = loader
+        .load_wolf_file_slice(WolfFile::AudioData, offset as u64, len as usize)
+        .expect("load track data");
+
+    let track_size = u16::from_le_bytes(track_chunk[0..2].try_into().unwrap()) as usize;
+
+    let mut track_data = vec![0; track_size];
+    track_data.copy_from_slice(&track_chunk[2..(track_size + 2)]);
+    track_data
 }
 
 fn sound_loc(rc: &RayCast, gx_param: Fixed, gy_param: Fixed) -> (u8, u8) {
@@ -574,8 +587,13 @@ impl Sound {
         true
     }
 
-    pub fn play_music(&mut self, _track: Music, _assets: &Assets, _loader: &dyn Loader) {
-        // todo "impl play music web"
+    pub fn play_music(&mut self, track: Music, assets: &Assets, loader: &dyn Loader) {
+        if self.modes.music == MusicMode::Off {
+            return;
+        }
+
+        let track_data = load_track(track, assets, loader);
+        self.opl.play_imf(track_data).expect("play imf")
     }
 
     pub fn play_sound_loc_tile(
@@ -642,12 +660,14 @@ impl Sound {
     }
 
     pub fn music_mode(&self) -> MusicMode {
-        // todo "music mode web"
-        MusicMode::Off
+        self.modes.music
     }
 
     pub fn set_music_mode(&mut self, mode: MusicMode) {
-        // todo "set music mode web"
+        self.modes.music = mode;
+        if mode == MusicMode::Off {
+            clear_music(&mut self.opl).expect("clear music");
+        }
     }
 }
 

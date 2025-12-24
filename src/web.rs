@@ -136,13 +136,22 @@ impl Loader for WebLoader {
     fn save_save_game(&self, which: usize, bytes: &[u8]) -> Result<(), String> {
         todo!("save game saving not implemented yet for web");
     }
+
     fn load_wolf_file_slice(
         &self,
         file: WolfFile,
-        offset: u64,
+        offset_u64: u64,
         len: usize,
     ) -> Result<Vec<u8>, String> {
-        todo!("wolf_file_slice not implemented yet for web")
+        let buffer = self
+            .files
+            .get(&file_name(file, &self.variant))
+            .expect(&format!(
+                "file {} not found",
+                file_name(file, &self.variant)
+            ));
+        let offset = offset_u64 as usize;
+        Ok(buffer[offset..(offset + len)].to_vec())
     }
 }
 

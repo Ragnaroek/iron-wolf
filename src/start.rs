@@ -77,13 +77,9 @@ impl DiskAnim {
 
 pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<(), String> {
     let mut wolf_config = config::load_wolf_config(&loader);
-    let patch_config = &loader.load_patch_config_file()?;
 
     let rt = tokio_runtime()?;
     let rt_ref = Arc::new(rt);
-
-    let sound = sd::startup(rt_ref.clone())?;
-    let assets = assets::load_all_assets(&sound, &loader, patch_config)?;
 
     let ticker = time::new_ticker();
 
@@ -93,6 +89,14 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
     check_for_episodes(&mut menu_state, loader.variant());
 
     vga::util::spawn_async(async move {
+        let patch_config = &loader.load_patch_config_file().expect("patch config load");
+        #[cfg(feature = "web")]
+        let sound = sd::startup(rt_ref.clone()).await.expect("sound startup");
+        #[cfg(feature = "sdl")]
+        let sound = sd::startup(rt_ref.clone()).expect("sound startup");
+
+        let assets = assets::load_all_assets(&sound, &loader, patch_config).expect("asset load");
+
         let mut vga = VGABuilder::new()
             .video_mode(0x13)
             .title("Iron Wolf".to_string())

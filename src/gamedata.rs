@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom};
 use std::str;
 
-use opl::{AdlSound, Instrument};
+use opl::{AdlSound, read_adl};
 
 use crate::assets::WolfVariant;
 use crate::assets::{DIGI_MAP, SoundName};
@@ -285,38 +285,7 @@ pub fn load_audio_sounds<M: Read + Seek>(
         data.seek(SeekFrom::Start(offset as u64))
             .map_err(|e| e.to_string())?;
         data.read_exact(&mut data_buf).map_err(|e| e.to_string())?;
-        sounds.push(read_sound(data_buf));
+        sounds.push(read_adl(data_buf));
     }
     Ok(sounds)
-}
-
-fn read_sound(data: Vec<u8>) -> AdlSound {
-    let length = u32::from_le_bytes(data[0..4].try_into().unwrap());
-    let instrument = Instrument {
-        m_char: data[6],
-        c_char: data[7],
-        m_scale: data[8],
-        c_scale: data[9],
-        m_attack: data[10],
-        c_attack: data[11],
-        m_sus: data[12],
-        c_sus: data[13],
-        m_wave: data[14],
-        c_wave: data[15],
-        n_conn: data[16],
-        voice: data[17],
-        mode: data[18],
-        // data[19..22] are padding and omitted
-    };
-    AdlSound {
-        length,
-        priority: u16::from_le_bytes(data[4..6].try_into().unwrap()),
-        instrument,
-        block: data[22],
-        data: data[23..(23 + length as usize)].to_vec(),
-        terminator: data[23 + length as usize],
-        name: str::from_utf8(&data[(23 + length as usize) + 1..data.len() - 1])
-            .expect("sound name")
-            .to_string(),
-    }
 }
