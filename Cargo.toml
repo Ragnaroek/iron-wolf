@@ -45,7 +45,7 @@ path = "src/main.rs"
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
 cfg-if = "1.0.4"
-toml = "0.9.8"
+toml = "0.9.10"
 vga-emu = "0.8.3"  # { path = "../vga-emu/" }
 opl-emu = "0.3.0" #  { path = "../opl-emu/" }
 web-time = "1.1.0" # std::time for web that needs an crate to be compatible :/
@@ -71,8 +71,8 @@ wasm-bindgen = { version = "0.2.106", optional = true, features = [
     "serde-serialize",
 ] }
 console_error_panic_hook = { version = "0.1.7", optional = true }
-js-sys = { version = "0.3.82", optional = true }
-web-sys = { version = "0.3.82", optional = true, features = [
+js-sys = { version = "0.3.83", optional = true }
+web-sys = { version = "0.3.83", optional = true, features = [
     'Document',
     'Window',
     'HtmlInputElement',
