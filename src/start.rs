@@ -92,7 +92,7 @@ pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<()
         let patch_config = &loader.load_patch_config_file().expect("patch config load");
         #[cfg(feature = "web")]
         let sound = sd::startup(rt_ref.clone()).await.expect("sound startup");
-        #[cfg(feature = "sdl")]
+        #[cfg(any(feature = "sdl", feature = "test"))]
         let sound = sd::startup(rt_ref.clone()).expect("sound startup");
 
         let assets = assets::load_all_assets(&sound, &loader, patch_config).expect("asset load");
