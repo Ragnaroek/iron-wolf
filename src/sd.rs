@@ -191,6 +191,9 @@ pub struct Sound {}
 pub struct Sound {
     modes: Modes,
     pub opl: OPL,
+    sound_playing: Option<SoundName>,
+    left_pos: u8,
+    right_pos: u8,
 }
 
 #[cfg(feature = "test")]
@@ -246,6 +249,9 @@ pub async fn startup(_: Arc<Runtime>) -> Result<Sound, String> {
     Ok(Sound {
         modes: default_modes(),
         opl: opl,
+        sound_playing: None,
+        left_pos: 0,
+        right_pos: 0,
     })
 }
 
@@ -352,13 +358,8 @@ impl Sound {
         // check priority
         {
             let playing = self.sound_playing.lock().unwrap();
-            if playing.is_some() {
-                let playing_prio =
-                    assets.audio_sounds[playing.expect("playing sound") as usize].priority;
-                let new_sound_prio = assets.audio_sounds[sound as usize].priority;
-                if new_sound_prio < playing_prio {
-                    return false;
-                }
+            if !check_sound_prio(&*playing, assets, sound) {
+                return false;
             }
         }
 
@@ -529,6 +530,18 @@ fn load_track(track: Music, assets: &Assets, loader: &dyn Loader) -> Vec<u8> {
     track_data
 }
 
+fn check_sound_prio(playing_sound: &Option<SoundName>, assets: &Assets, sound: SoundName) -> bool {
+    if playing_sound.is_some() {
+        let playing_prio =
+            assets.audio_sounds[playing_sound.expect("playing sound") as usize].priority;
+        let new_sound_prio = assets.audio_sounds[sound as usize].priority;
+        if new_sound_prio < playing_prio {
+            return false;
+        }
+    }
+    true
+}
+
 fn sound_loc(rc: &RayCast, gx_param: Fixed, gy_param: Fixed) -> (u8, u8) {
     let view_x = Fixed::new_from_i32(rc.view_x);
     let view_y = Fixed::new_from_i32(rc.view_y);
@@ -567,24 +580,40 @@ fn sound_loc(rc: &RayCast, gx_param: Fixed, gy_param: Fixed) -> (u8, u8) {
 
 #[cfg(feature = "web")]
 impl Sound {
-    pub fn is_sound_playing(&mut self, _sound: SoundName) -> bool {
-        // todo "impl is_sound_playing for web"
-        true
+    pub fn is_sound_playing(&mut self, sound: SoundName) -> bool {
+        if let Some(playing_sound) = self.sound_playing {
+            playing_sound == sound
+        } else {
+            false
+        }
     }
 
     pub fn is_any_sound_playing(&mut self) -> bool {
-        // todo! "impl is_any_sound_playing for web"
-        false
+        self.sound_playing.is_some()
     }
 
-    pub fn force_play_sound(&mut self, _sound: SoundName, _assets: &Assets) -> bool {
-        // todo ("impl force play sound web"
+    pub fn force_play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
+        return false; // TODO disabled sound as this is not working with the push model
+
+        self.sound_playing = Some(sound); // This sound _will_ be played
+
+        let may_digi_sound = assets.digi_sounds.get(&sound);
+        if may_digi_sound.is_some() && self.modes.digi == DigiMode::SoundBlaster {
+            todo!("implement digi sound playback on web");
+        } else {
+            if self.modes.sound == SoundMode::AdLib {
+                let adl_sound = assets.audio_sounds[sound as usize].clone();
+                self.opl.play_adl(adl_sound).expect("play sound file");
+            }
+        }
         true
     }
 
-    pub fn play_sound(&mut self, _sound: SoundName, _assets: &Assets) -> bool {
-        // todo "impl play sound web"
-        true
+    pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
+        if !check_sound_prio(&self.sound_playing, assets, sound) {
+            return false;
+        }
+        self.force_play_sound(sound, assets)
     }
 
     pub fn play_music(&mut self, track: Music, assets: &Assets, loader: &dyn Loader) {
@@ -605,7 +634,9 @@ impl Sound {
         tile_x: usize,
         tile_y: usize,
     ) {
-        // todo! "impl play sound loc tile web"
+        let gx = Fixed::new_from_i32(((tile_x as i32) << TILESHIFT) + (1 << (TILESHIFT - 1)));
+        let gy = Fixed::new_from_i32(((tile_y as i32) << TILESHIFT) + (1 << (TILESHIFT - 1)));
+        self.play_sound_loc_global(sound, assets, rc, gx, gy);
     }
 
     pub fn play_sound_loc_actor(
@@ -615,7 +646,13 @@ impl Sound {
         rc: &RayCast,
         obj: &ObjType,
     ) {
-        // todo "impl play sound actor web"
+        self.play_sound_loc_global(
+            sound,
+            assets,
+            rc,
+            Fixed::new_from_i32(obj.x),
+            Fixed::new_from_i32(obj.y),
+        );
     }
 
     fn play_sound_loc_global(
@@ -623,10 +660,13 @@ impl Sound {
         sound: SoundName,
         assets: &Assets,
         rc: &RayCast,
-        tile_x: usize,
-        tile_y: usize,
+        gx: Fixed,
+        gy: Fixed,
     ) {
-        // todo!("impl play sound loc global web"
+        let (left, right) = sound_loc(rc, gx, gy);
+        self.left_pos = left;
+        self.right_pos = right;
+        self.play_sound(sound, assets);
     }
 
     pub fn prepare_digi_sound(
@@ -642,21 +682,19 @@ impl Sound {
     }
 
     pub fn sound_mode(&self) -> SoundMode {
-        // todo "sound mode web"
-        SoundMode::Off
+        self.modes.sound
     }
 
     pub fn set_sound_mode(&mut self, mode: SoundMode) {
-        // todo "set sound mode web"
+        self.modes.sound = mode;
     }
 
     pub fn digi_mode(&self) -> DigiMode {
-        // todo "digi mode web"
-        DigiMode::Off
+        self.modes.digi
     }
 
     pub fn set_digi_mode(&mut self, mode: DigiMode) {
-        // todo "set digi mode web"
+        self.modes.digi = mode;
     }
 
     pub fn music_mode(&self) -> MusicMode {

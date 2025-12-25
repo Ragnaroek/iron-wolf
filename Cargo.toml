@@ -47,7 +47,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 cfg-if = "1.0.4"
 toml = "0.9.10"
 vga-emu = "0.8.3"  # { path = "../vga-emu/" }
-opl-emu = "0.3.0" #  { path = "../opl-emu/" }
+opl-emu = "0.3.0"  # { path = "../opl-emu/" }
 web-time = "1.1.0" # std::time for web that needs an crate to be compatible :/
 tokio = { version = "1.48.0", default-features = false }
 

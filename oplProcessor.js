@@ -7,6 +7,8 @@ class OPLProcessor extends AudioWorkletProcessor {
     this.port.onmessage = (event) => {
       if (event.data instanceof Float32Array) {
         this.ringBuffer.push(event.data);
+      } else if (event.data === "CLEAR") {
+        this.ringBuffer.length = 0;
       }
     };
   }
