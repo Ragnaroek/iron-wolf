@@ -16,3 +16,6 @@ https://github.com/Ragnaroek/iron-wolf/assets/214764/4e5a112f-6014-4de6-90d1-538
 `just run-sdl-shareware` should work out of the box on a cloned repo.
 It will run the shareware version, that is also checked in along with the code
 as testdata.
+
+Alternatively you can play the web version here:
+https://ragnaroek.github.io/iron-wolf/
