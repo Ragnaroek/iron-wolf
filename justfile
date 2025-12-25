@@ -18,27 +18,27 @@ run-sdl-profile:
     sudo -E cargo flamegraph --features sdl --profile=dev -- run
 
 run-sdl-demo NUM:
-    cargo run --features sdl -- -timedemo {{NUM}}
+    cargo run --features sdl -- -timedemo {{ NUM }}
 
-## Web
+# # Web
 build-web:
-	wasm-pack build --debug --target web --features web
+    wasm-pack build --out-dir web/pkg --release --target web --features web
 
 run-web: build-web
-	miniserve ./
+    miniserve ./web
 
 coverage-sdl:
-	cargo tarpaulin --features sdl --ignore-tests --out Lcov
+    cargo tarpaulin --features sdl --ignore-tests --out Lcov
 
-## Testing
+# # Testing
 test:
-	RUST_BACKTRACE=1 cargo test --features test
+    RUST_BACKTRACE=1 cargo test --features test
 
 test-all: build-sdl-tracing build-web test
 
-## Misc
+# # Misc
 profile:
-	sudo -E cargo flamegraph --bench core_loop -- --bench
+    sudo -E cargo flamegraph --bench core_loop -- --bench
 
 bench:
-	cargo bench --features sdl
+    cargo bench --features sdl

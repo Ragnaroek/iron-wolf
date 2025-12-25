@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en-US">
+
+<head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+    <title>Iron Wolf 3D</title>
+</head>
+
+<body>
+    <script type="module">
+        import init, {WebLoader, iw_init} from "./pkg/iw.js";
+        await init();
+
+        async function run() {
+          console.log("!!!! run");
+          this.blur();
+          iw_init("upload");
+        }
+        document.getElementById("run_shareware").addEventListener("click", run);
+    </script>
+
+    <canvas id="vga" style="border: 1px solid black;" width="640" height="400"></canvas>
+
+    <div>
+        <button id="run_shareware">Run shareware version</button>
+        <div style="margin-top: 20px;">or</div>
+        <label for="upload">Upload full version files to play them:</label>
+        <input style="margin-top: 20px;" id="upload" type="file" multiple />
+    </div>
+</body>
+
+</html>

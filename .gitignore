@@ -6,5 +6,5 @@ iw_config.toml
 iw.trace
 
 # generated testdata files
-testdata/shareware_data/SAVEGAM9.WL1
+testdata/shareware_data/SAVEGAM*.WL1
 testdata/tmp_write/*

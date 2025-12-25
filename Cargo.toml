@@ -17,6 +17,7 @@ web = [
     "opl-emu/web",
     "tokio/rt",
     "dep:wasm-bindgen",
+    "dep:wasm-bindgen-futures",
     "dep:console_error_panic_hook",
     "dep:web-sys",
     "dep:js-sys",
@@ -47,7 +48,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 cfg-if = "1.0.4"
 toml = "0.9.10"
 vga-emu = "0.8.3"  # { path = "../vga-emu/" }
-opl-emu = "0.3.0"  # { path = "../opl-emu/" }
+opl-emu = "0.3.1"  # { path = "../opl-emu/" }
 web-time = "1.1.0" # std::time for web that needs an crate to be compatible :/
 tokio = { version = "1.48.0", default-features = false }
 
@@ -70,6 +71,7 @@ libc = "0.2.177" # temp override, until sdl3/mixed can be used which also will r
 wasm-bindgen = { version = "0.2.106", optional = true, features = [
     "serde-serialize",
 ] }
+wasm-bindgen-futures = { version = "0.4.56", optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 js-sys = { version = "0.3.83", optional = true }
 web-sys = { version = "0.3.83", optional = true, features = [
@@ -82,6 +84,7 @@ web-sys = { version = "0.3.83", optional = true, features = [
     'FileReader',
     'Blob',
     'Performance',
+    'Response',
     'console',
 ] }
 wasm-timer = { version = "0.2.5", optional = true }
@@ -101,3 +104,6 @@ strip = true
 lto = true
 codegen-units = 1
 panic = "abort"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

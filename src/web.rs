@@ -5,7 +5,10 @@ use std::collections::HashMap;
 use std::io::Cursor;
 use std::rc::Rc;
 
+use js_sys::Uint8Array;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::JsFuture;
+use web_sys::Window;
 
 use crate::assets::{self, WolfFile, WolfVariant, file_name};
 use crate::config;
@@ -23,17 +26,71 @@ pub fn init_panic_hook() {
 }
 
 #[wasm_bindgen]
-pub fn iw_init(upload_id: &str) {
+pub async fn iw_init(upload_id: &str) {
     console_error_panic_hook::set_once();
 
-    let variant = &assets::W3D6;
+    register_upload_loader(upload_id);
 
-    let loader = WebLoader {
-        variant,
+    let mut shareware_loader = WebLoader {
+        variant: &assets::W3D1,
         files: HashMap::new(),
     };
+    load_shareware_data(&mut shareware_loader)
+        .await
+        .expect("load shareware data");
+    iw_start_web(shareware_loader).expect("iw_start_web failed");
+}
 
-    register_loader(upload_id, loader);
+async fn load_shareware_data(loader: &mut WebLoader) -> Result<(), JsValue> {
+    let win = web_sys::window().unwrap();
+
+    let file_name = loader.file_name(assets::GRAPHIC_DICT);
+    let data = load_shareware_file(&file_name, &win).await?;
+    loader.load(file_name, data);
+
+    let file_name = loader.file_name(assets::GRAPHIC_HEAD);
+    let data = load_shareware_file(&file_name, &win).await?;
+    loader.load(file_name, data);
+
+    let file_name = loader.file_name(assets::GRAPHIC_DATA);
+    let data = load_shareware_file(&file_name, &win).await?;
+    loader.load(file_name, data);
+
+    let file_name = loader.file_name(assets::MAP_HEAD);
+    let data = load_shareware_file(&file_name, &win).await?;
+    loader.load(file_name, data);
+
+    let file_name = loader.file_name(assets::GAME_MAPS);
+    let data = load_shareware_file(&file_name, &win).await?;
+    loader.load(file_name, data);
+
+    let file_name = loader.file_name(assets::GAMEDATA);
+    let data = load_shareware_file(&file_name, &win).await?;
+    loader.load(file_name, data);
+
+    let file_name = loader.file_name(assets::CONFIG_DATA);
+    let data = load_shareware_file(&file_name, &win).await?;
+    loader.load(file_name, data);
+
+    let file_name = loader.file_name(assets::AUDIO_HEAD);
+    let data = load_shareware_file(&file_name, &win).await?;
+    loader.load(file_name, data);
+
+    let file_name = loader.file_name(assets::AUDIO_DATA);
+    let data = load_shareware_file(&file_name, &win).await?;
+    loader.load(file_name, data);
+
+    Ok(())
+}
+
+async fn load_shareware_file(file_name: &str, win: &Window) -> Result<Vec<u8>, JsValue> {
+    let resp_value =
+        JsFuture::from(win.fetch_with_str(&format!("shareware/{}", file_name))).await?;
+    let resp: web_sys::Response = resp_value.dyn_into()?;
+    let buffer = JsFuture::from(resp.array_buffer()?).await?;
+
+    let array = Uint8Array::new(&buffer);
+    Ok(array.to_vec())
 }
 
 #[wasm_bindgen]
@@ -88,6 +145,8 @@ impl WebLoader {
             && self
                 .files
                 .contains_key(&self.file_name(assets::CONFIG_DATA))
+            && self.files.contains_key(&self.file_name(assets::AUDIO_HEAD))
+            && self.files.contains_key(&self.file_name(assets::AUDIO_DATA))
     }
 
     fn file_name(&self, asset_name: &str) -> String {
@@ -155,8 +214,13 @@ impl Loader for WebLoader {
     }
 }
 
-#[wasm_bindgen]
-pub fn register_loader(id: &str, loader: WebLoader) {
+fn register_upload_loader(id: &str) {
+    let loader = WebLoader {
+        variant: &assets::W3D6,
+        files: HashMap::new(),
+    };
+    let loader_ref = Rc::new(RefCell::new(loader));
+
     let document = web_sys::window().unwrap().document().unwrap();
     let button_elem = document
         .get_element_by_id(id)
@@ -165,7 +229,7 @@ pub fn register_loader(id: &str, loader: WebLoader) {
         .dyn_into::<web_sys::HtmlInputElement>()
         .expect("wrong input element");
     let click_handler: Closure<dyn FnMut(_)> =
-        Closure::once(move |e: web_sys::Event| handle_upload(e, loader));
+        Closure::once(move |e: web_sys::Event| handle_upload(e, loader_ref));
 
     button
         .add_event_listener_with_callback("change", click_handler.as_ref().unchecked_ref())
@@ -173,7 +237,7 @@ pub fn register_loader(id: &str, loader: WebLoader) {
     click_handler.forget();
 }
 
-fn handle_upload(event: web_sys::Event, loader: WebLoader) {
+fn handle_upload(event: web_sys::Event, loader: Rc<RefCell<WebLoader>>) {
     let input = event
         .target()
         .expect("upload button target")
@@ -181,13 +245,12 @@ fn handle_upload(event: web_sys::Event, loader: WebLoader) {
         .expect("input element");
     let files = input.files().expect("files");
 
-    let loader_ref = Rc::new(RefCell::new(loader));
     for i in 0..files.length() {
         let file = files.get(i).expect("file");
         let reader = web_sys::FileReader::new().expect("FileReader");
         reader.read_as_array_buffer(&file).expect("read triggered");
         let name = file.name();
-        let handle_ref = loader_ref.clone();
+        let handle_ref = loader.clone();
         let load_handler: Closure<dyn FnMut(_)> =
             Closure::once(move |e: web_sys::Event| handle_load(e, name, handle_ref));
         reader
@@ -198,6 +261,8 @@ fn handle_upload(event: web_sys::Event, loader: WebLoader) {
 }
 
 fn handle_load(event: web_sys::Event, name: String, loader: Rc<RefCell<WebLoader>>) {
+    web_sys::console::log_1(&format!("handle_load").into());
+
     let reader = event
         .target()
         .expect("reader target")
