@@ -125,8 +125,6 @@ pub struct WebLoader {
 #[wasm_bindgen]
 impl WebLoader {
     pub fn load(&mut self, file: String, data: Vec<u8>) {
-        web_sys::console::log_1(&format!("## load file {}", file).into());
-
         self.files.insert(file, data);
     }
 
