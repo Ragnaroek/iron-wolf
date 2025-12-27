@@ -1,5 +1,8 @@
 [![Rust](https://github.com/Ragnaroek/iron-wolf/actions/workflows/rust.yml/badge.svg)](https://github.com/Ragnaroek/iron-wolf/actions/workflows/rust.yml)
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=000)](https://www.buymeacoffee.com/ragnaroek)
+
+
 # iron-wolf
 wolf3D in Rust
 
