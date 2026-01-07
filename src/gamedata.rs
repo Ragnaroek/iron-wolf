@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom};
 use std::str;
 
-use opl::{AdlSound, read_adl};
+use opl::chip::AdlSound;
 
 use crate::assets::WolfVariant;
 use crate::assets::{DIGI_MAP, SoundName};
@@ -285,7 +285,7 @@ pub fn load_audio_sounds<M: Read + Seek>(
         data.seek(SeekFrom::Start(offset as u64))
             .map_err(|e| e.to_string())?;
         data.read_exact(&mut data_buf).map_err(|e| e.to_string())?;
-        sounds.push(read_adl(data_buf));
+        sounds.push(AdlSound::from_bytes(&data_buf));
     }
     Ok(sounds)
 }

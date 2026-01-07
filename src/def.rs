@@ -2,7 +2,7 @@
 #[path = "./def_test.rs"]
 mod def_test;
 
-use opl::AdlSound;
+use opl::chip::AdlSound;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;

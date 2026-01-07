@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use crate::def::{Assets, Font, Graphic, IWConfig, TileData, WeaponType};
 use crate::gamedata;
 use crate::loader::Loader;
-use crate::map::{MapFileType, MapSegs, MapType, load_map, load_map_headers, load_map_offsets};
-use crate::patch::{PatchConfig, graphic_patch};
+use crate::map::{load_map, load_map_headers, load_map_offsets, MapFileType, MapSegs, MapType};
+use crate::patch::{graphic_patch, PatchConfig};
 use crate::sd::Sound;
 use crate::util::DataReader;
 
@@ -1293,7 +1293,11 @@ fn grfilepos(chunk: usize, grstarts: &Vec<u8>) -> i32 {
         grstarts[offset + 2],
         0,
     ]);
-    if value == 0xffffff { -1 } else { value }
+    if value == 0xffffff {
+        -1
+    } else {
+        value
+    }
 }
 
 fn expand_chunk(chunk: usize, data_in: &[u8], grhuffman: &Vec<Huffnode>) -> Vec<u8> {

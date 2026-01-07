@@ -206,8 +206,15 @@ pub fn startup(_rt: Arc<Runtime>) -> Result<Sound, String> {
     Ok(test_sound())
 }
 
+#[cfg(any(feature = "sdl", feature = "test"))]
 const OPL_SETTINGS: OPLSettings = OPLSettings {
     mixer_rate: 49716,
+    imf_clock_rate: 700,
+    adl_clock_rate: 140,
+};
+
+#[cfg(feature = "web")]
+const OPL_SETTINGS: OPLSettings = OPLSettings {
     imf_clock_rate: 700,
     adl_clock_rate: 140,
 };
@@ -593,13 +600,11 @@ impl Sound {
     }
 
     pub fn force_play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
-        return false; // TODO disabled sound as this is not working with the push model
-
         self.sound_playing = Some(sound); // This sound _will_ be played
 
         let may_digi_sound = assets.digi_sounds.get(&sound);
         if may_digi_sound.is_some() && self.modes.digi == DigiMode::SoundBlaster {
-            todo!("implement digi sound playback on web");
+            //TODO "implement digi sound playback on web", as for now silence
         } else {
             if self.modes.sound == SoundMode::AdLib {
                 let adl_sound = assets.audio_sounds[sound as usize].clone();
