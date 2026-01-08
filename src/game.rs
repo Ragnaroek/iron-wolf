@@ -44,7 +44,6 @@ pub const ANGLE_1: u32 = ANGLE_45 / 45;
 
 pub const DEATH_ROTATE: u64 = 2;
 
-// TODO Check whether indexes are correct
 static ELEVATOR_BACK_TO: [usize; 6] = [0, 0, 6, 2, 4, 2];
 
 pub async fn game_loop(
@@ -631,7 +630,7 @@ fn scan_info_plane(
                     spawn_dead_guard(map_data, &mut actors, actor_at, x, y);
                 }
                 125 => {
-                    todo!("trans");
+                    todo!("trans (SOD)");
                 }
                 126..=129 => {
                     // ss stand: normal mode
@@ -692,10 +691,10 @@ fn scan_info_plane(
                     );
                 }
                 142 => {
-                    todo!("uber");
+                    todo!("uber (SOD)");
                 }
                 143 => {
-                    todo!("will");
+                    todo!("will (SOD)");
                 }
                 144..=147 => {
                     // guard stand: medium mode
@@ -766,7 +765,7 @@ fn scan_info_plane(
                     spawn_fake_hitler(map_data, &mut actors, actor_at, game_state, x, y);
                 }
                 161 => {
-                    todo!("death");
+                    todo!("death (SOD)");
                 }
                 162..=165 => {
                     // ss stand: medium mode
@@ -804,7 +803,18 @@ fn scan_info_plane(
                 170..=173 => {
                     // dogs stand: medium mode
                     if difficulty >= Difficulty::Medium {
-                        todo!("spawn dog medium");
+                        spawn_stand(
+                            tile_map,
+                            map_data,
+                            EnemyType::Dog,
+                            &mut actors,
+                            actor_at,
+                            game_state,
+                            x,
+                            y,
+                            tile - 170,
+                            difficulty,
+                        );
                     }
                 }
                 174..=177 => {
@@ -936,7 +946,18 @@ fn scan_info_plane(
                 206..=209 => {
                     // dogs stand: hard mode
                     if difficulty >= Difficulty::Hard {
-                        todo!("spawn dog hard");
+                        spawn_stand(
+                            tile_map,
+                            map_data,
+                            EnemyType::Dog,
+                            &mut actors,
+                            actor_at,
+                            game_state,
+                            x,
+                            y,
+                            tile - 206,
+                            difficulty,
+                        );
                     }
                 }
                 210..=213 => {
