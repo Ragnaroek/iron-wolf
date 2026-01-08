@@ -4,12 +4,12 @@ mod state_test;
 
 use crate::act1::{open_door, place_item_type};
 use crate::act2::{
-    S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_FAKECHASE1, S_FAKEDIE1, S_GIFTCHASE1,
-    S_GIFTDIE1_5, S_GIFTDIE1_140, S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_GRETELCHASE1,
-    S_GRETELDIE1, S_HITLERDIE1_5, S_HITLERDIE1_140, S_MECHACHASE1, S_MECHADIE1, S_MUTCHASE1,
-    S_MUTDIE1, S_MUTPAIN, S_MUTPAIN1, S_OFCCHASE1, S_OFCDIE1, S_OFCPAIN, S_OFCPAIN1,
-    S_SCHABBCHASE1, S_SCHABBDIE1_10, S_SCHABBDIE1_140, S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1,
-    do_death_scream,
+    S_BLINKYCHASE1, S_BOSSCHASE1, S_BOSSDIE1, S_DOGCHASE1, S_DOGDIE1, S_FAKECHASE1, S_FAKEDIE1,
+    S_FATCHASE1, S_FATDIE1_5, S_FATDIE1_140, S_GIFTCHASE1, S_GIFTDIE1_5, S_GIFTDIE1_140,
+    S_GRDCHASE1, S_GRDDIE1, S_GRDPAIN, S_GRDPAIN1, S_GRETELCHASE1, S_GRETELDIE1, S_HITLERCHASE1,
+    S_HITLERDIE1_5, S_HITLERDIE1_140, S_MECHACHASE1, S_MECHADIE1, S_MUTCHASE1, S_MUTDIE1,
+    S_MUTPAIN, S_MUTPAIN1, S_OFCCHASE1, S_OFCDIE1, S_OFCPAIN, S_OFCPAIN1, S_SCHABBCHASE1,
+    S_SCHABBDIE1_10, S_SCHABBDIE1_140, S_SSCHASE1, S_SSDIE1, S_SSPAIN, S_SSPAIN1, do_death_scream,
 };
 use crate::agent::{give_points, take_damage};
 use crate::assets::SoundName;
@@ -890,6 +890,11 @@ pub fn first_sighting(rc: &mut RenderContext, k: ObjKey, level_state: &mut Level
             new_state(obj, &S_GIFTCHASE1);
             obj.speed *= 3;
         }
+        ClassType::Fat => {
+            rc.play_sound(SoundName::ERLAUBEN);
+            new_state(obj, &S_FATCHASE1);
+            obj.speed *= 3;
+        }
         ClassType::Schabb => {
             rc.play_sound(SoundName::SCHABBSHA);
             new_state(obj, &S_SCHABBCHASE1);
@@ -905,12 +910,16 @@ pub fn first_sighting(rc: &mut RenderContext, k: ObjKey, level_state: &mut Level
             new_state(obj, &S_MECHACHASE1);
             obj.speed *= 3;
         }
-        // TODO realhitlerobj, DIESND
-        // TODO fatobj ERLAUBENSND
-        _ => panic!(
-            "first sight for class type not implemented: {:?}",
-            obj.class
-        ),
+        ClassType::RealHitler => {
+            rc.play_sound(SoundName::DIE);
+            new_state(obj, &S_HITLERCHASE1);
+            obj.speed *= 5;
+        }
+        ClassType::Ghost => {
+            new_state(obj, &S_BLINKYCHASE1);
+            obj.speed *= 2;
+        }
+        _ => { /* ignore */ }
     }
 
     if obj.distance < 0 {
@@ -1238,7 +1247,14 @@ fn kill_actor(
                 }
             }
             ClassType::Fat => {
-                todo!("kill fat");
+                give_points(rc, game_state, 5000);
+                game_state.kill_x = level_state.player().x as usize;
+                game_state.kill_y = level_state.player().y as usize;
+                if rc.sound.digi_mode() != DigiMode::Off {
+                    new_state(level_state.mut_obj(k), &S_FATDIE1_140);
+                } else {
+                    new_state(level_state.mut_obj(k), &S_FATDIE1_5);
+                }
             }
             ClassType::Schabb => {
                 give_points(rc, game_state, 5000);

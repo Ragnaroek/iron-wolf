@@ -1129,7 +1129,11 @@ derive_from! {
 
         GretelDie1 = 393, GretelDie2 = 394, GretelDie3 = 395,
 
-        // TODO fat face
+        // fat face
+        FatW1 = 396, FatW2 = 397, FatW3 = 398, FatW4 = 399,
+        FatShoot1 = 400, FatShoot2 = 401, FatShoot3 = 402, FatShoot4 = 403,
+
+        FatDie1 = 404, FatDie2 = 405, FatDie3 = 406, FatDead = 407,
 
         // bj
         BJW1 = 408, BJW2 = 409, BJW3 = 410, BJW4 = 411,

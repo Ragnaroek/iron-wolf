@@ -3273,7 +3273,263 @@ pub static S_GRETELSHOOT8: StateType = StateType {
     next: Some(&S_GRETELCHASE1),
 };
 
-pub static STATES: [&'static StateType; 281] = [
+//
+// fat
+//
+pub static S_FATSTAND: StateType = StateType {
+    id: 11300,
+    rotate: 0,
+    sprite: Some(Sprite::FatW1),
+    tic_time: 0,
+    think: Some(t_stand),
+    action: None,
+    async_action: None,
+    next: Some(&S_FATSTAND),
+};
+
+pub static S_FATCHASE1: StateType = StateType {
+    id: 11301,
+    rotate: 0,
+    sprite: Some(Sprite::FatW1),
+    tic_time: 10,
+    think: Some(t_fat),
+    action: None,
+    async_action: None,
+    next: Some(&S_FATCHASE1S),
+};
+
+pub static S_FATCHASE1S: StateType = StateType {
+    id: 11302,
+    rotate: 0,
+    sprite: Some(Sprite::FatW1),
+    tic_time: 3,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_FATCHASE2),
+};
+
+pub static S_FATCHASE2: StateType = StateType {
+    id: 11303,
+    rotate: 0,
+    sprite: Some(Sprite::FatW2),
+    tic_time: 8,
+    think: Some(t_fat),
+    action: None,
+    async_action: None,
+    next: Some(&S_FATCHASE3),
+};
+
+pub static S_FATCHASE3: StateType = StateType {
+    id: 11304,
+    rotate: 0,
+    sprite: Some(Sprite::FatW3),
+    tic_time: 10,
+    think: Some(t_fat),
+    action: None,
+    async_action: None,
+    next: Some(&S_FATCHASE3S),
+};
+
+pub static S_FATCHASE3S: StateType = StateType {
+    id: 11305,
+    rotate: 0,
+    sprite: Some(Sprite::FatW3),
+    tic_time: 3,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_FATCHASE4),
+};
+
+pub static S_FATCHASE4: StateType = StateType {
+    id: 11306,
+    rotate: 0,
+    sprite: Some(Sprite::FatW4),
+    tic_time: 8,
+    think: Some(t_fat),
+    action: None,
+    async_action: None,
+    next: Some(&S_FATCHASE1),
+};
+
+pub static S_FATDEATHCAM_140: StateType = StateType {
+    id: 11307,
+    rotate: 0,
+    sprite: Some(Sprite::FatW1),
+    tic_time: 1,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_FATDIE1_140),
+};
+
+pub static S_FATDEATHCAM_5: StateType = StateType {
+    id: 11308,
+    rotate: 0,
+    sprite: Some(Sprite::FatW1),
+    tic_time: 1,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_FATDIE1_5),
+};
+
+pub static S_FATDIE1_140: StateType = StateType {
+    id: 11309,
+    rotate: 0,
+    sprite: Some(Sprite::FatW1),
+    tic_time: 1,
+    think: None,
+    action: Some(a_death_scream),
+    async_action: None,
+    next: Some(&S_FATDIE2_140),
+};
+
+pub static S_FATDIE1_5: StateType = StateType {
+    id: 11310,
+    rotate: 0,
+    sprite: Some(Sprite::FatW1),
+    tic_time: 1,
+    think: None,
+    action: Some(a_death_scream),
+    async_action: None,
+    next: Some(&S_FATDIE2_5),
+};
+
+pub static S_FATDIE2_140: StateType = StateType {
+    id: 11311,
+    rotate: 0,
+    sprite: Some(Sprite::FatW1),
+    tic_time: 140,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_FATDIE3),
+};
+
+pub static S_FATDIE2_5: StateType = StateType {
+    id: 11312,
+    rotate: 0,
+    sprite: Some(Sprite::FatW1),
+    tic_time: 5,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_FATDIE3),
+};
+
+pub static S_FATDIE3: StateType = StateType {
+    id: 11313,
+    rotate: 0,
+    sprite: Some(Sprite::FatDie1),
+    tic_time: 10,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_FATDIE4),
+};
+
+pub static S_FATDIE4: StateType = StateType {
+    id: 11314,
+    rotate: 0,
+    sprite: Some(Sprite::FatDie2),
+    tic_time: 10,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_FATDIE5),
+};
+
+pub static S_FATDIE5: StateType = StateType {
+    id: 11315,
+    rotate: 0,
+    sprite: Some(Sprite::FatDie3),
+    tic_time: 10,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_FATDIE6),
+};
+
+pub static S_FATDIE6: StateType = StateType {
+    id: 11316,
+    rotate: 0,
+    sprite: Some(Sprite::FatDead),
+    tic_time: 20,
+    think: None,
+    action: None,
+    async_action: Some(a_start_death_cam),
+    next: Some(&S_FATDIE6),
+};
+
+pub static S_FATSHOOT1: StateType = StateType {
+    id: 11317,
+    rotate: 0,
+    sprite: Some(Sprite::FatShoot1),
+    tic_time: 30,
+    think: None,
+    action: None,
+    async_action: None,
+    next: Some(&S_FATSHOOT2),
+};
+
+pub static S_FATSHOOT2: StateType = StateType {
+    id: 11318,
+    rotate: 0,
+    sprite: Some(Sprite::FatShoot2),
+    tic_time: 10,
+    think: None,
+    action: Some(t_gift_throw), //same throw as gift
+    async_action: None,
+    next: Some(&S_FATSHOOT3),
+};
+
+pub static S_FATSHOOT3: StateType = StateType {
+    id: 11319,
+    rotate: 0,
+    sprite: Some(Sprite::FatShoot3),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    async_action: None,
+    next: Some(&S_FATSHOOT4),
+};
+
+pub static S_FATSHOOT4: StateType = StateType {
+    id: 11320,
+    rotate: 0,
+    sprite: Some(Sprite::FatShoot4),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    async_action: None,
+    next: Some(&S_FATSHOOT5),
+};
+
+pub static S_FATSHOOT5: StateType = StateType {
+    id: 11321,
+    rotate: 0,
+    sprite: Some(Sprite::FatShoot3),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    async_action: None,
+    next: Some(&S_FATSHOOT6),
+};
+
+pub static S_FATSHOOT6: StateType = StateType {
+    id: 11322,
+    rotate: 0,
+    sprite: Some(Sprite::FatShoot4),
+    tic_time: 10,
+    think: None,
+    action: Some(t_shoot),
+    async_action: None,
+    next: Some(&S_FATCHASE1),
+};
+
+pub static STATES: [&'static StateType; 304] = [
     &S_PLAYER,
     &S_ATTACK,
     &S_GRDSTAND,
@@ -3555,6 +3811,29 @@ pub static STATES: [&'static StateType; 281] = [
     &S_GRETELSHOOT6,
     &S_GRETELSHOOT7,
     &S_GRETELSHOOT8,
+    &S_FATSTAND,
+    &S_FATCHASE1,
+    &S_FATCHASE1S,
+    &S_FATCHASE2,
+    &S_FATCHASE3,
+    &S_FATCHASE3S,
+    &S_FATCHASE4,
+    &S_FATDEATHCAM_140,
+    &S_FATDEATHCAM_5,
+    &S_FATDIE1_140,
+    &S_FATDIE1_5,
+    &S_FATDIE2_140,
+    &S_FATDIE2_5,
+    &S_FATDIE3,
+    &S_FATDIE4,
+    &S_FATDIE5,
+    &S_FATDIE6,
+    &S_FATSHOOT1,
+    &S_FATSHOOT2,
+    &S_FATSHOOT3,
+    &S_FATSHOOT4,
+    &S_FATSHOOT5,
+    &S_FATSHOOT6,
 ];
 
 pub fn get_state_by_id(id: u16) -> Option<&'static StateType> {
@@ -4242,6 +4521,94 @@ fn t_gift(
     }
 }
 
+fn t_fat(
+    rc: &mut RenderContext,
+    k: ObjKey,
+    tics: u64,
+    level_state: &mut LevelState,
+    game_state: &mut GameState,
+    _: &mut ControlState,
+) {
+    let mut dodge = false;
+    let dist = {
+        let obj = level_state.obj(k);
+        let player = level_state.player();
+        let dx = obj.tilex.abs_diff(player.tilex);
+        let dy = obj.tiley.abs_diff(player.tiley);
+        let dist = if dx > dy { dx } else { dy };
+        dist
+    };
+
+    let (player_tile_x, player_tile_y) = {
+        let player = level_state.player();
+        (player.tilex, player.tiley)
+    };
+
+    if check_line(level_state, level_state.obj(k)) {
+        if (rnd_t() as u64) < (tics << 3) {
+            // go into attack frame
+            let mut_obj = level_state.mut_obj(k);
+            new_state(mut_obj, &S_FATSHOOT1);
+            return;
+        }
+        dodge = true;
+    }
+
+    if level_state.obj(k).dir == DirType::NoDir {
+        if dodge {
+            select_dodge_dir(k, level_state, player_tile_x, player_tile_y);
+        } else {
+            select_chase_dir(k, level_state, player_tile_x, player_tile_y);
+        }
+
+        if level_state.obj(k).dir == DirType::NoDir {
+            return;
+        }
+    }
+
+    let obj = level_state.obj(k);
+    let mut mov = obj.speed * tics as i32;
+    while mov != 0 {
+        let distance = level_state.obj(k).distance;
+        if distance < 0 {
+            // waiting for a door to open
+            let door = &mut level_state.doors[(-distance - 1) as usize];
+            open_door(door);
+            if door.action != DoorAction::Open {
+                return;
+            }
+            level_state.update_obj(k, |obj| obj.distance = TILEGLOBAL) // go ahead, the door is now opoen
+        }
+
+        if mov < level_state.obj(k).distance {
+            move_obj(rc, k, level_state, game_state, mov, tics);
+            break;
+        }
+
+        // reached goal tile, so select another one
+
+        // fix position to account for round off during moving
+        level_state.update_obj(k, |obj| {
+            obj.x = ((obj.tilex as i32) << TILESHIFT) + TILEGLOBAL / 2;
+            obj.y = ((obj.tiley as i32) << TILESHIFT) + TILEGLOBAL / 2;
+        });
+
+        mov -= level_state.obj(k).distance;
+
+        if dist < 4 {
+            select_run_dir(k, level_state, player_tile_x, player_tile_y);
+        } else if dodge {
+            select_dodge_dir(k, level_state, player_tile_x, player_tile_y);
+        } else {
+            select_chase_dir(k, level_state, player_tile_x, player_tile_y);
+        }
+
+        if level_state.obj(k).dir == DirType::NoDir {
+            return;
+        }
+    }
+}
+
 fn t_gift_throw(
     rc: &mut RenderContext,
     k: ObjKey,
@@ -4584,7 +4951,7 @@ pub fn spawn_gift(
 ) {
     let mut gift = spawn_new_obj(map_data, x_tile, y_tile, &S_GIFTSTAND, ClassType::Gift);
     gift.speed = SPD_PATROL;
-    gift.hitpoints = START_HITPOINTS[game_state.difficulty as usize][EnemyType::Schabbs as usize];
+    gift.hitpoints = START_HITPOINTS[game_state.difficulty as usize][EnemyType::Gift as usize];
     gift.dir = DirType::North;
     gift.flags = FL_SHOOTABLE | FL_AMBUSH;
     if !game_state.loaded_game {
@@ -4592,6 +4959,26 @@ pub fn spawn_gift(
     }
 
     spawn(actors, actor_at, gift);
+}
+
+pub fn spawn_fat(
+    map_data: &MapSegs,
+    actors: &mut Actors,
+    actor_at: &mut Vec<Vec<At>>,
+    game_state: &mut GameState,
+    x_tile: usize,
+    y_tile: usize,
+) {
+    let mut fat = spawn_new_obj(map_data, x_tile, y_tile, &S_FATSTAND, ClassType::Fat);
+    fat.speed = SPD_PATROL;
+    fat.hitpoints = START_HITPOINTS[game_state.difficulty as usize][EnemyType::Fat as usize];
+    fat.dir = DirType::South;
+    fat.flags = FL_SHOOTABLE | FL_AMBUSH;
+    if !game_state.loaded_game {
+        game_state.kill_total += 1;
+    }
+
+    spawn(actors, actor_at, fat);
 }
 
 pub fn spawn_fake_hitler(
@@ -4902,14 +5289,16 @@ pub fn do_death_scream(
         ClassType::RealHitler => {
             rc.play_sound(SoundName::EVA);
         }
-        ClassType::Gift => {
-            rc.play_sound(SoundName::DONNER);
-        }
         ClassType::Gretel => {
             rc.play_sound(SoundName::MEIN);
         }
-        // TODO fatobj ROSESND
-        _ => todo!("death scream missing: {:?}", obj.class),
+        ClassType::Gift => {
+            rc.play_sound(SoundName::DONNER);
+        }
+        ClassType::Fat => {
+            rc.play_sound(SoundName::ROSE);
+        }
+        _ => { /* ignore */ }
     }
 }
 
@@ -5219,7 +5608,13 @@ fn a_start_death_cam<'a>(
                     new_state(level_state.mut_obj(k), &S_GIFTDEATHCAM_5);
                 }
             }
-            // TODO fatobj
+            ClassType::Fat => {
+                if rc.sound.digi_mode() != DigiMode::Off {
+                    new_state(level_state.mut_obj(k), &S_FATDEATHCAM_140);
+                } else {
+                    new_state(level_state.mut_obj(k), &S_FATDEATHCAM_5);
+                }
+            }
             _ => { /* ignore */ }
         }
     })
