@@ -36,6 +36,10 @@ class OPLProcessor extends AudioWorkletProcessor {
         let ptr_bytes = new Uint8Array(this.wasm.memory.buffer, this.adl_data_ptr, this.adl_data_len);
         ptr_bytes.set(bytes);
         this.wasm.play_adl(this.generatorPtr, this.adl_data_ptr, this.adl_data_len);
+      } else if (event.data.cmd === "write_reg") {
+        this.wasm.write_reg(event.data.reg, event.data.value);
+      } else if (event.data.cmd === "stop_imf") {
+        this.wasm.stop_imf();
       }
     };
   }
