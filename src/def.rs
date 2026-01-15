@@ -134,9 +134,15 @@ pub struct BenchmarkResult {
     pub unbounded: Duration,
 }
 
+#[cfg(any(feature = "sdl", feature = "test"))]
 pub struct DigiSound {
     pub chunk: Box<[u8]>,
     pub channel: DigiChannel,
+}
+
+#[cfg(feature = "web")]
+pub struct DigiSound {
+    pub chunk: Vec<f32>,
 }
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]

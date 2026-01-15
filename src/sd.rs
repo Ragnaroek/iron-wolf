@@ -24,7 +24,13 @@ use sdl2::audio::{self, AudioCVT, AudioFormat};
 #[cfg(any(feature = "sdl", feature = "test"))]
 use sdl2::mixer::{self, Channel};
 
-const ORIG_SAMPLE_RATE: i32 = 7042;
+#[cfg(feature = "web")]
+use web_sys::{AudioContext, AudioContextOptions};
+
+const SOURCE_SAMPLE_RATE: i32 = 7042;
+const TARGET_SAMPLE_RATE: f32 = 44100.0;
+const PLAYBACK_RATE: f32 = SOURCE_SAMPLE_RATE as f32 / TARGET_SAMPLE_RATE;
+
 const MAX_TRACKS: usize = 10;
 
 const ATABLE_MAX: i32 = 15;
@@ -194,6 +200,7 @@ pub struct Sound {
     sound_playing: Option<SoundName>,
     left_pos: u8,
     right_pos: u8,
+    digi_context: AudioContext,
 }
 
 #[cfg(feature = "test")]
@@ -253,13 +260,27 @@ pub async fn startup(_: Arc<Runtime>) -> Result<Sound, String> {
     //"TODO impl proper web sd startup (currently a dummy)")
     let mut opl = OPL::new().await?;
     opl.init(OPL_SETTINGS).await?;
+
+    let digi_context = init_digi_sound_context()?;
+
     Ok(Sound {
         modes: default_modes(),
         opl: opl,
         sound_playing: None,
         left_pos: 0,
         right_pos: 0,
+        digi_context,
     })
+}
+
+#[cfg(feature = "web")]
+fn init_digi_sound_context() -> Result<AudioContext, String> {
+    let opts = AudioContextOptions::new();
+    opts.set_sample_rate(TARGET_SAMPLE_RATE);
+
+    let ctx =
+        AudioContext::new_with_context_options(&opts).map_err(|_| "digi audio context init")?;
+    Ok(ctx)
 }
 
 #[cfg(feature = "sdl")]
@@ -453,7 +474,7 @@ impl Sound {
         let cvt = AudioCVT::new(
             audio::AudioFormat::U8,
             1,
-            ORIG_SAMPLE_RATE,
+            SOURCE_SAMPLE_RATE,
             mon.format,
             mon.channels as u8,
             mon.frequency,
@@ -603,21 +624,50 @@ impl Sound {
         self.sound_playing = Some(sound); // This sound _will_ be played
 
         let may_digi_sound = assets.digi_sounds.get(&sound);
-        if may_digi_sound.is_some() && self.modes.digi == DigiMode::SoundBlaster {
-            //TODO "implement digi sound playback on web", as for now silence
+        if let Some(digi_sound) = may_digi_sound
+            && self.modes.digi == DigiMode::SoundBlaster
+        {
+            self.play_digi(digi_sound).expect("play digi sound")
         } else {
             if self.modes.sound == SoundMode::AdLib {
                 let adl_sound = assets.audio_sounds[sound as usize].clone();
-                self.opl.play_adl(adl_sound).expect("play sound file");
+                self.opl.play_adl(adl_sound).expect("play adl sound");
             }
         }
         true
     }
 
+    fn play_digi(&self, digi_sound: &DigiSound) -> Result<(), &str> {
+        let frames = digi_sound.chunk.len() as u32;
+        let buffer = self
+            .digi_context
+            .create_buffer(1, frames, TARGET_SAMPLE_RATE)
+            .map_err(|_| "create audio buffer")?;
+        buffer
+            .copy_to_channel_with_start_in_channel(&digi_sound.chunk, 0, 0)
+            .map_err(|_| "data copy to channel")?;
+
+        let src = self
+            .digi_context
+            .create_buffer_source()
+            .map_err(|_| "buffer source creation")?;
+        src.set_buffer(Some(&buffer));
+        src.playback_rate().set_value(PLAYBACK_RATE);
+
+        src.connect_with_audio_node(&self.digi_context.destination())
+            .map_err(|_| "audio connect")?;
+
+        src.start().map_err(|_| "sound start")
+    }
+
     pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
+        /*
+        TODO check sound prio on web, for that we need to be able
+        to track the sound end in OPL and the digi audio context
         if !check_sound_prio(&self.sound_playing, assets, sound) {
             return false;
         }
+        */
         self.force_play_sound(sound, assets)
     }
 
@@ -676,14 +726,14 @@ impl Sound {
 
     pub fn prepare_digi_sound(
         &self,
-        channel: DigiChannel,
+        _: DigiChannel,
         original_data: Vec<u8>,
     ) -> Result<DigiSound, String> {
-        //TODO proper impl web digi sound preparation
-        Ok(DigiSound {
-            chunk: Box::new([0; 0]),
-            channel: DigiChannel::Any,
-        })
+        let converted: Vec<f32> = original_data
+            .iter()
+            .map(|&s| (s as f32 - 128.0) / 128.0)
+            .collect();
+        Ok(DigiSound { chunk: converted })
     }
 
     pub fn sound_mode(&self) -> SoundMode {
