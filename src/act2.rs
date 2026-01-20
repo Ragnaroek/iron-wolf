@@ -6,7 +6,7 @@ use std::pin::Pin;
 
 use crate::act1::open_door;
 use crate::agent::{S_ATTACK, S_PLAYER, take_damage};
-use crate::assets::SoundName;
+use crate::assets::{SoundName, W3D1};
 use crate::def::{
     AMBUSH_TILE, ANGLES_F64, ActiveType, Actors, At, ClassType, ControlState, Difficulty, DirType,
     DoorAction, EnemyType, FL_AMBUSH, FL_NEVERMARK, FL_NONMARK, FL_SHOOTABLE, FL_VISABLE,
@@ -5263,7 +5263,12 @@ pub fn do_death_scream(
             rc.play_sound_loc_actor(SoundName::AHHHG, obj);
         }
         ClassType::Guard => {
-            rc.play_sound_loc_actor(GUARD_DEATH_SCREAMS[(rnd_t() % 8) as usize], obj);
+            let scream_ix = if rc.variant.id == W3D1.id {
+                (rnd_t() % 2) as usize
+            } else {
+                (rnd_t() % 8) as usize
+            };
+            rc.play_sound_loc_actor(GUARD_DEATH_SCREAMS[scream_ix], obj);
         }
         ClassType::Officer => {
             rc.play_sound_loc_actor(SoundName::NEINSOVAS, obj);

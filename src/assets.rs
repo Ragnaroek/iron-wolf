@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use crate::def::{Assets, Font, Graphic, IWConfig, TileData, WeaponType};
 use crate::gamedata;
 use crate::loader::Loader;
-use crate::map::{load_map, load_map_headers, load_map_offsets, MapFileType, MapSegs, MapType};
-use crate::patch::{graphic_patch, PatchConfig};
+use crate::map::{MapFileType, MapSegs, MapType, load_map, load_map_headers, load_map_offsets};
+use crate::patch::{PatchConfig, graphic_patch};
 use crate::sd::Sound;
 use crate::util::DataReader;
 
@@ -52,6 +52,7 @@ pub struct WolfVariant {
     pub start_music: usize,
     pub start_adlib_sound: usize,
     pub start_digi_sound: usize,
+    pub num_digi_sound: usize, // shareware version contains less digi sounds
     pub start_end_text: usize,
     pub graphic_lump_map: &'static [usize; NUM_GRAPHICS],
 }
@@ -68,6 +69,7 @@ pub static W3D1: WolfVariant = WolfVariant {
     start_music: 261,
     start_adlib_sound: 87,
     start_digi_sound: 174,
+    num_digi_sound: 20,
     start_end_text: 155,
     graphic_lump_map: &W3D1_LUMP_MAP,
 };
@@ -225,6 +227,7 @@ pub static W3D3: WolfVariant = WolfVariant {
     start_music: 0,
     start_adlib_sound: 0,
     start_digi_sound: 0,
+    num_digi_sound: DIGI_LIST.len(),
     start_end_text: 0,
     graphic_lump_map: &W3D1_LUMP_MAP, // TODO not correct, a placeholder
 };
@@ -239,6 +242,7 @@ pub static W3D6: WolfVariant = WolfVariant {
     start_music: 261,
     start_adlib_sound: 87,
     start_digi_sound: 174,
+    num_digi_sound: DIGI_LIST.len(),
     start_end_text: 143,
     graphic_lump_map: &W3D6_LUMP_MAP,
 };
@@ -395,6 +399,7 @@ pub static SOD: WolfVariant = WolfVariant {
     start_music: 243,
     start_adlib_sound: 81,
     start_digi_sound: 162,
+    num_digi_sound: DIGI_LIST.len(), // TODO not correct, a placeholder
     start_end_text: 168,
     graphic_lump_map: &W3D6_LUMP_MAP, // TODO not correct, a placeholder
 };
@@ -806,7 +811,7 @@ const STARTTILE8: usize = 135;
 const STARTTILE8M: usize = 136;
 const STARTEXTERNS: usize = 136;
 const NUM_FONT: usize = 2;
-pub const NUM_DIGI_SOUNDS: usize = 47;
+pub const NUM_DIGI_SOUNDS_FULL_VERSION: usize = 47;
 
 pub struct Huffnode {
     bit0: u16,
@@ -826,7 +831,7 @@ pub struct DigiMapEntry {
     pub channel: DigiChannel,
 }
 
-pub static DIGI_MAP: [DigiMapEntry; NUM_DIGI_SOUNDS] = [
+pub static DIGI_LIST: [DigiMapEntry; NUM_DIGI_SOUNDS_FULL_VERSION] = [
     DigiMapEntry {
         sound: SoundName::HALT,
         page_no: 0,
@@ -1293,11 +1298,7 @@ fn grfilepos(chunk: usize, grstarts: &Vec<u8>) -> i32 {
         grstarts[offset + 2],
         0,
     ]);
-    if value == 0xffffff {
-        -1
-    } else {
-        value
-    }
+    if value == 0xffffff { -1 } else { value }
 }
 
 fn expand_chunk(chunk: usize, data_in: &[u8], grhuffman: &Vec<Huffnode>) -> Vec<u8> {
@@ -1417,8 +1418,12 @@ pub fn load_all_assets(
     let mut gamedata_cursor = Cursor::new(gamedata_bytes);
     let textures = gamedata::load_all_textures(&mut gamedata_cursor, &gamedata_headers)?;
     let sprites = gamedata::load_all_sprites(&mut gamedata_cursor, &gamedata_headers)?;
-    let digi_sounds =
-        gamedata::load_all_digi_sounds(sound, &mut gamedata_cursor, &gamedata_headers)?;
+    let digi_sounds = gamedata::load_all_digi_sounds(
+        sound,
+        &mut gamedata_cursor,
+        &gamedata_headers,
+        loader.variant(),
+    )?;
 
     let mut audio_header_cursor = Cursor::new(loader.load_wolf_file(WolfFile::AudioHead));
     let audio_headers = gamedata::load_audio_headers(&mut audio_header_cursor)?;

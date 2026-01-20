@@ -6,7 +6,7 @@ use std::str;
 use opl::chip::AdlSound;
 
 use crate::assets::WolfVariant;
-use crate::assets::{DIGI_MAP, SoundName};
+use crate::assets::{DIGI_LIST, SoundName};
 use crate::def::DigiSound;
 use crate::sd::{DigiInfo, Sound};
 use crate::util::DataReader;
@@ -195,6 +195,7 @@ pub fn load_all_digi_sounds<M: Read + Seek>(
     sound: &Sound,
     data: &mut M,
     headers: &GamedataHeaders,
+    variant: &WolfVariant,
 ) -> Result<HashMap<SoundName, DigiSound>, String> {
     let sound_info_page = load_page(data, headers, (headers.num_chunks - 1) as usize)?;
     let num_digi = (headers.headers[(headers.num_chunks - 1) as usize].length / 4) as usize;
@@ -215,7 +216,9 @@ pub fn load_all_digi_sounds<M: Read + Seek>(
     }
 
     let mut sounds = HashMap::new();
-    for digi_sound in &DIGI_MAP {
+
+    for i in 0..variant.num_digi_sound {
+        let digi_sound = &DIGI_LIST[i];
         let digi = &digi_list[digi_sound.page_no];
         let digi_data = load_digi_page(data, headers, digi)?;
         sounds.insert(
