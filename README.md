@@ -21,4 +21,4 @@ It will run the shareware version, that is also checked in along with the code
 as testdata.
 
 Alternatively you can play the web version here:
-https://ragnaroek.github.io/iron-wolf/
+https://wolf.ironmule.dev/
