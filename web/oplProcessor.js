@@ -5,6 +5,7 @@ class OPLProcessor extends AudioWorkletProcessor {
     this.imf_data_len = 0;
     this.adl_data_ptr = 0;
     this.adl_data_len = 0;
+    this.adl_playing = false;
 
     const { wasmBytes, mixerRate, imfClockRate, adlClockRate } = options.processorOptions;
     const module = new WebAssembly.Module(wasmBytes);
@@ -36,6 +37,7 @@ class OPLProcessor extends AudioWorkletProcessor {
         let ptr_bytes = new Uint8Array(this.wasm.memory.buffer, this.adl_data_ptr, this.adl_data_len);
         ptr_bytes.set(bytes);
         this.wasm.play_adl(this.generatorPtr, this.adl_data_ptr, this.adl_data_len);
+        this.adl_playing = true;
       } else if (event.data.cmd === "write_reg") {
         this.wasm.write_reg(event.data.reg, event.data.value);
       } else if (event.data.cmd === "stop_imf") {
@@ -53,6 +55,14 @@ class OPLProcessor extends AudioWorkletProcessor {
       output[0][i] = bytes[i * 2];
       output[1][i] = bytes[i * 2 + 1];
     }
+
+    const adl_playing = this.wasm.is_adl_playing(this.generatorPtr);
+    if (this.adl_playing && !adl_playing) {
+      this.adl_playing = false;
+      //notify on "falling flank" to the main thread
+      this.port.postMessage("adl_finished");
+    }
+
     return true; // keep processor alive
   }
 }

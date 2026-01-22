@@ -1,5 +1,9 @@
-use std::sync::{Arc, Mutex};
+use std::cell::Cell;
+use std::rc::Rc;
+use std::sync::Arc;
 use tokio::runtime::Runtime;
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::prelude::*;
 use web_sys::{AudioContext, AudioContextOptions};
 
 use opl::{OPL, OPLSettings};
@@ -13,12 +17,11 @@ use crate::sd::{
     DigiMode, Modes, MusicMode, SOURCE_SAMPLE_RATE, SoundMode, check_sound_prio, clear_music,
     default_modes, load_track, sound_loc,
 };
-use crate::start::quit;
 
 pub struct Sound {
     modes: Modes,
     pub opl: OPL,
-    sound_playing: Option<SoundName>,
+    sound_playing: Rc<Cell<Option<SoundName>>>,
     left_pos: u8,
     right_pos: u8,
     digi_context: AudioContext,
@@ -40,8 +43,8 @@ pub async fn startup(_: Arc<Runtime>) -> Result<Sound, String> {
 
     Ok(Sound {
         modes: default_modes(),
-        opl: opl,
-        sound_playing: None,
+        opl,
+        sound_playing: Rc::new(Cell::new(None)),
         left_pos: 0,
         right_pos: 0,
         digi_context,
@@ -59,7 +62,7 @@ fn init_digi_sound_context() -> Result<AudioContext, String> {
 
 impl Sound {
     pub fn is_sound_playing(&mut self, sound: SoundName) -> bool {
-        if let Some(playing_sound) = self.sound_playing {
+        if let Some(playing_sound) = self.sound_playing.get() {
             playing_sound == sound
         } else {
             false
@@ -67,11 +70,11 @@ impl Sound {
     }
 
     pub fn is_any_sound_playing(&mut self) -> bool {
-        self.sound_playing.is_some()
+        self.sound_playing.get().is_some()
     }
 
     pub fn force_play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
-        self.sound_playing = Some(sound); // This sound _will_ be played
+        self.sound_playing.set(Some(sound)); // This sound _will_ be played
 
         let may_digi_sound = assets.digi_sounds.get(&sound);
         if let Some(digi_sound) = may_digi_sound
@@ -81,13 +84,18 @@ impl Sound {
         } else {
             if self.modes.sound == SoundMode::AdLib {
                 let adl_sound = assets.audio_sounds[sound as usize].clone();
-                self.opl.play_adl(adl_sound).expect("play adl sound");
+                let sound_playing_clone = self.sound_playing.clone();
+                self.opl
+                    .play_adl(adl_sound, move || {
+                        sound_playing_clone.set(None);
+                    })
+                    .expect("play adl sound");
             }
         }
         true
     }
 
-    fn play_digi(&self, digi_sound: &DigiSound) -> Result<(), &str> {
+    fn play_digi(&mut self, digi_sound: &DigiSound) -> Result<(), &str> {
         let frames = digi_sound.chunk.len() as u32;
         let buffer = self
             .digi_context
@@ -104,6 +112,15 @@ impl Sound {
         src.set_buffer(Some(&buffer));
         src.playback_rate().set_value(PLAYBACK_RATE);
 
+        let playing_clone = self.sound_playing.clone();
+        let on_ended = Closure::<dyn FnMut()>::new(move || {
+            playing_clone.set(None);
+        });
+
+        src.add_event_listener_with_callback("ended", on_ended.as_ref().unchecked_ref())
+            .unwrap();
+        on_ended.forget();
+
         src.connect_with_audio_node(&self.digi_context.destination())
             .map_err(|_| "audio connect")?;
 
@@ -111,13 +128,9 @@ impl Sound {
     }
 
     pub fn play_sound(&mut self, sound: SoundName, assets: &Assets) -> bool {
-        /*
-        TODO check sound prio on web, for that we need to be able
-        to track the sound end in OPL and the digi audio context
-        if !check_sound_prio(&self.sound_playing, assets, sound) {
+        if !check_sound_prio(&self.sound_playing.get(), assets, sound) {
             return false;
         }
-        */
         self.force_play_sound(sound, assets)
     }
 

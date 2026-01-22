@@ -536,7 +536,7 @@ impl RenderContext {
     // sound helpers
 
     pub fn play_sound(&mut self, sound: SoundName) -> bool {
-        self.sound.play_sound(sound, &self.assets) // TODO rename back to play_sound
+        self.sound.play_sound(sound, &self.assets)
     }
 
     pub fn force_play_sound(&mut self, sound: SoundName) -> bool {

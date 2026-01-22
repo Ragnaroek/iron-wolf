@@ -259,8 +259,6 @@ fn handle_upload(event: web_sys::Event, loader: Rc<RefCell<WebLoader>>) {
 }
 
 fn handle_load(event: web_sys::Event, name: String, loader: Rc<RefCell<WebLoader>>) {
-    web_sys::console::log_1(&format!("handle_load").into());
-
     let reader = event
         .target()
         .expect("reader target")
