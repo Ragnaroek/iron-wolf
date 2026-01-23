@@ -16,6 +16,7 @@ web = [
     "vga-emu/web",
     "opl-emu/web",
     "tokio/rt",
+    "dep:serde-wasm-bindgen",
     "dep:wasm-bindgen",
     "dep:wasm-bindgen-futures",
     "dep:console_error_panic_hook",
@@ -71,6 +72,7 @@ libc = "0.2.177" # temp override, until sdl3/mixed can be used which also will r
 wasm-bindgen = { version = "0.2.106", optional = true, features = [
     "serde-serialize",
 ] }
+serde-wasm-bindgen = { version = "0.6.5", optional = true }
 wasm-bindgen-futures = { version = "0.4.56", optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 js-sys = { version = "0.3.83", optional = true }

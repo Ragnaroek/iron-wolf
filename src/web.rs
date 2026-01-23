@@ -157,7 +157,7 @@ impl Loader for WebLoader {
         return self.variant;
     }
 
-    fn write_wolf_file(&self, file: WolfFile, data: &[u8]) -> Result<(), String> {
+    fn write_wolf_file(&self, _file: WolfFile, _data: &[u8]) -> Result<(), String> {
         todo!("write_wolf_file not implemented for web");
     }
 
@@ -181,16 +181,16 @@ impl Loader for WebLoader {
         }
     }
     // panics, if patch path is not set
-    fn load_patch_data_file(&self, name: String) -> Vec<u8> {
+    fn load_patch_data_file(&self, _name: String) -> Vec<u8> {
         todo!("patch file data loading not implemented for web");
     }
-    fn load_save_game_head(&self, which: usize) -> Result<Vec<u8>, String> {
+    fn load_save_game_head(&self, _which: usize) -> Result<Vec<u8>, String> {
         todo!("save game loading not implemented yet for web");
     }
-    fn load_save_game(&self, which: usize) -> Result<Vec<u8>, String> {
+    fn load_save_game(&self, _which: usize) -> Result<Vec<u8>, String> {
         todo!("save game loading not implemented yet for web");
     }
-    fn save_save_game(&self, which: usize, bytes: &[u8]) -> Result<(), String> {
+    fn save_save_game(&self, _which: usize, _bytes: &[u8]) -> Result<(), String> {
         todo!("save game saving not implemented yet for web");
     }
 
@@ -284,7 +284,7 @@ fn handle_load(event: web_sys::Event, name: String, loader: Rc<RefCell<WebLoader
 #[wasm_bindgen]
 pub fn gamepal_color(ix: usize) -> JsValue {
     let result = assets::gamepal_color(ix);
-    JsValue::from_serde(&result).unwrap()
+    serde_wasm_bindgen::to_value(&result).expect("serialise gamepal_color")
 }
 
 // Gamedata
@@ -299,11 +299,11 @@ pub fn load_gamedata_headers(buffer: &Buffer) -> JsValue {
     .to_vec();
 
     let result = gamedata::load_gamedata_headers(&bytes).unwrap();
-    JsValue::from_serde(&result).unwrap()
+    serde_wasm_bindgen::to_value(&result).expect("serialize gamedata headers")
 }
 
 #[wasm_bindgen]
-pub fn load_texture(gamedata_js: &Buffer, header_js: &JsValue) -> JsValue {
+pub fn load_texture(gamedata_js: &Buffer, header_js: JsValue) -> JsValue {
     let gamedata: Vec<u8> = js_sys::Uint8Array::new_with_byte_offset_and_length(
         &gamedata_js.buffer(),
         gamedata_js.byte_offset(),
@@ -311,7 +311,8 @@ pub fn load_texture(gamedata_js: &Buffer, header_js: &JsValue) -> JsValue {
     )
     .to_vec();
 
-    let header: gamedata::GamedataHeader = header_js.into_serde().unwrap();
+    let header: gamedata::GamedataHeader =
+        serde_wasm_bindgen::from_value(header_js).expect("deserialize header");
     let result_load = gamedata::load_texture(&mut Cursor::new(gamedata), &header);
     if result_load.is_err() {
         println!("result = {:?}", result_load.as_ref().err());
@@ -319,7 +320,7 @@ pub fn load_texture(gamedata_js: &Buffer, header_js: &JsValue) -> JsValue {
         println!("texture load ok");
     }
     let result = result_load.expect("load texture");
-    JsValue::from_serde(&result).expect("deserialize texture")
+    serde_wasm_bindgen::to_value(&result).expect("deserialize texture")
 }
 
 // Map
@@ -327,8 +328,8 @@ pub fn load_texture(gamedata_js: &Buffer, header_js: &JsValue) -> JsValue {
 #[wasm_bindgen]
 pub fn load_map(
     map_data_js: &Buffer,
-    map_headers_js: &JsValue,
-    map_offsets_js: &JsValue,
+    map_headers_js: JsValue,
+    map_offsets_js: JsValue,
     mapnum: usize,
 ) -> JsValue {
     let map_data: Vec<u8> = js_sys::Uint8Array::new_with_byte_offset_and_length(
@@ -338,8 +339,10 @@ pub fn load_map(
     )
     .to_vec();
 
-    let map_headers: Vec<map::MapType> = map_headers_js.into_serde().unwrap();
-    let map_offsets: map::MapFileType = map_offsets_js.into_serde().unwrap();
+    let map_headers: Vec<map::MapType> =
+        serde_wasm_bindgen::from_value(map_headers_js).expect("deserialise maptype");
+    let map_offsets: map::MapFileType =
+        serde_wasm_bindgen::from_value(map_offsets_js).expect("deserialise mapfiletype");
     let result = map::load_map(
         &mut Cursor::new(map_data),
         &map_headers,
@@ -347,7 +350,7 @@ pub fn load_map(
         mapnum,
     )
     .unwrap();
-    JsValue::from_serde(&result).unwrap()
+    serde_wasm_bindgen::to_value(&result).expect("serialise mapsegs")
 }
 
 #[wasm_bindgen]
@@ -360,11 +363,11 @@ pub fn load_map_offsets(buffer: &Buffer) -> JsValue {
     .to_vec();
 
     let result = map::load_map_offsets(&bytes).unwrap();
-    JsValue::from_serde(&result).unwrap()
+    serde_wasm_bindgen::to_value(&result).expect("serialise mapfiletype")
 }
 
 #[wasm_bindgen]
-pub fn load_map_headers(buffer: &Buffer, offsets_js: &JsValue) -> JsValue {
+pub fn load_map_headers(buffer: &Buffer, offsets_js: JsValue) -> JsValue {
     let bytes: Vec<u8> = js_sys::Uint8Array::new_with_byte_offset_and_length(
         &buffer.buffer(),
         buffer.byte_offset(),
@@ -372,7 +375,8 @@ pub fn load_map_headers(buffer: &Buffer, offsets_js: &JsValue) -> JsValue {
     )
     .to_vec();
 
-    let offsets: map::MapFileType = offsets_js.into_serde().unwrap();
+    let offsets: map::MapFileType =
+        serde_wasm_bindgen::from_value(offsets_js).expect("deserialise mapfiletype");
     let (_, result) = map::load_map_headers(&bytes, offsets).unwrap();
-    JsValue::from_serde(&result).unwrap()
+    serde_wasm_bindgen::to_value(&result).expect("serialise maptype")
 }
