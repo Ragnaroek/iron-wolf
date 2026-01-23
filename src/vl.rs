@@ -3,8 +3,8 @@ use vga::{ColorReg, VGA};
 pub fn set_palette(vga: &mut VGA, palette: &[u8]) {
     debug_assert_eq!(palette.len(), 768);
     vga.set_color_reg(ColorReg::AddressWriteMode, 0);
-    for i in 0..768 {
-        vga.set_color_reg(ColorReg::Data, palette[i]);
+    for v in palette.iter().take(768) {
+        vga.set_color_reg(ColorReg::Data, *v);
     }
 }
 

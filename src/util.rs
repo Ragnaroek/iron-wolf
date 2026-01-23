@@ -86,7 +86,7 @@ impl DataReader<'_> {
     }
 
     pub fn offset(&self) -> usize {
-        return self.offset;
+        self.offset
     }
 }
 
@@ -119,8 +119,8 @@ impl DataWriter {
     }
 
     pub fn write_bytes(&mut self, bytes: &[u8]) {
-        for i in 0..bytes.len() {
-            self.data[self.offset] = bytes[i];
+        for byte in bytes {
+            self.data[self.offset] = *byte;
             self.offset += 1;
         }
     }
@@ -162,7 +162,7 @@ impl DataWriter {
     }
 
     pub fn offset(&self) -> usize {
-        return self.offset;
+        self.offset
     }
 }
 

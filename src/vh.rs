@@ -22,7 +22,7 @@ pub async fn vw_fade_out(vga: &mut VGA) {
 }
 
 pub async fn vw_fade_in(vga: &mut VGA) {
-    fade_in(vga, 0, 255, &GAMEPAL, 30).await
+    fade_in(vga, 0, 255, GAMEPAL, 30).await
 }
 
 pub fn draw_tile_8(rc: &mut RenderContext, x: usize, y: usize, tile: usize) {

@@ -43,6 +43,5 @@ pub fn rnd_t() -> u8 {
         Some((x + 1) & 0xFF)
     });
     let ix = RND_INDEX.load(Ordering::Relaxed);
-    let v = RND_TABLE[ix];
-    v
+    RND_TABLE[ix]
 }
