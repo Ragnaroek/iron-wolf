@@ -1,5 +1,3 @@
-#[cfg(feature = "tracing")]
-use tracing::instrument;
 use vga::util::sleep;
 
 use std::mem;
@@ -263,7 +261,6 @@ impl RenderContext {
         self.bufferofs.load(std::sync::atomic::Ordering::Relaxed)
     }
 
-    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     pub async fn activate_buffer(&mut self, offset: usize) {
         let addr_parts = offset.to_le_bytes();
         self.vga.set_crt_data(CRTReg::StartAdressLow, addr_parts[0]);
@@ -397,7 +394,6 @@ impl RenderContext {
         vl::fade_in(&mut self.vga, 0, 255, GAMEPAL, 30).await;
     }
 
-    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     pub fn fizzle_fade<'a>(
         &mut self,
         source: usize,

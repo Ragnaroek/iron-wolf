@@ -1,6 +1,3 @@
-#[cfg(feature = "tracing")]
-use tracing::instrument;
-
 use web_time::{Duration, Instant};
 
 use vga::util::sleep;
@@ -48,7 +45,6 @@ impl Ticker {
         self.last_count = 0;
     }
 
-    #[cfg_attr(feature = "tracing", instrument(skip_all))]
     pub async fn wait_for_tic(&mut self) -> u64 {
         if self.last_count > self.get_count() {
             // if the game was paused a LONG time

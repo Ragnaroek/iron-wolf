@@ -2,9 +2,6 @@
 #[path = "./draw_test.rs"]
 mod draw_test;
 
-#[cfg(feature = "tracing")]
-use tracing::instrument;
-
 use crate::act2::S_DEATH_CAM;
 use crate::agent::get_bonus;
 use crate::def::{
@@ -519,7 +516,6 @@ impl RayCast {
     }
 }
 
-#[cfg_attr(feature = "tracing", instrument(skip_all))]
 pub fn wall_refresh(rc: &mut RenderContext, game_state: &GameState, level_state: &mut LevelState) {
     rc.cast.init_ray_cast_consts(
         &rc.projection,
@@ -555,7 +551,6 @@ pub fn wall_refresh(rc: &mut RenderContext, game_state: &GameState, level_state:
     }
 }
 
-#[cfg_attr(feature = "tracing", instrument(skip_all))]
 pub async fn three_d_refresh(
     rc: &mut RenderContext,
     game_state: &mut GameState,
@@ -596,7 +591,6 @@ pub async fn three_d_refresh(
 }
 
 // Clears the screen and already draws the bottom and ceiling
-#[cfg_attr(feature = "tracing", instrument(skip_all))]
 fn clear_screen(rc: &mut RenderContext, state: &GameState) {
     let ceil_color = VGA_CEILING[state.episode * 10 + state.map_on];
 
@@ -848,7 +842,6 @@ fn vert_wall(i: usize) -> usize {
     if i == 0 { 0 } else { (i - 1) * 2 + 1 }
 }
 
-#[cfg_attr(feature = "tracing", instrument(skip_all))]
 fn draw_player_weapon(
     rc: &mut RenderContext,
     level_state: &LevelState,
@@ -889,7 +882,6 @@ fn draw_player_weapon(
     }
 }
 
-#[cfg_attr(feature = "tracing", instrument(skip_all))]
 fn draw_scaleds(rc: &mut RenderContext, game_state: &mut GameState, level_state: &mut LevelState) {
     let mut visptr = 0;
     // place static objects

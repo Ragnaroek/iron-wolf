@@ -4,11 +4,6 @@ mod play_test;
 
 use web_time::{Duration, Instant};
 
-#[cfg(feature = "tracing")]
-use tracing::info_span;
-#[cfg(feature = "tracing")]
-use tracing::instrument;
-
 use vga::VGA;
 use vga::input::NumCode;
 use vga::util::sleep;
@@ -340,10 +335,6 @@ pub async fn play_loop(
         } else {
             None
         };
-
-        #[cfg(feature = "tracing")]
-        let span = info_span!("frame", id = _frame_id);
-        _frame_id += 1;
 
         let (next_frame_start, curr_tics) = rc.ticker.next_tics_time(1);
         let want_frame_start = next_frame_start + (TARGET_FRAME_DURATION / 2); // target mid frame time
@@ -750,7 +741,6 @@ pub fn center_window(
     );
 }
 
-#[cfg_attr(feature = "tracing", instrument(skip_all))]
 async fn check_keys(
     rc: &mut RenderContext,
     wolf_config: &mut WolfConfig,
@@ -983,7 +973,6 @@ fn clear_palette_shifts(game_state: &mut GameState) {
     game_state.damage_count = 0;
 }
 
-#[cfg_attr(feature = "tracing", instrument(skip_all))]
 async fn update_palette_shifts(
     game_state: &mut GameState,
     vga: &mut VGA,

@@ -29,12 +29,6 @@ test = [
     "sdl2",
     "tokio/rt-multi-thread",
 ]
-tracing = [
-    "vga-emu/tracing",
-    "dep:tracing",
-    "dep:tracing-subscriber",
-    "dep:tracing-appender",
-]
 
 [lib]
 name = "iw"
@@ -52,15 +46,6 @@ vga-emu = "0.8.3"  # { path = "../vga-emu/" }
 opl-emu = "0.4.2"  # { path = "../opl-emu/" }
 web-time = "1.1.0" # std::time for web that needs an crate to be compatible :/
 tokio = { version = "1.48.0", default-features = false }
-
-# feature tracing
-tracing = { version = "0.1.41", optional = true, default-features = false, features = [
-    "attributes",
-] }
-tracing-subscriber = { version = "0.3.20", optional = true, default-features = false, features = [
-    "json",
-] }
-tracing-appender = { version = "0.2.3", optional = true, default-features = false }
 
 # feature sdl
 sdl2 = { version = "0.38.0", optional = true, default-features = false, features = [
