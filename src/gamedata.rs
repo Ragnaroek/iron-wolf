@@ -7,8 +7,7 @@ use opl::chip::AdlSound;
 
 use crate::assets::WolfVariant;
 use crate::assets::{DIGI_LIST, SoundName};
-use crate::def::DigiSound;
-use crate::sd::{DigiInfo, Sound};
+use crate::sd::{DigiInfo, DigiSound, Sound};
 use crate::util::DataReader;
 
 #[derive(Serialize, Deserialize, Debug)]

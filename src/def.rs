@@ -9,11 +9,12 @@ use std::path::PathBuf;
 use std::pin::Pin;
 use std::time::Duration;
 
-use crate::assets::{DigiChannel, SoundName};
+use crate::assets::SoundName;
 use crate::fixed::Fixed;
 use crate::gamedata::{GamedataHeaders, SpriteData, TextureData};
 use crate::map::{MapFileType, MapSegs, MapType};
 use crate::rc::{PAGE_1_START, PAGE_2_START, PAGE_3_START, RenderContext};
+use crate::sd::DigiSound;
 use crate::start::quit;
 
 pub const MAX_ACTORS: usize = 150;
@@ -132,17 +133,6 @@ pub struct BenchmarkResult {
     pub total: Duration,
     pub real: Duration,
     pub unbounded: Duration,
-}
-
-#[cfg(any(feature = "sdl", feature = "test"))]
-pub struct DigiSound {
-    pub chunk: Box<[u8]>,
-    pub channel: DigiChannel,
-}
-
-#[cfg(feature = "web")]
-pub struct DigiSound {
-    pub chunk: Vec<f32>,
 }
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]

@@ -9,7 +9,7 @@ use web_sys::{AudioContext, AudioContextOptions};
 use opl::{OPL, OPLSettings};
 
 use crate::assets::{DigiChannel, Music, SoundName};
-use crate::def::{Assets, DigiSound, ObjType, TILESHIFT};
+use crate::def::{Assets, ObjType, TILESHIFT};
 use crate::draw::RayCast;
 use crate::fixed::Fixed;
 use crate::loader::Loader;
@@ -17,6 +17,10 @@ use crate::sd::{
     DigiMode, Modes, MusicMode, SOURCE_SAMPLE_RATE, SoundMode, check_sound_prio, clear_music,
     default_modes, load_track, sound_loc,
 };
+
+pub struct DigiSound {
+    pub chunk: Vec<f32>,
+}
 
 pub struct Sound {
     modes: Modes,

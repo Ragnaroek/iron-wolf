@@ -32,7 +32,7 @@ coverage-sdl:
 
 # # Testing
 test:
-    RUST_BACKTRACE=1 cargo test --features test
+    RUST_BACKTRACE=1 RUSTFLAGS="-A unused" cargo test --features test
 
 test-all: build-sdl-tracing build-web test
 

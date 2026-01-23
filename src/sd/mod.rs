@@ -1,15 +1,19 @@
 #[cfg(feature = "sdl")]
 pub mod sd_sdl;
 #[cfg(feature = "sdl")]
-pub use sd_sdl::{Sound, startup};
+pub use sd_sdl::{DigiSound, Sound, startup};
 
 #[cfg(feature = "web")]
 pub mod sd_web;
 #[cfg(feature = "web")]
-pub use sd_web::{Sound, startup};
+pub use sd_web::{DigiSound, Sound, startup};
 
 #[cfg(feature = "test")]
+pub mod sd_sdl;
+#[cfg(feature = "test")]
 pub mod sd_tst;
+#[cfg(feature = "test")]
+pub use sd_sdl::DigiSound;
 #[cfg(feature = "test")]
 pub use sd_tst::{Sound, startup, test_sound};
 

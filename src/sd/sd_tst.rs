@@ -4,10 +4,10 @@ use tokio::runtime::Runtime;
 use opl::OPLSettings;
 
 use crate::assets::{DigiChannel, Music, SoundName};
-use crate::def::{Assets, DigiSound, ObjType};
+use crate::def::{Assets, ObjType};
 use crate::draw::RayCast;
 use crate::loader::Loader;
-use crate::sd::{DigiMode, MusicMode, SoundMode};
+use crate::sd::{DigiMode, DigiSound, MusicMode, SoundMode};
 
 pub struct Sound {}
 

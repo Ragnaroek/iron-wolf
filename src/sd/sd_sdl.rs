@@ -8,7 +8,7 @@ use tokio::runtime::Runtime;
 use opl::{OPL, OPLSettings};
 
 use crate::assets::{DigiChannel, Music, SoundName};
-use crate::def::{Assets, DigiSound, ObjType, TILESHIFT};
+use crate::def::{Assets, ObjType, TILESHIFT};
 use crate::draw::RayCast;
 use crate::fixed::Fixed;
 use crate::loader::Loader;
@@ -17,6 +17,11 @@ use crate::sd::{
     default_modes, load_track, sound_loc,
 };
 use crate::start::quit;
+
+pub struct DigiSound {
+    pub chunk: Box<[u8]>,
+    pub channel: DigiChannel,
+}
 
 pub struct DigiMixConfig {
     pub frequency: i32,
