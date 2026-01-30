@@ -13,12 +13,13 @@
 
         async function run() {
           this.blur();
+          document.getElementById("vga").focus();
           iw_init("upload");
         }
         document.getElementById("run_shareware").addEventListener("click", run);
     </script>
 
-    <canvas id="vga" style="border: 1px solid black;" width="640" height="400"></canvas>
+    <canvas id="vga" style="border: 1px solid black;" width="640" height="400" tabindex="0"></canvas>
 
     <div>
         <button id="run_shareware">Run shareware version</button>

@@ -41,7 +41,7 @@ pub async fn iw_init(upload_id: &str) {
     iw_start_web(shareware_loader).expect("iw_start_web failed");
 }
 
-async fn load_shareware_data(loader: &mut WebLoader) -> Result<(), JsValue> {
+pub async fn load_shareware_data(loader: &mut WebLoader) -> Result<(), JsValue> {
     let win = web_sys::window().unwrap();
 
     let file_name = loader.file_name(assets::GRAPHIC_DICT);
@@ -124,6 +124,13 @@ pub struct WebLoader {
 
 #[wasm_bindgen]
 impl WebLoader {
+    pub fn new_shareware() -> WebLoader {
+        WebLoader {
+            variant: &assets::W3D1,
+            files: HashMap::new(),
+        }
+    }
+
     pub fn load(&mut self, file: String, data: Vec<u8>) {
         self.files.insert(file, data);
     }
