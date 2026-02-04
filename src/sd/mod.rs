@@ -180,7 +180,7 @@ pub fn clear_music(opl: &mut OPL) -> Result<(), String> {
     Ok(())
 }
 
-pub fn load_track(track: Music, assets: &Assets, loader: &dyn Loader) -> Vec<u8> {
+pub fn load_track(track: Music, assets: &Assets, loader: &Loader) -> Vec<u8> {
     let variant = loader.variant();
     let trackno = track as usize;
     let offset = assets.audio_headers[variant.start_music + trackno];

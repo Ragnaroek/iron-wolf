@@ -6,7 +6,7 @@ use crate::def::{
 };
 use crate::draw::{Hit, Op, calc_height, init_ray_cast};
 use crate::fixed::Fixed;
-use crate::loader::{DiskLoader, Loader};
+use crate::loader::Loader;
 use crate::map::MapSegs;
 use crate::rc::{Input, RenderContext};
 use crate::start::new_view_size;

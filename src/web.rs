@@ -1,7 +1,6 @@
 extern crate web_sys;
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::io::Cursor;
 use std::rc::Rc;
 
@@ -10,15 +9,26 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::Window;
 
-use crate::assets::{self, WolfFile, WolfVariant, file_name};
+use crate::assets::{self};
 use crate::config;
 use crate::gamedata;
 use crate::loader::Loader;
 use crate::map;
-use crate::patch::PatchConfig;
 use crate::start::iw_start;
 
-const PATCH_FILE_NAME: &'static str = "patch.toml";
+#[wasm_bindgen]
+extern "C" {
+    pub type Buffer;
+
+    #[wasm_bindgen(method, getter)]
+    pub fn buffer(this: &Buffer) -> js_sys::ArrayBuffer;
+
+    #[wasm_bindgen(method, getter, js_name = byteOffset)]
+    pub fn byte_offset(this: &Buffer) -> u32;
+
+    #[wasm_bindgen(method, getter)]
+    pub fn length(this: &Buffer) -> u32;
+}
 
 #[wasm_bindgen]
 pub fn init_panic_hook() {
@@ -31,17 +41,14 @@ pub async fn iw_init(upload_id: &str) {
 
     register_upload_loader(upload_id);
 
-    let mut shareware_loader = WebLoader {
-        variant: &assets::W3D1,
-        files: HashMap::new(),
-    };
+    let mut shareware_loader = Loader::new_empty(&assets::W3D1);
     load_shareware_data(&mut shareware_loader)
         .await
         .expect("load shareware data");
     iw_start_web(shareware_loader).expect("iw_start_web failed");
 }
 
-pub async fn load_shareware_data(loader: &mut WebLoader) -> Result<(), JsValue> {
+pub async fn load_shareware_data(loader: &mut Loader) -> Result<(), JsValue> {
     let win = web_sys::window().unwrap();
 
     let file_name = loader.file_name(assets::GRAPHIC_DICT);
@@ -94,136 +101,13 @@ async fn load_shareware_file(file_name: &str, win: &Window) -> Result<Vec<u8>, J
 }
 
 #[wasm_bindgen]
-pub fn iw_start_web(loader: WebLoader) -> Result<(), String> {
+pub fn iw_start_web(loader: Loader) -> Result<(), String> {
     let iw_config = config::default_iw_config()?;
     iw_start(loader, iw_config)
 }
 
-// WebLoader
-
-#[wasm_bindgen]
-extern "C" {
-    pub type Buffer;
-
-    #[wasm_bindgen(method, getter)]
-    pub fn buffer(this: &Buffer) -> js_sys::ArrayBuffer;
-
-    #[wasm_bindgen(method, getter, js_name = byteOffset)]
-    pub fn byte_offset(this: &Buffer) -> u32;
-
-    #[wasm_bindgen(method, getter)]
-    pub fn length(this: &Buffer) -> u32;
-}
-
-#[wasm_bindgen]
-#[derive(Debug)]
-pub struct WebLoader {
-    variant: &'static WolfVariant,
-    files: HashMap<String, Vec<u8>>,
-}
-
-#[wasm_bindgen]
-impl WebLoader {
-    pub fn new_shareware() -> WebLoader {
-        WebLoader {
-            variant: &assets::W3D1,
-            files: HashMap::new(),
-        }
-    }
-
-    pub fn load(&mut self, file: String, data: Vec<u8>) {
-        self.files.insert(file, data);
-    }
-
-    pub fn all_files_loaded(&self) -> bool {
-        self.files
-            .contains_key(&self.file_name(assets::GRAPHIC_DICT))
-            && self
-                .files
-                .contains_key(&self.file_name(assets::GRAPHIC_HEAD))
-            && self
-                .files
-                .contains_key(&self.file_name(assets::GRAPHIC_DATA))
-            && self.files.contains_key(&self.file_name(assets::MAP_HEAD))
-            && self.files.contains_key(&self.file_name(assets::GAME_MAPS))
-            && self.files.contains_key(&self.file_name(assets::GAMEDATA))
-            && self
-                .files
-                .contains_key(&self.file_name(assets::CONFIG_DATA))
-            && self.files.contains_key(&self.file_name(assets::AUDIO_HEAD))
-            && self.files.contains_key(&self.file_name(assets::AUDIO_DATA))
-    }
-
-    fn file_name(&self, asset_name: &str) -> String {
-        format!("{}.{}", asset_name, self.variant.file_ending)
-    }
-}
-
-impl Loader for WebLoader {
-    fn variant(&self) -> &'static WolfVariant {
-        return self.variant;
-    }
-
-    fn write_wolf_file(&self, _file: WolfFile, _data: &[u8]) -> Result<(), String> {
-        todo!("write_wolf_file not implemented for web");
-    }
-
-    fn load_wolf_file(&self, file: WolfFile) -> Vec<u8> {
-        let buffer = self
-            .files
-            .get(&file_name(file, &self.variant))
-            .expect(&format!(
-                "file {} not found",
-                file_name(file, &self.variant)
-            ));
-        buffer.clone()
-    }
-
-    fn load_patch_config_file(&self) -> Result<Option<PatchConfig>, String> {
-        if let Some(bytes) = self.files.get(PATCH_FILE_NAME) {
-            let config: PatchConfig = toml::from_slice(&bytes).map_err(|e| e.to_string())?;
-            Ok(Some(config))
-        } else {
-            Ok(None)
-        }
-    }
-    // panics, if patch path is not set
-    fn load_patch_data_file(&self, _name: String) -> Vec<u8> {
-        todo!("patch file data loading not implemented for web");
-    }
-    fn load_save_game_head(&self, _which: usize) -> Result<Vec<u8>, String> {
-        todo!("save game loading not implemented yet for web");
-    }
-    fn load_save_game(&self, _which: usize) -> Result<Vec<u8>, String> {
-        todo!("save game loading not implemented yet for web");
-    }
-    fn save_save_game(&self, _which: usize, _bytes: &[u8]) -> Result<(), String> {
-        todo!("save game saving not implemented yet for web");
-    }
-
-    fn load_wolf_file_slice(
-        &self,
-        file: WolfFile,
-        offset_u64: u64,
-        len: usize,
-    ) -> Result<Vec<u8>, String> {
-        let buffer = self
-            .files
-            .get(&file_name(file, &self.variant))
-            .expect(&format!(
-                "file {} not found",
-                file_name(file, &self.variant)
-            ));
-        let offset = offset_u64 as usize;
-        Ok(buffer[offset..(offset + len)].to_vec())
-    }
-}
-
 fn register_upload_loader(id: &str) {
-    let loader = WebLoader {
-        variant: &assets::W3D6,
-        files: HashMap::new(),
-    };
+    let loader = Loader::new_empty(&assets::W3D6);
     let loader_ref = Rc::new(RefCell::new(loader));
 
     let document = web_sys::window().unwrap().document().unwrap();
@@ -242,7 +126,7 @@ fn register_upload_loader(id: &str) {
     click_handler.forget();
 }
 
-fn handle_upload(event: web_sys::Event, loader: Rc<RefCell<WebLoader>>) {
+fn handle_upload(event: web_sys::Event, loader: Rc<RefCell<Loader>>) {
     let input = event
         .target()
         .expect("upload button target")
@@ -265,7 +149,7 @@ fn handle_upload(event: web_sys::Event, loader: Rc<RefCell<WebLoader>>) {
     }
 }
 
-fn handle_load(event: web_sys::Event, name: String, loader: Rc<RefCell<WebLoader>>) {
+fn handle_load(event: web_sys::Event, name: String, loader: Rc<RefCell<Loader>>) {
     let reader = event
         .target()
         .expect("reader target")
@@ -279,7 +163,7 @@ fn handle_load(event: web_sys::Event, name: String, loader: Rc<RefCell<WebLoader
     };
 
     if all_loaded {
-        let l = Rc::<RefCell<WebLoader>>::try_unwrap(loader)
+        let l = Rc::<RefCell<Loader>>::try_unwrap(loader)
             .unwrap()
             .into_inner();
         iw_start_web(l).expect("iw start");

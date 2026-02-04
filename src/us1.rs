@@ -1,4 +1,5 @@
 use vga::input::NumCode;
+use vga::util::sleep;
 
 use crate::def::{Font, WindowState};
 use crate::rc::RenderContext;
@@ -158,7 +159,7 @@ pub fn clear_window(rc: &mut RenderContext, win_state: &mut WindowState) {
 
 /// max_chars = 0 for maximum chars
 /// max_width = 0 for maximum width
-pub fn line_input(
+pub async fn line_input(
     rc: &mut RenderContext,
     win_state: &mut WindowState,
     x: usize,
@@ -310,8 +311,9 @@ pub fn line_input(
             update_cursor = false;
         }
 
-        // don't poll to fast, otherwise key inputs will be missed
-        while rc.ticker.get_count() < (count + TICK_BASE / 8) {}
+        // don't poll to fast, otherwise key inputs will be missed and the render
+        // routine will be starved
+        sleep(2).await;
         rc.display();
     }
 

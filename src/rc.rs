@@ -539,7 +539,7 @@ impl RenderContext {
         self.sound.force_play_sound(sound, &self.assets)
     }
 
-    pub fn play_music(&mut self, track: Music, loader: &dyn Loader) {
+    pub fn play_music(&mut self, track: Music, loader: &Loader) {
         self.sound.play_music(track, &self.assets, loader);
     }
 

@@ -12,7 +12,7 @@ use crate::def::{
 use crate::draw::init_ray_cast;
 use crate::fixed::{Fixed, ZERO};
 use crate::game::setup_game_level;
-use crate::loader::{DiskLoader, Loader};
+use crate::loader::Loader;
 use crate::rc::{Input, RenderContext};
 use crate::sd;
 use crate::start::start_test;
@@ -25,15 +25,15 @@ use super::{do_load, null_obj_type};
 // Read a original W3D savegame and writes it back. Should result in almost
 // the same save game files (there are currently differences that are WiP to achieve
 // a full load of savegames in IW)
-#[test]
+#[tokio::test]
 #[cfg(feature = "test")]
-fn test_do_load_and_save_save0() {
+async fn test_do_load_and_save_save0() {
     let episode = 0;
     let map_on = 1;
     let mut data_path = PathBuf::new();
     data_path.push("./testdata/shareware_data");
 
-    let loader = DiskLoader {
+    let loader = Loader {
         variant: &assets::W3D1,
         data_path,
         patch_path: None,
@@ -77,7 +77,8 @@ fn test_do_load_and_save_save0() {
         0,
         0,
         0,
-    );
+    )
+    .await;
     assert!(checksum_passed);
     // check game_state
     check_loaded_save_0(
@@ -113,7 +114,8 @@ fn test_do_load_and_save_save0() {
         9, /*only difference to load before*/
         0,
         0,
-    );
+    )
+    .await;
     assert!(checksum_passed);
     // check game_state again after save9 load
     check_loaded_save_0(
@@ -268,9 +270,15 @@ fn check_loaded_save_0(
     }
 }
 
-fn check_written_save_0(loader: &DiskLoader) {
-    let orig_save = loader.load_save_game(0).expect("orig save game loaded");
-    let test_save = loader.load_save_game(9).expect("test save game loaded");
+async fn check_written_save_0(loader: &Loader) {
+    let orig_save = loader
+        .load_save_game(0)
+        .await
+        .expect("orig save game loaded");
+    let test_save = loader
+        .load_save_game(9)
+        .await
+        .expect("test save game loaded");
 
     assert_eq!(orig_save.len(), test_save.len());
     for i in 0..4274 {
@@ -374,15 +382,15 @@ fn check_written_save_0(loader: &DiskLoader) {
 }
 
 // save game 1 is a manipulated/cheated one. Lives were edited to 99.
-#[test]
+#[tokio::test]
 #[cfg(feature = "test")]
-fn test_do_load_save1() {
+async fn test_do_load_save1() {
     let episode = 0;
     let map_on = 1;
     let mut data_path = PathBuf::new();
     data_path.push("./testdata/shareware_data");
 
-    let loader = DiskLoader {
+    let loader = Loader {
         variant: &assets::W3D1,
         data_path,
         patch_path: None,
@@ -406,7 +414,8 @@ fn test_do_load_save1() {
         1,
         0,
         0,
-    );
+    )
+    .await;
 
     assert!(!checksum_passed);
 

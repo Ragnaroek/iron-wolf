@@ -5,14 +5,14 @@ use vga::{SCReg, VGABuilder};
 use crate::assets;
 use crate::config;
 use crate::draw::init_ray_cast;
-use crate::loader::{DiskLoader, Loader};
+use crate::loader::Loader;
 use crate::rc::{Input, RenderContext};
 use crate::sd;
 use crate::start::new_view_size;
 use crate::time::new_ticker;
 
 #[cfg(feature = "test")]
-pub fn start_test_iw(loader: &dyn Loader) -> RenderContext {
+pub fn start_test_iw(loader: &Loader) -> RenderContext {
     let wolf_config = config::load_wolf_config(loader);
     let mut vga = VGABuilder::new()
         .video_mode(0x13)
@@ -50,7 +50,7 @@ pub fn test_context() -> RenderContext {
     let mut data_path = PathBuf::new();
     data_path.push("./testdata/shareware_data");
 
-    start_test_iw(&DiskLoader {
+    start_test_iw(&Loader {
         variant: &assets::W3D1,
         data_path,
         patch_path: None,

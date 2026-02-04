@@ -1,4 +1,4 @@
-#[cfg(test)]
+#[cfg(all(test, not(feature = "web")))]
 #[path = "./config_test.rs"]
 mod config_test;
 
@@ -119,7 +119,7 @@ pub struct WolfConfig {
     pub mouse_adjustment: u16,
 }
 
-pub fn write_wolf_config(loader: &dyn Loader, wolf_config: &WolfConfig) -> Result<(), String> {
+pub fn write_wolf_config(loader: &Loader, wolf_config: &WolfConfig) -> Result<(), String> {
     let mut writer = DataWriter::new(522);
 
     for i in 0..MAX_SCORES {
@@ -175,7 +175,7 @@ fn button_to_u16(button: Button) -> u16 {
     }
 }
 
-pub fn load_wolf_config(loader: &dyn Loader) -> WolfConfig {
+pub fn load_wolf_config(loader: &Loader) -> WolfConfig {
     let data = loader.load_wolf_file(WolfFile::ConfigData);
     let mut reader = DataReader::new(&data);
 

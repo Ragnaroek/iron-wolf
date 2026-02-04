@@ -329,7 +329,7 @@ pub async fn victory(
     rc: &mut RenderContext,
     game_state: &mut GameState,
     win_state: &mut WindowState,
-    loader: &dyn Loader,
+    loader: &Loader,
 ) {
     rc.play_music(Music::URAHERO, loader);
     clear_split_vwb(win_state);
@@ -434,7 +434,7 @@ pub fn clear_split_vwb(win_state: &mut WindowState) {
 pub async fn check_highscore(
     rc: &mut RenderContext,
     win_state: &mut WindowState,
-    loader: &dyn Loader,
+    loader: &Loader,
     wolf_config: &mut WolfConfig,
     my_score: HighScore,
 ) {
@@ -471,7 +471,8 @@ pub async fn check_highscore(
             MAX_HIGH_NAME,
             100,
             &wolf_config.high_scores[n as usize].name,
-        );
+        )
+        .await;
         if !escape {
             wolf_config.high_scores[n as usize].name = input;
         }
@@ -547,7 +548,7 @@ pub async fn level_completed(
     rc: &mut RenderContext,
     game_state: &mut GameState,
     win_state: &mut WindowState,
-    loader: &dyn Loader,
+    loader: &Loader,
 ) {
     rc.set_buffer_offset(rc.active_buffer());
 

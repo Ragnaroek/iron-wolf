@@ -28,6 +28,8 @@ test = [
     "opl-emu/sdl",
     "sdl2",
     "tokio/rt-multi-thread",
+    "tokio/test-util",
+    "tokio/macros",
 ]
 
 [lib]
@@ -71,6 +73,13 @@ web-sys = { version = "0.3.83", optional = true, features = [
     "AudioBuffer",
     "AudioParam",
     "AudioBufferSourceNode",
+    "IdbFactory",
+    "IdbDatabase",
+    "IdbOpenDbRequest",
+    "IdbTransaction",
+    "IdbTransactionMode",
+    "IdbObjectStore",
+    "DomStringList",
 ] }
 wasm-timer = { version = "0.2.5", optional = true }
 

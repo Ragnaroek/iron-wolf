@@ -184,7 +184,7 @@ impl Sound {
         self.force_play_sound(sound, assets)
     }
 
-    pub fn play_music(&mut self, track: Music, assets: &Assets, loader: &dyn Loader) {
+    pub fn play_music(&mut self, track: Music, assets: &Assets, loader: &Loader) {
         if self.modes.lock().unwrap().music == MusicMode::Off {
             return;
         }

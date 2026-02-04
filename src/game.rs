@@ -54,7 +54,7 @@ pub async fn game_loop(
     game_state: &mut GameState,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
-    loader: &dyn Loader,
+    loader: &Loader,
 ) {
     let mut control_state: ControlState = new_control_state();
 
@@ -1137,7 +1137,7 @@ pub async fn play_demo(
     iw_config: &IWConfig,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
-    loader: &dyn Loader,
+    loader: &Loader,
     demo_num: usize,
     benchmark: bool,
 ) -> (bool, Option<BenchmarkResult>) {

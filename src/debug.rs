@@ -46,7 +46,8 @@ pub async fn debug_keys(
             2,
             0,
             "",
-        );
+        )
+        .await;
         if !esc {
             let level_parse = str.parse::<usize>();
             if let Ok(level) = level_parse {

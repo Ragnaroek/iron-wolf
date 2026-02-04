@@ -1069,7 +1069,7 @@ pub static DIGI_LIST: [DigiMapEntry; NUM_DIGI_SOUNDS_FULL_VERSION] = [
     },
 ];
 
-pub fn load_demo(loader: &dyn Loader, demo: GraphicNum) -> Result<Vec<u8>, String> {
+pub fn load_demo(loader: &Loader, demo: GraphicNum) -> Result<Vec<u8>, String> {
     let grstarts = loader.load_wolf_file(WolfFile::GraphicHead);
     let grdata = loader.load_wolf_file(WolfFile::GraphicData);
     let grhuffman_bytes = loader.load_wolf_file(WolfFile::GraphicDict);
@@ -1084,7 +1084,7 @@ pub fn load_demo(loader: &dyn Loader, demo: GraphicNum) -> Result<Vec<u8>, Strin
 }
 
 fn load_all_graphics(
-    loader: &dyn Loader,
+    loader: &Loader,
     patch_config: &Option<PatchConfig>,
 ) -> Result<(Vec<Graphic>, Vec<Font>, TileData, Vec<String>), String> {
     let grhuffman_bytes = loader.load_wolf_file(WolfFile::GraphicDict);
@@ -1394,7 +1394,7 @@ pub fn load_map_from_assets(assets: &Assets, mapnum: usize) -> Result<MapSegs, S
 }
 
 pub fn load_map_headers_from_config(
-    loader: &dyn Loader,
+    loader: &Loader,
 ) -> Result<(MapFileType, Vec<MapType>), String> {
     let offset_bytes = loader.load_wolf_file(WolfFile::MapHead);
     let map_bytes = loader.load_wolf_file(WolfFile::GameMaps);
@@ -1407,7 +1407,7 @@ pub fn load_map_headers_from_config(
 // loads all assets for the game into memory
 pub fn load_all_assets(
     sound: &Sound,
-    loader: &dyn Loader,
+    loader: &Loader,
     patch_config: &Option<PatchConfig>,
 ) -> Result<Assets, String> {
     let (map_offsets, map_headers) = load_map_headers_from_config(loader)?;
@@ -1454,7 +1454,7 @@ pub fn load_all_assets(
 }
 
 pub fn load_graphic_assets(
-    loader: &dyn Loader,
+    loader: &Loader,
     patch_config: &Option<PatchConfig>,
 ) -> Result<Assets, String> {
     let (map_offsets, map_headers) = load_map_headers_from_config(loader)?;

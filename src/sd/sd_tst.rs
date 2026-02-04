@@ -42,7 +42,7 @@ impl Sound {
         true
     }
 
-    pub fn play_music(&mut self, _track: Music, _assets: &Assets, _loader: &dyn Loader) {
+    pub fn play_music(&mut self, _track: Music, _assets: &Assets, _loader: &Loader) {
         // do nothing
     }
 

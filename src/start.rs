@@ -5,12 +5,12 @@ mod start_test;
 use std::cmp::min;
 use std::process::exit;
 use std::sync::Arc;
-use std::time::Duration;
 use std::usize;
 
 use tokio::runtime::{self, Runtime};
 
 use vga::input::NumCode;
+use vga::util::sleep;
 use vga::{SCReg, VGA, VGABuilder};
 
 use crate::act2::get_state_by_id;
@@ -59,7 +59,7 @@ fn new_disk_anim(x: usize, y: usize) -> DiskAnim {
 }
 
 impl DiskAnim {
-    fn disk_flop_anim(&mut self, rc: &mut RenderContext, iw_config: &IWConfig) {
+    async fn disk_flop_anim(&mut self, rc: &mut RenderContext, iw_config: &IWConfig) {
         if self.which {
             rc.pic(self.x, self.y, GraphicNum::CDISKLOADING2PIC)
         } else {
@@ -70,12 +70,12 @@ impl DiskAnim {
         rc.display();
 
         if !iw_config.options.fast_loading {
-            std::thread::sleep(Duration::from_millis(40));
+            sleep(40).await;
         }
     }
 }
 
-pub fn iw_start(loader: impl Loader + 'static, iw_config: IWConfig) -> Result<(), String> {
+pub fn iw_start(loader: Loader, iw_config: IWConfig) -> Result<(), String> {
     let mut wolf_config = config::load_wolf_config(&loader);
 
     let rt = tokio_runtime()?;
@@ -271,7 +271,7 @@ async fn demo_loop(
     iw_config: &IWConfig,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
-    loader: &dyn Loader,
+    loader: &Loader,
 ) {
     rc.play_music(intro_song(loader.variant()), loader);
 
@@ -399,12 +399,12 @@ pub fn quit(err: Option<&str>) -> ! {
     exit(0)
 }
 
-pub fn save_the_game(
+pub async fn save_the_game(
     rc: &mut RenderContext,
     iw_config: &IWConfig,
     level_state: &LevelState,
     game_state: &GameState,
-    loader: &dyn Loader,
+    loader: &Loader,
     which: usize,
     name: &str,
     x: usize,
@@ -422,15 +422,15 @@ pub fn save_the_game(
     }
     writer.write_bytes(&header);
 
-    disk_anim.disk_flop_anim(rc, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config).await;
     write_game_state(writer, game_state);
     let (offset, checksum) = do_write_checksum(writer, SAVEGAME_NAME_LEN, 0);
 
-    disk_anim.disk_flop_anim(rc, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config).await;
     write_level_ratios(writer, game_state);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
 
-    disk_anim.disk_flop_anim(rc, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config).await;
     for x in 0..MAP_SIZE {
         for y in 0..MAP_SIZE {
             writer.write_u8(level_state.level.tile_map[x][y] as u8);
@@ -438,7 +438,7 @@ pub fn save_the_game(
     }
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
 
-    disk_anim.disk_flop_anim(rc, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config).await;
     for x in 0..MAP_SIZE {
         for y in 0..MAP_SIZE {
             match level_state.actor_at[x][y] {
@@ -469,40 +469,40 @@ pub fn save_the_game(
 
     for i in 0..level_state.actors.len() {
         let k = ObjKey(i);
-        disk_anim.disk_flop_anim(rc, iw_config);
+        disk_anim.disk_flop_anim(rc, iw_config).await;
         if level_state.actors.exists(k) {
             write_obj_type(writer, level_state.obj(k));
         }
     }
-    disk_anim.disk_flop_anim(rc, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config).await;
     write_obj_type(writer, &null_obj_type());
 
     let offset = writer.offset(); // no checksum over obj_type, reset the offset
     writer.write_u16(level_state.statics.len() as u16);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
 
-    disk_anim.disk_flop_anim(rc, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config).await;
     for i in 0..level_state.statics.len() {
         write_static(writer, &level_state.statics[i]);
     }
     writer.skip((MAX_STATS - level_state.statics.len()) * STAT_TYPE_LEN);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
 
-    disk_anim.disk_flop_anim(rc, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config).await;
     for i in 0..level_state.doors.len() {
         writer.write_u16(level_state.doors[i].position);
     }
     writer.skip((MAX_DOORS - level_state.doors.len()) * 2);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
 
-    disk_anim.disk_flop_anim(rc, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config).await;
     for door in &level_state.doors {
         write_door(writer, door);
     }
     writer.skip((MAX_DOORS - level_state.doors.len()) * DOOR_TYPE_LEN);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
 
-    disk_anim.disk_flop_anim(rc, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config).await;
     writer.write_u16(game_state.push_wall_state as u16);
     let (offset, checksum) = do_write_checksum(writer, offset, checksum);
     writer.write_u16(game_state.push_wall_x as u16);
@@ -518,7 +518,8 @@ pub fn save_the_game(
 
     loader
         .save_save_game(which, &writer.data)
-        .expect("save game saved")
+        .await
+        .expect("save game saved");
 }
 
 // in bytes
@@ -655,14 +656,15 @@ pub async fn load_the_game(
     level_state: &mut LevelState,
     game_state: &mut GameState,
     win_state: &mut WindowState,
-    loader: &dyn Loader,
+    loader: &Loader,
     which: usize,
     x: usize,
     y: usize,
 ) {
     rc.fade_in().await;
 
-    let checksums_matched = do_load(rc, iw_config, level_state, game_state, loader, which, x, y);
+    let checksums_matched =
+        do_load(rc, iw_config, level_state, game_state, loader, which, x, y).await;
     if !checksums_matched {
         message(rc, win_state, &STR_SAVE_CHEAT);
 
@@ -671,31 +673,34 @@ pub async fn load_the_game(
     }
 }
 
-pub fn do_load(
+pub async fn do_load(
     rc: &mut RenderContext,
     iw_config: &IWConfig,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    loader: &dyn Loader,
+    loader: &Loader,
     which: usize,
     x: usize,
     y: usize,
 ) -> bool {
     let mut disk_anim = new_disk_anim(x, y);
-    let data = loader.load_save_game(which).expect("save game loaded");
+    let data = loader
+        .load_save_game(which)
+        .await
+        .expect("save game loaded");
     let reader = &mut DataReader::new_with_offset(&data, SAVEGAME_NAME_LEN); //first 32 bytes are savegame name
 
     // reconstruct GameState
-    disk_anim.disk_flop_anim(rc, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config).await;
     load_game_state(reader, game_state);
     let (offset, checksum) = do_read_checksum(reader, SAVEGAME_NAME_LEN, 0);
 
     // reconstruct LevelRatio
-    disk_anim.disk_flop_anim(rc, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config).await;
     load_level_ratios(reader, game_state);
     let (offset, checksum) = do_read_checksum(reader, offset, checksum);
 
-    disk_anim.disk_flop_anim(rc, iw_config);
+    disk_anim.disk_flop_anim(rc, iw_config).await;
     *level_state = setup_game_level(game_state, &rc.assets, false).expect("set up game level"); // TODO replace expect with Quit()
 
     // load tilemap
@@ -749,7 +754,7 @@ pub fn do_load(
 
     let mut i = 1;
     loop {
-        disk_anim.disk_flop_anim(rc, iw_config);
+        disk_anim.disk_flop_anim(rc, iw_config).await;
         let actor = read_obj_type(reader);
         if actor.active == ActiveType::BadObject {
             break;

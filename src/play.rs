@@ -291,7 +291,7 @@ pub async fn play_loop(
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
     control_state: &mut ControlState,
-    loader: &dyn Loader,
+    loader: &Loader,
     benchmark: bool,
 ) -> Option<BenchmarkResult> {
     let shifts = init_colour_shifts();
@@ -749,7 +749,7 @@ async fn check_keys(
     menu_state: &mut MenuState,
     level_state: &mut LevelState,
     game_state: &mut GameState,
-    loader: &dyn Loader,
+    loader: &Loader,
 ) -> GameStateUpdate {
     if rc.input.mode == InputMode::DemoPlayback {
         return GameStateUpdate::without_update();
@@ -1028,7 +1028,7 @@ pub fn finish_palette_shifts(game_state: &mut GameState, vga: &mut VGA) {
     }
 }
 
-pub fn start_music(rc: &mut RenderContext, game_state: &mut GameState, loader: &dyn Loader) {
+pub fn start_music(rc: &mut RenderContext, game_state: &mut GameState, loader: &Loader) {
     let track = SONGS[game_state.map_on + game_state.episode * 10];
     rc.play_music(track, loader);
 }

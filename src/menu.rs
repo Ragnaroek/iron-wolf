@@ -807,7 +807,7 @@ pub async fn control_panel(
     game_state: &mut GameState,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
-    loader: &dyn Loader,
+    loader: &Loader,
     scan: NumCode,
 ) -> GameStateUpdate {
     rc.play_music(Music::WONDERIN, loader);
@@ -943,7 +943,7 @@ pub async fn control_panel(
     }
 }
 
-async fn cp_read_this(rc: &mut RenderContext, loader: &dyn Loader) -> MenuHandle {
+async fn cp_read_this(rc: &mut RenderContext, loader: &Loader) -> MenuHandle {
     rc.play_music(Music::CORNER, loader);
     help_screens(rc).await;
     rc.play_music(Music::WONDERIN, loader);
@@ -955,7 +955,7 @@ async fn cp_custom_controls(
     wolf_config: &mut WolfConfig,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
-    loader: &dyn Loader,
+    loader: &Loader,
 ) -> MenuHandle {
     draw_custom_screen(rc, win_state, menu_state).await;
 
@@ -1620,7 +1620,7 @@ async fn cp_sound(
     rc: &mut RenderContext,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
-    loader: &dyn Loader,
+    loader: &Loader,
 ) -> MenuHandle {
     draw_sound_menu(rc, win_state, menu_state).await;
     loop {
@@ -1758,10 +1758,10 @@ async fn cp_load_game(
     game_state: &mut GameState,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
-    loader: &dyn Loader,
+    loader: &Loader,
 ) -> MenuHandle {
     // TODO Handle QuickLoad
-    let state = read_save_game_state(loader);
+    let state = read_save_game_state(loader).await;
     draw_load_save_screen(rc, win_state, menu_state, &state, false).await;
     loop {
         let load_handle = handle_menu(rc, win_state, menu_state, no_op_routine).await;
@@ -1797,7 +1797,7 @@ async fn cp_view_scores(
     wolf_config: &WolfConfig,
     game_state: &mut GameState,
     win_state: &mut WindowState,
-    loader: &dyn Loader,
+    loader: &Loader,
 ) -> MenuHandle {
     if game_state.loaded_game || game_state.start_game || win_state.in_game {
         if !confirm(rc, win_state, END_GAME_STR).await {
@@ -1829,10 +1829,10 @@ async fn cp_save_game(
     game_state: &mut GameState,
     win_state: &mut WindowState,
     menu_state: &mut MenuState,
-    loader: &dyn Loader,
+    loader: &Loader,
 ) -> MenuHandle {
     // TODO Handle QuickSave
-    let state = read_save_game_state(loader);
+    let state = read_save_game_state(loader).await;
     draw_load_save_screen(rc, win_state, menu_state, &state, true).await;
     loop {
         rc.display();
@@ -1840,7 +1840,6 @@ async fn cp_save_game(
         let save_handle = handle_menu(rc, win_state, menu_state, no_op_routine).await;
         if let MenuHandle::Selected(which) = save_handle {
             // TODO Check overwrite existing game
-
             if state[which].available {
                 if !confirm(rc, win_state, GAME_SAVED).await {
                     draw_load_save_screen(rc, win_state, menu_state, &state, true).await;
@@ -1867,6 +1866,7 @@ async fn cp_save_game(
                     10,
                     BKGD_COLOR,
                 );
+                rc.display();
                 ""
             };
 
@@ -1879,7 +1879,8 @@ async fn cp_save_game(
                 31,
                 LSM_W - save_menu.state.indent - 30,
                 initial_input,
-            );
+            )
+            .await;
             if !escape {
                 draw_ls_action(rc, win_state, true);
                 save_the_game(
@@ -1892,7 +1893,8 @@ async fn cp_save_game(
                     &input,
                     LSA_X + 8,
                     LSA_Y + 5,
-                );
+                )
+                .await;
                 win_state.font_number = 1;
                 return MenuHandle::BackToGameLoop(None);
             } else {
@@ -1912,11 +1914,11 @@ struct SaveGameState {
     name: Option<String>,
 }
 
-fn read_save_game_state(loader: &dyn Loader) -> Vec<SaveGameState> {
+async fn read_save_game_state(loader: &Loader) -> Vec<SaveGameState> {
     let mut result = Vec::with_capacity(NUM_SAVE_GAMES);
 
     for which in 0..NUM_SAVE_GAMES {
-        let header_result = loader.load_save_game_head(which);
+        let header_result = loader.load_save_game_head(which).await;
         if let Ok(header_bytes) = header_result {
             let mut end = header_bytes.len();
             for i in 0..header_bytes.len() {
@@ -2264,7 +2266,7 @@ async fn cp_change_view(
     wolf_config: &mut WolfConfig,
     iw_config: &IWConfig,
     win_state: &mut WindowState,
-    loader: &dyn Loader,
+    loader: &Loader,
 ) -> MenuHandle {
     let old_view = (rc.projection.view_width / 16) as u16;
     let mut new_view = old_view;
