@@ -101,7 +101,8 @@ async fn test_do_load_and_save_save0() {
         "e1m2",
         0,
         0,
-    );
+    )
+    .await;
     check_written_save_0(&loader);
 
     // load save9 again, it should result in the same game state as the load of save0
