@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 authors = ["Michael Bohn <spaceodyssey@gmx.de>"]
 description = "Iron-Wolf a Wolfenstein 3D source port"
+license = "GPL-3.0"
+repository = "https://github.com/Ragnaroek/iron-wolf"
 
 [features]
 sdl = [
