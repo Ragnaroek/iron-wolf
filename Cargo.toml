@@ -1,5 +1,5 @@
 [package]
-name = "iw"
+name = "iron-wolf"
 version = "0.1.0"
 edition = "2024"
 authors = ["Michael Bohn <spaceodyssey@gmx.de>"]

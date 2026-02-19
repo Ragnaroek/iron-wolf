@@ -36,3 +36,6 @@ profile:
 
 bench:
     cargo bench --features sdl
+
+publish:
+	cargo publish --features sdl
