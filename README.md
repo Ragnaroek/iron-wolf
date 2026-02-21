@@ -8,7 +8,8 @@ Wolfenstein 3D in Rust
 
 The goal is to have a pixel, mod-friendly perfect recreation of Wolfenstein 3D in Rust.
 
-E1M1 demo:
+E1M1 Demo
+
 https://github.com/user-attachments/assets/54743451-ada0-4067-95cc-f9f454dc5d6a
 
 ## Playing Iron Wolf
