@@ -2307,6 +2307,8 @@ async fn cp_change_view(
             rc.fade_out().await;
             return MenuHandle::OpenMenu(Menu::Top);
         }
+
+        tic_delay(rc, 1).await;
     }
 
     if old_view != new_view {
