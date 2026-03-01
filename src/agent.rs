@@ -1,4 +1,5 @@
-use std::time::Duration;
+use std::pin::Pin;
+use vga::util::sleep;
 
 use crate::act1::{operate_door, push_wall};
 use crate::act2::spawn_bj_victory;
@@ -54,7 +55,8 @@ pub static S_PLAYER: StateType = StateType {
     rotate: 0,
     sprite: None,
     tic_time: 0,
-    think: Some(t_player),
+    think: None,
+    async_think: Some(t_player),
     action: None,
     async_action: None,
     next: None,
@@ -66,6 +68,7 @@ pub static S_ATTACK: StateType = StateType {
     sprite: None,
     tic_time: 0,
     think: Some(t_attack),
+    async_think: None,
     action: None,
     async_action: None,
     next: None,
@@ -403,35 +406,38 @@ fn victory_spin(tics: u64, level_state: &mut LevelState) {
     }
 }
 
-fn t_player(
-    rc: &mut RenderContext,
+fn t_player<'a>(
+    rc: &'a mut RenderContext,
     k: ObjKey,
     tics: u64,
-    level_state: &mut LevelState,
-    game_state: &mut GameState,
-    control_state: &mut ControlState,
-) {
-    if game_state.victory_flag {
-        victory_spin(tics, level_state);
-        return;
-    }
+    level_state: &'a mut LevelState,
+    game_state: &'a mut GameState,
+    control_state: &'a mut ControlState,
+) -> Pin<Box<dyn Future<Output = ()> + 'a>> {
+    Box::pin(async move {
+        if game_state.victory_flag {
+            victory_spin(tics, level_state);
+            return;
+        }
 
-    update_face(rc, tics, game_state);
-    check_weapon_change(rc, game_state, control_state);
+        update_face(rc, tics, game_state);
+        check_weapon_change(rc, game_state, control_state);
 
-    if control_state.button_state(Button::Use) {
-        cmd_use(rc, level_state, game_state, control_state);
-    }
+        if control_state.button_state(Button::Use) {
+            cmd_use(rc, level_state, game_state, control_state).await;
+        }
 
-    if control_state.button_state(Button::Attack) && !control_state.button_held(Button::Attack) {
-        cmd_fire(level_state, game_state, control_state);
-    }
+        if control_state.button_state(Button::Attack) && !control_state.button_held(Button::Attack)
+        {
+            cmd_fire(level_state, game_state, control_state);
+        }
 
-    control_movement(rc, k, level_state, game_state, control_state);
-    if game_state.victory_flag {
-        return;
-    }
-    // TODO plux and tilex update?
+        control_movement(rc, k, level_state, game_state, control_state);
+        if game_state.victory_flag {
+            return;
+        }
+        // TODO plux and tilex update?
+    })
 }
 
 fn cmd_fire(
@@ -452,7 +458,7 @@ fn cmd_fire(
     }
 }
 
-fn cmd_use(
+async fn cmd_use(
     rc: &mut RenderContext,
     level_state: &mut LevelState,
     game_state: &mut GameState,
@@ -507,7 +513,7 @@ fn cmd_use(
 
         rc.play_sound(SoundName::LEVELDONE);
         while rc.sound.is_any_sound_playing() {
-            std::thread::sleep(Duration::from_millis(1));
+            sleep(1).await;
         }
     }
 

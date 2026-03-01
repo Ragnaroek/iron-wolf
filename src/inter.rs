@@ -1,5 +1,7 @@
 use std::ascii::Char;
 
+use vga::util::sleep;
+
 use crate::agent::{draw_level, draw_score, give_points};
 use crate::assets::{GraphicNum, Music, SoundName, num_pic};
 use crate::config::{MAX_HIGH_NAME, MAX_SCORES, WolfConfig, write_wolf_config};
@@ -644,6 +646,7 @@ pub async fn level_completed(
                         )
                         .await;
                     }
+                    sleep(1).await;
                 }
 
                 if rc.check_ack() {
@@ -675,6 +678,7 @@ pub async fn level_completed(
                     )
                     .await;
                 }
+                sleep(1).await;
             }
         }
 
@@ -699,6 +703,7 @@ pub async fn level_completed(
                         )
                         .await;
                     }
+                    sleep(1).await;
                 }
             }
             if rc.check_ack() {
@@ -739,6 +744,7 @@ pub async fn level_completed(
                 )
                 .await;
             }
+            sleep(1).await;
         }
 
         // SECRET RATIO
@@ -762,6 +768,7 @@ pub async fn level_completed(
                         )
                         .await;
                     }
+                    sleep(1).await;
                 }
             }
             if rc.check_ack() {
@@ -802,6 +809,7 @@ pub async fn level_completed(
                 )
                 .await;
             }
+            sleep(1).await;
         }
 
         // TREASURE RATIO
@@ -825,6 +833,7 @@ pub async fn level_completed(
                         )
                         .await;
                     }
+                    sleep(1).await;
                 }
             }
             if rc.check_ack() {
@@ -865,6 +874,7 @@ pub async fn level_completed(
                 )
                 .await;
             }
+            sleep(1).await;
         }
 
         return done_normal_level_complete(
@@ -946,6 +956,7 @@ async fn finish_level_complete(
     rc.start_ack();
     while !rc.check_ack() {
         bj_breather.poll_breathe(rc);
+        sleep(1).await;
     }
 
     rc.fade_out().await;

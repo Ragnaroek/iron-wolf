@@ -503,18 +503,16 @@ async fn do_actor(
     // non transitional object
 
     if level_state.obj(k).tic_count == 0 {
-        if let Some(think) = level_state
-            .obj(k)
-            .state
-            .expect(&format!(
-                "state,k={:?}, class={:?}, is={}",
-                k,
-                level_state.obj(k).class,
-                level_state.obj(k).state.is_some(),
-            ))
-            .think
-        {
+        if let Some(think) = level_state.obj(k).state.expect("state").think {
             think(rc, k, tics, level_state, game_state, control_state);
+            if level_state.obj(k).state.is_none() {
+                level_state.actors.drop_obj(k);
+                return;
+            }
+        }
+
+        if let Some(async_think) = level_state.obj(k).state.expect("state").async_think {
+            async_think(rc, k, tics, level_state, game_state, control_state).await;
             if level_state.obj(k).state.is_none() {
                 level_state.actors.drop_obj(k);
                 return;
@@ -571,6 +569,14 @@ async fn do_actor(
 
     if let Some(think) = level_state.obj(k).state.expect("state").think {
         think(rc, k, tics, level_state, game_state, control_state);
+        if level_state.obj(k).state.is_none() {
+            level_state.actors.drop_obj(k);
+            return;
+        }
+    }
+
+    if let Some(async_think) = level_state.obj(k).state.expect("state").async_think {
+        async_think(rc, k, tics, level_state, game_state, control_state).await;
         if level_state.obj(k).state.is_none() {
             level_state.actors.drop_obj(k);
             return;

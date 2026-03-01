@@ -910,6 +910,15 @@ type Think = fn(
     control_state: &mut ControlState,
 );
 
+type AsyncThink = for<'a> fn(
+    rc: &'a mut RenderContext,
+    k: ObjKey,
+    tics: u64,
+    level_state: &'a mut LevelState,
+    game_state: &'a mut GameState,
+    control_state: &'a mut ControlState,
+) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
+
 type Action = fn(
     rc: &mut RenderContext,
     k: ObjKey,
@@ -928,6 +937,7 @@ type AsyncAction = for<'a> fn(
     control_state: &'a mut ControlState,
 ) -> Pin<Box<dyn Future<Output = ()> + 'a>>;
 
+// TODO combine async_think and async_action into only one
 #[derive(Eq, Debug)]
 pub struct StateType {
     pub id: u16, // non-changing ID of this state, will be used in save games
@@ -935,6 +945,7 @@ pub struct StateType {
     pub sprite: Option<Sprite>, // None means get from obj->temp1
     pub tic_time: u32,
     pub think: Option<Think>,
+    pub async_think: Option<AsyncThink>,
     pub action: Option<Action>,
     pub async_action: Option<AsyncAction>,
     pub next: Option<&'static StateType>,
