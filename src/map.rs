@@ -216,9 +216,12 @@ pub fn load_map_offsets(bytes: &Vec<u8>) -> Result<MapFileType, String> {
     let mut reader = DataReader::new(&bytes);
     let rlew_tag = reader.read_u16();
 
-    let mut header_offsets = Vec::with_capacity(100);
-    for _ in 0..100 {
-        header_offsets.push(reader.read_i32());
+    let mut header_offsets = vec![0; 100];
+    for i in 0..100 {
+        header_offsets[i] = reader.read_i32();
+        if reader.at_end() {
+            break;
+        }
     }
     Ok(MapFileType {
         rlew_tag,

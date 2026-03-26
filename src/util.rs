@@ -88,6 +88,10 @@ impl DataReader<'_> {
     pub fn offset(&self) -> usize {
         self.offset
     }
+
+    pub fn at_end(&self) -> bool {
+        self.offset >= self.data.len()
+    }
 }
 
 pub struct DataWriter {

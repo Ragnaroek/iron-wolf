@@ -1,4 +1,6 @@
-use crate::map::{carmack_expand, rlew_expand};
+use std::fs;
+
+use crate::map::{carmack_expand, load_map_offsets, rlew_expand};
 
 // First test case from: https://moddingwiki.shikadi.net/wiki/Carmack_compression
 // others are from: https://github.com/camoto-project/gamecompjs/blob/master/test/test-cmp-carmackize.js
@@ -168,6 +170,19 @@ pub fn test_rlew_expand() {
         assert_eq!(result.len(), decompressed.len());
         assert_eq!(result, decompressed, "{}", desc);
     }
+}
+
+#[test]
+pub fn test_load_map_offsets() -> Result<(), String> {
+    // wolfendoom has a 'corrupt' header file and does not contain 100 header pointers
+    let map_head_bytes = fs::read("testdata/wolfendoom/MAPHEAD.WL6").map_err(|e| e.to_string())?;
+    let offsets = load_map_offsets(&map_head_bytes)?;
+    // sample some offsets from the file
+    assert_eq!(offsets.header_offsets[0], 0x1DF2);
+    assert_eq!(offsets.header_offsets[1], 0x3DF0);
+    assert_eq!(offsets.header_offsets[59], 0x066892);
+    assert_eq!(offsets.header_offsets[99], 0x00);
+    Ok(())
 }
 
 // helper
