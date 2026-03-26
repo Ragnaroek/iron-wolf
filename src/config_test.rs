@@ -15,8 +15,8 @@ fn test_default_iw_config() {
     assert!(conf.unwrap().vanilla);
 }
 
-#[test]
-fn test_read_write_wolf_config() {
+#[tokio::test]
+async fn test_read_write_wolf_config() {
     let mut read_data_path = PathBuf::new();
     read_data_path.push("./testdata/shareware_data");
 
@@ -38,7 +38,9 @@ fn test_read_write_wolf_config() {
         patch_path: None,
     };
 
-    write_wolf_config(&write_loader, &read_config).expect("write config");
+    write_wolf_config(&write_loader, &read_config)
+        .await
+        .expect("write config");
 
     let original_data = read_loader.load_wolf_file(WolfFile::ConfigData);
     let reloaded_data = write_loader.load_wolf_file(WolfFile::ConfigData);

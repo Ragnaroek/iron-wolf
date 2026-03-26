@@ -985,7 +985,9 @@ async fn cp_custom_controls(
         wolf_config.button_mouse = rc.input.button_mouse.clone();
         wolf_config.button_scan = rc.input.button_scan.clone();
         wolf_config.dir_scan = rc.input.dir_scan.clone();
-        write_wolf_config(loader, wolf_config).expect("write config");
+        write_wolf_config(loader, wolf_config)
+            .await
+            .expect("write config");
     }
 
     return handle;
@@ -2320,7 +2322,9 @@ async fn cp_change_view(
         let new_projection = new_view_size(new_view);
         rc.cast = init_ray_cast(new_projection.view_width);
         wolf_config.viewsize = new_view;
-        write_wolf_config(loader, wolf_config).expect("write config");
+        write_wolf_config(loader, wolf_config)
+            .await
+            .expect("write config");
 
         rc.projection = new_projection;
     }

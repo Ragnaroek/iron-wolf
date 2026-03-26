@@ -119,7 +119,7 @@ pub struct WolfConfig {
     pub mouse_adjustment: u16,
 }
 
-pub fn write_wolf_config(loader: &Loader, wolf_config: &WolfConfig) -> Result<(), String> {
+pub async fn write_wolf_config(loader: &Loader, wolf_config: &WolfConfig) -> Result<(), String> {
     let mut writer = DataWriter::new(522);
 
     for i in 0..MAX_SCORES {
@@ -156,7 +156,9 @@ pub fn write_wolf_config(loader: &Loader, wolf_config: &WolfConfig) -> Result<()
     writer.write_u16(wolf_config.viewsize);
     writer.write_u16(wolf_config.mouse_adjustment);
 
-    loader.write_wolf_file(WolfFile::ConfigData, &writer.data)
+    loader
+        .write_wolf_file(WolfFile::ConfigData, &writer.data)
+        .await
 }
 
 pub fn numcode_to_u16(code: NumCode) -> u16 {

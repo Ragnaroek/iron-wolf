@@ -9,6 +9,7 @@ use crate::patch::PatchConfig;
 const PATCH_FILE_NAME: &'static str = "patch.toml";
 const INDEXED_DB_NAME: &'static str = "iron-wolf";
 const INDEXED_DB_SAVE_STORE: &'static str = "saves";
+const INDEXED_DB_FILE_STORE: &'static str = "files";
 
 #[wasm_bindgen]
 #[derive(Debug)]
@@ -38,8 +39,13 @@ impl Loader {
         return self.variant;
     }
 
-    pub fn write_wolf_file(&self, _file: WolfFile, _data: &[u8]) -> Result<(), String> {
-        todo!("write_wolf_file not implemented for web");
+    pub async fn write_wolf_file(&self, file: WolfFile, bytes: &[u8]) -> Result<(), String> {
+        let name = file_name(file, &self.variant);
+        let data = Uint8Array::from(bytes);
+        store_file_indexeddb(&name, data)
+            .await
+            .map_err(|_| "store savegame")?;
+        Ok(())
     }
 
     pub fn load_wolf_file(&self, file: WolfFile) -> Vec<u8> {
@@ -140,6 +146,20 @@ fn savegame_name(which: usize) -> String {
     format!("SAVEGAM{}", which)
 }
 
+async fn store_file_indexeddb(file_name: &str, data: Uint8Array) -> Result<(), JsValue> {
+    let db = open_db().await?;
+    let transaction = db.transaction_with_str_and_mode(
+        INDEXED_DB_FILE_STORE,
+        web_sys::IdbTransactionMode::Readwrite,
+    )?;
+
+    let store = transaction.object_store(INDEXED_DB_FILE_STORE)?;
+    idb_request_await(&store.put_with_key(&data, &file_name.into())?)
+        .await
+        .map_err(|_| "idb store failed")?;
+    Ok(())
+}
+
 async fn store_savegame_indexeddb(save_name: &str, data: Uint8Array) -> Result<(), JsValue> {
     let db = open_db().await?;
     let transaction = db.transaction_with_str_and_mode(
@@ -177,7 +197,7 @@ async fn open_db() -> Result<web_sys::IdbDatabase, JsValue> {
     let window = web_sys::window().expect("global window access");
     let factory = window.indexed_db().map_err(|e| e)?;
     if let Some(factory) = factory {
-        let open_request = factory.open_with_u32(INDEXED_DB_NAME, 2)?;
+        let open_request = factory.open_with_u32(INDEXED_DB_NAME, 3)?;
 
         let db_promise = js_sys::Promise::new(&mut |resolve, reject| {
             let onsuccess = Closure::wrap(Box::new(move |event: web_sys::Event| {
@@ -209,6 +229,10 @@ async fn open_db() -> Result<web_sys::IdbDatabase, JsValue> {
                 if !db.object_store_names().contains(INDEXED_DB_SAVE_STORE) {
                     db.create_object_store(INDEXED_DB_SAVE_STORE)
                         .expect("created save store");
+                }
+                if !db.object_store_names().contains(INDEXED_DB_FILE_STORE) {
+                    db.create_object_store(INDEXED_DB_FILE_STORE)
+                        .expect("created file store");
                 }
             }) as Box<dyn FnMut(_)>);
 

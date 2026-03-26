@@ -478,7 +478,7 @@ pub async fn check_highscore(
         if !escape {
             wolf_config.high_scores[n as usize].name = input;
         }
-        let write_result = write_wolf_config(loader, wolf_config);
+        let write_result = write_wolf_config(loader, wolf_config).await;
         if write_result.is_err() {
             quit(Some("failed to write config file"));
         }

@@ -16,7 +16,7 @@ impl Loader {
         return self.variant;
     }
 
-    pub fn write_wolf_file(&self, file: WolfFile, data: &[u8]) -> Result<(), String> {
+    pub async fn write_wolf_file(&self, file: WolfFile, data: &[u8]) -> Result<(), String> {
         let name = file_name(file, &self.variant);
         let path = &self.data_path.join(name);
         let mut file = File::create(path).map_err(|e| e.to_string())?;
