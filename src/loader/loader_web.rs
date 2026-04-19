@@ -122,6 +122,10 @@ impl Loader {
         self.files.insert(file, data);
     }
 
+    pub fn has_file(&self, name: &str) -> bool {
+        self.files.contains_key(name)
+    }
+
     pub fn all_files_loaded(&self) -> bool {
         self.files
             .contains_key(&self.file_name(assets::GRAPHIC_DICT))

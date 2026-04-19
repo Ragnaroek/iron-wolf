@@ -1,6 +1,6 @@
 [package]
 name = "iron-wolf"
-version = "0.10.0"
+version = "0.10.1"
 edition = "2024"
 authors = ["Michael Bohn <spaceodyssey@gmx.de>"]
 description = "Iron-Wolf a Wolfenstein 3D source port"

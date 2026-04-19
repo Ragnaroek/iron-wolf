@@ -42,50 +42,33 @@ pub async fn iw_init(upload_id: &str) {
     register_upload_loader(upload_id);
 
     let mut shareware_loader = Loader::new_empty(&assets::W3D1);
-    load_shareware_data(&mut shareware_loader)
+    load_missing_shareware_data(&mut shareware_loader)
         .await
         .expect("load shareware data");
     iw_start_web(shareware_loader).expect("iw_start_web failed");
 }
 
-pub async fn load_shareware_data(loader: &mut Loader) -> Result<(), JsValue> {
+/// If the file is not already present in the Loader it will be added to it.
+pub async fn load_missing_shareware_data(loader: &mut Loader) -> Result<(), JsValue> {
     let win = web_sys::window().unwrap();
 
-    let file_name = loader.file_name(assets::GRAPHIC_DICT);
-    let data = load_shareware_file(&file_name, &win).await?;
-    loader.load(file_name, data);
-
-    let file_name = loader.file_name(assets::GRAPHIC_HEAD);
-    let data = load_shareware_file(&file_name, &win).await?;
-    loader.load(file_name, data);
-
-    let file_name = loader.file_name(assets::GRAPHIC_DATA);
-    let data = load_shareware_file(&file_name, &win).await?;
-    loader.load(file_name, data);
-
-    let file_name = loader.file_name(assets::MAP_HEAD);
-    let data = load_shareware_file(&file_name, &win).await?;
-    loader.load(file_name, data);
-
-    let file_name = loader.file_name(assets::GAME_MAPS);
-    let data = load_shareware_file(&file_name, &win).await?;
-    loader.load(file_name, data);
-
-    let file_name = loader.file_name(assets::GAMEDATA);
-    let data = load_shareware_file(&file_name, &win).await?;
-    loader.load(file_name, data);
-
-    let file_name = loader.file_name(assets::CONFIG_DATA);
-    let data = load_shareware_file(&file_name, &win).await?;
-    loader.load(file_name, data);
-
-    let file_name = loader.file_name(assets::AUDIO_HEAD);
-    let data = load_shareware_file(&file_name, &win).await?;
-    loader.load(file_name, data);
-
-    let file_name = loader.file_name(assets::AUDIO_DATA);
-    let data = load_shareware_file(&file_name, &win).await?;
-    loader.load(file_name, data);
+    for file in [
+        assets::GRAPHIC_DICT,
+        assets::GRAPHIC_HEAD,
+        assets::GRAPHIC_DATA,
+        assets::MAP_HEAD,
+        assets::GAME_MAPS,
+        assets::GAMEDATA,
+        assets::CONFIG_DATA,
+        assets::AUDIO_HEAD,
+        assets::AUDIO_DATA,
+    ] {
+        let file_name = loader.file_name(file);
+        if !loader.has_file(&file_name) {
+            let data = load_shareware_file(&file_name, &win).await?;
+            loader.load(file_name, data);
+        }
+    }
 
     Ok(())
 }
