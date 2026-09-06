@@ -39,7 +39,7 @@ pub fn init_rnd_t(randomize: bool) {
 
 // Return a random # between 0-255
 pub fn rnd_t() -> u8 {
-    let _ = RND_INDEX.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |x| {
+    let _ = RND_INDEX.try_update(Ordering::Relaxed, Ordering::Relaxed, |x| {
         Some((x + 1) & 0xFF)
     });
     let ix = RND_INDEX.load(Ordering::Relaxed);

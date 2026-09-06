@@ -5,7 +5,6 @@ mod start_test;
 use std::cmp::min;
 use std::process::exit;
 use std::sync::Arc;
-use std::usize;
 
 use tokio::runtime::{self, Runtime};
 

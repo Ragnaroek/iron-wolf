@@ -44,7 +44,6 @@ path = "src/main.rs"
 
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
-cfg-if = "1.0.4"
 toml = "1.1.2+spec-1.1.0"
 vga-emu = "0.8.5"  # { path = "../vga-emu/" }
 opl-emu = "0.4.2"  # { path = "../opl-emu/" }

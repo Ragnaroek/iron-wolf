@@ -160,7 +160,6 @@ dependencies = [
 name = "iron-wolf"
 version = "0.10.1"
 dependencies = [
- "cfg-if",
  "console_error_panic_hook",
  "js-sys",
  "libc",
