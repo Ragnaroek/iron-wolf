@@ -1,4 +1,4 @@
-use vga::VGA;
+use vga::{RenderBackend, VGA};
 
 use crate::{
     assets::GAMEPAL,
@@ -17,11 +17,11 @@ pub fn vw_vlin(rc: &mut RenderContext, y: usize, z: usize, x: usize, color: u8) 
     rc.vlin(x, y, z - y + 1, color)
 }
 
-pub async fn vw_fade_out(vga: &mut VGA) {
+pub async fn vw_fade_out<R: RenderBackend>(vga: &mut VGA<R>) {
     fade_out(vga, 0, 255, 0, 0, 0, 30).await
 }
 
-pub async fn vw_fade_in(vga: &mut VGA) {
+pub async fn vw_fade_in<R: RenderBackend>(vga: &mut VGA<R>) {
     fade_in(vga, 0, 255, GAMEPAL, 30).await
 }
 

@@ -11,12 +11,11 @@ use crate::sd;
 use crate::start::new_view_size;
 use crate::time::new_ticker;
 
-#[cfg(feature = "test")]
 pub fn start_test_iw(loader: &Loader) -> RenderContext {
     let wolf_config = config::load_wolf_config(loader);
     let mut vga = VGABuilder::new()
         .video_mode(0x13)
-        .build()
+        .build(vga::backend_test::TestRenderBackend::new())
         .expect("VGA test instance");
 
     let sound = sd::test_sound();
@@ -45,7 +44,6 @@ pub fn start_test_iw(loader: &Loader) -> RenderContext {
     rc
 }
 
-#[cfg(feature = "test")]
 pub fn test_context() -> RenderContext {
     let mut data_path = PathBuf::new();
     data_path.push("./testdata/shareware_data");

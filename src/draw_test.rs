@@ -317,7 +317,6 @@ fn test_init_ray_cast_consts() {
     assert_eq!(rc.view_y, 3788164);
 }
 
-#[cfg(feature = "test")]
 #[test]
 fn test_calc_height() {
     let prj = new_view_size(19);

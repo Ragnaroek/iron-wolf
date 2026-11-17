@@ -4,9 +4,9 @@ mod play_test;
 
 use web_time::{Duration, Instant};
 
-use vga::VGA;
 use vga::input::NumCode;
 use vga::util::sleep;
+use vga::{RenderBackend, VGA};
 
 use crate::act1::{move_doors, move_push_walls};
 use crate::agent::draw_fps;
@@ -979,9 +979,9 @@ fn clear_palette_shifts(game_state: &mut GameState) {
     game_state.damage_count = 0;
 }
 
-async fn update_palette_shifts(
+async fn update_palette_shifts<R: RenderBackend>(
     game_state: &mut GameState,
-    vga: &mut VGA,
+    vga: &mut VGA<R>,
     shifts: &ColourShifts,
     tics: u64,
 ) {
@@ -1027,7 +1027,7 @@ async fn update_palette_shifts(
 }
 
 /// Resets palette to normal if needed
-pub fn finish_palette_shifts(game_state: &mut GameState, vga: &mut VGA) {
+pub fn finish_palette_shifts<R: RenderBackend>(game_state: &mut GameState, vga: &mut VGA<R>) {
     if game_state.pal_shifted {
         game_state.pal_shifted = false;
         set_palette(vga, &GAMEPAL);

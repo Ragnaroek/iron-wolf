@@ -1,3 +1,4 @@
+use vga::RenderBackend;
 use vga::input::NumCode;
 
 use crate::def::{At, GameState, LevelState, ObjKey, ObjType, PlayState, WindowState};
@@ -5,8 +6,8 @@ use crate::play::center_window;
 use crate::rc::RenderContext;
 use crate::us1::{line_input, print, print_centered};
 
-pub async fn debug_keys(
-    rc: &mut RenderContext,
+pub async fn debug_keys<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
     win_state: &mut WindowState,
     game_state: &mut GameState,
     player: &ObjType,

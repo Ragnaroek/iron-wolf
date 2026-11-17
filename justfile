@@ -1,3 +1,10 @@
+# egui
+build-egui:
+    cargo build --release --features egui
+
+run-egui:
+    RUST_BACKTRACE=1 cargo run --features egui -- -goobers
+
 # SDL
 build-sdl:
     cargo build --release --features sdl
@@ -14,7 +21,7 @@ run-sdl-profile:
 run-sdl-demo NUM:
     cargo run --features sdl -- -timedemo {{ NUM }}
 
-# # Web
+# Web
 build-web:
     wasm-pack build --out-dir web/pkg --release --target web --features web
 
@@ -24,13 +31,13 @@ run-web: build-web
 coverage-sdl:
     cargo tarpaulin --features sdl --ignore-tests --out Lcov
 
-# # Testing
+# Testing
 test:
-    RUST_BACKTRACE=1 RUSTFLAGS="-A unused" cargo test --features test
+    RUST_BACKTRACE=1 cargo test
 
 test-all: build-web test
 
-# # Misc
+# Misc
 profile:
     sudo -E cargo flamegraph --bench core_loop -- --bench
 

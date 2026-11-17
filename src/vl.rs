@@ -1,6 +1,6 @@
-use vga::{ColorReg, VGA};
+use vga::{ColorReg, RenderBackend, VGA};
 
-pub fn set_palette(vga: &mut VGA, palette: &[u8]) {
+pub fn set_palette<R: RenderBackend>(vga: &mut VGA<R>, palette: &[u8]) {
     debug_assert_eq!(palette.len(), 768);
     vga.set_color_reg(ColorReg::AddressWriteMode, 0);
     for v in palette.iter().take(768) {
@@ -8,7 +8,7 @@ pub fn set_palette(vga: &mut VGA, palette: &[u8]) {
     }
 }
 
-pub fn get_palette(vga: &mut VGA) -> Vec<u8> {
+pub fn get_palette<R: RenderBackend>(vga: &mut VGA<R>) -> Vec<u8> {
     let mut palette = Vec::with_capacity(768);
     vga.set_color_reg(ColorReg::AddressReadMode, 0);
     for _ in 0..768 {
@@ -17,7 +17,7 @@ pub fn get_palette(vga: &mut VGA) -> Vec<u8> {
     palette
 }
 
-fn fill_palette(vga: &mut VGA, red: u8, green: u8, blue: u8) {
+fn fill_palette<R: RenderBackend>(vga: &mut VGA<R>, red: u8, green: u8, blue: u8) {
     vga.set_color_reg(ColorReg::AddressWriteMode, 0);
     for _ in 0..256 {
         vga.set_color_reg(ColorReg::Data, red);
@@ -26,8 +26,8 @@ fn fill_palette(vga: &mut VGA, red: u8, green: u8, blue: u8) {
     }
 }
 
-pub async fn fade_out(
-    vga: &mut VGA,
+pub async fn fade_out<R: RenderBackend>(
+    vga: &mut VGA<R>,
     start: usize,
     end: usize,
     red: u8,
@@ -62,7 +62,13 @@ pub async fn fade_out(
     fill_palette(vga, red, green, blue);
 }
 
-pub async fn fade_in(vga: &mut VGA, start: usize, end: usize, palette: &[u8], steps: usize) {
+pub async fn fade_in<R: RenderBackend>(
+    vga: &mut VGA<R>,
+    start: usize,
+    end: usize,
+    palette: &[u8],
+    steps: usize,
+) {
     let palette1 = get_palette(vga);
     let mut palette2 = palette1.clone();
 

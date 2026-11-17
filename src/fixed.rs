@@ -1,5 +1,5 @@
-#[cfg(feature = "test")]
 #[path = "./fixed_test.rs"]
+#[cfg(test)]
 mod fixed_test;
 
 use std::fmt;

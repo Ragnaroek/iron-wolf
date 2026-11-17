@@ -1,5 +1,5 @@
-#[cfg(feature = "test")]
 #[path = "./draw_test.rs"]
+#[cfg(test)]
 mod draw_test;
 
 use crate::act2::S_DEATH_CAM;

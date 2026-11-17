@@ -1,0 +1,3 @@
+NEXT2: remove 'test' feature and use dev-dependencies
+==> remove test feature in vga-emu (also not needed there???)
+====> drüber nachdenken wie das funktionieren kann

@@ -1,4 +1,4 @@
-#[cfg(feature = "test")]
+#[cfg(test)]
 #[path = "./start_test.rs"]
 mod start_test;
 
@@ -8,18 +8,19 @@ use std::sync::Arc;
 
 use tokio::runtime::{self, Runtime};
 
+use vga::backend_egui::EguiRenderBackend;
 use vga::input::NumCode;
 use vga::util::sleep;
-use vga::{SCReg, VGA, VGABuilder};
+use vga::{RenderBackend, SCReg, VGA, VGABuilder};
 
 use crate::act2::get_state_by_id;
 use crate::assets::{self, GAMEPAL, GraphicNum, SIGNON};
 use crate::config::{WolfConfig, check_timedemo_env};
 use crate::def::{
-    ActiveType, At, ClassType, Difficulty, Dir, DirType, DoorAction, DoorLock, DoorType, GameState,
-    HEIGHT_RATIO, IWConfig, LevelRatio, LevelState, MAP_SIZE, MAX_DOORS, MAX_STATS, NUM_AREAS,
-    ObjKey, ObjType, PLAYER_KEY, Sprite, StaticKind, StaticType, WeaponType, WindowState,
-    new_game_state,
+    ActiveType, Assets, At, ClassType, Difficulty, Dir, DirType, DoorAction, DoorLock, DoorType,
+    GameState, HEIGHT_RATIO, IWConfig, LevelRatio, LevelState, MAP_SIZE, MAX_DOORS, MAX_STATS,
+    NUM_AREAS, ObjKey, ObjType, PLAYER_KEY, Sprite, StaticKind, StaticType, WeaponType,
+    WindowState, new_game_state,
 };
 use crate::draw::init_ray_cast;
 use crate::fixed::Fixed;
@@ -31,8 +32,9 @@ use crate::menu::{
     message,
 };
 use crate::play::{self, DEMO_TICS, ProjectionConfig, draw_play_border};
-use crate::rc::{Input, RenderContext};
-use crate::time;
+use crate::rc::{Input, RenderContext, Video};
+use crate::sd::Sound;
+use crate::time::{self, Ticker};
 use crate::us1::c_print;
 use crate::util::{DataReader, DataWriter};
 use crate::vl;
@@ -75,14 +77,14 @@ impl DiskAnim {
 }
 
 pub fn iw_start(loader: Loader, iw_config: IWConfig) -> Result<(), String> {
-    let mut wolf_config = config::load_wolf_config(&loader);
+    let wolf_config = config::load_wolf_config(&loader);
 
     let rt = tokio_runtime()?;
     let rt_ref = Arc::new(rt);
 
     let ticker = time::new_ticker();
 
-    let mut win_state = initial_window_state();
+    let win_state = initial_window_state();
     let mut menu_state = initial_menu_state(loader.variant());
 
     check_for_episodes(&mut menu_state, loader.variant());
@@ -91,96 +93,156 @@ pub fn iw_start(loader: Loader, iw_config: IWConfig) -> Result<(), String> {
         let patch_config = &loader.load_patch_config_file().expect("patch config load");
         #[cfg(feature = "web")]
         let sound = sd::startup(rt_ref.clone()).await.expect("sound startup");
-        #[cfg(any(feature = "sdl", feature = "test"))]
+        #[cfg(any(feature = "sdl", feature = "egui"))]
         let sound = sd::startup(rt_ref.clone()).expect("sound startup");
 
         let assets = assets::load_all_assets(&sound, &loader, patch_config).expect("asset load");
 
-        let mut vga = VGABuilder::new()
+        let builder = VGABuilder::new()
             .video_mode(0x13)
             .title("Iron Wolf".to_string())
-            .fullscreen(iw_config.options.fullscreen)
-            .build()
-            .expect("vga build");
-        //enable Mode Y
-        let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
-        vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
+            .fullscreen(iw_config.options.fullscreen);
 
-        let input = Input::init_player(&wolf_config);
+        #[cfg(feature = "egui")]
+        run_wolf(
+            builder.build(EguiRenderBackend::new()).expect("egui"),
+            loader,
+            iw_config,
+            wolf_config,
+            ticker,
+            assets,
+            sound,
+            win_state,
+            menu_state,
+        )
+        .await
+        .expect("run wolf");
 
-        if let Some(which_demo) = check_timedemo_env() {
-            let projection = init_projection(&wolf_config, &mut vga);
-            let cast = init_ray_cast(projection.view_width);
+        #[cfg(feature = "sdl")]
+        run_wolf(
+            builder.build(Sdl3RenderBackend::new()).expect("sdl"),
+            loader,
+            iw_config,
+            wolf_config,
+            ticker,
+            assets,
+            sound,
+            win_state,
+            menu_state,
+        )
+        .await
+        .expect("run wolf");
 
-            let mut rc = RenderContext::init(
-                vga,
-                ticker,
-                assets,
-                loader.variant(),
-                input,
-                projection,
-                cast,
-                sound,
-            );
+        #[cfg(feature = "web")]
+        run_wolf(
+            builder.build(WebRenderBackend::new()).expect("web"),
+            loader,
+            iw_config,
+            wolf_config,
+            ticker,
+            assets,
+            sound,
+            win_state,
+            menu_state,
+        )
+        .await
+        .expect("run wolf");
 
-            let (abort, benchmark_result) = play_demo(
-                &mut rc,
-                &mut wolf_config,
-                &iw_config,
-                &mut win_state,
-                &mut menu_state,
-                &loader,
-                which_demo,
-                true,
-            )
-            .await;
-
-            if abort {
-                println!("timedemo aborted")
-            } else {
-                let b = benchmark_result.expect("benchmark result");
-                let r_fps = (b.real.as_secs_f32() / b.total.as_secs_f32()) * 70.0;
-
-                let num_frames = b.total.as_secs_f32() * 70.0;
-                let avg_frame = (b.unbounded.as_secs_f32() / num_frames) * DEMO_TICS as f32;
-                let u_fps = 1.0 / avg_frame;
-                println!("timedemo, total time: {:.2}s", b.total.as_secs_f32());
-                println!(
-                    "\treal time: {:.2}s, unbounded time: {:.2}s",
-                    b.real.as_secs_f32(),
-                    b.unbounded.as_secs_f32()
-                );
-                println!("\t{:.2} real fps, {:.2} unbounded fps", r_fps, u_fps);
-                exit(0);
-            }
-        } else {
-            let projection = init_projection(&wolf_config, &mut vga);
-            let cast = init_ray_cast(projection.view_width);
-            let mut rc = RenderContext::init(
-                vga,
-                ticker,
-                assets,
-                loader.variant(),
-                input,
-                projection,
-                cast,
-                sound,
-            );
-
-            init_game(&mut rc, &mut win_state).await;
-
-            demo_loop(
-                &mut rc,
-                &mut wolf_config,
-                &iw_config,
-                &mut win_state,
-                &mut menu_state,
-                &loader,
-            )
-            .await;
-        }
+        #[cfg(not(any(feature = "sdl", feature = "egui", feature = "web")))]
+        compile_error!("enable at least one frontend: `sdl` or `egui`");
     });
 
+    Ok(())
+}
+
+async fn run_wolf(
+    mut vga: Video,
+    loader: Loader,
+    iw_config: IWConfig,
+    mut wolf_config: WolfConfig,
+    ticker: Ticker,
+    assets: Assets,
+    sound: Sound,
+    mut win_state: WindowState,
+    mut menu_state: MenuState,
+) -> Result<(), String> {
+    //enable Mode Y
+    let mem_mode = vga.get_sc_data(SCReg::MemoryMode);
+    vga.set_sc_data(SCReg::MemoryMode, (mem_mode & !0x08) | 0x04); //turn off chain 4 & odd/even
+
+    let input = Input::init_player(&wolf_config);
+
+    if let Some(which_demo) = check_timedemo_env() {
+        let projection = init_projection(&wolf_config, &mut vga);
+        let cast = init_ray_cast(projection.view_width);
+
+        let mut rc = RenderContext::init(
+            vga,
+            ticker,
+            assets,
+            loader.variant(),
+            input,
+            projection,
+            cast,
+            sound,
+        );
+
+        let (abort, benchmark_result) = play_demo(
+            &mut rc,
+            &mut wolf_config,
+            &iw_config,
+            &mut win_state,
+            &mut menu_state,
+            &loader,
+            which_demo,
+            true,
+        )
+        .await;
+
+        if abort {
+            println!("timedemo aborted")
+        } else {
+            let b = benchmark_result.expect("benchmark result");
+            let r_fps = (b.real.as_secs_f32() / b.total.as_secs_f32()) * 70.0;
+
+            let num_frames = b.total.as_secs_f32() * 70.0;
+            let avg_frame = (b.unbounded.as_secs_f32() / num_frames) * DEMO_TICS as f32;
+            let u_fps = 1.0 / avg_frame;
+            println!("timedemo, total time: {:.2}s", b.total.as_secs_f32());
+            println!(
+                "\treal time: {:.2}s, unbounded time: {:.2}s",
+                b.real.as_secs_f32(),
+                b.unbounded.as_secs_f32()
+            );
+            println!("\t{:.2} real fps, {:.2} unbounded fps", r_fps, u_fps);
+            exit(0);
+        }
+    } else {
+        let projection = init_projection(&wolf_config, &mut vga);
+        let cast = init_ray_cast(projection.view_width);
+        let mut rc = RenderContext::init(
+            vga,
+            ticker,
+            assets,
+            loader.variant(),
+            input,
+            projection,
+            cast,
+            sound,
+        );
+
+        init_game(&mut rc, &mut win_state).await;
+
+        demo_loop(
+            &mut rc,
+            &mut wolf_config,
+            &iw_config,
+            &mut win_state,
+            &mut menu_state,
+            &loader,
+        )
+        .await;
+    }
     Ok(())
 }
 
@@ -190,7 +252,7 @@ pub fn tokio_runtime() -> Result<Runtime, String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    #[cfg(any(feature = "sdl", feature = "test"))]
+    #[cfg(any(feature = "sdl", feature = "test", feature = "egui"))]
     let rt = runtime::Runtime::new().map_err(|e| e.to_string())?;
 
     Ok(rt)
@@ -212,7 +274,10 @@ pub fn initial_window_state() -> WindowState {
     }
 }
 
-fn init_projection(wolf_config: &WolfConfig, vga: &mut VGA) -> ProjectionConfig {
+fn init_projection<R: RenderBackend>(
+    wolf_config: &WolfConfig,
+    vga: &mut VGA<R>,
+) -> ProjectionConfig {
     vl::set_palette(vga, GAMEPAL);
     new_view_size(wolf_config.viewsize)
 }
@@ -361,7 +426,7 @@ async fn demo_loop(
     }
 }
 
-fn signon_screen(vga: &mut VGA) {
+fn signon_screen<R: RenderBackend>(vga: &mut VGA<R>) {
     let mut buf_offset = 0;
     let mut vga_offset = 0;
     while buf_offset < SIGNON.len() - 4 {

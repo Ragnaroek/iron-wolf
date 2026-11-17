@@ -1,4 +1,5 @@
 use std::pin::Pin;
+use vga::RenderBackend;
 use vga::util::sleep;
 
 use crate::act1::{operate_door, push_wall};
@@ -458,8 +459,8 @@ fn cmd_fire(
     }
 }
 
-async fn cmd_use(
-    rc: &mut RenderContext,
+async fn cmd_use<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
     level_state: &mut LevelState,
     game_state: &mut GameState,
     control_state: &mut ControlState,
@@ -751,8 +752,8 @@ pub fn thrust_player(level_state: &mut LevelState) -> usize {
     offset
 }
 
-pub fn thrust(
-    rc: &mut RenderContext,
+pub fn thrust<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
@@ -779,7 +780,11 @@ pub fn thrust(
     }
 }
 
-pub fn give_points(rc: &mut RenderContext, game_state: &mut GameState, points: u32) {
+pub fn give_points<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
+    game_state: &mut GameState,
+    points: u32,
+) {
     game_state.score += points;
     while game_state.score >= game_state.next_extra {
         game_state.next_extra += EXTRA_POINTS;
@@ -788,7 +793,7 @@ pub fn give_points(rc: &mut RenderContext, game_state: &mut GameState, points: u
     draw_score(rc, &game_state)
 }
 
-pub fn give_extra_man(rc: &mut RenderContext, game_state: &mut GameState) {
+pub fn give_extra_man<R: RenderBackend>(rc: &mut RenderContext<R>, game_state: &mut GameState) {
     if game_state.lives < 9 {
         game_state.lives += 1;
     }
@@ -796,7 +801,11 @@ pub fn give_extra_man(rc: &mut RenderContext, game_state: &mut GameState) {
     rc.play_sound(SoundName::BONUS1UP);
 }
 
-pub fn get_bonus(rc: &mut RenderContext, game_state: &mut GameState, check: &mut StaticType) {
+pub fn get_bonus<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
+    game_state: &mut GameState,
+    check: &mut StaticType,
+) {
     match check.item_number {
         StaticKind::BoFirstaid => {
             if game_state.health == 100 {
@@ -892,7 +901,11 @@ pub fn get_bonus(rc: &mut RenderContext, game_state: &mut GameState, check: &mut
     check.sprite = Sprite::None; // remove from list
 }
 
-fn give_key(rc: &mut RenderContext, game_state: &mut GameState, key: StaticKind) {
+fn give_key<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
+    game_state: &mut GameState,
+    key: StaticKind,
+) {
     let key_value = match key {
         StaticKind::BoKey1 => 1 << 0,
         StaticKind::BoKey2 => 1 << 1,
@@ -905,7 +918,7 @@ fn give_key(rc: &mut RenderContext, game_state: &mut GameState, key: StaticKind)
     draw_keys(rc, game_state);
 }
 
-fn heal_self(rc: &mut RenderContext, game_state: &mut GameState, points: i32) {
+fn heal_self<R: RenderBackend>(rc: &mut RenderContext<R>, game_state: &mut GameState, points: i32) {
     game_state.health += points;
     if game_state.health > 100 {
         game_state.health = 100;
@@ -917,7 +930,11 @@ fn heal_self(rc: &mut RenderContext, game_state: &mut GameState, points: i32) {
     draw_face(rc, &game_state);
 }
 
-fn give_weapon(rc: &mut RenderContext, game_state: &mut GameState, weapon: WeaponType) {
+fn give_weapon<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
+    game_state: &mut GameState,
+    weapon: WeaponType,
+) {
     give_ammo(rc, game_state, 6);
     if game_state.best_weapon < weapon {
         game_state.best_weapon = weapon;
@@ -927,7 +944,7 @@ fn give_weapon(rc: &mut RenderContext, game_state: &mut GameState, weapon: Weapo
     draw_weapon(rc, game_state);
 }
 
-fn give_ammo(rc: &mut RenderContext, game_state: &mut GameState, ammo: i32) {
+fn give_ammo<R: RenderBackend>(rc: &mut RenderContext<R>, game_state: &mut GameState, ammo: i32) {
     if game_state.ammo <= 0 {
         // knife was out
         if game_state.attack_frame <= 0 {
@@ -942,8 +959,8 @@ fn give_ammo(rc: &mut RenderContext, game_state: &mut GameState, ammo: i32) {
     draw_ammo(rc, game_state);
 }
 
-fn clip_move(
-    rc: &mut RenderContext,
+fn clip_move<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
     k: ObjKey,
     level_state: &mut LevelState,
     x_move: i32,
@@ -1097,7 +1114,7 @@ fn update_face(rc: &mut RenderContext, tics: u64, state: &mut GameState) {
     }
 }
 
-pub fn draw_keys(rc: &mut RenderContext, state: &GameState) {
+pub fn draw_keys<R: RenderBackend>(rc: &mut RenderContext<R>, state: &GameState) {
     if state.keys & 1 != 0 {
         status_draw_pic(rc, 30, 4, GraphicNum::GOLDKEYPIC);
     } else {
@@ -1111,15 +1128,21 @@ pub fn draw_keys(rc: &mut RenderContext, state: &GameState) {
     }
 }
 
-pub fn draw_weapon(rc: &mut RenderContext, state: &GameState) {
+pub fn draw_weapon<R: RenderBackend>(rc: &mut RenderContext<R>, state: &GameState) {
     status_draw_pic(rc, 32, 8, weapon_pic(state.weapon))
 }
 
-pub fn draw_score(rc: &mut RenderContext, state: &GameState) {
+pub fn draw_score<R: RenderBackend>(rc: &mut RenderContext<R>, state: &GameState) {
     latch_number(rc, 6, 16, 6, state.score as i32);
 }
 
-fn latch_number(rc: &mut RenderContext, x_start: usize, y: usize, width: usize, num: i32) {
+fn latch_number<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
+    x_start: usize,
+    y: usize,
+    width: usize,
+    num: i32,
+) {
     let str = num.to_string();
     let mut w_cnt = width;
     let mut x = x_start;
@@ -1144,7 +1167,12 @@ fn latch_number(rc: &mut RenderContext, x_start: usize, y: usize, width: usize, 
 }
 
 /// x in bytes
-fn status_draw_pic(rc: &mut RenderContext, x: usize, y: usize, pic: GraphicNum) {
+fn status_draw_pic<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
+    x: usize,
+    y: usize,
+    pic: GraphicNum,
+) {
     let offset_prev = rc.buffer_offset();
     for i in 0..3 {
         rc.set_buffer_offset(SCREENLOC[i]);

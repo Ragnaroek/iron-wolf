@@ -1,4 +1,4 @@
-#[cfg(feature = "test")]
+#[cfg(test)]
 #[path = "./map_test.rs"]
 mod map_test;
 

@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::time::Duration;
+use vga::RenderBackend;
 
 use crate::assets::SoundName;
 use crate::fixed::Fixed;

@@ -8,6 +8,12 @@ license = "GPL-3.0"
 repository = "https://github.com/Ragnaroek/iron-wolf"
 
 [features]
+egui = [
+    "vga-emu/egui",
+    "opl-emu/sdl",
+    "sdl2",
+    "tokio/rt-multi-thread"
+]
 sdl = [
     "vga-emu/sdl2",
     "opl-emu/sdl",
@@ -25,14 +31,6 @@ web = [
     "dep:web-sys",
     "dep:js-sys",
 ]
-test = [
-    "vga-emu/test",
-    "opl-emu/sdl",
-    "sdl2",
-    "tokio/rt-multi-thread",
-    "tokio/test-util",
-    "tokio/macros",
-]
 
 [lib]
 name = "iw"
@@ -42,10 +40,14 @@ crate-type = ["cdylib", "rlib"]
 name = "iw"
 path = "src/main.rs"
 
+[dev-dependencies]
+tokio = { version = "1.54.1", features = ["full"] }
+vga-emu = { path = "../vga-emu/", features = ["test-vga"] }
+
 [dependencies]
 serde = { version = "1.0.229", features = ["derive"] }
 toml = "1.2.1+spec-1.1.0"
-vga-emu = "0.8.5"  # { path = "../vga-emu/" }
+vga-emu = { path = "../vga-emu/" } # "0.8.5"  # { path = "../vga-emu/" }
 opl-emu = "0.4.2"  # { path = "../opl-emu/" }
 web-time = "1.1.0" # std::time for web that needs an crate to be compatible :/
 tokio = { version = "1.54.1", default-features = false }

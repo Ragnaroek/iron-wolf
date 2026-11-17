@@ -1,9 +1,6 @@
-#![feature(test)]
-
 extern crate iw;
 extern crate test;
 
-#[cfg(feature = "test")]
 use {
     iw::assets,
     iw::config::default_iw_config,
@@ -20,7 +17,6 @@ use {
     vga::VGABuilder,
 };
 
-#[cfg(feature = "test")]
 #[bench]
 fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
     let mut data_path = PathBuf::new();
@@ -35,7 +31,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
         patch_path: iw_config.data.patch_data,
     };
 
-    let assets = assets::load_graphic_assets(&loader)?;
+    let assets = assets::load_graphic_assets(&loader, &None)?;
 
     let prj = new_view_size(19);
     let (graphics, fonts, tiles, texts) = assets::load_all_graphics(&loader, &None)?;
@@ -44,7 +40,9 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
 
     let mut game_state = new_game_state();
 
-    let vga = VGABuilder::new().video_mode(0x13).build()?;
+    let vga = VGABuilder::new()
+        .video_mode(0x13)
+        .build(vga::backend_test::TestRenderBackend::new())?;
     let input = Input::init_demo_playback(Vec::with_capacity(0));
     let ticker = new_test_ticker();
 
@@ -52,20 +50,7 @@ fn bench_ray_cast_loop(b: &mut Bencher) -> Result<(), String> {
     let player = level_state.player();
     let mut cast = init_ray_cast(prj.view_width);
     cast.init_ray_cast_consts(&prj, player, 0);
-    let mut rc = RenderContext::init(
-        vga,
-        ticker,
-        graphics,
-        fonts,
-        tiles,
-        texts,
-        assets,
-        &assets::W3D1,
-        input,
-        prj,
-        cast,
-        sound,
-    );
+    let mut rc = RenderContext::init(vga, ticker, assets, &assets::W3D1, input, prj, cast, sound);
 
     b.iter(|| {
         for _ in 0..1000 {

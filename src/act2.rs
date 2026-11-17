@@ -4,6 +4,8 @@ mod act2_test;
 
 use std::pin::Pin;
 
+use vga::RenderBackend;
+
 use crate::act1::open_door;
 use crate::agent::{S_ATTACK, S_PLAYER, take_damage};
 use crate::assets::{SoundName, W3D1};
@@ -5452,8 +5454,8 @@ fn spawn(actors: &mut Actors, actor_at: &mut Vec<Vec<At>>, obj: ObjType) {
 */
 
 /// Try to damage the player, based on skill level and player's speed
-fn t_shoot(
-    rc: &mut RenderContext,
+fn t_shoot<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
     k: ObjKey,
     _: u64,
     level_state: &mut LevelState,
@@ -5530,8 +5532,8 @@ fn t_shoot(
     }
 }
 
-fn a_death_scream(
-    rc: &mut RenderContext,
+fn a_death_scream<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
     k: ObjKey,
     _: u64,
     level_state: &mut LevelState,
@@ -5541,8 +5543,8 @@ fn a_death_scream(
     do_death_scream(rc, k, level_state, game_state);
 }
 
-pub fn do_death_scream(
-    rc: &mut RenderContext,
+pub fn do_death_scream<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
     k: ObjKey,
     level_state: &mut LevelState,
     game_state: &mut GameState,
@@ -5765,8 +5767,8 @@ pub fn spawn_bj_victory(level_state: &mut LevelState) {
     spawn(&mut level_state.actors, &mut level_state.actor_at, bj);
 }
 
-fn t_bj_run(
-    rc: &mut RenderContext,
+fn t_bj_run<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
@@ -5797,8 +5799,8 @@ fn t_bj_run(
     }
 }
 
-fn t_bj_jump(
-    rc: &mut RenderContext,
+fn t_bj_jump<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
     k: ObjKey,
     tics: u64,
     level_state: &mut LevelState,
@@ -5809,8 +5811,8 @@ fn t_bj_jump(
     move_obj(rc, k, level_state, game_state, mov, tics);
 }
 
-fn t_bj_yell(
-    rc: &mut RenderContext,
+fn t_bj_yell<R: RenderBackend>(
+    rc: &mut RenderContext<R>,
     k: ObjKey,
     _: u64,
     level_state: &mut LevelState,
@@ -5821,8 +5823,8 @@ fn t_bj_yell(
     rc.play_sound_loc_actor(SoundName::YEAH, obj);
 }
 
-fn t_bj_done(
-    _: &mut RenderContext,
+fn t_bj_done<R: RenderBackend>(
+    _: &mut RenderContext<R>,
     _: ObjKey,
     _: u64,
     _: &mut LevelState,
@@ -5832,8 +5834,8 @@ fn t_bj_done(
     game_state.play_state = PlayState::Victorious;
 }
 
-fn a_start_death_cam<'a>(
-    rc: &'a mut RenderContext,
+fn a_start_death_cam<'a, R: RenderBackend>(
+    rc: &'a mut RenderContext<R>,
     k: ObjKey,
     _: u64,
     level_state: &'a mut LevelState,

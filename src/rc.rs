@@ -1,3 +1,4 @@
+use vga::RenderBackend;
 use vga::util::sleep;
 
 use std::mem;
@@ -34,6 +35,15 @@ pub const DIR_SCAN_NORTH: usize = 0;
 pub const DIR_SCAN_EAST: usize = 1;
 pub const DIR_SCAN_SOUTH: usize = 2;
 pub const DIR_SCAN_WEST: usize = 3;
+
+#[cfg(all(feature = "sdl", not(test)))]
+pub type Backend = vga::backend_sdl2::Sdl2RenderBackend;
+
+#[cfg(all(feature = "egui", not(test)))]
+pub type Backend = vga::backend_egui::EguiRenderBackend;
+
+#[cfg(test)]
+pub type Backend = vga::backend_test::TestRenderBackend;
 
 #[derive(PartialEq)]
 pub enum InputMode {
@@ -74,7 +84,7 @@ pub struct Input {
 }
 
 pub struct RenderContext {
-    pub vga: VGA,
+    pub vga: VGA<Backend>,
     pub ticker: time::Ticker,
     linewidth: usize,
     bufferofs: AtomicUsize,
@@ -121,7 +131,12 @@ impl Input {
         }
     }
 
-    pub async fn wait_user_input(&mut self, vga: &mut VGA, ticker: &Ticker, delay: u64) -> bool {
+    pub async fn wait_user_input<R: RenderBackend>(
+        &mut self,
+        vga: &mut VGA<R>,
+        ticker: &Ticker,
+        delay: u64,
+    ) -> bool {
         let last_count = ticker.get_count();
         {
             vga.input_monitoring().clear_keyboard();
@@ -142,7 +157,7 @@ impl Input {
         false
     }
 
-    pub fn clear_keys_down(&self, vga: &mut VGA) {
+    pub fn clear_keys_down<R: RenderBackend>(&self, vga: &mut VGA<R>) {
         if self.mode == InputMode::Player {
             let mut input = vga.input_monitoring();
             input.clear_keyboard();
@@ -154,7 +169,7 @@ impl Input {
 
 impl RenderContext {
     pub fn init(
-        vga: VGA,
+        vga: VGA<Backend>,
         ticker: time::Ticker,
         assets: Assets,
         variant: &'static WolfVariant,

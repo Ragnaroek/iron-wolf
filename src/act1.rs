@@ -1,3 +1,5 @@
+use vga::RenderBackend;
+
 use crate::{
     assets::SoundName,
     def::{
